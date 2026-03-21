@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulta Vehiculo</title>
+<style>
+body{font-family:Arial;margin:30px}
+input,button,textarea{padding:10px;font-size:16px}
+button{cursor:pointer}
+.card{margin-top:16px;border:1px solid #ccc;padding:15px;border-radius:10px;max-width:900px}
+.grid{display:grid;grid-template-columns:160px 1fr;gap:6px}
+.k{color:#666}
+textarea{width:100%;height:170px;margin-top:10px}
+small{color:#666}
+</style>
+</head>
+<body>
+
+<h2>Consulta de Vehiculo por Placa</h2>
+
+<input id="placa" placeholder="Ej: ANN697" maxlength="12">
+<button onclick="consultarPlaca()">Consultar placa</button>
+<button onclick="procesarPegado()">Guardar JSON pegado</button>
+
+<div class="card">
+  <div id="estado">1) Escribe la placa y consulta. 2) Si deseas, pega un JSON manual. 3) Guarda el resultado.</div>
+  <textarea id="jsonbox" placeholder="Aqui puedes pegar manualmente un JSON ya obtenido"></textarea>
+  <small>La consulta usa el backend local y requiere sesion activa.</small>
+</div>
+
+<div id="resultado" class="card"></div>
+
+<script>
+let ultimoResultado = null;
+let guardando = false;
+
+async function readJsonSafe(response){
+  const raw = await response.text();
+  try{
+    return raw ? JSON.parse(raw) : {};
+  }catch{
+    throw new Error("El servidor no devolvio JSON valido.");
+  }
+}
+
+function render(d){
+  const r = document.getElementById("resultado");
+  r.innerHTML = `
+    <div class="grid">
+      <div class="k">Placa</div><div><b>${d.numPlaca||""}</b></div>
+      <div class="k">Marca / Modelo</div><div>${d.marca||""} ${d.modelo||""}</div>
+      <div class="k">Ano</div><div>${d.anoFab||""}</div>
+      <div class="k">Color</div><div>${d.color||""}</div>
+      <div class="k">Carroceria</div><div>${d.descTipoCarr||""}</div>
+      <div class="k">Motor</div><div>${d.numMotor||""}</div>
+      <div class="k">Serie</div><div>${d.numSerie||d.noVin||""}</div>
+      <div class="k">Dimensiones</div><div>${d.longitud||""} x ${d.ancho||""} x ${d.altura||""}</div>
+    </div>
+  `;
+}
+
+async function consultarPlaca(){
+  const estado = document.getElementById("estado");
+  const placa = document.getElementById("placa").value.trim().toUpperCase();
+  if(!placa){ alert("Ingresa placa"); return; }
+
+  estado.textContent = "Consultando placa...";
+
+  try{
+    const r = await fetch(`buscar_placa.php?placa=${encodeURIComponent(placa)}`, {
+      headers: { "Accept": "application/json" },
+      credentials: "same-origin"
+    });
+    const j = await readJsonSafe(r);
+
+    if(!j.ok){
+      estado.textContent = j.error || "No se pudo consultar la placa.";
+      return;
+    }
+
+    ultimoResultado = j.respuesta || null;
+    document.getElementById("jsonbox").value = JSON.stringify(ultimoResultado || {}, null, 2);
+    render(ultimoResultado || {});
+    estado.textContent = "Consulta completada. Puedes guardar el resultado.";
+  }catch(err){
+    estado.textContent = "Error consultando: " + (err.message || err);
+  }
+}
+
+async function procesarPegado(){
+  if(guardando){ return; }
+
+  const estado = document.getElementById("estado");
+  const txt = document.getElementById("jsonbox").value.trim();
+  if(!txt){ alert("Pega el JSON primero"); return; }
+
+  let data;
+  try{
+    data = JSON.parse(txt);
+  }catch(e){
+    estado.textContent = "Lo pegado no es JSON valido.";
+    return;
+  }
+
+  if((data.status || "") !== "success"){
+    estado.textContent = "La respuesta no es success (placa invalida o error).";
+    render(data);
+    return;
+  }
+
+  estado.textContent = "Guardando en DB...";
+  render(data);
+
+  try{
+    guardando = true;
+    const r = await fetch("guardar_vehiculo.php",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Accept":"application/json" },
+      body: JSON.stringify(data),
+      credentials: "same-origin"
+    });
+    const j = await readJsonSafe(r);
+
+    if(!r.ok || !j.ok){
+      estado.textContent = j.error || j.detail || "No se pudo guardar.";
+      return;
+    }
+
+    estado.textContent = "Guardado OK";
+  }catch(err){
+    estado.textContent = "Error guardando: " + (err.message || err);
+  }finally{
+    guardando = false;
+  }
+}
+</script>
+
+</body>
+</html>

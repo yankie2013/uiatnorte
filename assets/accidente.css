@@ -1,0 +1,250 @@
+/* ====== Tema (auto) con variables ====== */
+:root{
+  --bg: #0b0f19;
+  --fg: #e6e8ef;
+  --muted: 156,163,175;
+  --panel-bg: #141a29aa;
+  --panel-bd: #ffffff22;
+  --field-bg: #ffffff0d;
+  --field-bd: #ffffff30;
+  --overlay: #0008;
+  --group-bg: #0f1524c0;
+  --dash-bd: #ffffff1f;
+  --option-bg: #ffffff0d;
+  --option-bd: #ffffff25;
+  --option-hover-bg:#1b2236;
+  --pill-bg:#ffffff14;
+  --error-bg:#ef44441a;
+  --error-bd:#ef444466;
+  --error-fg:#fecaca;
+  --modalbar-bg:#0f1628;
+  --if-bg:#0b0f19;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg: #f6f7fb;
+    --fg: #0b0f19;
+    --panel-bg: #ffffffcc;
+    --panel-bd: #00000014;
+    --field-bg: #ffffff;
+    --field-bd: #00000022;
+    --overlay: #0006;
+    --group-bg: #ffffffcc;
+    --dash-bd: #0000001a;
+    --option-bg: #ffffff;
+    --option-bd: #00000022;
+    --option-hover-bg:#f3f4f6;
+    --pill-bg:#f2f4ff;
+    --error-bg:#fee2e2;
+    --error-bd:#fecaca;
+    --error-fg:#7f1d1d;
+    --modalbar-bg:#eef2ff;
+    --if-bg:#f5f7ff;
+  }
+}
+
+/* ====== Layout y tipografía ====== */
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px system-ui}
+.wrap{max-width:1100px;margin:24px auto;padding:16px}
+.title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Tarjetas / paneles */
+.card{
+  background:var(--panel-bg);
+  border:1px solid var(--panel-bd);
+  border-radius:18px;
+  padding:16px;
+  backdrop-filter:blur(10px)
+}
+
+/* Grid */
+form.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-5{grid-column:span 5}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
+@media(max-width:920px){.col-8,.col-6,.col-5,.col-4,.col-3{grid-column:span 12}}
+
+/* Controles */
+label{display:block;font-weight:600;margin-bottom:6px}
+input,select,textarea{
+  width:100%;padding:10px 12px;
+  border:1px solid var(--field-bd);
+  border-radius:12px;background:var(--field-bg);color:var(--fg)
+}
+.rowflex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Botones */
+.btn{
+  display:inline-flex;gap:8px;padding:10px 14px;
+  border:1px solid var(--field-bd);
+  border-radius:12px;background:var(--pill-bg);color:var(--fg);
+  text-decoration:none
+}
+.btn.primary{background:linear-gradient(90deg,#4f46e5,#06b6d4);border:none;color:#fff}
+
+/* Avisos / chips */
+.error{
+  background:var(--error-bg);
+  border:1px solid var(--error-bd);
+  color:var(--error-fg);
+  padding:10px;border-radius:12px;margin-bottom:12px
+}
+.plus{
+  width:34px;height:36px;border-radius:10px;
+  border:1px dashed rgba(var(--muted),.45);
+  background:var(--option-bg);cursor:pointer
+}
+.badge{
+  font-size:12px;padding:3px 8px;border-radius:999px;
+  border:1px solid var(--field-bd);background:var(--pill-bg)
+}
+
+/* Modal base (catálogos) */
+.modal{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal.active{display:flex}
+.modal .card{width:min(460px,95vw)}
+
+/* Grupo Modalidad/Consecuencia */
+.groupbox{border:1px solid var(--dash-bd);border-radius:16px;padding:14px;background:var(--group-bg)}
+.groupbox>legend{padding:0 8px;color:rgba(var(--muted),1);font-weight:700}
+.groupbox-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group-title{font-weight:700}
+.group-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-input{
+  flex:1 1 220px;min-width:180px;padding:8px 10px;
+  border-radius:10px;border:1px solid var(--field-bd);
+  background:var(--field-bg);color:var(--fg)
+}
+.tool{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:rgba(var(--muted),1)}
+.option-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:10px;max-height:220px;overflow:auto;padding:4px;
+  border:1px dashed var(--dash-bd);border-radius:12px;background:transparent
+}
+.option-card{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:1px solid var(--option-bd);border-radius:12px;
+  background:var(--option-bg);cursor:pointer;user-select:none;
+  transition:transform .08s ease,border-color .15s ease, background .15s ease
+}
+.option-card:hover{transform:translateY(-1px);border-color:#7dd3fc80;background:var(--option-hover-bg)}
+.option-card input{display:none}
+.option-card .check{
+  width:18px;height:18px;border-radius:6px;
+  border:2px solid rgba(var(--muted),.5);display:inline-block;position:relative;flex:0 0 18px
+}
+.option-card input:checked + .check{border-color:#22d3ee;background:linear-gradient(135deg,#4f46e5,#06b6d4)}
+.option-card input:checked + .check::after{content:"";position:absolute;inset:3px;border-radius:3px;background:white}
+.option-card .text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Botonera de Participantes junto a SIDPOL */
+.pills{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.pillbtn{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;
+  border:1px solid var(--field-bd);background:var(--pill-bg);color:var(--fg);text-decoration:none;font-weight:700;white-space:nowrap
+}
+.pillbtn.disabled{pointer-events:none;opacity:.45;filter:grayscale(40%)}
+
+/* Modales XL con iframe */
+.modal-xl{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;padding:16px;z-index:1000}
+.modal-xl.active{display:flex}
+.modal-xl .box{background:var(--panel-bg);color:var(--fg);width:min(1100px,95vw);border-radius:16px;overflow:hidden;border:1px solid var(--panel-bd)}
+.modalbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--panel-bd);background:var(--modalbar-bg)}
+.modalbar .ttl{font-weight:800}
+.modalbar .x{cursor:pointer;border:1px solid var(--field-bd);padding:6px 10px;border-radius:10px;background:var(--pill-bg);color:var(--fg)}
+.ifwrap{position:relative;width:100%;height:min(78vh,820px);background:var(--if-bg)}
+.ifwrap iframe{width:100%;height:100%;border:0}
+.loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--if-bg);opacity:.85}
+.loader.hide{display:none}
+
+/* ====== MODAL XL RESPONSIVO ====== */
+.modal-xl{
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;              /* se muestra con JS */
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #000 60%, transparent);
+  padding: clamp(8px, 2vw, 20px);
+}
+
+.modal-xl .box{
+  width: min(1200px, 96vw);
+  height: min(90vh, 1000px);
+  background: var(--card, #0f172a);
+  color: var(--text, #e5e7eb);
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, #ffffff33 30%, transparent);
+  box-shadow: 0 20px 70px rgba(0,0,0,.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-xl .modalbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, #ffffff 6%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, #ffffff33 22%, transparent);
+}
+.modal-xl .modalbar .ttl{
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.modal-xl .modalbar .x{
+  appearance: none;
+  background: color-mix(in srgb, #ffffff 10%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 20%, transparent);
+  color: inherit;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.modal-xl .ifwrap{
+  flex: 1 1 auto;
+  min-height: 0;               /* importante para que el iframe crezca */
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-xl .ifwrap iframe{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #0b1220;
+}
+
+/* Loader centrado */
+.modal-xl .loader{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: .95rem;
+  color: #94a3b8;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.modal-xl .loader.hide{ opacity: 0; }
+
+/* Estado visible del modal */
+.modal-xl.show{ display: flex; }
+
+/* Pequeñito: reduce padding y radios */
+@media (max-width: 540px){
+  .modal-xl{ padding: 8px; }
+  .modal-xl .box{ border-radius: 14px; }
+  .modal-xl .modalbar{ padding: 10px 12px; }
+}
+
+/* Bloquear scroll del body cuando hay modal */
+body.modal-open{ overflow: hidden; }

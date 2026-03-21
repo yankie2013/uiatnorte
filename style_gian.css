@@ -1,0 +1,177 @@
+/* =========================================================
+   style_gian.css — UIAT Norte (Estilo GIAN)
+   Glass • Auto Light/Dark • Compacto • Gradiente Indigo/Violet
+   v1.0
+   ========================================================= */
+
+/* ---------- Paleta y modo auto ---------- */
+:root{
+  --bg: 255,255,255;
+  --fg: 17,24,39;
+  --muted: 107,114,128;
+  --brand1: 99,102,241;    /* indigo */
+  --brand2: 139,92,246;    /* violet */
+  --ok: 16,185,129;        /* emerald */
+  --err: 239,68,68;        /* red */
+  --card: 255,255,255;
+  --glass: 255,255,255,0.60;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: 3,7,18;
+    --fg: 229,231,235;
+    --muted: 156,163,175;
+    --brand1: 129,140,248;
+    --brand2: 167,139,250;
+    --card: 17,24,39;
+    --glass: 17,24,39,0.55;
+  }
+}
+
+/* ---------- Base ---------- */
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0; padding:0;
+  color: rgb(var(--fg));
+  background:
+    radial-gradient(1100px 600px at 8% 0%, rgba(var(--brand1),0.14), transparent 60%),
+    radial-gradient(900px 800px at 100% 100%, rgba(var(--brand2),0.12), transparent 60%),
+    rgb(var(--bg));
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+}
+
+/* ---------- Contenedor y tarjeta ---------- */
+.wrap{
+  min-height:100%;
+  display:grid; place-items:center;
+  padding:20px;
+}
+.card{
+  width:100%; max-width:1100px;
+  background: rgba(var(--glass));
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow:hidden;
+}
+.hdr{
+  padding:18px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+  background: linear-gradient(135deg, rgba(var(--brand1),0.16), rgba(var(--brand2),0.16));
+  border-bottom:1px solid rgba(255,255,255,0.14);
+}
+.ttl{ font-size:18px; font-weight:800; display:flex; gap:10px; align-items:center; }
+.pill{ font-size:12px; padding:4px 8px; border-radius:999px; background: rgba(var(--brand1),0.20); }
+.body{ padding:16px; }
+.foot{
+  padding:12px 16px;
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  border-top:1px dashed rgba(255,255,255,0.18);
+}
+.hint{ font-size:12px; color: rgba(var(--muted),1); }
+
+/* ---------- Grid responsivo ---------- */
+.grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap:10px; }
+.col-3{ grid-column: span 3; }
+.col-4{ grid-column: span 4; }
+.col-6{ grid-column: span 6; }
+.col-8{ grid-column: span 8; }
+.col-9{ grid-column: span 9; }
+.col-12{ grid-column: span 12; }
+@media (max-width: 1000px){
+  .col-3,.col-4,.col-6,.col-8,.col-9{ grid-column: span 12; }
+}
+
+/* ---------- Campos ---------- */
+label{
+  display:block; font-size:12px; color: rgba(var(--muted),1);
+  margin:6px 2px;
+}
+input, select, textarea{
+  width:100%;
+  padding:9px 11px;
+  background: rgba(var(--card),0.92);
+  color: rgb(var(--fg));
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:12px;
+  outline:none;
+  transition: box-shadow .2s, border-color .2s, transform .05s;
+}
+input:focus, select:focus, textarea:focus{
+  border-color: rgba(var(--brand1),0.6);
+  box-shadow: 0 0 0 4px rgba(var(--brand1),0.22);
+}
+textarea{ min-height: 80px; resize: vertical; }
+
+/* ---------- Botones ---------- */
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.btn{
+  appearance:none; border:0; cursor:pointer;
+  padding:10px 16px; border-radius:12px; font-weight:700;
+  background: linear-gradient(135deg, rgba(var(--brand1),1), rgba(var(--brand2),1));
+  color:#fff;
+  box-shadow:0 8px 18px rgba(0,0,0,0.18);
+  transition: transform .06s, box-shadow .2s, filter .2s;
+}
+.btn:active{ transform: translateY(1px) scale(.995); }
+.btn.sec{ background: rgba(0,0,0,0.06); color: rgb(var(--fg)); }
+
+/* ---------- Mensajes ---------- */
+.msg{ margin:0 0 12px 0; padding:10px 12px; border-radius:12px; font-size:14px; border:1px solid transparent; }
+.msg.ok{ background: rgba(var(--ok),.12); border-color: rgba(var(--ok),.3); }
+.msg.err{ background: rgba(var(--err),.12); border-color: rgba(var(--err),.3); }
+
+/* ---------- Utilidades ---------- */
+.text-right{ text-align:right }
+.mt-2{ margin-top:8px } .mt-3{ margin-top:12px } .mt-4{ margin-top:16px }
+
+/* =========================================================
+   Ajuste compacto global — Estilo GIAN v1.1
+   ========================================================= */
+
+/* Inputs, selects y textarea más compactos */
+input, select, textarea {
+  font-size: 13px;       /* antes 14–15px */
+  padding: 6px 8px;      /* más pequeños */
+  border-radius: 8px;    /* bordes un poco menos grandes */
+}
+
+/* Etiquetas */
+label {
+  font-size: 11px;
+  margin: 4px 2px;
+}
+
+/* Botones más compactos */
+.btn {
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 8px;
+}
+.btn.small {
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 7px;
+}
+
+/* Tablas compactas */
+table {
+  font-size: 13px;       /* reducir tamaño de texto */
+}
+thead th {
+  font-size: 11px;
+  padding: 6px;
+}
+tbody td {
+  font-size: 13px;
+  padding: 6px;
+}
+
+/* Mensajes compactos */
+.msg {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}

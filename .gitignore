@@ -1,0 +1,27 @@
+# Runtime / temporales
+/tmp/*
+!/tmp/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
+*.log
+/error_log
+/php_errors.log
+
+# Credenciales y estado local
+/.env.local
+/.cf_cookie_jar.txt
+/google/*.json
+!/google/.gitkeep
+
+# Artefactos y paquetes locales
+/*.zip
+/__MACOSX/
+/vendor_old/
+/PHPWord-1.4.0/
+/dompdf/
+
+# Sistema / editores
+Thumbs.db
+.DS_Store

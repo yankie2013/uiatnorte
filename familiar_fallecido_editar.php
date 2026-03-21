@@ -1,0 +1,321 @@
+<?php
+require __DIR__ . '/auth.php';
+require_login();
+require __DIR__ . '/db.php';
+
+use App\Repositories\FamiliarFallecidoRepository;
+use App\Services\FamiliarFallecidoService;
+
+header('Content-Type: text/html; charset=utf-8');
+
+if (!function_exists('h')) {
+    function h($value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+$service = new FamiliarFallecidoService(new FamiliarFallecidoRepository($pdo));
+
+if (isset($_GET['ajax'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $op = (string) $_GET['ajax'];
+        if ($op === 'buscar_doc') {
+            $persona = $service->personaPorDocumento((string) ($_GET['tipo'] ?? ''), (string) ($_GET['doc'] ?? ''));
+            if ($persona === null) {
+                echo json_encode(['ok' => false, 'msg' => 'No existe en BD. Usa el boton + para registrarla.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            echo json_encode(['ok' => true, 'persona' => $persona], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if ($op === 'buscar_id') {
+            $persona = $service->personaPorId((int) ($_GET['id'] ?? 0));
+            echo json_encode(['ok' => true, 'persona' => $persona], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        throw new InvalidArgumentException('Operacion no valida.');
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+$id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+if ($id <= 0) {
+    http_response_code(400);
+    exit('Falta id');
+}
+
+$row = $service->detalle($id);
+if ($row === null) {
+    http_response_code(404);
+    exit('Registro no encontrado.');
+}
+
+$accidenteId = (int) ($row['accidente_id'] ?? 0);
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+if ($returnTo === '') {
+    $returnTo = 'familiar_fallecido_listar.php?accidente_id=' . $accidenteId;
+}
+$error = '';
+$data = $service->defaultData($row);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = [
+        'accidente_id' => $accidenteId,
+        'fallecido_inv_id' => $_POST['fallecido_inv_id'] ?? '',
+        'familiar_persona_id' => $_POST['familiar_persona_id'] ?? '',
+        'parentesco' => $_POST['parentesco'] ?? '',
+        'observaciones' => $_POST['observaciones'] ?? '',
+        'celular' => $_POST['celular'] ?? '',
+        'email' => $_POST['email'] ?? '',
+    ];
+
+    try {
+        $service->update($id, $data);
+        header('Location: ' . $returnTo . (str_contains($returnTo, '?') ? '&' : '?') . 'ok=updated');
+        exit;
+    } catch (Throwable $e) {
+        $error = $e->getMessage();
+    }
+}
+
+$ctx = $service->formContext($accidenteId);
+include __DIR__ . '/sidebar.php';
+?>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Editar familiar de fallecido</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#dc2626;--danger:#b91c1c;--ok:#166534}
+@media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#f87171;--danger:#fecaca;--ok:#bbf7d0}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1040px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(220,38,38,.12);color:var(--primary);border:1px solid rgba(220,38,38,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.field{display:flex;flex-direction:column;gap:6px}.label{font-size:12px;color:var(--muted);font-weight:700}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin-bottom:12px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text)}textarea{min-height:96px;resize:vertical}.search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.search-row select{max-width:120px}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}.header-card{margin-bottom:14px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}.modal{width:960px;max-width:96%;height:86vh;background:var(--card);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}.modal header{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.modal .body{flex:1}.modal iframe{border:0;width:100%;height:100%}@media(max-width:820px){.c6{grid-column:span 12}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <div>
+      <h1 style="margin:0 0 6px">Familiar de fallecido <span class="badge">Editar</span></h1>
+      <div class="small">Registro #<?= (int) $id ?> - Accidente ID: <?= (int) $accidenteId ?></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="<?= h($returnTo) ?>">Volver</a>
+      <a class="btn" href="familiar_fallecido_leer.php?id=<?= (int) $id ?>&return_to=<?= urlencode($returnTo) ?>">Ver detalle</a>
+      <button class="btn primary" type="submit" form="frmFamiliar">Guardar cambios</button>
+    </div>
+  </div>
+
+  <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
+
+  <?php if ($ctx['accidente']): ?>
+    <div class="card header-card">
+      <strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong>
+      <div class="small" style="margin-top:4px;">
+        SIDPOL: <?= h((string) ($ctx['accidente']['sidpol'] ?? 'Sin SIDPOL')) ?>
+        - Registro: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? 'Sin registro')) ?>
+        - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? 'Sin fecha')) ?>
+        - Lugar: <?= h((string) ($ctx['accidente']['lugar'] ?? 'Sin lugar')) ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <form method="post" class="card" id="frmFamiliar" autocomplete="off">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+    <input type="hidden" name="familiar_persona_id" id="familiar_persona_id" value="<?= h((string) $data['familiar_persona_id']) ?>">
+
+    <div class="grid">
+      <div class="c12 field">
+        <label class="label" for="fallecido_inv_id">Fallecido del accidente*</label>
+        <select name="fallecido_inv_id" id="fallecido_inv_id" required>
+          <option value="">Selecciona</option>
+          <?php foreach ($ctx['fallecidos'] as $fallecido): ?>
+            <?php $label = trim((string) (($fallecido['apellido_paterno'] ?? '') . ' ' . ($fallecido['apellido_materno'] ?? '') . ' ' . ($fallecido['nombres'] ?? ''))); ?>
+            <option value="<?= (int) $fallecido['inv_id'] ?>" <?= (string) $data['fallecido_inv_id'] === (string) $fallecido['inv_id'] ? 'selected' : '' ?>>
+              <?= h($label) ?> - Doc: <?= h((string) ($fallecido['num_doc'] ?? '-')) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="c12 field">
+        <label class="label">Familiar*</label>
+        <div class="search-row">
+          <select id="tipo_doc">
+            <?php foreach ($ctx['tipos_doc'] as $tipo): ?>
+              <option value="<?= h($tipo) ?>" <?= $data['tipo_doc'] === $tipo ? 'selected' : '' ?>><?= h($tipo) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <input type="text" id="num_doc" value="<?= h((string) $data['num_doc']) ?>" placeholder="Numero de documento">
+          <button type="button" class="btn" id="btnBuscar">Buscar</button>
+          <button type="button" class="btn" id="btnEditarPersona">Editar persona</button>
+          <button type="button" class="btn" id="btnLimpiar">Limpiar</button>
+        </div>
+        <div class="small" id="persona_info"><?= $data['nombre_familiar'] !== '' ? 'Familiar actual: ' . h($data['nombre_familiar']) : '-' ?></div>
+      </div>
+
+      <div class="c12 field">
+        <label class="label">Nombre completo</label>
+        <input type="text" id="persona_nombre" value="<?= h((string) $data['nombre_familiar']) ?>" readonly>
+      </div>
+      <div class="c12 field">
+        <label class="label">Domicilio</label>
+        <input type="text" id="persona_domicilio" value="<?= h((string) $data['domicilio']) ?>" readonly>
+      </div>
+      <div class="c6 field">
+        <label class="label" for="celular">Celular</label>
+        <input type="text" id="celular" name="celular" value="<?= h((string) $data['celular']) ?>">
+      </div>
+      <div class="c6 field">
+        <label class="label" for="email">Email</label>
+        <input type="email" id="email" name="email" value="<?= h((string) $data['email']) ?>">
+      </div>
+      <div class="c6 field">
+        <label class="label" for="parentesco">Parentesco</label>
+        <input type="text" id="parentesco" name="parentesco" value="<?= h((string) $data['parentesco']) ?>">
+      </div>
+      <div class="c12 field">
+        <label class="label" for="observaciones">Observaciones</label>
+        <textarea id="observaciones" name="observaciones"><?= h((string) $data['observaciones']) ?></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn" id="btnAbrirMan">Registrar manifestacion</button>
+      <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
+      <button class="btn primary" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="personaModal">
+  <div class="modal">
+    <header>
+      <h3 id="personaModalTitle">Editar persona</h3>
+      <button class="btn" type="button" id="btnPersonaCerrar">Cerrar</button>
+    </header>
+    <div class="body"><iframe id="personaFrame" src="about:blank"></iframe></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="manModal">
+  <div class="modal">
+    <header>
+      <h3>Registrar manifestacion</h3>
+      <button class="btn" type="button" id="btnManCerrar">Cerrar</button>
+    </header>
+    <div class="body"><iframe id="manFrame" src="about:blank"></iframe></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const tipoDoc = document.getElementById('tipo_doc');
+  const numDoc = document.getElementById('num_doc');
+  const info = document.getElementById('persona_info');
+  const personaId = document.getElementById('familiar_persona_id');
+  const personaNombre = document.getElementById('persona_nombre');
+  const personaDom = document.getElementById('persona_domicilio');
+  const personaCel = document.getElementById('celular');
+  const personaEmail = document.getElementById('email');
+  const personaModal = document.getElementById('personaModal');
+  const personaFrame = document.getElementById('personaFrame');
+  const manModal = document.getElementById('manModal');
+  const manFrame = document.getElementById('manFrame');
+
+  function pintarPersona(persona) {
+    personaId.value = persona.id || '';
+    personaNombre.value = [persona.apellido_paterno || '', persona.apellido_materno || '', persona.nombres || ''].join(' ').trim();
+    personaDom.value = persona.domicilio || '';
+    personaCel.value = persona.celular || '';
+    personaEmail.value = persona.email || '';
+    if (persona.num_doc) numDoc.value = persona.num_doc;
+    if (persona.tipo_doc) tipoDoc.value = persona.tipo_doc;
+    info.innerHTML = 'Familiar: <b>' + personaNombre.value + '</b> (id: ' + persona.id + ')';
+  }
+
+  document.getElementById('btnBuscar').addEventListener('click', async function(){
+    try {
+      const r = await fetch('familiar_fallecido_editar.php?ajax=buscar_doc&tipo=' + encodeURIComponent(tipoDoc.value) + '&doc=' + encodeURIComponent((numDoc.value || '').trim()), {cache:'no-store'});
+      const j = await r.json();
+      if (!j.ok) {
+        info.textContent = j.msg || 'No encontrado.';
+        return;
+      }
+      pintarPersona(j.persona);
+    } catch (e) {
+      info.textContent = 'Error consultando.';
+    }
+  });
+
+  document.getElementById('btnLimpiar').addEventListener('click', function(){
+    personaId.value = '';
+    personaNombre.value = '';
+    personaDom.value = '';
+    personaCel.value = '';
+    personaEmail.value = '';
+    info.textContent = '-';
+    numDoc.value = '';
+  });
+
+  document.getElementById('btnEditarPersona').addEventListener('click', function(){
+    if (!personaId.value) {
+      alert('No hay persona seleccionada.');
+      return;
+    }
+    personaFrame.src = 'persona_editar.php?id=' + encodeURIComponent(personaId.value);
+    personaModal.style.display = 'flex';
+  });
+
+  document.getElementById('btnPersonaCerrar').addEventListener('click', function(){
+    personaModal.style.display = 'none';
+    personaFrame.src = 'about:blank';
+  });
+
+  document.getElementById('btnAbrirMan').addEventListener('click', function(){
+    if (!personaId.value) {
+      alert('Selecciona o crea al familiar primero.');
+      return;
+    }
+    const hoy = new Date();
+    const fecha = hoy.toISOString().slice(0,10);
+    const hora = hoy.toTimeString().slice(0,5);
+    const url = 'documento_manifestacion_nuevo.php?accidente_id=' + encodeURIComponent('<?= (int) $accidenteId ?>')
+      + '&persona_id=' + encodeURIComponent(personaId.value)
+      + '&pref_fecha=' + encodeURIComponent(fecha)
+      + '&pref_hora=' + encodeURIComponent(hora)
+      + '&origen=ff_editar&ff_id=' + encodeURIComponent('<?= (int) $id ?>');
+    manFrame.src = url;
+    manModal.style.display = 'flex';
+  });
+
+  document.getElementById('btnManCerrar').addEventListener('click', function(){
+    manModal.style.display = 'none';
+    manFrame.src = 'about:blank';
+  });
+
+  window.addEventListener('message', async function(ev){
+    const d = ev.data || {};
+    if ((d.type === 'persona_saved' || d.type === 'persona_creada') && d.id) {
+      try {
+        const r = await fetch('familiar_fallecido_editar.php?ajax=buscar_id&id=' + encodeURIComponent(d.id), {cache:'no-store'});
+        const j = await r.json();
+        if (j.ok && j.persona) pintarPersona(j.persona);
+      } catch (e) {}
+      personaModal.style.display = 'none';
+      personaFrame.src = 'about:blank';
+    }
+    if (d.type === 'documento_manifestacion_saved') {
+      manModal.style.display = 'none';
+      manFrame.src = 'about:blank';
+    }
+  });
+})();
+</script>
+</body>
+</html>
