@@ -7,11 +7,21 @@ require_once __DIR__ . '/bootstrap/app.php';
 
 $baseUrl = trim((string) app_config('services.seeker.base_url', 'https://seeker.red'));
 $token = trim((string) app_config('services.seeker.token', ''));
+$tokenDni = trim((string) app_config('services.seeker.token_dni', $token));
+$tokenPlaca = trim((string) app_config('services.seeker.token_vehiculo', $token));
 $dniUrl = trim((string) app_config('services.seeker.dni_url', $baseUrl . '/personas/apiPremium/dni'));
 $placaUrl = trim((string) app_config('services.seeker.placa_url', $baseUrl . '/vehiculos/api_newPlacas'));
 
 if (!defined('API_TOKEN')) {
-    define('API_TOKEN', $token);
+    define('API_TOKEN', $token !== '' ? $token : ($tokenDni !== '' ? $tokenDni : $tokenPlaca));
+}
+
+if (!defined('API_DNI_TOKEN')) {
+    define('API_DNI_TOKEN', $tokenDni);
+}
+
+if (!defined('API_PLACA_TOKEN')) {
+    define('API_PLACA_TOKEN', $tokenPlaca);
 }
 
 if (!defined('API_DNI_URL')) {
@@ -22,10 +32,10 @@ if (!defined('API_PLACA_URL')) {
     define('API_PLACA_URL', $placaUrl);
 }
 
-function assert_token(): void
+function assert_token(string $token, string $envName): void
 {
-    if (!defined('API_TOKEN') || trim((string) API_TOKEN) === '') {
-        throw new Exception('Configura SEEKER_TOKEN en .env.local o en las variables de entorno.');
+    if (trim($token) === '') {
+        throw new Exception('Configura ' . $envName . ' en .env.local o en las variables de entorno.');
     }
 }
 
@@ -86,12 +96,12 @@ function consultar_dni(string $dni): array
         throw new Exception('El DNI debe tener 8 digitos.');
     }
 
-    assert_token();
+    assert_token((string) API_DNI_TOKEN, 'SEEKER_TOKEN_DNI');
 
     $res = curl_json(API_DNI_URL, [
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . API_TOKEN,
+            'Authorization: Bearer ' . API_DNI_TOKEN,
             'Content-Type: application/x-www-form-urlencoded',
             'Accept: application/json',
         ],
@@ -120,9 +130,9 @@ function consultar_placa(string $placa): array
         throw new Exception('Placa invalida.');
     }
 
-    assert_token();
+    assert_token((string) API_PLACA_TOKEN, 'SEEKER_TOKEN_VEHICULO');
 
-    $url = API_PLACA_URL . '?placa=' . urlencode($placa) . '&token=' . urlencode(API_TOKEN);
+    $url = API_PLACA_URL . '?placa=' . urlencode($placa) . '&token=' . urlencode(API_PLACA_TOKEN);
     $res = curl_json($url, [
         CURLOPT_HTTPHEADER => [
             'Accept: application/json',

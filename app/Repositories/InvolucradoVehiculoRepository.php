@@ -13,14 +13,14 @@ final class InvolucradoVehiculoRepository
 
     public function accidentes(): array
     {
-        $sql = "SELECT id, CONCAT('#',id,' – ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' – ',COALESCE(lugar,'')) AS nom
+        $sql = "SELECT id, CONCAT('#',id,' Â– ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' Â– ',COALESCE(lugar,'')) AS nom
                   FROM accidentes ORDER BY id DESC";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function categorias(): array
     {
-        $sql = "SELECT id, CONCAT(codigo,' – ',descripcion) AS nombre FROM categoria_vehiculos ORDER BY codigo";
+        $sql = "SELECT id, CONCAT(codigo,' Â– ',descripcion) AS nombre FROM categoria_vehiculos ORDER BY codigo";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -31,8 +31,21 @@ final class InvolucradoVehiculoRepository
 
     public function buscarVehiculos(string $q): array
     {
-        $st = $this->pdo->prepare('SELECT id, placa, color, anio FROM vehiculos WHERE placa LIKE ? ORDER BY placa LIMIT 50');
-        $st->execute(['%' . $q . '%']);
+        $q = trim($q);
+        $normalized = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $q));
+
+        $st = $this->pdo->prepare(
+            "SELECT id, placa, color, anio
+               FROM vehiculos
+              WHERE placa LIKE :raw
+                 OR UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) LIKE :normalized
+              ORDER BY placa
+              LIMIT 50"
+        );
+        $st->execute([
+            ':raw' => '%' . $q . '%',
+            ':normalized' => '%' . $normalized . '%',
+        ]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -45,7 +58,7 @@ final class InvolucradoVehiculoRepository
 
     public function tiposPorCategoria(int $categoriaId): array
     {
-        $st = $this->pdo->prepare("SELECT id, CONCAT(codigo,' – ',nombre) AS nombre FROM tipos_vehiculo WHERE categoria_id=? ORDER BY codigo");
+        $st = $this->pdo->prepare("SELECT id, CONCAT(codigo,' Â– ',nombre) AS nombre FROM tipos_vehiculo WHERE categoria_id=? ORDER BY codigo");
         $st->execute([$categoriaId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }

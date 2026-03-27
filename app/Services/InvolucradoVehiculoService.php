@@ -20,7 +20,7 @@ final class InvolucradoVehiculoService
     {
         $rows = $this->repository->buscarVehiculos(trim($q));
         foreach ($rows as &$row) {
-            $row['texto'] = $row['placa'] . (!empty($row['color']) ? ' – ' . $row['color'] : '') . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
+            $row['texto'] = $row['placa'] . (!empty($row['color']) ? ' Â– ' . $row['color'] : '') . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
         }
         return $rows;
     }
@@ -30,10 +30,10 @@ final class InvolucradoVehiculoService
         $codigo = trim((string) ($input['codigo'] ?? ''));
         $descripcion = trim((string) ($input['descripcion'] ?? '')) ?: null;
         if ($codigo === '') {
-            throw new InvalidArgumentException('Código requerido');
+            throw new InvalidArgumentException('CÃ³digo requerido');
         }
         $id = $this->repository->createCategoria($codigo, $descripcion);
-        return ['id' => $id, 'nombre' => $codigo . ' – ' . ($descripcion ?? '')];
+        return ['id' => $id, 'nombre' => $codigo . ' Â– ' . ($descripcion ?? '')];
     }
 
     public function crearTipo(array $input): array
@@ -43,10 +43,10 @@ final class InvolucradoVehiculoService
         $nombre = trim((string) ($input['nombre'] ?? ''));
         $descripcion = trim((string) ($input['descripcion'] ?? '')) ?: null;
         if ($categoriaId <= 0 || $codigo === '' || $nombre === '') {
-            throw new InvalidArgumentException('Categoría, código y nombre son requeridos');
+            throw new InvalidArgumentException('CategorÃ­a, cÃ³digo y nombre son requeridos');
         }
         $id = $this->repository->createTipo($categoriaId, $codigo, $nombre, $descripcion);
-        return ['id' => $id, 'nombre' => $codigo . ' – ' . $nombre];
+        return ['id' => $id, 'nombre' => $codigo . ' Â– ' . $nombre];
     }
 
     public function crearCarroceria(array $input): array
@@ -115,7 +115,7 @@ final class InvolucradoVehiculoService
         }
 
         $texto = $placa
-          . ($this->nullableString($input['color'] ?? null) ? ' – ' . $this->nullableString($input['color'] ?? null) : '')
+          . ($this->nullableString($input['color'] ?? null) ? ' Â– ' . $this->nullableString($input['color'] ?? null) : '')
           . ($this->nullableInt($input['anio'] ?? null) ? ' (' . $this->nullableInt($input['anio'] ?? null) . ')' : '');
 
         return ['id' => $id, 'texto' => $texto];
@@ -150,20 +150,20 @@ final class InvolucradoVehiculoService
             throw new InvalidArgumentException('Selecciona un accidente.');
         }
         if ($vehiculoId <= 0) {
-            throw new InvalidArgumentException('Selecciona un vehículo.');
+            throw new InvalidArgumentException('Selecciona un vehÃ­culo.');
         }
         if (!in_array($tipo, self::TIPO_OPTIONS, true)) {
             throw new InvalidArgumentException('Selecciona el tipo (Unidad / Combinado vehicular 1 / Combinado vehicular 2 / Fugado).');
         }
         if (!in_array($orden, self::UT_OPTIONS, true)) {
-            throw new InvalidArgumentException('Orden de participación inválido.');
+            throw new InvalidArgumentException('Orden de participaciÃ³n invÃ¡lido.');
         }
 
         try {
             $this->repository->createInvolucradoVehiculo($accidenteId, $vehiculoId, $orden, $tipo, $observaciones);
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
-                throw new InvalidArgumentException('Ese vehículo ya está vinculado a este accidente.');
+                throw new InvalidArgumentException('Ese vehÃ­culo ya estÃ¡ vinculado a este accidente.');
             }
             throw $e;
         }
@@ -181,20 +181,20 @@ final class InvolucradoVehiculoService
         $observaciones = trim((string) ($input['observaciones'] ?? '')) ?: null;
 
         if ($vehiculoId <= 0) {
-            throw new InvalidArgumentException('Selecciona un vehículo.');
+            throw new InvalidArgumentException('Selecciona un vehÃ­culo.');
         }
         if ($tipo === '') {
             throw new InvalidArgumentException('Selecciona el tipo.');
         }
         if (!in_array($tipo, self::TIPO_OPTIONS, true)) {
-            throw new InvalidArgumentException('Tipo inválido.');
+            throw new InvalidArgumentException('Tipo invÃ¡lido.');
         }
 
         try {
             $this->repository->updateInvolucradoVehiculo($id, $vehiculoId, $tipo, $observaciones);
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
-                throw new InvalidArgumentException('Ese vehículo ya está vinculado a este accidente.');
+                throw new InvalidArgumentException('Ese vehÃ­culo ya estÃ¡ vinculado a este accidente.');
             }
             throw $e;
         }

@@ -9,9 +9,25 @@ use App\Services\VehiculoService;
 header('Content-Type: text/html; charset=utf-8');
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
+function vehiculo_resumen(array $vehiculo): string {
+    $texto = trim((string) ($vehiculo['placa'] ?? ''));
+    $color = trim((string) ($vehiculo['color'] ?? ''));
+    $anio = trim((string) ($vehiculo['anio'] ?? ''));
+
+    if ($color !== '') {
+        $texto .= ' - ' . $color;
+    }
+    if ($anio !== '') {
+        $texto .= ' (' . $anio . ')';
+    }
+
+    return $texto;
+}
 
 $vehiculoRepo = new VehiculoRepository($pdo);
 $vehiculoService = new VehiculoService($vehiculoRepo);
+$isEmbed = isset($_GET['embed']) && $_GET['embed'] !== '0';
+$prefillPlaca = trim((string) ($_GET['placa'] ?? ''));
 
 $catalogos = $vehiculoService->catalogos();
 $categorias = $catalogos['categorias'];
@@ -28,11 +44,52 @@ foreach ($categorias as $categoria) {
 $err = '';
 $old = $vehiculoService->oldInput();
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $prefillPlaca !== '' && $old['placa'] === '') {
+    $old['placa'] = mb_strtoupper($prefillPlaca, 'UTF-8');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old = $vehiculoService->oldInput($_POST);
 
     try {
-        $vehiculoService->crear($_POST);
+        $vehiculoId = $vehiculoService->crear($_POST);
+        if ($isEmbed) {
+            $vehiculo = $vehiculoRepo->find($vehiculoId) ?? ['id' => $vehiculoId, 'placa' => $old['placa'], 'color' => $old['color'], 'anio' => $old['anio']];
+            $payload = [
+                'type' => 'vehiculo_creado',
+                'vehiculo' => [
+                    'id' => $vehiculoId,
+                    'texto' => vehiculo_resumen($vehiculo),
+                ],
+            ];
+            ?><!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehiculo creado</title>
+<link rel="stylesheet" href="style_gian.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="body">
+      <div class="msg ok">Vehiculo creado correctamente.</div>
+      <p>Se esta actualizando el formulario anterior.</p>
+    </div>
+  </div>
+</div>
+<script>
+const payload = <?= json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+if (window.parent && window.parent !== window) {
+  window.parent.postMessage(payload, window.location.origin);
+}
+</script>
+</body>
+</html>
+<?php
+            exit;
+        }
         header('Location: vehiculo_listar.php?msg=creado');
         exit;
     } catch (InvalidArgumentException $e) {
@@ -99,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="card">
     <div class="hdr">
       <div class="ttl">🚗 Nuevo Vehículo — UIAT Norte</div>
-      <span class="pill">Estilo GIAN</span>
+      <span class="pill"><?= $isEmbed ? 'Modo modal' : 'Estilo GIAN' ?></span>
     </div>
 
     <div class="body">
@@ -114,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="button" class="btn small" id="btnCheckPlaca">Verificar</button>
             <button type="button" class="btn small" id="btnAbrirSeeker">Abrir Seeker</button>
             <button type="button" class="btn small" id="btnPegarJson">Pegar JSON</button>
+            <button type="button" class="btn small" id="btnSubirImagen">Subir/Pegar Imagen</button>
           </div>
           <div id="placaStatus" style="margin-top:6px; font-size:12px; opacity:.9;"></div>
         </div>
@@ -212,7 +270,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="col-12 row" style="justify-content:flex-end;">
-          <a class="btn sec" href="vehiculo_listar.php">Volver</a>
+          <?php if($isEmbed): ?>
+            <button class="btn sec" type="button" id="btnCerrarEmbed">Cancelar</button>
+          <?php else: ?>
+            <a class="btn sec" href="vehiculo_listar.php">Volver</a>
+          <?php endif; ?>
           <button class="btn" type="submit">Guardar</button>
         </div>
       </form>
@@ -359,6 +421,28 @@ document.getElementById('placa').addEventListener('input', e => e.target.value =
   </div>
 </div>
 
+<!-- ========= MODAL: OCR desde imagen ========= -->
+<div class="modal-mask" id="ocrModalMask" aria-hidden="true" style="z-index:1250;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ocrModalTitle" style="max-width:760px;">
+    <h3 id="ocrModalTitle">Extraer datos desde imagen</h3>
+    <div class="help">Sube una captura o foto del documento del vehículo, o pega una imagen con Ctrl+V. Se intentará leer placa, serie, motor, año, color, categoría y medidas.</div>
+    <input type="file" id="ocrImageInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-top:12px;">
+    <div id="ocrPasteZone" tabindex="0" style="margin-top:12px;padding:12px;border-radius:12px;border:1px dashed rgba(0,0,0,.18); background:rgba(148,163,184,.08);">
+      Pega aquí una imagen con <strong>Ctrl+V</strong> o <strong>Cmd+V</strong>
+    </div>
+    <div id="ocrPreviewWrap" style="display:none; margin-top:12px;">
+      <img id="ocrPreview" alt="Vista previa OCR" style="max-width:100%; max-height:320px; border-radius:12px; border:1px solid rgba(0,0,0,.12); object-fit:contain;">
+    </div>
+    <div id="ocrStatus" class="help" style="margin-top:10px;"></div>
+    <textarea id="ocrTextBox" rows="8" style="width:100%;margin-top:10px;padding:10px;border-radius:12px;" placeholder="Aquí aparecerá el texto detectado para revisión."></textarea>
+    <div class="actions">
+      <button type="button" class="btn sec" id="btnOcrCancel">Cancelar</button>
+      <button type="button" class="btn sec" id="btnOcrProcesar">Procesar imagen</button>
+      <button type="button" class="btn" id="btnOcrAplicar" disabled>Aplicar al formulario</button>
+    </div>
+  </div>
+</div>
+
 <script>
 async function postForm(url, dataObj){
   const body = new URLSearchParams(dataObj);
@@ -482,6 +566,18 @@ const jsonMask   = document.getElementById('jsonModalMask');
 const jsonBox    = document.getElementById('jsonSeekerBox');
 const btnJsonCancel = document.getElementById('btnJsonCancel');
 const btnJsonAplicar = document.getElementById('btnJsonAplicar');
+const btnSubirImagen = document.getElementById('btnSubirImagen');
+const ocrMask = document.getElementById('ocrModalMask');
+const ocrImageInput = document.getElementById('ocrImageInput');
+const ocrPasteZone = document.getElementById('ocrPasteZone');
+const ocrPreviewWrap = document.getElementById('ocrPreviewWrap');
+const ocrPreview = document.getElementById('ocrPreview');
+const ocrStatus = document.getElementById('ocrStatus');
+const ocrTextBox = document.getElementById('ocrTextBox');
+const btnOcrCancel = document.getElementById('btnOcrCancel');
+const btnOcrProcesar = document.getElementById('btnOcrProcesar');
+const btnOcrAplicar = document.getElementById('btnOcrAplicar');
+let ocrClipboardFile = null;
 
 function setStatus(msg, ok=null){
   placaStatus.textContent = msg || '';
@@ -517,6 +613,100 @@ function closeJsonModal(){
 btnJsonCancel.addEventListener('click', closeJsonModal);
 jsonMask.addEventListener('click', (e)=>{ if(e.target===jsonMask) closeJsonModal(); });
 
+function openOcrModal(){
+  ocrClipboardFile = null;
+  ocrImageInput.value = '';
+  ocrTextBox.value = '';
+  ocrPreviewWrap.style.display = 'none';
+  ocrPreview.removeAttribute('src');
+  btnOcrAplicar.disabled = true;
+  setOcrStatus('Sube una imagen del documento y luego procesa el OCR.', null);
+  ocrMask.style.display = 'flex';
+  ocrMask.setAttribute('aria-hidden','false');
+  setTimeout(()=>ocrPasteZone.focus(), 0);
+}
+
+function closeOcrModal(){
+  ocrMask.style.display = 'none';
+  ocrMask.setAttribute('aria-hidden','true');
+}
+
+function setOcrStatus(msg, ok=null){
+  ocrStatus.textContent = msg || '';
+  ocrStatus.style.color = ok===true ? '#19a974' : ok===false ? '#ff4d4d' : '';
+}
+
+function loadOcrPreviewFromFile(file){
+  if(!file){
+    ocrPreviewWrap.style.display = 'none';
+    ocrPreview.removeAttribute('src');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    ocrPreview.src = String(reader.result || '');
+    ocrPreviewWrap.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function setOcrImageFile(file, sourceLabel){
+  ocrClipboardFile = file || null;
+  loadOcrPreviewFromFile(file || null);
+  if(file){
+    setOcrStatus(`${sourceLabel} lista. Presiona "Procesar imagen".`, null);
+  }
+}
+
+function getOcrSelectedFile(){
+  return (ocrImageInput.files && ocrImageInput.files[0]) || ocrClipboardFile;
+}
+
+function extractImageFromClipboardEvent(event){
+  const items = event.clipboardData?.items || [];
+  for(const item of items){
+    if(item.kind === 'file' && item.type.startsWith('image/')){
+      const file = item.getAsFile();
+      if(file) return file;
+    }
+  }
+  return null;
+}
+
+btnOcrCancel.addEventListener('click', closeOcrModal);
+ocrMask.addEventListener('click', (e)=>{ if(e.target===ocrMask) closeOcrModal(); });
+btnSubirImagen.addEventListener('click', openOcrModal);
+
+ocrImageInput.addEventListener('change', ()=>{
+  const file = ocrImageInput.files && ocrImageInput.files[0];
+  if(!file){
+    ocrClipboardFile = null;
+    loadOcrPreviewFromFile(null);
+    return;
+  }
+  setOcrImageFile(file, 'Imagen subida');
+});
+
+ocrPasteZone.addEventListener('paste', (event)=>{
+  const file = extractImageFromClipboardEvent(event);
+  if(!file) return;
+  event.preventDefault();
+  ocrImageInput.value = '';
+  setOcrImageFile(file, 'Imagen pegada');
+});
+
+document.addEventListener('paste', (event)=>{
+  if(ocrMask.getAttribute('aria-hidden') !== 'false') return;
+  const tag = document.activeElement?.tagName || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const file = extractImageFromClipboardEvent(event);
+  if(!file) return;
+  event.preventDefault();
+  ocrImageInput.value = '';
+  setOcrImageFile(file, 'Imagen pegada');
+});
+
 async function checkPlacaExists(placa){
   const r = await fetch(`vehiculo_check.php?placa=${encodeURIComponent(placa)}`, {credentials:'same-origin'});
   return await readJsonSafe(r);
@@ -547,32 +737,326 @@ function toNum(s){
   return m ? m[0] : '';
 }
 
-function applySeekerToForm(data){
-  // placa (si existe en json)
+function normalizeTextValue(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function extractLineValue(lines, labels){
+  const normalizedLabels = labels.map(normalizeTextValue);
+  for(const line of lines){
+    const raw = String(line || '').trim();
+    if(!raw) continue;
+
+    const normalized = normalizeTextValue(raw);
+    for(const label of normalizedLabels){
+      if(!normalized.startsWith(label)) continue;
+
+      const tokens = normalized.split(' ');
+      const labelTokens = label.split(' ');
+      const remainderTokens = tokens.slice(labelTokens.length);
+      let value = remainderTokens.join(' ').replace(/^[:;\-.\s]+/, '').trim();
+
+      if(value === ''){
+        const match = raw.match(/^[^:]+[:;]\s*(.+)$/);
+        value = match ? String(match[1] || '').trim() : '';
+      }
+
+      if(value !== '') return value;
+    }
+  }
+  return '';
+}
+
+function extractRegexValue(rawText, patterns){
+  const text = String(rawText || '').replace(/\r/g, ' ');
+  for(const pattern of patterns){
+    const match = text.match(pattern);
+    if(match && match[1]){
+      return String(match[1]).trim();
+    }
+  }
+  return '';
+}
+
+function normalizePlateCandidate(value){
+  const compact = normalizeTextValue(value).replace(/[^A-Z0-9]/g, '');
+  if(/^[A-Z0-9]{6}$/.test(compact)){
+    return `${compact.slice(0,3)}-${compact.slice(3)}`;
+  }
+  if(/^[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(String(value || '').toUpperCase().trim())){
+    return String(value || '').toUpperCase().trim();
+  }
+  return compact;
+}
+
+function extractPlateCandidate(rawText){
+  const text = String(rawText || '').replace(/\r/g, ' ');
+  const labeled = extractRegexValue(text, [
+    /PLACA\s*[:;]?\s*([A-Z0-9-]{6,8})/i,
+  ]);
+  const candidate = labeled || extractRegexValue(text, [
+    /\b([A-Z]{3}-?[0-9]{3})\b/i,
+    /\b([A-Z0-9]{3}-?[A-Z0-9]{3})\b/i,
+  ]);
+  return normalizePlateCandidate(candidate);
+}
+
+function extractVinCandidate(rawText){
+  const text = String(rawText || '').replace(/\r/g, ' ');
+  const labeled = extractRegexValue(text, [
+    /(?:N\s*DE\s*VIN|N\s*VIN|NO\s*VIN|NUM\s*VIN|VIN)\s*[:;]?\s*([A-HJ-NPR-Z0-9]{17})/i,
+    /(?:N\s*SERIE|NRO\s*SERIE|NO\s*SERIE|NUM\s*SERIE)\s*[:;]?\s*([A-HJ-NPR-Z0-9]{17})/i,
+  ]);
+  if(labeled) return labeled.toUpperCase();
+
+  const global = extractRegexValue(text, [
+    /\b([A-HJ-NPR-Z0-9]{17})\b/i,
+  ]);
+  return global ? global.toUpperCase() : '';
+}
+
+function extractMotorCandidate(rawText){
+  const text = String(rawText || '').replace(/\r/g, ' ');
+  const labeled = extractRegexValue(text, [
+    /(?:N\s*MOTOR|NRO\s*MOTOR|NO\s*MOTOR|NUM\s*MOTOR|MOTOR)\s*[:;]?\s*([A-Z0-9-]{5,})/i,
+  ]);
+  return labeled ? labeled.toUpperCase() : '';
+}
+
+function extractCleanLabelValue(rawText, patterns){
+  const text = String(rawText || '').replace(/\r/g, ' ');
+  for(const pattern of patterns){
+    const match = text.match(pattern);
+    if(match && match[1]){
+      return cleanSimpleField(match[1]);
+    }
+  }
+  return '';
+}
+
+function cleanSimpleField(value){
+  return String(value || '')
+    .replace(/\bOFICINA\b.*$/i, '')
+    .replace(/\bLIMA\b.*$/i, '')
+    .replace(/^[:;\-.\s]+/, '')
+    .trim();
+}
+
+function findSelectOptionValue(selectId, expectedText){
+  const select = document.getElementById(selectId);
+  if(!select || !expectedText) return '';
+  const wanted = normalizeTextValue(expectedText);
+  const option = Array.from(select.options).find(opt => normalizeTextValue(opt.textContent) === wanted)
+    || Array.from(select.options).find(opt => normalizeTextValue(opt.textContent).includes(wanted) || wanted.includes(normalizeTextValue(opt.textContent)));
+  return option ? String(option.value) : '';
+}
+
+function findCarroceriaMatch(nombre){
+  const wanted = normalizeTextValue(nombre);
+  return CARROCERIAS.find(item => normalizeTextValue(item.nombre) === wanted)
+      || CARROCERIAS.find(item => normalizeTextValue(item.nombre).includes(wanted) || wanted.includes(normalizeTextValue(item.nombre)))
+      || null;
+}
+
+function findTipoById(tipoId){
+  return TIPOS.find(item => String(item.id) === String(tipoId)) || null;
+}
+
+async function ensureMarcaModeloSelections(marcaNombre, modeloNombre){
+  const marca = cleanSimpleField(marcaNombre);
+  const modelo = cleanSimpleField(modeloNombre);
+  const marcaSelect = document.getElementById('marca_id');
+
+  let marcaValue = marca ? findSelectOptionValue('marca_id', marca) : '';
+  if(!marcaValue && marca){
+    try{
+      const js = await postForm('add_catalogo.php', { kind:'marca', nombre: marca });
+      marcaSelect.add(new Option(js.label, js.id, true, true));
+      marcaValue = String(js.id);
+    }catch(e){
+      marcaValue = findSelectOptionValue('marca_id', marca);
+    }
+  }
+
+  if(marcaValue){
+    setSelectValue('marca_id', marcaValue);
+  }
+
+  if(!modelo || !marcaValue) return;
+
+  refreshModelos();
+  let modeloValue = findSelectOptionValue('modelo_id', modelo);
+  if(!modeloValue){
+    try{
+      const js = await postForm('add_catalogo.php', { kind:'modelo', nombre: modelo, padre_id: marcaValue });
+      MODELOS.push({ id: js.id, marca_id: marcaValue, nombre: js.label });
+      refreshModelos();
+      modeloValue = String(js.id);
+    }catch(e){
+      refreshModelos();
+      modeloValue = findSelectOptionValue('modelo_id', modelo);
+    }
+  }
+
+  if(modeloValue){
+    setSelectValue('modelo_id', modeloValue);
+  }
+}
+
+function parseVehiculoImageText(rawText){
+  const text = String(rawText || '').replace(/\r/g, '');
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+
+  const parsed = {
+    placa: extractPlateCandidate(text),
+    tipoUso: cleanSimpleField(extractLineValue(lines, ['TIPO USO', 'TIPOUSO'])),
+    categoria: extractLineValue(lines, ['CATEGORIA', 'CATEGORÍA']),
+    carroceria: extractCleanLabelValue(text, [
+      /CARROCER[ÍI]A\s*[:;]?\s*([A-ZÁÉÍÓÚÑ0-9 ]{3,30}?)(?=\s+(?:MARCA|MODELO|A[ÑN]O|N\s+MOTOR|TIPO|LONGITUD|ANCHO|ALTURA|PESO|OFICINA)\b|$)/i,
+    ]) || cleanSimpleField(extractLineValue(lines, ['CARROCERIA', 'CARROCERÍA'])),
+    marca: extractCleanLabelValue(text, [
+      /MARCA\s*[:;]?\s*([A-ZÁÉÍÓÚÑ0-9 ]{2,30}?)(?=\s+(?:MODELO|A[ÑN]O|N\s+MOTOR|TIPO|LONGITUD|ANCHO|ALTURA|PESO|OFICINA)\b|$)/i,
+    ]) || cleanSimpleField(extractLineValue(lines, ['MARCA'])),
+    modelo: extractCleanLabelValue(text, [
+      /MODELO\s*[:;]?\s*([A-ZÁÉÍÓÚÑ0-9 ]{2,30}?)(?=\s+(?:A[ÑN]O|N\s+MOTOR|TIPO|LONGITUD|ANCHO|ALTURA|PESO|OFICINA)\b|$)/i,
+    ]) || cleanSimpleField(extractLineValue(lines, ['MODELO'])),
+    anioMod: extractLineValue(lines, ['ANO MOD', 'AÑO MOD']),
+    anioFab: extractLineValue(lines, ['ANO FAB', 'AÑO FAB']),
+    serie: extractVinCandidate(text),
+    vin: extractVinCandidate(text),
+    color: extractCleanLabelValue(text, [
+      /COLOR\s*1?\s*[:;]?\s*([A-ZÁÉÍÓÚÑ ]{3,20}?)(?=\s+(?:COLOR|N\s+MOTOR|TIPO|LONGITUD|ANCHO|ALTURA|PESO|OFICINA|CARROCER|MARCA|MODELO)\b|$)/i,
+    ]) || cleanSimpleField(extractLineValue(lines, ['COLOR 1', 'COLOR'])),
+    motor: extractMotorCandidate(text),
+    combustible: cleanSimpleField(extractLineValue(lines, ['TIPO COMBUS', 'TIPO COMBUST', 'TIPO COMB'])),
+    longitud: extractRegexValue(text, [
+      /LONGITUD\s*[:;]?\s*([0-9]+(?:[.,][0-9]+)?)/i,
+      /LONGITUD\s+([0-9]+(?:[.,][0-9]+)?)/i,
+    ]) || extractLineValue(lines, ['LONGITUD']),
+    ancho: extractRegexValue(text, [
+      /ANCHO\s*[:;]?\s*([0-9]+(?:[.,][0-9]+)?)/i,
+      /ANCHO\s+([0-9]+(?:[.,][0-9]+)?)/i,
+    ]) || extractLineValue(lines, ['ANCHO']),
+    altura: extractRegexValue(text, [
+      /ALTURA\s*[:;]?\s*([0-9]+(?:[.,][0-9]+)?)/i,
+      /ALTURA\s+([0-9]+(?:[.,][0-9]+)?)/i,
+    ]) || extractLineValue(lines, ['ALTURA']),
+    asientos: extractLineValue(lines, ['N ASIENTOS', 'NUM ASIENTOS']),
+    partida: extractLineValue(lines, ['N PARTIDA', 'NO PARTIDA', 'NUM PARTIDA']),
+  };
+
+  return parsed;
+}
+
+async function applyImageParsedData(parsed, rawText){
+  if(parsed.placa){
+    placaInput.value = normalizePlateCandidate(parsed.placa);
+  }
+  if(parsed.motor){
+    document.getElementById('nro_motor').value = parsed.motor.replace(/\s+/g, '');
+  }
+  const serie = parsed.serie || parsed.vin;
+  if(serie){
+    document.getElementById('serie_vin').value = serie.replace(/\s+/g, '');
+  }
+
+  const year = (parsed.anioMod || parsed.anioFab || '').match(/\b(19|20)\d{2}\b/);
+  if(year){
+    document.getElementById('anio').value = year[0];
+  }
+
+  if(parsed.color){
+    document.getElementById('color').value = parsed.color;
+  }
+
+  document.getElementById('largo_mm').value = toNum(parsed.longitud);
+  document.getElementById('ancho_mm').value = toNum(parsed.ancho);
+  document.getElementById('alto_mm').value = toNum(parsed.altura);
+
+  const categoria = normalizeTextValue(parsed.categoria).match(/\b(M|N|O|L)\d\b/);
+  if(categoria && catCodeToId[categoria[0]]){
+    setSelectValue('categoria_id', String(catCodeToId[categoria[0]]));
+  }
+
+  await ensureMarcaModeloSelections(parsed.marca, parsed.modelo);
+
+  if(parsed.carroceria){
+    const carroceriaMatch = findCarroceriaMatch(parsed.carroceria);
+    if(carroceriaMatch){
+      const tipoInfo = findTipoById(carroceriaMatch.tipo_id);
+      if(tipoInfo && tipoInfo.categoria_id){
+        setSelectValue('categoria_id', String(tipoInfo.categoria_id));
+      }
+      refreshTipos();
+      const tipoValue = String(carroceriaMatch.tipo_id || '');
+      if(tipoValue){
+        setSelectValue('tipo_id', tipoValue);
+      }
+      refreshCarrocerias();
+      setSelectValue('carroceria_id', String(carroceriaMatch.id));
+    }
+  }
+
+  const notasEl = document.getElementById('notas');
+  const noteParts = [];
+  if(parsed.tipoUso) noteParts.push(`Tipo Uso OCR: ${parsed.tipoUso}`);
+  if(parsed.marca) noteParts.push(`Marca OCR: ${parsed.marca}`);
+  if(parsed.modelo) noteParts.push(`Modelo OCR: ${parsed.modelo}`);
+  if(parsed.carroceria) noteParts.push(`Carrocería OCR: ${parsed.carroceria}`);
+  if(parsed.combustible) noteParts.push(`Combustible OCR: ${parsed.combustible}`);
+  if(parsed.partida) noteParts.push(`Partida OCR: ${parsed.partida}`);
+  if(parsed.asientos) noteParts.push(`Asientos OCR: ${parsed.asientos}`);
+  if(rawText){
+    noteParts.push(`OCR TEXTO: ${rawText.replace(/\s+/g, ' ').trim()}`);
+  }
+
+  if(noteParts.length){
+    const extra = noteParts.join(' | ');
+    notasEl.value = notasEl.value ? `${notasEl.value}\n${extra}` : extra;
+  }
+}
+
+async function ensureTesseractLoaded(){
+  if(window.Tesseract) return window.Tesseract;
+
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('No se pudo cargar el motor OCR.'));
+    document.head.appendChild(script);
+  });
+
+  if(!window.Tesseract){
+    throw new Error('El motor OCR no quedó disponible.');
+  }
+
+  return window.Tesseract;
+}
+
+async function applySeekerToForm(data){
   if(data.numPlaca) placaInput.value = String(data.numPlaca).toUpperCase();
-
-  // motor
   document.getElementById('nro_motor').value = data.numMotor || '';
-
-  // vin/serie
   document.getElementById('serie_vin').value = data.noVin || data.numSerie || '';
-
-  // año
   document.getElementById('anio').value = (data.anoFab || '').toString().trim();
-
-  // color
   document.getElementById('color').value = data.color || '';
-
-  // dimensiones
   document.getElementById('largo_mm').value = toNum(data.longitud);
   document.getElementById('ancho_mm').value = toNum(data.ancho);
   document.getElementById('alto_mm').value  = toNum(data.altura);
 
-  // categoría (aprox)
   const catId = mapCategoriaId(data.coCateg);
   if(catId) setSelectValue('categoria_id', catId);
 
-  // notas: guarda referencia de marca/modelo/carrocería que vienen en texto
+  await ensureMarcaModeloSelections(data.marca || '', data.modelo || '');
+
   const notaParts = [];
   if(data.marca) notaParts.push(`Marca API: ${data.marca}`);
   if(data.modelo) notaParts.push(`Modelo API: ${data.modelo}`);
@@ -608,50 +1092,16 @@ btnCheckPlaca.addEventListener('click', async ()=>{
   }
 });
 
-async function consultarPlacaSeeker(placa){
-  const r = await fetch(`buscar_placa.php?placa=${encodeURIComponent(placa)}`, {
-    headers: { 'Accept': 'application/json' },
-    credentials: 'same-origin'
-  });
-
-  const j = await readJsonSafe(r);
-
-  if(!j.ok){
-    throw new Error(j.error || 'No se pudo consultar la placa.');
-  }
-
-  return extractSeekerPayload(j.respuesta || j);
-}
-
-btnAbrirSeeker.addEventListener('click', async ()=>{
+btnAbrirSeeker.addEventListener('click', ()=>{
   const placa = placaInput.value.trim().toUpperCase();
-  if(!placa) return setStatus('Ingresa placa.', false);
-
-  setStatus('Consultando datos de la placa...', null);
-  btnAbrirSeeker.disabled = true;
-
-  try{
-    const data = await consultarPlacaSeeker(placa);
-
-    if(!data || (data.status||'') !== 'success'){
-      jsonBox.value = JSON.stringify(data, null, 2);
-      openJsonModal();
-      setStatus('La consulta no devolvio un resultado valido. Revisa el JSON.', false);
-      return;
-    }
-
-     applySeekerToForm(data);
-     setStatus('Datos de la placa cargados. Revisa Marca/Modelo y guarda.', true);
-  }catch(e){
-    setStatus(e.message || 'No se pudo consultar la placa.', false);
-  }finally{
-    btnAbrirSeeker.disabled = false;
-  }
+  const url = placa ? `https://seeker.red/?placa=${encodeURIComponent(placa)}` : 'https://seeker.red/';
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setStatus('Se abrió Seeker en otra pestaña. Consulta la placa, copia el JSON y luego usa "Pegar JSON".', true);
 });
 
 btnPegarJson.addEventListener('click', openJsonModal);
 
-btnJsonAplicar.addEventListener('click', ()=>{
+btnJsonAplicar.addEventListener('click', async ()=>{
   const raw = jsonBox.value.trim();
   if(!raw){ alert('Pega el JSON primero.'); return; }
 
@@ -664,9 +1114,59 @@ btnJsonAplicar.addEventListener('click', ()=>{
     return;
   }
 
-  applySeekerToForm(data);
+  await applySeekerToForm(data);
   closeJsonModal();
   setStatus('Datos aplicados. Completa Marca/Modelo y guarda.', true);
+});
+
+btnOcrProcesar.addEventListener('click', async ()=>{
+  const file = getOcrSelectedFile();
+  if(!file){
+    setOcrStatus('Selecciona o pega una imagen primero.', false);
+    return;
+  }
+
+  btnOcrProcesar.disabled = true;
+  btnOcrAplicar.disabled = true;
+  ocrTextBox.value = '';
+
+  try{
+    const Tesseract = await ensureTesseractLoaded();
+    const result = await Tesseract.recognize(file, 'spa', {
+      logger: (message) => {
+        if(message.status){
+          const progress = typeof message.progress === 'number' ? ` ${Math.round(message.progress * 100)}%` : '';
+          setOcrStatus(`${message.status}${progress}`, null);
+        }
+      }
+    });
+
+    const text = String(result?.data?.text || '').trim();
+    if(!text){
+      throw new Error('No se pudo extraer texto de la imagen.');
+    }
+
+    ocrTextBox.value = text;
+    setOcrStatus('Texto extraído. Revisa y presiona "Aplicar al formulario".', true);
+    btnOcrAplicar.disabled = false;
+  }catch(e){
+    setOcrStatus(e.message || 'No se pudo procesar la imagen.', false);
+  }finally{
+    btnOcrProcesar.disabled = false;
+  }
+});
+
+btnOcrAplicar.addEventListener('click', async ()=>{
+  const text = ocrTextBox.value.trim();
+  if(!text){
+    setOcrStatus('No hay texto extraído para aplicar.', false);
+    return;
+  }
+
+  const parsed = parseVehiculoImageText(text);
+  await applyImageParsedData(parsed, text);
+  closeOcrModal();
+  setStatus('Datos de la imagen aplicados. Revisa Marca/Modelo y guarda.', true);
 });
 
 // aviso rápido al salir de placa
@@ -684,11 +1184,16 @@ placaInput.addEventListener('blur', async ()=>{
     // silencioso
   }
 });
+
+const btnCerrarEmbed = document.getElementById('btnCerrarEmbed');
+if (btnCerrarEmbed) {
+  btnCerrarEmbed.addEventListener('click', ()=>{
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type:'vehiculo_modal_cerrar' }, window.location.origin);
+    }
+  });
+}
 </script>
 
 </body>
 </html>
-
-
-
-

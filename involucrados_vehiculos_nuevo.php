@@ -152,6 +152,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
 
   .inline{ display:flex; gap:8px; align-items:center; }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px; }
+  .modal-frame-box{ width:min(100%, 1240px) !important; padding:0 !important; overflow:hidden !important; }
+  .modal-frame-head{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:12px 14px; border-bottom:1px solid rgba(0,0,0,.08);
+  }
+  .modal-frame-head h3{ margin:0; }
+  .modal-frame-body{ height:min(88vh, 860px); background:rgba(255,255,255,.75); }
+  .modal-frame-body iframe{ width:100%; height:100%; border:0; background:transparent; }
+  @media (prefers-color-scheme: dark){
+    .modal-frame-head{ border-bottom:1px solid rgba(255,255,255,.12); }
+    .modal-frame-body{ background:rgba(15,23,42,.45); }
+  }
 
   .btn{
     appearance:none; border:none; outline:none; text-decoration:none; cursor:pointer;
@@ -482,7 +494,7 @@ body.modal-open{ overflow: hidden !important; }
         <div class="inline">
           <input type="text" id="qplaca" placeholder="Ej. ABC123">
           <button class="btn mini" type="button" id="btnBuscarPlaca">Buscar</button>
-          <button class="btn mini" type="button" id="btnNuevoVehiculo" data-open="mdVehiculo">＋ Nuevo vehículo</button>
+          <button class="btn mini" type="button" id="btnNuevoVehiculo">＋ Nuevo vehículo</button>
         </div>
       </div>
     </div>
@@ -535,78 +547,14 @@ body.modal-open{ overflow: hidden !important; }
 
   <!-- =================== MODAL NUEVO VEHÍCULO =================== -->
   <div class="modal" id="mdVehiculo">
-    <div class="box">
-      <h3 style="margin:0 0 8px 0">Registrar nuevo vehículo</h3>
-
-      <div class="grid-4">
-        <div><label>Placa *</label><input type="text" id="nv_placa" placeholder="ABC123"></div>
-        <div><label>Año</label><input type="number" id="nv_anio" min="1900" max="2100"></div>
-        <div><label>Color</label><input type="text" id="nv_color"></div>
-        <div></div>
+    <div class="box modal-frame-box">
+      <div class="modal-frame-head">
+        <h3>Registrar nuevo vehículo</h3>
+        <button class="btn" type="button" data-close="mdVehiculo">Cerrar</button>
       </div>
-
-      <div class="grid-4">
-        <div>
-          <label>Categoría</label>
-          <div class="inline">
-            <select id="nv_categoria_id">
-              <option value="">—</option>
-              <?php foreach($categorias as $c): ?><option value="<?=$c['id']?>"><?=h($c['nombre'])?></option><?php endforeach; ?>
-            </select>
-            <button class="btn mini" type="button" data-open="mdCategoria">＋</button>
-          </div>
-        </div>
-        <div>
-          <label>Tipo</label>
-          <div class="inline">
-            <select id="nv_tipo_id"><option value="">—</option></select>
-            <button class="btn mini" type="button" data-open="mdTipo">＋</button>
-          </div>
-        </div>
-        <div>
-          <label>Carrocería</label>
-          <div class="inline">
-            <select id="nv_carroceria_id"><option value="">—</option></select>
-            <button class="btn mini" type="button" data-open="mdCarroceria">＋</button>
-          </div>
-        </div>
-        <div></div>
+      <div class="modal-frame-body">
+        <iframe id="vehiculoNuevoFrame" src="about:blank" loading="lazy"></iframe>
       </div>
-
-      <div class="grid-4">
-        <div>
-          <label>Marca</label>
-          <div class="inline">
-            <select id="nv_marca_id">
-              <option value="">—</option>
-              <?php foreach($marcas as $m): ?><option value="<?=$m['id']?>"><?=h($m['nombre'])?></option><?php endforeach; ?>
-            </select>
-            <button class="btn mini" type="button" data-open="mdMarca">＋</button>
-          </div>
-        </div>
-        <div>
-          <label>Modelo</label>
-          <div class="inline">
-            <select id="nv_modelo_id"><option value="">—</option></select>
-            <button class="btn mini" type="button" data-open="mdModelo">＋</button>
-          </div>
-        </div>
-        <div><label>Largo (m)</label><input type="number" step="0.01" id="nv_largo_mm"></div>
-        <div><label>Ancho (m)</label><input type="number" step="0.01" id="nv_ancho_mm"></div>
-      </div>
-
-      <div class="grid-4">
-        <div><label>Alto (m)</label><input type="number" step="0.01" id="nv_alto_mm"></div>
-        <div style="grid-column: 1 / -1;">
-          <label>Notas</label><textarea id="nv_notas" rows="3"></textarea>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn" type="button" data-close="mdVehiculo">Cancelar</button>
-        <button class="btn primary" type="button" id="btnGuardarNV">Guardar vehículo</button>
-      </div>
-      <div id="nv_msg" class="muted"></div>
     </div>
   </div>
 
@@ -676,65 +624,94 @@ body.modal-open{ overflow: hidden !important; }
 const $$ = (s,ctx=document)=>ctx.querySelector(s);
 const $$$ = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
 
-function openModal(id){ $$('#'+id)?.classList.add('show'); }
-function closeModal(id){ $$('#'+id)?.classList.remove('show'); }
+function syncModalScrollLock(){
+  document.body.classList.toggle('modal-open', $$$('.modal.show').length > 0);
+}
+function openModal(id){
+  $$('#'+id)?.classList.add('show');
+  syncModalScrollLock();
+}
+function closeModal(id){
+  const modal = $$('#'+id);
+  modal?.classList.remove('show');
+  if(id === 'mdVehiculo'){
+    const frame = $('#vehiculoNuevoFrame');
+    if(frame) frame.src = 'about:blank';
+  }
+  syncModalScrollLock();
+}
 $$$('[data-open]').forEach(b=>b.addEventListener('click',e=>openModal(e.currentTarget.dataset.open)));
 $$$('[data-close]').forEach(b=>b.addEventListener('click',e=>closeModal(e.currentTarget.dataset.close)));
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     $$$('.modal.show').forEach(m => m.classList.remove('show'));
+    syncModalScrollLock();
+  }
+});
+
+function abrirModalNuevoVehiculo(placa = ''){
+  const frame = $('#vehiculoNuevoFrame');
+  if (!frame) return;
+  const url = new URL('vehiculo_nuevo.php', window.location.href);
+  url.searchParams.set('embed', '1');
+  if (placa) {
+    url.searchParams.set('placa', placa);
+  }
+  frame.src = url.toString();
+  openModal('mdVehiculo');
+}
+
+function normalizePlateText(value){
+  const compact = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (compact.length === 6) {
+    return `${compact.slice(0, 3)}-${compact.slice(3)}`;
+  }
+  return compact;
+}
+
+$('#btnNuevoVehiculo')?.addEventListener('click', ()=>{
+  const placa = normalizePlateText(($('#qplaca').value || '').trim());
+  $('#qplaca').value = placa;
+  abrirModalNuevoVehiculo(placa);
+});
+
+$('#qplaca')?.addEventListener('input', (e)=>{
+  const cursorAtEnd = e.target.selectionStart === e.target.value.length;
+  const normalized = normalizePlateText(e.target.value);
+  e.target.value = normalized;
+  if (cursorAtEnd) {
+    e.target.setSelectionRange(normalized.length, normalized.length);
   }
 });
 
 /* ==== Buscar por placa ==== */
 $('#btnBuscarPlaca')?.addEventListener('click', async ()=>{
-  const q = $('#qplaca').value.trim();
+  const q = normalizePlateText($('#qplaca').value.trim());
+  $('#qplaca').value = q;
   const sel = $('#vehiculo_id');
   sel.innerHTML = '<option value="">Buscando…</option>';
   const r = await fetch(`?ajax=buscar_vehiculos&q=${encodeURIComponent(q)}`);
   const j = await r.json();
   sel.innerHTML = '<option value="">— Selecciona de la búsqueda —</option>';
+  if (!j.length) {
+    if (confirm('No se encontraron vehículos. ¿Deseas registrarlo ahora?')) {
+      abrirModalNuevoVehiculo(q);
+    }
+    return;
+  }
   j.forEach(it=>{
     const o=document.createElement('option'); o.value=it.id; o.textContent=it.texto; sel.appendChild(o);
   });
+  if (j.length > 0) {
+    sel.value = String(j[0].id);
+    sel.dispatchEvent(new Event('change'));
+  }
 });
 
 /* Resumen vehículo */
 $('#vehiculo_id')?.addEventListener('change', ()=>{
   const t = $('#vehiculo_id').selectedOptions[0]?.textContent || '';
   $('#veh_resumen').value = t;
-});
-
-/* ==== Encadenados catálogos (modal nuevo vehículo) ==== */
-$('#nv_categoria_id')?.addEventListener('change', async (e)=>{
-  const v = e.target.value || '';
-  const sel = $('#nv_tipo_id'); const selc = $('#nv_carroceria_id');
-  sel.innerHTML = '<option value="">Cargando…</option>'; selc.innerHTML='<option value="">—</option>';
-  if(!v){ sel.innerHTML='<option value="">—</option>'; return; }
-  const r = await fetch(`?ajax=tipos_por_categoria&categoria_id=${encodeURIComponent(v)}`);
-  const j = await r.json();
-  sel.innerHTML = '<option value="">—</option>';
-  j.forEach(it=>{ const o=document.createElement('option'); o.value=it.id; o.textContent=it.nombre; sel.appendChild(o); });
-});
-$('#nv_tipo_id')?.addEventListener('change', async (e)=>{
-  const v = e.target.value || '';
-  const sel = $('#nv_carroceria_id');
-  sel.innerHTML = '<option value="">Cargando…</option>';
-  if(!v){ sel.innerHTML='<option value="">—</option>'; return; }
-  const r = await fetch(`?ajax=carrocerias_por_tipo&tipo_id=${encodeURIComponent(v)}`);
-  const j = await r.json();
-  sel.innerHTML = '<option value="">—</option>';
-  j.forEach(it=>{ const o=document.createElement('option'); o.value=it.id; o.textContent=it.nombre; sel.appendChild(o); });
-});
-$('#nv_marca_id')?.addEventListener('change', async (e)=>{
-  const v = e.target.value || '';
-  const sel = $('#nv_modelo_id');
-  sel.innerHTML = '<option value="">Cargando…</option>';
-  if(!v){ sel.innerHTML='<option value="">—</option>'; return; }
-  const r = await fetch(`?ajax=modelos_por_marca&marca_id=${encodeURIComponent(v)}`);
-  const j = await r.json();
-  sel.innerHTML = '<option value="">—</option>';
-  j.forEach(it=>{ const o=document.createElement('option'); o.value=it.id; o.textContent=it.nombre; sel.appendChild(o); });
 });
 
 /* ==== Altas rápidas de catálogo ==== */
@@ -773,47 +750,38 @@ $('#btnSaveModelo')?.addEventListener('click', async ()=>{
   if(j.ok){ const s=$('#nv_modelo_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });
 
-/* ==== Guardar nuevo vehículo (modal) ==== */
-$('#btnGuardarNV')?.addEventListener('click', async ()=>{
-  const data = {
-    placa: $('#nv_placa').value.trim(),
-    anio: $('#nv_anio').value,
-    color: $('#nv_color').value.trim(),
-    categoria_id: $('#nv_categoria_id').value,
-    tipo_id: $('#nv_tipo_id').value,
-    carroceria_id: $('#nv_carroceria_id').value,
-    marca_id: $('#nv_marca_id').value,
-    modelo_id: $('#nv_modelo_id').value,
-    largo_mm: $('#nv_largo_mm').value,
-    ancho_mm: $('#nv_ancho_mm').value,
-    alto_mm:  $('#nv_alto_mm').value,
-    notas: $('#nv_notas').value
-  };
-  const j = await postForm('?ajax=crear_vehiculo', data);
-  const msg = $('#nv_msg');
-  if(j.ok){
-    msg.textContent = 'Vehículo creado ✔';
-    const sel = $('#vehiculo_id');
-    const o = document.createElement('option'); o.value=j.vehiculo.id; o.textContent=j.vehiculo.texto;
-    sel.appendChild(o); sel.value = j.vehiculo.id; sel.dispatchEvent(new Event('change'));
-    setTimeout(()=>closeModal('mdVehiculo'), 350);
-  }else{
-    msg.textContent = 'Error: '+j.error;
-  }
-});
-
 /* ==== Botones guardar ==== */
 $('#btnNext')?.addEventListener('click', ()=>{ $('#next').value='1'; });
 $('#btnGuardar')?.addEventListener('click', ()=>{ $('#next').value='0'; });
 
-/* ==== Poblar select "Tipo" del modal Carrocería ==== */
-$('#nv_tipo_id')?.addEventListener('change', ()=>{
-  const v = $('#nv_tipo_id').value;
-  $('#c_tipo').innerHTML = v ? `<option value="${v}">Seleccionado</option>` : '<option value="">—</option>';
-});
-
 /* helper */
 function $(sel){ return document.querySelector(sel); }
+
+window.addEventListener('message', (event)=>{
+  if (event.origin !== window.location.origin) return;
+
+  const data = event.data || {};
+  if (data.type === 'vehiculo_modal_cerrar') {
+    closeModal('mdVehiculo');
+    return;
+  }
+
+  if (data.type !== 'vehiculo_creado' || !data.vehiculo || !data.vehiculo.id) return;
+
+  const sel = $('#vehiculo_id');
+  let option = Array.from(sel.options).find(opt => String(opt.value) === String(data.vehiculo.id));
+  if (!option) {
+    option = document.createElement('option');
+    option.value = data.vehiculo.id;
+    option.textContent = data.vehiculo.texto || ('ID ' + data.vehiculo.id);
+    sel.appendChild(option);
+  } else if (data.vehiculo.texto) {
+    option.textContent = data.vehiculo.texto;
+  }
+  sel.value = String(data.vehiculo.id);
+  sel.dispatchEvent(new Event('change'));
+  closeModal('mdVehiculo');
+});
 </script>
 </body>
 </html>

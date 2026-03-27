@@ -11,21 +11,76 @@ header('Content-Type: text/html; charset=utf-8');
 function h($s){ return htmlspecialchars((string)($s ?? ''), ENT_QUOTES, 'UTF-8'); }
 function g($k,$d=null){ return isset($_GET[$k]) ? trim((string)$_GET[$k]) : $d; }
 function fmtDate($s){ return $s ? date('Y-m-d H:i', strtotime($s)) : '-'; }
-function labelize($col){
-  static $map = [
-    'placa' => 'Placa',
-    'serie_vin' => 'Serie VIN',
-    'nro_motor' => 'Nro motor',
-    'anio' => 'Anio',
-    'color' => 'Color',
-    'largo_mm' => 'Largo (m)',
-    'ancho_mm' => 'Ancho (m)',
-    'alto_mm' => 'Alto (m)',
-    'notas' => 'Notas',
-    'creado_en' => 'Creado',
-    'actualizado_en' => 'Actualizado',
-  ];
-  return $map[$col] ?? ucwords(str_replace('_', ' ', $col));
+function fmtMetric($value): string {
+    if ($value === null || $value === '') {
+        return '-';
+    }
+    return rtrim(rtrim((string) $value, '0'), '.');
+}
+function cleanPairValue(string $value): string {
+    return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+}
+function parseVehiculoNotas(?string $notes): array {
+    $notes = trim((string) $notes);
+    if ($notes === '') {
+        return ['pairs' => [], 'raw_text' => '', 'visible_notes' => ''];
+    }
+
+    $pairs = [];
+    $rawText = '';
+    $visibleParts = [];
+
+    foreach (preg_split('/\|/u', $notes) ?: [] as $part) {
+        $part = trim($part);
+        if ($part === '') {
+            continue;
+        }
+
+        if (preg_match('/^([^:]+):\s*(.+)$/u', $part, $m)) {
+            $label = cleanPairValue($m[1]);
+            $value = cleanPairValue($m[2]);
+            if ($label === '') {
+                continue;
+            }
+
+            if (mb_strtoupper($label, 'UTF-8') === 'OCR TEXTO') {
+                $rawText = $value;
+                continue;
+            }
+
+            $pairs[$label] = $value;
+            continue;
+        }
+
+        $visibleParts[] = $part;
+    }
+
+    return [
+        'pairs' => $pairs,
+        'raw_text' => $rawText,
+        'visible_notes' => implode("\n", $visibleParts),
+    ];
+}
+function noteValue(array $pairs, array $labels): string {
+    foreach ($labels as $label) {
+        if (!empty($pairs[$label])) {
+            return (string) $pairs[$label];
+        }
+    }
+    return '';
+}
+function fieldValue(...$values): string {
+    foreach ($values as $value) {
+        $value = trim((string) ($value ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return '-';
+}
+function renderField(string $label, string $value, string $class = ''): string {
+    $classAttr = trim('field ' . $class);
+    return '<div class="' . h($classAttr) . '"><div class="label">' . h($label) . '</div><div class="val">' . nl2br(h($value !== '' ? $value : '-')) . '</div></div>';
 }
 
 $vehiculoService = new VehiculoService(new VehiculoRepository($pdo));
@@ -38,35 +93,39 @@ $detalle = $vehiculoService->detalle($id, $placa);
 $v = $detalle['vehiculo'] ?? null;
 $cntInv = $detalle['accidentes_vinculados'] ?? null;
 
-$placaTxt = $v['placa'] ?? '';
-$marcaModelo = trim(
-    ($v['marca_nombre'] ?? '')
-    . (($v['modelo_nombre'] ?? '') ? (' / ' . $v['modelo_nombre']) : '')
-    . (($v['anio'] ?? '') ? (' - ' . $v['anio']) : '')
+$placaTxt = trim((string) ($v['placa'] ?? ''));
+$notasInfo = parseVehiculoNotas($v['notas'] ?? '');
+$pairs = $notasInfo['pairs'];
+$visibleNotes = $notasInfo['visible_notes'];
+$rawOcrText = $notasInfo['raw_text'];
+
+$categoria = trim(
+    (string) ($v['cat_codigo'] ?? '')
+    . (!empty($v['cat_desc']) ? (' - ' . $v['cat_desc']) : '')
 );
-
-$clasificacionParts = [];
-if(!empty($v['cat_codigo']) || !empty($v['cat_desc'])){
-  $clasificacionParts[] = trim(($v['cat_codigo'] ?? '') . (($v['cat_desc'] ?? '') ? (' - ' . $v['cat_desc']) : ''));
-}
-if(!empty($v['tipo_codigo']) || !empty($v['tipo_nombre'])){
-  $clasificacionParts[] = trim(($v['tipo_codigo'] ?? '') . (($v['tipo_nombre'] ?? '') ? (' - ' . $v['tipo_nombre']) : ''));
-}
-if(!empty($v['carroceria_nombre'])) $clasificacionParts[] = $v['carroceria_nombre'];
-$clasificacion = $clasificacionParts ? implode(' / ', $clasificacionParts) : '-';
-
-$dimensiones = '-';
-if($v && ($v['largo_mm'] !== null || $v['ancho_mm'] !== null || $v['alto_mm'] !== null)){
-  $L = $v['largo_mm'] !== null ? rtrim(rtrim((string)$v['largo_mm'], '0'), '.') : '-';
-  $A = $v['ancho_mm'] !== null ? rtrim(rtrim((string)$v['ancho_mm'], '0'), '.') : '-';
-  $H = $v['alto_mm'] !== null ? rtrim(rtrim((string)$v['alto_mm'], '0'), '.') : '-';
-  $dimensiones = "$L x $A x $H m";
-}
-
-$excluir = [
-  'id','placa','categoria_id','tipo_id','carroceria_id','marca_id','modelo_id','anio',
-  'largo_mm','ancho_mm','alto_mm'
-];
+$tipo = trim(
+    (string) ($v['tipo_codigo'] ?? '')
+    . (!empty($v['tipo_nombre']) ? (' - ' . $v['tipo_nombre']) : '')
+);
+$carroceria = fieldValue($v['carroceria_nombre'] ?? '', noteValue($pairs, ['Carrocería OCR', 'Carrocería API']));
+$marca = fieldValue($v['marca_nombre'] ?? '', noteValue($pairs, ['Marca OCR', 'Marca API']));
+$modelo = fieldValue($v['modelo_nombre'] ?? '', noteValue($pairs, ['Modelo OCR', 'Modelo API']));
+$color = fieldValue($v['color'] ?? '', noteValue($pairs, ['Color OCR', 'Color API']));
+$combustible = fieldValue(noteValue($pairs, ['Combustible OCR', 'Combustible API']));
+$tipoUso = fieldValue(noteValue($pairs, ['Tipo Uso OCR', 'Tipo Uso API']));
+$partida = fieldValue(noteValue($pairs, ['Partida OCR', 'Partida API']));
+$asientos = fieldValue(noteValue($pairs, ['Asientos OCR', 'Asientos API']));
+$serieVin = fieldValue($v['serie_vin'] ?? '');
+$nroMotor = fieldValue($v['nro_motor'] ?? '');
+$anio = fieldValue($v['anio'] ?? '');
+$largo = fieldValue(fmtMetric($v['largo_mm'] ?? null));
+$ancho = fieldValue(fmtMetric($v['ancho_mm'] ?? null));
+$alto = fieldValue(fmtMetric($v['alto_mm'] ?? null));
+$subtitulo = trim(
+    ($marca !== '-' ? $marca : '')
+    . ($modelo !== '-' ? (($marca !== '-' ? ' / ' : '') . $modelo) : '')
+    . ($anio !== '-' ? ((($marca !== '-' || $modelo !== '-') ? ' - ' : '') . $anio) : '')
+);
 ?>
 <!doctype html>
 <html lang="es">
@@ -76,29 +135,43 @@ $excluir = [
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{color-scheme:light dark}
-  body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:13px}
-  .wrap{max-width:1000px;margin:20px auto;padding:0 12px}
-  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}
-  .title h1{margin:0;font-size:18px;font-weight:800}
-  .badge{padding:2px 6px;border-radius:999px;background:rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.25);font-size:10px;font-weight:700}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:11px;background:#111}
+  .wrap{max-width:1120px;margin:14px auto;padding:0 12px}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+  .title h1{margin:0;font-size:16px;font-weight:800}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.25);font-size:10px;font-weight:700}
   .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .btn{padding:6px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.25);text-decoration:none;font-weight:700;font-size:12px;color:inherit;background:transparent}
+  .btn{padding:5px 9px;border-radius:11px;border:1px solid rgba(127,127,127,.25);text-decoration:none;font-weight:700;font-size:11px;color:inherit;background:transparent}
   .btn.primary{background:#0d6efd;color:#fff;border-color:#0b5ed7}
-  .btn.danger{color:#b91c1c}
-  .card{border:1px solid rgba(127,127,127,.25);border-radius:16px;padding:14px;box-shadow:0 4px 14px rgba(0,0,0,.12);background:rgba(255,255,255,.85)}
-  @media (prefers-color-scheme: dark){ .card{background:rgba(255,255,255,.05)} }
-  .header{margin-bottom:10px}
-  .placa{font-size:18px;font-weight:900;letter-spacing:.3px}
-  .sub{font-size:13px;opacity:.85}
-  .grid{display:grid;gap:8px;grid-template-columns:repeat(4,1fr)}
-  @media(max-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:520px){.grid{grid-template-columns:1fr}}
-  .field{border:1px solid rgba(127,127,127,.25);border-radius:12px;padding:8px 10px;font-size:12px;background:rgba(127,127,127,.06)}
-  @media (prefers-color-scheme: dark){ .field{background:rgba(255,255,255,.04)} }
-  .label{font-size:11px;font-weight:700;opacity:.75;margin-bottom:2px}
-  .val{font-weight:600;font-size:12px;word-break:break-word}
-  .full,.wide{grid-column:1/-1}
+  .btn.danger{color:#ef4444}
+  .card{border:1px solid rgba(127,127,127,.25);border-radius:18px;padding:12px 12px 10px;box-shadow:0 8px 24px rgba(0,0,0,.22);background:rgba(255,255,255,.08)}
+  .hero{padding-bottom:10px;border-bottom:1px solid rgba(127,127,127,.20);margin-bottom:10px}
+  .hero-plate{font-size:24px;line-height:1;font-weight:900;letter-spacing:.7px}
+  .hero-sub{margin-top:4px;font-size:13px;opacity:.88;font-weight:600}
+  .section{margin-top:12px}
+  .section h2{margin:0 0 6px;font-size:10px;letter-spacing:.65px;text-transform:uppercase;opacity:.72}
+  .grid{display:grid;gap:6px;grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media(max-width:980px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .field{border:1px solid rgba(127,127,127,.22);border-radius:12px;padding:8px 9px;background:rgba(127,127,127,.07);min-height:48px}
+  .span-2{grid-column:span 2}
+  .span-4{grid-column:1/-1}
+  @media(max-width:760px){.span-2{grid-column:span 1}}
+  .label{font-size:9px;font-weight:800;letter-spacing:.25px;opacity:.72;margin-bottom:4px;text-transform:uppercase}
+  .val{font-weight:700;font-size:12px;line-height:1.22;word-break:break-word}
+  .val.small{font-size:11px}
+  .search-card{border:1px solid rgba(127,127,127,.25);border-radius:18px;padding:14px;background:rgba(255,255,255,.08)}
+  .search-form{display:grid;gap:8px;grid-template-columns:1fr auto}
+  .search-form input{padding:9px 11px;border-radius:12px;border:1px solid rgba(127,127,127,.25);background:transparent;color:inherit}
+  .notes{white-space:pre-wrap;font-size:11px;line-height:1.35}
+  @media(max-width:560px){
+    .wrap{margin:10px auto;padding:0 10px}
+    .card{padding:10px 10px 9px;border-radius:16px}
+    .hero-plate{font-size:21px}
+    .hero-sub{font-size:12px}
+    .field{min-height:auto}
+  }
 </style>
 </head>
 <body>
@@ -118,56 +191,83 @@ $excluir = [
   </div>
 
   <?php if(!$v): ?>
-    <div class="card">
-      <form method="get" style="display:grid;gap:8px;grid-template-columns:1fr auto;">
-        <input type="text" name="placa" placeholder="Buscar por placa (ABC123)" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.25);">
+    <div class="search-card">
+      <form method="get" class="search-form">
+        <input type="text" name="placa" placeholder="Buscar por placa (ABC123)">
         <button class="btn primary" type="submit">Buscar</button>
       </form>
     </div>
   <?php else: ?>
     <div class="card">
-      <div class="header">
-        <div class="placa">Placa: <?= h($placaTxt ?: '-') ?></div>
-        <div class="sub"><?= h($marcaModelo ?: '-') ?></div>
+      <div class="hero">
+        <div class="hero-plate"><?= h($placaTxt !== '' ? $placaTxt : '-') ?></div>
+        <?php if($subtitulo !== ''): ?><div class="hero-sub"><?= h($subtitulo) ?></div><?php endif; ?>
       </div>
 
-      <div class="grid">
-        <div class="field full">
-          <div class="label">Clasificacion</div>
-          <div class="val"><?= h($clasificacion) ?></div>
+      <div class="section">
+        <h2>Identificación</h2>
+        <div class="grid">
+          <?= renderField('Marca', $marca) ?>
+          <?= renderField('Modelo', $modelo) ?>
+          <?= renderField('Año', $anio) ?>
+          <?= renderField('Color', $color) ?>
+          <?= renderField('Serie VIN', $serieVin, 'span-2') ?>
+          <?= renderField('Nro motor', $nroMotor, 'span-2') ?>
         </div>
+      </div>
 
-        <div class="field full">
-          <div class="label">Dimensiones</div>
-          <div class="val"><?= h($dimensiones) ?></div>
+      <div class="section">
+        <h2>Clasificación</h2>
+        <div class="grid">
+          <?= renderField('Categoría', fieldValue($categoria), 'span-2') ?>
+          <?= renderField('Tipo', fieldValue($tipo), 'span-2') ?>
+          <?= renderField('Carrocería', $carroceria) ?>
+          <?= renderField('Tipo de uso', $tipoUso, 'span-2') ?>
+          <?= renderField('Combustible', $combustible) ?>
         </div>
+      </div>
 
-        <?php foreach($v as $col => $val): ?>
-          <?php
-          if(in_array($col, $excluir, true)) continue;
-          if(in_array($col, ['cat_codigo','cat_desc','tipo_codigo','tipo_nombre','carroceria_nombre','marca_nombre','modelo_nombre'], true)) continue;
-          $display = in_array($col, ['creado_en','actualizado_en'], true) ? fmtDate($val) : $val;
-          $isWide = in_array($col, ['notas'], true);
-          ?>
-          <div class="field <?= $isWide ? 'wide' : '' ?>">
-            <div class="label"><?= h(labelize($col)) ?></div>
-            <div class="val"><?= ($display !== '' && $display !== null) ? nl2br(h((string)$display)) : '-' ?></div>
-          </div>
-        <?php endforeach; ?>
+      <div class="section">
+        <h2>Dimensiones</h2>
+        <div class="grid">
+          <?= renderField('Largo (m)', $largo) ?>
+          <?= renderField('Ancho (m)', $ancho) ?>
+          <?= renderField('Alto (m)', $alto) ?>
+          <?= renderField('Asientos', $asientos) ?>
+        </div>
+      </div>
 
-        <?php if($cntInv !== null): ?>
-          <div class="field">
-            <div class="label">Accidentes vinculados</div>
-            <div class="val"><?= (int)$cntInv ?></div>
-          </div>
-          <div class="field">
-            <div class="label">Acciones</div>
-            <div class="val">
-              <a class="btn" href="involucrados_vehiculos_listar.php?q=<?= urlencode($v['placa'] ?? '') ?>">Ver en listados</a>
+      <div class="section">
+        <h2>Otros Detalles</h2>
+        <div class="grid">
+          <?= renderField('N° Partida', $partida) ?>
+          <?= renderField('Creado', fmtDate($v['creado_en'] ?? null), 'span-2') ?>
+          <?= renderField('Actualizado', fmtDate($v['actualizado_en'] ?? null), 'span-2') ?>
+          <?php if($cntInv !== null): ?>
+            <?= renderField('Accidentes vinculados', (string) ((int) $cntInv)) ?>
+            <div class="field">
+              <div class="label">Acciones</div>
+              <div class="val small">
+                <a class="btn" href="involucrados_vehiculos_listar.php?q=<?= urlencode($v['placa'] ?? '') ?>">Ver en listados</a>
+              </div>
             </div>
-          </div>
-        <?php endif; ?>
+          <?php endif; ?>
+        </div>
       </div>
+
+      <?php if($visibleNotes !== '' || $rawOcrText !== ''): ?>
+        <div class="section">
+          <h2>Notas</h2>
+          <div class="grid">
+            <?php if($visibleNotes !== ''): ?>
+              <?= renderField('Notas registradas', $visibleNotes, 'span-4') ?>
+            <?php endif; ?>
+            <?php if($rawOcrText !== ''): ?>
+              <?= renderField('Texto OCR', $rawOcrText, 'span-4') ?>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>
