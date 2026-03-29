@@ -9,10 +9,23 @@ use App\Services\DocumentoOccisoService;
 header('Content-Type: text/html; charset=utf-8');
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function g($k,$d=null){ return isset($_GET[$k]) ? trim((string)$_GET[$k]) : $d; }
+function append_query(string $url, array $params): string {
+  $frag = '';
+  if (str_contains($url, '#')) {
+    [$url, $frag] = explode('#', $url, 2);
+    $frag = '#' . $frag;
+  }
+  $query = http_build_query(array_filter($params, static fn($v) => $v !== null && $v !== ''));
+  if ($query === '') return $url . $frag;
+  return $url . (str_contains($url, '?') ? '&' : '?') . $query . $frag;
+}
 
 $service = new DocumentoOccisoService(new DocumentoOccisoRepository($pdo));
-$persona_id_get = (int)($_GET['persona_id'] ?? 0);
-$accidente_id_get = (int)($_GET['accidente_id'] ?? 0);
+$persona_id_get = (int) g('persona_id', 0);
+$accidente_id_get = (int) g('accidente_id', 0);
+$embed = (int) g('embed', 0);
+$return_to = g('return_to', '');
 $personas = $service->personaOptions();
 $accidentes = $service->accidenteOptions();
 $old = [
@@ -24,8 +37,24 @@ $err = '';
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
   try {
-    $service->crear($_POST);
-    $ok = true;
+    $newId = $service->crear($_POST);
+    $personaId = (int) ($_POST['persona_id'] ?? $persona_id_get);
+    $accidenteId = (int) ($_POST['accidente_id'] ?? $accidente_id_get);
+    $backTo = $return_to !== ''
+      ? $return_to
+      : append_query('documento_occiso_list.php', [
+          'persona_id' => $personaId ?: null,
+          'accidente_id' => $accidenteId ?: null,
+          'embed' => $embed ?: null,
+        ]);
+    header('Location: ' . append_query('documento_occiso_ver.php', [
+      'id' => $newId,
+      'persona_id' => $personaId ?: null,
+      'accidente_id' => $accidenteId ?: null,
+      'embed' => $embed ?: null,
+      'return_to' => $backTo,
+    ]));
+    exit;
   } catch (Throwable $e) {
     $err = $e->getMessage();
     $old = $service->mergeOld($old, $_POST);
