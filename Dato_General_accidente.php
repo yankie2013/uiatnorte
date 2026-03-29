@@ -1017,6 +1017,13 @@ include __DIR__ . '/sidebar.php';
    <span class="led <?= $cntPer>0 ? 'on' : '' ?>" title="<?= $cntPer>0?'Con registros':'Sin registros' ?>"></span>
 </a>
 
+<a href="accidente_vista_tabs.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-persona"
+   title="Vista integral por pestañas del accidente">
+   🗂 Vista Tabs
+   <span class="led <?= $cntPer>0 ? 'on' : '' ?>" title="<?= $cntPer>0?'Con personas registradas':'Sin personas registradas' ?>"></span>
+</a>
+
 <a href="familiar_fallecido_listar.php?accidente_id=<?=h($accidente_id)?>"
    class="btn-fallecido"
    title="Familiares de Fallecidos">

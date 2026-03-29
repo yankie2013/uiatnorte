@@ -164,6 +164,10 @@ body { padding-left:60px; transition:.35s; }
             <span class="section-icon">📄</span>
             <span>Ver datos generales</span>
         </a>
+        <a class="btn" href="accidente_vista_tabs.php?accidente_id=<?=h($accidente_id)?>">
+            <span class="section-icon">🗂</span>
+            <span>Vista por tabs</span>
+        </a>
         <?php endif; ?>
     </div>
 

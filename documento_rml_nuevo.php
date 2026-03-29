@@ -12,6 +12,8 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function g($k,$d=null){ return isset($_GET[$k])? trim($_GET[$k]) : $d; }
 
 $service = new DocumentoRmlService(new DocumentoRmlRepository($pdo));
+$embed = g('embed', '0') === '1';
+$return_to = g('return_to', '');
 $persona_id = (int)g('persona_id',0);
 $per = $service->persona($persona_id);
 $err = '';
@@ -19,7 +21,13 @@ $err = '';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   try {
     $persona_id = (int)($_POST['persona_id'] ?? 0);
+    $embed = (($_POST['embed'] ?? '0') === '1');
+    $return_to = (string) ($_POST['return_to'] ?? $return_to);
     $service->crear($_POST);
+    if($embed){
+      echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"rml.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter, sans-serif">Guardado...</body>';
+      exit;
+    }
     header('Location: documento_rml_listar.php?ok=1&persona_id='.$persona_id);
     exit;
   } catch (Throwable $e) {
@@ -85,12 +93,20 @@ textarea{min-height:84px; resize:vertical}
 </head><body><div class="wrap">
   <div class="bar">
     <h1>RML - Nuevo</h1>
-    <div class="rowin"><a class="btn small" href="documento_rml_listar.php<?= $persona_id? '?persona_id='.$persona_id : '' ?>">Volver</a></div>
+    <div class="rowin">
+      <?php if($embed): ?>
+        <a class="btn small" href="<?= $return_to ? h($return_to) : 'javascript:history.back()' ?>">Cerrar</a>
+      <?php else: ?>
+        <a class="btn small" href="documento_rml_listar.php<?= $persona_id? '?persona_id='.$persona_id : '' ?>">Volver</a>
+      <?php endif; ?>
+    </div>
   </div>
   <div class="note">Incapacidad m&eacute;dico y Atenci&oacute;n facultativo: ingresa n&uacute;mero de d&iacute;as o escribe "No requiere".</div>
   <?php if(!empty($err)): ?><div class="err"><?=h($err)?></div><?php endif; ?>
   <?php if($personaMissing): ?><div class="warn">Selecciona una persona v&aacute;lida antes de registrar el RML.</div><?php endif; ?>
   <form method="post" class="card" autocomplete="off">
+    <input type="hidden" name="embed" value="<?= $embed ? '1' : '0' ?>">
+    <input type="hidden" name="return_to" value="<?= h($return_to) ?>">
     <div class="grid">
       <div class="col-6">
         <label>Persona</label>
@@ -123,7 +139,11 @@ textarea{min-height:84px; resize:vertical}
       </div>
     </div>
     <div class="actions">
-      <a class="btn" href="documento_rml_listar.php<?= $persona_id? '?persona_id='.$persona_id : '' ?>">Cancelar</a>
+      <?php if($embed): ?>
+        <a class="btn" href="<?= $return_to ? h($return_to) : 'javascript:history.back()' ?>">Cancelar</a>
+      <?php else: ?>
+        <a class="btn" href="documento_rml_listar.php<?= $persona_id? '?persona_id='.$persona_id : '' ?>">Cancelar</a>
+      <?php endif; ?>
       <button class="btn primary" type="submit" <?= $personaMissing ? 'disabled aria-disabled="true"' : '' ?>>Guardar</button>
     </div>
   </form>

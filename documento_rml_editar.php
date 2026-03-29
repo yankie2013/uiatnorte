@@ -13,6 +13,8 @@ function g($k,$d=null){ return isset($_GET[$k]) ? trim((string)$_GET[$k]) : $d; 
 
 $service = new DocumentoRmlService(new DocumentoRmlRepository($pdo));
 $id = (int) g('id', 0);
+$embed = g('embed', '0') === '1';
+$return_to = g('return_to', '');
 $err = '';
 $ctx = $service->editarContexto($id);
 if (!$ctx) {
@@ -24,7 +26,13 @@ $per = $ctx['persona'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $embed = (($_POST['embed'] ?? '0') === '1');
+        $return_to = (string) ($_POST['return_to'] ?? $return_to);
         $service->actualizar($id, $_POST);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"rml.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter, sans-serif">Guardado...</body>';
+            exit;
+        }
         header('Location: documento_rml_leer.php?id=' . $id);
         exit;
     } catch (Throwable $e) {
@@ -55,12 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="bar">
     <h1>RML - Editar <span class="badge">ID #<?= (int) $row['id'] ?></span></h1>
     <div class="rowin">
-      <a class="btn small" href="documento_rml_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
-      <a class="btn small" href="documento_rml_listar.php?persona_id=<?= (int) $row['persona_id'] ?>">Volver</a>
+      <?php if (!$embed): ?><a class="btn small" href="documento_rml_leer.php?id=<?= (int) $row['id'] ?>">Ver</a><?php endif; ?>
+      <a class="btn small" href="<?= $embed && $return_to ? h($return_to) : 'documento_rml_listar.php?persona_id=' . (int) $row['persona_id'] ?>">Volver</a>
     </div>
   </div>
   <?php if ($err): ?><div class="err"><?= h($err) ?></div><?php endif; ?>
   <form method="post" class="card" autocomplete="off">
+    <input type="hidden" name="embed" value="<?= $embed ? '1' : '0' ?>">
+    <input type="hidden" name="return_to" value="<?= h($return_to) ?>">
     <div class="grid">
       <div class="col-6"><label>Persona</label><input value="<?= h(($per['nom'] ?? '-') . ' - DNI ' . ($per['num_doc'] ?? '-')) ?>" readonly></div>
       <div class="col-6"><label>N&uacute;mero</label><input name="numero" value="<?= h($row['numero'] ?? '') ?>" required></div>
@@ -70,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="col-12"><label>Observaciones</label><textarea name="observaciones" rows="4"><?= h($row['observaciones'] ?: '') ?></textarea></div>
     </div>
     <div class="actions">
-      <a class="btn" href="documento_rml_listar.php?persona_id=<?= (int) $row['persona_id'] ?>">Cancelar</a>
+      <a class="btn" href="<?= $embed && $return_to ? h($return_to) : 'documento_rml_listar.php?persona_id=' . (int) $row['persona_id'] ?>">Cancelar</a>
       <button class="btn primary" type="submit">Guardar cambios</button>
     </div>
   </form>
