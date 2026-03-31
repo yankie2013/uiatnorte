@@ -11,6 +11,8 @@ header('Content-Type: text/html; charset=utf-8');
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $service = new DocumentoRecibidoService(new DocumentoRecibidoRepository($pdo));
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $accidenteId = isset($_GET['accidente_id']) && $_GET['accidente_id'] !== '' ? (int) $_GET['accidente_id'] : null;
 $ctx = $service->formContext($accidenteId);
 $data = $service->defaultData(['accidente_id' => $accidenteId ?: '']);
@@ -20,6 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = $service->defaultData($_POST);
     try {
         $newId = $service->crear($_POST);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"documento_recibido.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
         $redir = 'documento_recibido_listar.php?msg=creado';
         if (!empty($_POST['accidente_id'])) {
             $redir .= '&accidente_id=' . urlencode((string) $_POST['accidente_id']);
@@ -60,8 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="help">Puedes asociarlo a un accidente y, opcionalmente, a un oficio existente.</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a href="documento_recibido_listar.php" class="btn secondary">Volver</a>
-      <a href="index.php" class="btn secondary">Panel</a>
+      <?php if ($embed): ?>
+        <button type="button" class="btn secondary" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cerrar</button>
+      <?php else: ?>
+        <a href="documento_recibido_listar.php" class="btn secondary">Volver</a>
+        <a href="index.php" class="btn secondary">Panel</a>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -70,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <form method="POST" class="form-grid" novalidate>
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <div>
       <label for="accidente_id">Accidente</label>
       <select id="accidente_id" name="accidente_id">
@@ -96,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input id="tipo_documento" type="text" name="tipo_documento" value="<?= h($data['tipo_documento']) ?>">
     </div>
     <div>
-      <label for="numero_documento">Nï¿½mero de documento</label>
+      <label for="numero_documento">Número de documento</label>
       <input id="numero_documento" type="text" name="numero_documento" value="<?= h($data['numero_documento']) ?>">
     </div>
     <div>
@@ -122,7 +134,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </select>
     </div>
     <div class="full" style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-      <div><a class="btn secondary" href="documento_recibido_listar.php">Cancelar</a></div>
+      <div>
+        <?php if ($embed): ?>
+          <button type="button" class="btn secondary" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cancelar</button>
+        <?php else: ?>
+          <a class="btn secondary" href="documento_recibido_listar.php">Cancelar</a>
+        <?php endif; ?>
+      </div>
       <div><button class="btn primary" type="submit">Guardar Documento</button></div>
     </div>
   </form>

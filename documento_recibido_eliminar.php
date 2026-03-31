@@ -33,6 +33,7 @@ if (!$row) {
     exit('Documento no encontrado');
 }
 
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = (string)($_GET['return_to'] ?? ($_POST['return_to'] ?? ''));
 if ($returnTo === '') {
     $returnTo = 'documento_recibido_listar.php';
@@ -45,6 +46,10 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['confirm'] ?? '') === '1') {
     try {
         $service->eliminar($id);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"documento_recibido.deleted"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Eliminado...</body>';
+            exit;
+        }
         header('Location: ' . append_query($returnTo, ['msg' => 'eliminado']));
         exit;
     } catch (Throwable $e) {
@@ -83,9 +88,14 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
 
   <form method="post" class="actions">
     <input type="hidden" name="id" value="<?= (int)$id ?>">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <input type="hidden" name="confirm" value="1">
-    <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
+    <?php if ($embed): ?>
+      <button type="button" class="btn" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cancelar</button>
+    <?php else: ?>
+      <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
+    <?php endif; ?>
     <button class="btn primary" type="submit">Eliminar</button>
   </form>
 </div>

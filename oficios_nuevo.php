@@ -16,6 +16,8 @@ if (!function_exists('h')) {
 }
 
 $service = new OficioService(new OficioRepository($pdo));
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 
 $accidenteIdGet = isset($_GET['accidente_id']) ? (int) $_GET['accidente_id'] : 0;
 $sidpolGet = trim((string) ($_GET['sidpol'] ?? ''));
@@ -96,6 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $asignado = $service->create($data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"oficio.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
         $success = 'Oficio registrado correctamente.';
         $data = $service->defaultData(null, (int) ($data['accidente_id'] ?: 0));
         $data['tipo'] = $_POST['tipo'] ?? 'SOLICITAR';
@@ -113,7 +119,9 @@ $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccident
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
 
-include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    include __DIR__ . '/sidebar.php';
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -132,15 +140,21 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
 <div class="wrap">
   <h1>Nuevo Oficio</h1>
   <div class="toolbar">
-    <button class="btn" type="button" onclick="history.back()">← Atrás</button>
-    <a class="btn" href="index.php">Ir al panel</a>
-    <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
+    <?php if ($embed): ?>
+      <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
+    <?php else: ?>
+      <button class="btn" type="button" onclick="history.back()">← Atrás</button>
+      <a class="btn" href="index.php">Ir al panel</a>
+      <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
+    <?php endif; ?>
   </div>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmOficio">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <div class="grid">
       <div class="c12">
         <label>Accidente asociado*</label>
@@ -301,7 +315,11 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
       </div>
 
       <div class="c12" style="display:flex;justify-content:flex-end;gap:10px;">
-        <a class="btn" href="<?= h($listarHref) ?>">Cancelar</a>
+        <?php if ($embed): ?>
+          <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
+        <?php else: ?>
+          <a class="btn" href="<?= h($listarHref) ?>">Cancelar</a>
+        <?php endif; ?>
         <button class="btn primary" type="submit">Guardar oficio</button>
       </div>
     </div>
@@ -480,6 +498,7 @@ async function recalcularNumero() {
   numInp.value = data.next;
 }
 function syncListadoHref() {
+  if (!linkListado) return;
   const base = 'oficios_listar.php';
   if (accSel.value) linkListado.href = base + '?accidente_id=' + encodeURIComponent(accSel.value);
   else if (<?= json_encode($sidpolGet) ?>) linkListado.href = base + '?sidpol=' + encodeURIComponent(<?= json_encode($sidpolGet) ?>);

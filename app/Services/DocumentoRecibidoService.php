@@ -108,7 +108,7 @@ final class DocumentoRecibidoService
     {
         $estado = trim((string) ($input['estado'] ?? ''));
         if ($estado !== '' && !in_array($estado, self::ESTADOS, true)) {
-            throw new InvalidArgumentException('Estado inv·lido.');
+            throw new InvalidArgumentException('Estado inv√°lido.');
         }
 
         return [

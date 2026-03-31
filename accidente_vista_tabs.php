@@ -4,7 +4,11 @@ require_login();
 require __DIR__ . '/db.php';
 
 use App\Repositories\PersonaRepository;
+use App\Repositories\AccidenteRepository;
+use App\Repositories\OficioRepository;
 use App\Repositories\VehiculoRepository;
+use App\Services\AccidenteService;
+use App\Services\OficioService;
 use App\Services\PersonaService;
 use App\Services\VehiculoService;
 
@@ -16,6 +20,11 @@ if (!isset($pdo) && isset($db) && $db instanceof PDO) {
 
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
+
+$accidenteRepo = new AccidenteRepository($pdo);
+$accidenteService = new AccidenteService($accidenteRepo);
+$oficioService = new OficioService(new OficioRepository($pdo));
+$oficioEstados = $oficioService->formContext()['estados'] ?? ['BORRADOR', 'FIRMADO', 'ENVIADO', 'ANULADO', 'ARCHIVADO'];
 
 function h($value): string
 {
@@ -31,9 +40,9 @@ function fmt($value): string
 function full_name(array $row): string
 {
     $name = trim(
-        (string) ($row['apellido_paterno'] ?? '') . ' '
-        . (string) ($row['apellido_materno'] ?? '') . ' '
-        . (string) ($row['nombres'] ?? '')
+        (string) ($row['nombres'] ?? '') . ' '
+        . (string) ($row['apellido_paterno'] ?? '') . ' '
+        . (string) ($row['apellido_materno'] ?? '')
     );
     return preg_replace('/\s+/u', ' ', $name) ?: '';
 }
@@ -42,6 +51,40 @@ function person_label(array $row): string
 {
     $name = full_name($row);
     return $name !== '' ? $name : ('Persona #' . (int) ($row['persona_id'] ?? 0));
+}
+
+function person_doc_label(?string $tipoDoc): string
+{
+    $tipoDoc = mb_strtoupper(trim((string) ($tipoDoc ?? '')), 'UTF-8');
+
+    return match ($tipoDoc) {
+        'DNI' => 'DNI',
+        'CE' => 'Carnet de extranjería',
+        'PAS' => 'Pasaporte',
+        'OTRO' => 'Documento',
+        default => $tipoDoc !== '' ? $tipoDoc : 'Documento',
+    };
+}
+
+function person_heading_suffix(array $row): string
+{
+    $parts = [];
+
+    $numDoc = trim((string) ($row['num_doc'] ?? ''));
+    if ($numDoc !== '') {
+        $parts[] = person_doc_label((string) ($row['tipo_doc'] ?? '')) . ' ' . $numDoc;
+    }
+
+    $edad = trim((string) ($row['edad'] ?? ''));
+    if ($edad !== '') {
+        $parts[] = $edad . ' años';
+    }
+
+    if ($parts === []) {
+        return '';
+    }
+
+    return ' (' . implode(' · ', $parts) . ')';
 }
 
 function fecha_hora_corta_esp(?string $value): string
@@ -219,6 +262,40 @@ function needs_occ(array $row): bool
     return $lesion === 'fallecido';
 }
 
+function needs_herido(array $row): bool
+{
+    $lesion = mb_strtolower(trim((string) ($row['lesion'] ?? '')), 'UTF-8');
+    return str_contains($lesion, 'heri');
+}
+
+function person_tab_tone_class(array $row): string
+{
+    if (needs_occ($row)) {
+        return 'tab-occiso';
+    }
+    if (is_conductor($row)) {
+        return 'tab-driver';
+    }
+    if (needs_herido($row)) {
+        return 'tab-herido';
+    }
+    return '';
+}
+
+function person_panel_tone_class(array $row): string
+{
+    if (needs_occ($row)) {
+        return 'occiso-panel';
+    }
+    if (is_conductor($row)) {
+        return 'driver-panel';
+    }
+    if (needs_herido($row)) {
+        return 'herido-panel';
+    }
+    return '';
+}
+
 function human_label(string $key): string
 {
     static $map = [
@@ -247,6 +324,7 @@ function human_label(string $key): string
         'foto_path' => 'Foto',
         'api_fuente' => 'Fuente API',
         'api_ref' => 'Referencia API',
+        'persona_creado_en' => 'Persona creada en',
         'domicilio_departamento' => 'Departamento de domicilio',
         'domicilio_provincia' => 'Provincia de domicilio',
         'domicilio_distrito' => 'Distrito de domicilio',
@@ -325,6 +403,54 @@ function render_field_cards(array $record, array $fields): string
     return $html;
 }
 
+function project_prefixed_record(array $row, string $prefix): array
+{
+    $projected = [];
+    foreach ($row as $key => $value) {
+        if (str_starts_with((string) $key, $prefix)) {
+            $projected[substr((string) $key, strlen($prefix))] = $value;
+        }
+    }
+    return $projected;
+}
+
+function oficio_status_class(?string $estado): string
+{
+    $estado = mb_strtolower(trim((string) ($estado ?? '')), 'UTF-8');
+
+    return match ($estado) {
+        'borrador' => 'status-borrador',
+        'firmado' => 'status-firmado',
+        'enviado' => 'status-enviado',
+        'anulado' => 'status-anulado',
+        'archivado' => 'status-archivado',
+        default => '',
+    };
+}
+
+function oficio_icon(array $row): string
+{
+    $haystack = mb_strtolower(trim((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['asunto_detalle'] ?? ''))), 'UTF-8');
+
+    if ($haystack === '') {
+        return '📄';
+    }
+    if (str_contains($haystack, 'protocolo')) {
+        return '💀';
+    }
+    if (str_contains($haystack, 'peritaje')) {
+        return '🚗';
+    }
+    if (str_contains($haystack, 'camara') || str_contains($haystack, 'cámara')) {
+        return '📷';
+    }
+    if (str_contains($haystack, 'otros documentos') || str_contains($haystack, 'otro documento')) {
+        return '📁';
+    }
+
+    return '📄';
+}
+
 function render_editable_fields(array $record, array $fields, string $idPrefix = ''): string
 {
     $html = '';
@@ -369,7 +495,7 @@ function render_editable_fields(array $record, array $fields, string $idPrefix =
         }
 
         $html .= '<div class="' . h($class) . '">';
-        $html .= '<label class="field-label" for="' . h($inputId) . '">' . h($label) . '</label>';
+        $html .= '<label class="edit-label" for="' . h($inputId) . '">' . h($label) . '</label>';
 
         if ($type === 'textarea') {
             $html .= '<textarea class="edit-control" id="' . h($inputId) . '" name="' . h($name) . '" ' . implode(' ', $attrs) . '>' . h($value) . '</textarea>';
@@ -400,6 +526,84 @@ function json_response(array $payload, int $status = 200): never
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string) ($_POST['action'] ?? ''));
+
+    if ($action === 'save_accidente_estado_inline') {
+        try {
+            $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
+            $estado = trim((string) ($_POST['estado'] ?? 'Pendiente'));
+            if ($accidenteId <= 0) {
+                throw new InvalidArgumentException('Accidente no encontrado.');
+            }
+
+            $acc = $accidenteRepo->accidenteById($accidenteId);
+            if (!$acc) {
+                throw new InvalidArgumentException('Accidente no encontrado.');
+            }
+
+            $result = $accidenteService->updateAccidente($accidenteId, [
+                'registro_sidpol' => $acc['registro_sidpol'] ?? '',
+                'lugar' => $acc['lugar'] ?? '',
+                'referencia' => $acc['referencia'] ?? '',
+                'cod_dep' => $acc['cod_dep'] ?? '',
+                'cod_prov' => $acc['cod_prov'] ?? '',
+                'cod_dist' => $acc['cod_dist'] ?? '',
+                'comisaria_id' => $acc['comisaria_id'] ?? '',
+                'fecha_accidente' => $acc['fecha_accidente'] ?? '',
+                'fecha_comunicacion' => $acc['fecha_comunicacion'] ?? '',
+                'fecha_intervencion' => $acc['fecha_intervencion'] ?? '',
+                'comunicante_nombre' => $acc['comunicante_nombre'] ?? '',
+                'comunicante_telefono' => $acc['comunicante_telefono'] ?? '',
+                'fiscalia_id' => $acc['fiscalia_id'] ?? '',
+                'fiscal_id' => $acc['fiscal_id'] ?? '',
+                'nro_informe_policial' => $acc['nro_informe_policial'] ?? '',
+                'sentido' => $acc['sentido'] ?? '',
+                'secuencia' => $acc['secuencia'] ?? '',
+                'modalidad_ids' => $accidenteRepo->modalidadIdsForAccidente($accidenteId),
+                'consecuencia_ids' => $accidenteRepo->consecuenciaIdsForAccidente($accidenteId),
+                'estado' => $estado,
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Estado actualizado correctamente.', 'id' => $result['id']]);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_accidente_inline') {
+        try {
+            $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
+            if ($accidenteId <= 0) {
+                throw new InvalidArgumentException('Accidente no encontrado.');
+            }
+
+            $result = $accidenteService->updateAccidente($accidenteId, [
+                'registro_sidpol' => $_POST['registro_sidpol'] ?? '',
+                'lugar' => $_POST['lugar'] ?? '',
+                'referencia' => $_POST['referencia'] ?? '',
+                'cod_dep' => $_POST['cod_dep'] ?? '',
+                'cod_prov' => $_POST['cod_prov'] ?? '',
+                'cod_dist' => $_POST['cod_dist'] ?? '',
+                'comisaria_id' => $_POST['comisaria_id'] ?? '',
+                'fecha_accidente' => $_POST['fecha_accidente'] ?? '',
+                'fecha_comunicacion' => $_POST['fecha_comunicacion'] ?? '',
+                'fecha_intervencion' => $_POST['fecha_intervencion'] ?? '',
+                'comunicante_nombre' => $_POST['comunicante_nombre'] ?? '',
+                'comunicante_telefono' => $_POST['comunicante_telefono'] ?? '',
+                'fiscalia_id' => $_POST['fiscalia_id'] ?? '',
+                'fiscal_id' => $_POST['fiscal_id'] ?? '',
+                'nro_informe_policial' => $_POST['nro_informe_policial'] ?? '',
+                'sentido' => $_POST['sentido'] ?? '',
+                'secuencia' => $_POST['secuencia'] ?? '',
+                'modalidad_ids' => $_POST['modalidad_ids'] ?? [],
+                'consecuencia_ids' => $_POST['consecuencia_ids'] ?? [],
+                'estado' => $_POST['estado'] ?? 'Pendiente',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Accidente actualizado correctamente.', 'id' => $result['id']]);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
 
     if ($action === 'save_persona_inline') {
         try {
@@ -464,6 +668,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             json_response(['ok' => false, 'message' => $e->getMessage()], 422);
         }
     }
+
+    if ($action === 'save_oficio_estado_inline') {
+        try {
+            $oficioId = (int) ($_POST['oficio_id'] ?? 0);
+            $estado = trim((string) ($_POST['estado'] ?? 'BORRADOR'));
+            if ($oficioId <= 0) {
+                throw new InvalidArgumentException('Oficio no encontrado.');
+            }
+
+            $oficioService->changeEstado($oficioId, $estado);
+            json_response(['ok' => true, 'message' => 'Estado del oficio actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+}
+
+if (isset($_GET['ajax'])) {
+    $ajax = trim((string) $_GET['ajax']);
+
+    if ($ajax === 'prov') {
+        $dep = substr((string) ($_GET['dep'] ?? ''), 0, 2);
+        json_response(['ok' => true, 'data' => $accidenteRepo->provinciasByDepartamento($dep)]);
+    }
+
+    if ($ajax === 'dist') {
+        $dep = substr((string) ($_GET['dep'] ?? ''), 0, 2);
+        $prov = substr((string) ($_GET['prov'] ?? ''), 0, 2);
+        json_response(['ok' => true, 'data' => $accidenteRepo->distritos($dep, $prov)]);
+    }
+
+    if ($ajax === 'comisarias_dist') {
+        $dep = substr((string) ($_GET['dep'] ?? ''), 0, 2);
+        $prov = substr((string) ($_GET['prov'] ?? ''), 0, 2);
+        $dist = substr((string) ($_GET['dist'] ?? ''), 0, 2);
+        json_response(['ok' => true, 'data' => $accidenteRepo->comisariasByDistrito($dep, $prov, $dist)]);
+    }
+
+    if ($ajax === 'fiscales') {
+        $fiscaliaId = (int) ($_GET['fiscalia_id'] ?? 0);
+        json_response(['ok' => true, 'data' => $accidenteRepo->fiscalesByFiscalia($fiscaliaId)]);
+    }
+
+    if ($ajax === 'fiscal_info') {
+        $fiscalId = (int) ($_GET['fiscal_id'] ?? 0);
+        json_response(['ok' => true, 'data' => $accidenteRepo->fiscalTelefono($fiscalId)]);
+    }
 }
 
 $paramSidpol = trim((string) ($_GET['sidpol'] ?? ''));
@@ -484,6 +735,31 @@ if (!$accidente) {
 }
 
 $accidente_id = (int) $accidente['id'];
+$accidenteBase = $accidenteRepo->accidenteById($accidente_id) ?: $accidente;
+$deps = $accidenteRepo->departamentos();
+$fiscaliasCatalog = $accidenteRepo->fiscalias();
+$modalidadesCatalog = $accidenteRepo->modalidades();
+$consecuenciasCatalog = $accidenteRepo->consecuencias();
+$modSel = $accidenteRepo->modalidadIdsForAccidente($accidente_id);
+$conSel = $accidenteRepo->consecuenciaIdsForAccidente($accidente_id);
+
+$provs = !empty($accidenteBase['cod_dep']) ? $accidenteRepo->provinciasByDepartamento((string) $accidenteBase['cod_dep']) : [];
+$dists = (!empty($accidenteBase['cod_dep']) && !empty($accidenteBase['cod_prov']))
+    ? $accidenteRepo->distritos((string) $accidenteBase['cod_dep'], (string) $accidenteBase['cod_prov'])
+    : [];
+$comis = (!empty($accidenteBase['cod_dep']) && !empty($accidenteBase['cod_prov']) && !empty($accidenteBase['cod_dist']))
+    ? $accidenteRepo->comisariasByDistrito((string) $accidenteBase['cod_dep'], (string) $accidenteBase['cod_prov'], (string) $accidenteBase['cod_dist'])
+    : [];
+$comisIds = array_map(static fn(array $x): int => (int) $x['id'], $comis);
+if (!empty($accidenteBase['comisaria_id']) && !in_array((int) $accidenteBase['comisaria_id'], $comisIds, true)) {
+    $row = $accidenteRepo->comisariaById((int) $accidenteBase['comisaria_id']);
+    if ($row) {
+        $row['_fuera'] = 1;
+        array_unshift($comis, $row);
+    }
+}
+$fiscalesDeFiscalia = !empty($accidenteBase['fiscalia_id']) ? $accidenteRepo->fiscalesByFiscalia((int) $accidenteBase['fiscalia_id']) : [];
+$fiscalTelData = !empty($accidenteBase['fiscal_id']) ? $accidenteRepo->fiscalTelefono((int) $accidenteBase['fiscal_id']) : [];
 
 $accidenteInfo = safe_query_one(
     $pdo,
@@ -641,8 +917,29 @@ $policias = safe_query_all(
             p.apellido_paterno,
             p.apellido_materno,
             p.nombres,
+            p.sexo,
+            p.fecha_nacimiento,
+            p.edad,
+            p.estado_civil,
+            p.nacionalidad,
+            p.departamento_nac,
+            p.provincia_nac,
+            p.distrito_nac,
+            p.domicilio,
+            p.domicilio_departamento,
+            p.domicilio_provincia,
+            p.domicilio_distrito,
+            p.ocupacion,
+            p.grado_instruccion,
+            p.nombre_padre,
+            p.nombre_madre,
             p.celular,
-            p.email
+            p.email,
+            p.notas,
+            p.foto_path,
+            p.api_fuente,
+            p.api_ref,
+            p.creado_en AS persona_creado_en
        FROM policial_interviniente pi
        JOIN personas p ON p.id = pi.persona_id
       WHERE pi.accidente_id = ?
@@ -655,16 +952,62 @@ $propietarios = safe_query_all(
     "SELECT pv.*,
             iv.orden_participacion,
             v.placa,
-            pn.tipo_doc AS tipo_doc_nat,
-            pn.num_doc AS dni_nat,
-            pn.apellido_paterno AS ap_nat,
-            pn.apellido_materno AS am_nat,
-            pn.nombres AS no_nat,
-            pr.tipo_doc AS tipo_doc_rep,
-            pr.num_doc AS dni_rep,
-            pr.apellido_paterno AS ap_rep,
-            pr.apellido_materno AS am_rep,
-            pr.nombres AS no_rep
+            pn.tipo_doc AS owner_tipo_doc,
+            pn.num_doc AS owner_num_doc,
+            pn.apellido_paterno AS owner_apellido_paterno,
+            pn.apellido_materno AS owner_apellido_materno,
+            pn.nombres AS owner_nombres,
+            pn.sexo AS owner_sexo,
+            pn.fecha_nacimiento AS owner_fecha_nacimiento,
+            pn.edad AS owner_edad,
+            pn.estado_civil AS owner_estado_civil,
+            pn.nacionalidad AS owner_nacionalidad,
+            pn.departamento_nac AS owner_departamento_nac,
+            pn.provincia_nac AS owner_provincia_nac,
+            pn.distrito_nac AS owner_distrito_nac,
+            pn.domicilio AS owner_domicilio,
+            pn.domicilio_departamento AS owner_domicilio_departamento,
+            pn.domicilio_provincia AS owner_domicilio_provincia,
+            pn.domicilio_distrito AS owner_domicilio_distrito,
+            pn.ocupacion AS owner_ocupacion,
+            pn.grado_instruccion AS owner_grado_instruccion,
+            pn.nombre_padre AS owner_nombre_padre,
+            pn.nombre_madre AS owner_nombre_madre,
+            pn.celular AS owner_celular,
+            pn.email AS owner_email,
+            pn.notas AS owner_notas,
+            pn.foto_path AS owner_foto_path,
+            pn.api_fuente AS owner_api_fuente,
+            pn.api_ref AS owner_api_ref,
+            pn.creado_en AS owner_persona_creado_en,
+            pr.tipo_doc AS rep_tipo_doc,
+            pr.num_doc AS rep_num_doc,
+            pr.apellido_paterno AS rep_apellido_paterno,
+            pr.apellido_materno AS rep_apellido_materno,
+            pr.nombres AS rep_nombres,
+            pr.sexo AS rep_sexo,
+            pr.fecha_nacimiento AS rep_fecha_nacimiento,
+            pr.edad AS rep_edad,
+            pr.estado_civil AS rep_estado_civil,
+            pr.nacionalidad AS rep_nacionalidad,
+            pr.departamento_nac AS rep_departamento_nac,
+            pr.provincia_nac AS rep_provincia_nac,
+            pr.distrito_nac AS rep_distrito_nac,
+            pr.domicilio AS rep_domicilio,
+            pr.domicilio_departamento AS rep_domicilio_departamento,
+            pr.domicilio_provincia AS rep_domicilio_provincia,
+            pr.domicilio_distrito AS rep_domicilio_distrito,
+            pr.ocupacion AS rep_ocupacion,
+            pr.grado_instruccion AS rep_grado_instruccion,
+            pr.nombre_padre AS rep_nombre_padre,
+            pr.nombre_madre AS rep_nombre_madre,
+            pr.celular AS rep_celular,
+            pr.email AS rep_email,
+            pr.notas AS rep_notas,
+            pr.foto_path AS rep_foto_path,
+            pr.api_fuente AS rep_api_fuente,
+            pr.api_ref AS rep_api_ref,
+            pr.creado_en AS rep_persona_creado_en
        FROM propietario_vehiculo pv
        JOIN involucrados_vehiculos iv ON iv.id = pv.vehiculo_inv_id
        JOIN vehiculos v ON v.id = iv.vehiculo_id
@@ -690,17 +1033,62 @@ $familiares = safe_query_all(
     $pdo,
     "SELECT ff.*,
             ip.persona_id AS fallecido_persona_id,
-            pf.num_doc AS dni_fall,
-            pf.apellido_paterno AS ap_fall,
-            pf.apellido_materno AS am_fall,
-            pf.nombres AS no_fall,
-            pr.tipo_doc AS tipo_doc_fam,
-            pr.num_doc AS dni_fam,
-            pr.apellido_paterno AS ap_fam,
-            pr.apellido_materno AS am_fam,
-            pr.nombres AS no_fam,
-            pr.celular AS cel_fam,
-            pr.email AS em_fam
+            pf.tipo_doc AS fall_tipo_doc,
+            pf.num_doc AS fall_num_doc,
+            pf.apellido_paterno AS fall_apellido_paterno,
+            pf.apellido_materno AS fall_apellido_materno,
+            pf.nombres AS fall_nombres,
+            pf.sexo AS fall_sexo,
+            pf.fecha_nacimiento AS fall_fecha_nacimiento,
+            pf.edad AS fall_edad,
+            pf.estado_civil AS fall_estado_civil,
+            pf.nacionalidad AS fall_nacionalidad,
+            pf.departamento_nac AS fall_departamento_nac,
+            pf.provincia_nac AS fall_provincia_nac,
+            pf.distrito_nac AS fall_distrito_nac,
+            pf.domicilio AS fall_domicilio,
+            pf.domicilio_departamento AS fall_domicilio_departamento,
+            pf.domicilio_provincia AS fall_domicilio_provincia,
+            pf.domicilio_distrito AS fall_domicilio_distrito,
+            pf.ocupacion AS fall_ocupacion,
+            pf.grado_instruccion AS fall_grado_instruccion,
+            pf.nombre_padre AS fall_nombre_padre,
+            pf.nombre_madre AS fall_nombre_madre,
+            pf.celular AS fall_celular,
+            pf.email AS fall_email,
+            pf.notas AS fall_notas,
+            pf.foto_path AS fall_foto_path,
+            pf.api_fuente AS fall_api_fuente,
+            pf.api_ref AS fall_api_ref,
+            pf.creado_en AS fall_persona_creado_en,
+            pr.tipo_doc AS fam_tipo_doc,
+            pr.num_doc AS fam_num_doc,
+            pr.apellido_paterno AS fam_apellido_paterno,
+            pr.apellido_materno AS fam_apellido_materno,
+            pr.nombres AS fam_nombres,
+            pr.sexo AS fam_sexo,
+            pr.fecha_nacimiento AS fam_fecha_nacimiento,
+            pr.edad AS fam_edad,
+            pr.estado_civil AS fam_estado_civil,
+            pr.nacionalidad AS fam_nacionalidad,
+            pr.departamento_nac AS fam_departamento_nac,
+            pr.provincia_nac AS fam_provincia_nac,
+            pr.distrito_nac AS fam_distrito_nac,
+            pr.domicilio AS fam_domicilio,
+            pr.domicilio_departamento AS fam_domicilio_departamento,
+            pr.domicilio_provincia AS fam_domicilio_provincia,
+            pr.domicilio_distrito AS fam_domicilio_distrito,
+            pr.ocupacion AS fam_ocupacion,
+            pr.grado_instruccion AS fam_grado_instruccion,
+            pr.nombre_padre AS fam_nombre_padre,
+            pr.nombre_madre AS fam_nombre_madre,
+            pr.celular AS fam_celular,
+            pr.email AS fam_email,
+            pr.notas AS fam_notas,
+            pr.foto_path AS fam_foto_path,
+            pr.api_fuente AS fam_api_fuente,
+            pr.api_ref AS fam_api_ref,
+            pr.creado_en AS fam_persona_creado_en
        FROM familiar_fallecido ff
        JOIN involucrados_personas ip ON ip.id = ff.fallecido_inv_id
        JOIN personas pf ON pf.id = ip.persona_id
@@ -765,6 +1153,18 @@ $oficios = safe_query_all(
   LEFT JOIN personas p ON p.id = ip.persona_id
       WHERE o.accidente_id = ?
    ORDER BY o.fecha_emision DESC, o.id DESC",
+            [$accidente_id]
+);
+
+$documentosRecibidos = safe_query_all(
+    $pdo,
+    "SELECT dr.*,
+            COALESCE(o.numero, '') AS oficio_numero,
+            COALESCE(o.anio, '') AS oficio_anio
+       FROM documentos_recibidos dr
+  LEFT JOIN oficios o ON o.id = dr.referencia_oficio_id
+      WHERE dr.accidente_id = ?
+   ORDER BY COALESCE(dr.fecha, '9999-12-31') DESC, dr.id DESC",
     [$accidente_id]
 );
 
@@ -850,6 +1250,40 @@ $personaEditSections = [
     ],
 ];
 
+$policiaPersonaSections = [
+    'Identidad' => [
+        'tipo_doc', 'num_doc', 'apellido_paterno', 'apellido_materno', 'nombres',
+        'sexo', 'fecha_nacimiento', 'edad', 'estado_civil', 'nacionalidad',
+    ],
+    'Nacimiento y Contacto' => [
+        'departamento_nac', 'provincia_nac', 'distrito_nac',
+        ['key' => 'domicilio', 'class' => 'span-2'],
+        'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito',
+        'celular', 'email',
+    ],
+    'Perfil Complementario' => [
+        'ocupacion', 'grado_instruccion',
+        ['key' => 'nombre_padre', 'class' => 'span-2'],
+        ['key' => 'nombre_madre', 'class' => 'span-2'],
+        ['key' => 'notas', 'class' => 'span-2'],
+        ['key' => 'foto_path', 'class' => 'span-2'],
+        'api_fuente', 'api_ref', 'persona_creado_en',
+    ],
+];
+
+$abogadoSections = [
+    'Datos personales' => [
+        'apellido_paterno', 'apellido_materno', 'nombres',
+    ],
+    'Registro profesional' => [
+        'colegiatura', 'registro', 'casilla_electronica',
+    ],
+    'Contacto y dirección' => [
+        'celular', 'email',
+        ['key' => 'domicilio_procesal', 'class' => 'span-2'],
+    ],
+];
+
 $vehiculoRepo = new VehiculoRepository($pdo);
 $vehiculoService = new VehiculoService($vehiculoRepo);
 $vehiculoCatalogos = $vehiculoService->catalogos();
@@ -931,6 +1365,8 @@ include __DIR__ . '/sidebar.php';
     --line:#d9e1ee;
     --muted:#66758c;
     --ink:#162033;
+    --title-blue:#2f5f96;
+    --title-blue-soft:#5a79a3;
     --gold:#9a7a1b;
     --gold-soft:#fff8e2;
     --blue:#3257a8;
@@ -939,35 +1375,128 @@ include __DIR__ . '/sidebar.php';
   body{background:linear-gradient(180deg,#f7f9fc 0%,#eef3fa 100%);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
   .page{max-width:1380px;margin:12px auto;padding:0 10px 16px}
   .topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .title-wrap h1{margin:0;font-size:20px;font-weight:900;letter-spacing:-.02em}
+  .title-wrap h1{margin:0;font-size:20px;font-weight:900;letter-spacing:-.02em;color:var(--title-blue)}
   .title-wrap p{margin:1px 0 0;color:var(--muted);font-size:12px}
   .top-actions{display:flex;gap:8px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:12px;line-height:1.15;box-shadow:0 6px 18px rgba(17,24,39,.05)}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
   .summary-stack{display:grid;gap:6px;margin-bottom:8px}
   .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:12px;padding:9px 11px;font-size:13px;font-weight:700;line-height:1.3}
-  .summary-pill strong{color:#5d6c83;display:inline-block;min-width:150px}
-  .section-title{margin:0 0 6px;color:#607089;font-weight:900;font-size:14px}
+  .summary-pill strong{color:#8b6a12;display:inline-block;min-width:150px}
+  .section-title{margin:0 0 6px;color:var(--title-blue);font-weight:900;font-size:14px;letter-spacing:.01em}
   .general-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+  .ident-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
   .g-3{grid-column:span 3}.g-4{grid-column:span 4}.g-6{grid-column:span 6}.g-12{grid-column:span 12}
   .data-card{background:#f7f8fb;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-height:64px}
   .data-card.highlight{border-color:#dfb94d;background:linear-gradient(180deg,#fffdf7 0%,#fff7df 100%)}
-  .data-card .label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--gold);margin-bottom:3px}
+  .data-card.centered{text-align:center;display:flex;flex-direction:column;justify-content:center}
+  .data-card .label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
   .data-card .value{font-size:13px;line-height:1.2;font-weight:800;word-break:break-word}
   .data-card .value.status-pendiente{color:#c81e1e}
   .data-card .value.status-resuelto{color:#19734d}
+  .data-card .value.status-diligencias{color:#9a6a00}
+  .quick-status-select{width:100%;max-width:180px;margin:0 auto;border:1px solid #d5ddeb;border-radius:10px;background:#fff;padding:6px 10px;font-size:13px;font-weight:900;color:var(--ink);text-align:center;text-align-last:center}
+  .quick-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
+  .module-status-select{border:1px solid #d5ddeb;border-radius:999px;background:#fff;padding:5px 10px;font-size:11px;font-weight:900;line-height:1.1;color:var(--ink);min-width:126px;text-align:center;text-align-last:center}
+  .module-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.14)}
+  .module-status-select.status-borrador{border-color:#cbd5e1;background:#f8fafc;color:#475569}
+  .module-status-select.status-firmado{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}
+  .module-status-select.status-enviado{border-color:#86efac;background:#ecfdf5;color:#166534}
+  .module-status-select.status-anulado{border-color:#fca5a5;background:#fff1f2;color:#b91c1c}
+  .module-status-select.status-archivado{border-color:#d8b4fe;background:#faf5ff;color:#7c3aed}
   .line-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
   .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:800;line-height:1.25}
-  .line-card strong{color:var(--gold)}
+  .line-card strong{color:#8b6a12}
   .tabs-shell{margin-top:10px}
   .tabs-header{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
   .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#3f4e68;border-radius:10px;padding:7px 9px;font-weight:800;font-size:12px;line-height:1.1;white-space:nowrap}
   .tabs-header .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
+  .tabs-header .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
+  .tabs-header .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
+  .tabs-header .nav-link.tab-herido{border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
+  .tabs-header .nav-link.tab-herido.active{background:linear-gradient(180deg,#fff1b8 0%,#ffe89a 100%);border-color:#e0ba36;color:#8a6500;box-shadow:0 0 0 1px rgba(224,186,54,.16) inset, 0 8px 18px rgba(224,186,54,.16)}
+  .tabs-header .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
+  .tabs-header .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
   .tabs-header .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
-  .tab-panel{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
+  .tab-panel{position:relative;overflow:hidden;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
+  .tab-panel.driver-panel{
+    border-color:#44f7b2;
+    background:
+      linear-gradient(180deg,rgba(241,255,250,.98) 0%,rgba(255,255,255,.96) 42%,rgba(248,255,252,.96) 100%);
+    box-shadow:
+      0 12px 30px rgba(17,24,39,.08),
+      0 0 0 1px rgba(68,247,178,.18) inset,
+      0 0 22px rgba(55,255,179,.24),
+      0 0 44px rgba(55,255,179,.14);
+  }
+  .tab-panel.driver-panel::before{
+    content:"";
+    position:absolute;
+    inset:-40% auto auto -18%;
+    width:58%;
+    height:180%;
+    transform:rotate(18deg);
+    background:linear-gradient(180deg,rgba(255,255,255,.0) 0%,rgba(255,255,255,.34) 35%,rgba(255,255,255,.08) 72%,rgba(255,255,255,0) 100%);
+    filter:blur(4px);
+    pointer-events:none;
+    animation:driverSheen 7.5s ease-in-out infinite;
+  }
+  .tab-panel.driver-panel::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(55,255,179,.16);
+  }
+  .tab-panel.driver-panel .person-title h2{
+    text-shadow:0 1px 0 rgba(255,255,255,.55);
+  }
+  .tab-panel.herido-panel{
+    border-color:#e0ba36;
+    background:
+      linear-gradient(180deg,rgba(255,252,235,.98) 0%,rgba(255,255,255,.96) 42%,rgba(255,252,244,.96) 100%);
+    box-shadow:
+      0 12px 30px rgba(17,24,39,.08),
+      0 0 0 1px rgba(224,186,54,.14) inset,
+      0 0 20px rgba(224,186,54,.14);
+  }
+  .tab-panel.herido-panel::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(224,186,54,.14);
+  }
+  .tab-panel.occiso-panel{
+    border-color:#e06a6a;
+    background:
+      linear-gradient(180deg,rgba(255,245,245,.98) 0%,rgba(255,255,255,.96) 42%,rgba(255,248,248,.96) 100%);
+    box-shadow:
+      0 12px 30px rgba(17,24,39,.08),
+      0 0 0 1px rgba(224,106,106,.16) inset,
+      0 0 20px rgba(220,38,38,.16);
+  }
+  .tab-panel.occiso-panel::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(220,38,38,.14);
+  }
+  @keyframes driverSheen{
+    0%, 100%{transform:translateX(-18%) rotate(18deg);opacity:.52}
+    50%{transform:translateX(138%) rotate(18deg);opacity:.82}
+  }
   .person-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .person-title h2{margin:0;font-size:17px;font-weight:900;line-height:1.15}
+  .person-title h2{margin:0;font-size:17px;font-weight:900;line-height:1.15;color:var(--title-blue);letter-spacing:-.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .person-title p{margin:3px 0 0;color:var(--muted);font-weight:700;font-size:12px}
+  .person-name-copy{display:inline-flex;align-items:center;gap:6px}
+  .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#40506d;font-size:12px;font-weight:900;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+  .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
+  .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
   .chip-row{display:flex;flex-wrap:wrap;gap:6px}
   .chip-role,.chip-status,.chip-simple{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid var(--line);font-size:10px;font-weight:900;background:#fff;line-height:1.1}
   .chip-conductor{background:#e8fbef;border-color:#b7e6c3;color:#19734d}
@@ -980,17 +1509,33 @@ include __DIR__ . '/sidebar.php';
   .chip-status-danger{background:#ffe8e8;border-color:#ffb6b6;color:#c81e1e}
   .action-row{display:flex;gap:8px;flex-wrap:wrap}
   .section-block{margin-top:10px}
-  .section-block h3{margin:0 0 6px;font-size:13px;font-weight:900;color:#52627a}
+  .section-block h3{margin:0 0 6px;font-size:13px;font-weight:900;color:var(--title-blue);letter-spacing:.01em}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
   .field-card.span-2{grid-column:span 2}
-  .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#6d7e96;margin-bottom:3px}
+  .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
+  .edit-label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin-bottom:3px}
   .field-value{font-size:12px;line-height:1.28;font-weight:800;word-break:break-word}
   .editable-shell{display:grid;gap:8px}
   .editable-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
   .editable-actions{display:flex;gap:6px;flex-wrap:wrap}
   .editable-actions[hidden]{display:none}
   .btn-shell.btn-primary{background:linear-gradient(180deg,#fff1bc 0%,#ffd86e 100%);border-color:#e2ba47;color:#5f4700}
+  .general-edit-shell{display:grid;gap:8px}
+  .general-edit-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+  .general-edit-card{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .general-edit-card.g-3{grid-column:span 3}
+  .general-edit-card.g-4{grid-column:span 4}
+  .general-edit-card.g-6{grid-column:span 6}
+  .general-edit-card.g-9{grid-column:span 9}
+  .general-edit-card.g-12{grid-column:span 12}
+  .general-edit-card label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin:0 0 4px}
+  .general-edit-card .edit-control{font-size:12px}
+  .general-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .general-checkbox{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:800;line-height:1.25}
+  .general-checkbox input{margin-top:2px}
+  .general-help{font-size:10px;color:var(--muted);font-weight:700}
+  .general-inline-note{font-size:11px;color:var(--muted);font-weight:700}
   .inline-edit-error{display:none;padding:8px 10px;border:1px solid #f1b3b3;background:#fff1f1;color:#aa2222;border-radius:10px;font-size:11px;font-weight:800}
   .inline-edit-error.is-visible{display:block}
   .edit-field{padding:6px 8px}
@@ -1001,9 +1546,10 @@ include __DIR__ . '/sidebar.php';
   .module-grid{display:grid;gap:6px}
   .module-card{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:9px 11px}
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
-  .module-card h4{margin:0;font-size:14px;font-weight:900;line-height:1.15}
+  .module-card h4{margin:0;font-size:14px;font-weight:900;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .module-card p{margin:0;color:var(--muted);font-weight:700;font-size:11px;line-height:1.25}
   .module-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .module-title-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .module-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:800;font-size:12px}
   .inner-tabs{display:flex;gap:5px;overflow:auto;padding-bottom:5px;margin:8px 0 6px}
@@ -1013,7 +1559,7 @@ include __DIR__ . '/sidebar.php';
   .inner-panel{border:1px solid var(--line);border-radius:13px;background:#fbfcfe;padding:8px}
   .record-stack{display:grid;gap:6px}
   .record-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:8px 9px}
-  .record-card h5{margin:0 0 4px;font-size:12px;font-weight:900;line-height:1.2}
+  .record-card h5{margin:0 0 4px;font-size:12px;font-weight:900;line-height:1.2;color:#8b6a12}
   .record-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.3;font-weight:700}
   .record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .record-chipline{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
@@ -1028,6 +1574,8 @@ include __DIR__ . '/sidebar.php';
   }
   @media (max-width:980px){
     .g-3,.g-4,.g-6{grid-column:span 6}
+    .ident-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9{grid-column:span 6}
     .line-grid{grid-template-columns:1fr}
     .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .general-grid{gap:5px}
@@ -1041,7 +1589,10 @@ include __DIR__ . '/sidebar.php';
     .summary-pill{padding:8px 9px;font-size:12px}
     .summary-pill strong{display:block;min-width:0;margin-bottom:4px}
     .g-3,.g-4,.g-6,.g-12{grid-column:span 12}
+    .ident-grid{grid-template-columns:1fr}
+    .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9,.general-edit-card.g-12{grid-column:span 12}
     .field-grid{grid-template-columns:1fr}
+    .general-checkbox-grid{grid-template-columns:1fr}
     .field-card.span-2{grid-column:span 1}
     .editable-toolbar{align-items:flex-start}
     .person-title h2{font-size:16px}
@@ -1050,6 +1601,9 @@ include __DIR__ . '/sidebar.php';
     .inner-tabs .nav-link{padding:5px 7px;font-size:10px}
     .inline-frame{height:460px}
     .data-card{min-height:auto}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tab-panel.driver-panel::before{animation:none}
   }
 </style>
 </head>
@@ -1067,101 +1621,313 @@ include __DIR__ . '/sidebar.php';
   </div>
 
   <div class="panel">
-    <div class="summary-stack">
-      <div class="summary-pill"><strong>Modalidades:</strong> <?= $modsConcat ?></div>
-      <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
-    </div>
-
-    <div class="section-block">
-      <h2 class="section-title">Identificación</h2>
-      <div class="general-grid">
-        <div class="data-card highlight g-3">
-          <div class="label">Registro SIDPOL</div>
-          <div class="value"><?= fmt($A['registro_sidpol'] ?? '') ?></div>
-        </div>
-        <?php $estadoClass = mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8') === 'pendiente' ? 'status-pendiente' : (mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8') === 'resuelto' ? 'status-resuelto' : ''); ?>
-        <div class="data-card g-3">
-          <div class="label">Estado</div>
-          <div class="value <?= h($estadoClass) ?>"><?= fmt($A['estado'] ?? '') ?></div>
-        </div>
-        <div class="data-card g-3">
-          <div class="label">N° informe policial</div>
-          <div class="value"><?= fmt($A['nro_informe_policial'] ?? '') ?></div>
-        </div>
-        <div class="data-card g-3">
-          <div class="label">Comisaría</div>
-          <div class="value"><?= fmt($A['comisaria_nom'] ?? '') ?></div>
+    <div class="general-edit-shell" data-edit-shell="general-accidente">
+      <div class="editable-toolbar">
+        <div class="general-inline-note">Dato general del accidente</div>
+        <div class="editable-actions">
+          <button type="button" class="btn-shell js-edit-start" data-shell="general-accidente">Editar</button>
+          <div class="editable-actions" data-edit-actions="general-accidente" hidden>
+            <button type="button" class="btn-shell js-edit-cancel" data-shell="general-accidente">Cancelar</button>
+            <button type="submit" class="btn-shell btn-primary" form="accidente-inline-form">Guardar</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="section-block">
-      <h2 class="section-title">Fechas</h2>
-      <div class="line-grid">
-        <div class="line-card"><strong>Accidente:</strong> <?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></div>
-        <div class="line-card"><strong>Comunicación:</strong> <?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></div>
-        <div class="line-card"><strong>Intervención:</strong> <?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></div>
-      </div>
-    </div>
+      <div class="inline-edit-error" id="accidente-inline-error"></div>
 
-    <div class="section-block">
-      <h2 class="section-title">Ubicación</h2>
-      <div class="general-grid">
-        <div class="data-card g-4">
-          <div class="label">Lugar</div>
-          <div class="value"><?= fmt($A['lugar'] ?? '') ?></div>
+      <div class="editable-view" data-edit-view="general-accidente">
+        <div class="summary-stack">
+          <div class="summary-pill"><strong>Modalidades:</strong> <?= $modsConcat ?></div>
+          <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
         </div>
-        <div class="data-card g-4">
-          <div class="label">Ubicación</div>
-          <div class="value"><?= $ubicacion !== '' ? h($ubicacion) : '—' ?></div>
-        </div>
-        <div class="data-card g-4">
-          <div class="label">Referencia</div>
-          <div class="value"><?= fmt($A['referencia'] ?? '') ?></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="section-block">
-      <h2 class="section-title">Autoridades</h2>
-      <div class="general-grid">
-        <div class="data-card g-6">
-          <div class="label">Fiscalía</div>
-          <div class="value"><?= fmt($A['fiscalia_nom'] ?? '') ?></div>
+        <div class="section-block">
+          <h2 class="section-title">Identificación</h2>
+          <div class="ident-grid">
+            <div class="data-card highlight centered">
+              <div class="label">Registro SIDPOL</div>
+              <div class="value"><?= fmt($A['registro_sidpol'] ?? '') ?></div>
+            </div>
+            <?php
+              $estadoKey = mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8');
+              $estadoClass = $estadoKey === 'pendiente'
+                ? 'status-pendiente'
+                : ($estadoKey === 'resuelto'
+                    ? 'status-resuelto'
+                    : ($estadoKey === 'con diligencias' ? 'status-diligencias' : ''));
+            ?>
+            <div class="data-card centered">
+              <div class="label">Estado</div>
+              <select class="quick-status-select value <?= h($estadoClass) ?> js-quick-status" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>">
+                <?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?>
+                  <option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="data-card centered">
+              <div class="label">N° informe policial</div>
+              <div class="value"><?= fmt($A['nro_informe_policial'] ?? '') ?></div>
+            </div>
+            <div class="data-card centered">
+              <div class="label">Comisaría</div>
+              <div class="value"><?= fmt($A['comisaria_nom'] ?? '') ?></div>
+            </div>
+            <div class="data-card centered">
+              <div class="label">N° folder</div>
+              <div class="value"><?= fmt($A['folder'] ?? '') ?></div>
+            </div>
+          </div>
         </div>
-        <div class="data-card g-6">
-          <div class="label">Fiscal a cargo</div>
-          <div class="value"><?= fmt($A['fiscal_nom'] ?? '') ?></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="section-block">
-      <h2 class="section-title">Comunicación</h2>
-      <div class="general-grid">
-        <div class="data-card g-6">
-          <div class="label">Comunicante</div>
-          <div class="value"><?= fmt($A['comunicante_nombre'] ?? '') ?></div>
+        <div class="section-block">
+          <h2 class="section-title">Fechas</h2>
+          <div class="line-grid">
+            <div class="line-card"><strong>Accidente:</strong> <?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></div>
+            <div class="line-card"><strong>Comunicación:</strong> <?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></div>
+            <div class="line-card"><strong>Intervención:</strong> <?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></div>
+          </div>
         </div>
-        <div class="data-card g-6">
-          <div class="label">Tel. comunicante</div>
-          <div class="value"><?= fmt($A['comunicante_telefono'] ?? '') ?></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="section-block">
-      <h2 class="section-title">Descripción</h2>
-      <div class="general-grid">
-        <div class="data-card g-6">
-          <div class="label">Sentido / dirección</div>
-          <div class="value"><?= fmt($A['sentido'] ?? '') ?></div>
+        <div class="section-block">
+          <h2 class="section-title">Ubicación</h2>
+          <div class="general-grid">
+            <div class="data-card g-4">
+              <div class="label">Lugar</div>
+              <div class="value"><?= fmt($A['lugar'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-4">
+              <div class="label">Ubicación</div>
+              <div class="value"><?= $ubicacion !== '' ? h($ubicacion) : '—' ?></div>
+            </div>
+            <div class="data-card g-4">
+              <div class="label">Referencia</div>
+              <div class="value"><?= fmt($A['referencia'] ?? '') ?></div>
+            </div>
+          </div>
         </div>
-        <div class="data-card g-6">
-          <div class="label">Secuencia de eventos</div>
-          <div class="value"><?= fmt($A['secuencia'] ?? '') ?></div>
+
+        <div class="section-block">
+          <h2 class="section-title">Autoridades</h2>
+          <div class="general-grid">
+            <div class="data-card g-6">
+              <div class="label">Fiscalía</div>
+              <div class="value"><?= fmt($A['fiscalia_nom'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-6">
+              <div class="label">Fiscal a cargo</div>
+              <div class="value"><?= fmt($A['fiscal_nom'] ?? '') ?></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Comunicación</h2>
+          <div class="general-grid">
+            <div class="data-card g-6">
+              <div class="label">Comunicante</div>
+              <div class="value"><?= fmt($A['comunicante_nombre'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-6">
+              <div class="label">Tel. comunicante</div>
+              <div class="value"><?= fmt($A['comunicante_telefono'] ?? '') ?></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Descripción</h2>
+          <div class="general-grid">
+            <div class="data-card g-6">
+              <div class="label">Sentido / dirección</div>
+              <div class="value"><?= fmt($A['sentido'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-6">
+              <div class="label">Secuencia de eventos</div>
+              <div class="value"><?= fmt($A['secuencia'] ?? '') ?></div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <form class="editable-form js-inline-ajax-form js-accidente-inline-form" id="accidente-inline-form" data-shell="general-accidente" data-error="accidente-inline-error" method="post" hidden>
+        <input type="hidden" name="action" value="save_accidente_inline">
+        <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
+
+        <div class="section-block" style="margin-top:0">
+          <h2 class="section-title">Clasificación del evento</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-6">
+              <label>Modalidades</label>
+              <div class="general-checkbox-grid">
+                <?php foreach ($modalidadesCatalog as $item): ?>
+                  <label class="general-checkbox">
+                    <input type="checkbox" name="modalidad_ids[]" value="<?= (int) $item['id'] ?>" <?= in_array((int) $item['id'], $modSel, true) ? 'checked' : '' ?>>
+                    <span><?= h((string) $item['nombre']) ?></span>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            </div>
+            <div class="general-edit-card g-6">
+              <label>Consecuencias</label>
+              <div class="general-checkbox-grid">
+                <?php foreach ($consecuenciasCatalog as $item): ?>
+                  <label class="general-checkbox">
+                    <input type="checkbox" name="consecuencia_ids[]" value="<?= (int) $item['id'] ?>" <?= in_array((int) $item['id'], $conSel, true) ? 'checked' : '' ?>>
+                    <span><?= h((string) $item['nombre']) ?></span>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Identificación</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-3">
+              <label for="acc-registro-sidpol">Registro SIDPOL</label>
+              <input class="edit-control" id="acc-registro-sidpol" type="text" name="registro_sidpol" maxlength="50" value="<?= h((string) ($accidenteBase['registro_sidpol'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-estado">Estado</label>
+              <select class="edit-control" id="acc-estado" name="estado">
+                <?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?>
+                  <option value="<?= h($estadoOpt) ?>" <?= (string) ($accidenteBase['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-nro-informe">N° informe policial</label>
+              <input class="edit-control" id="acc-nro-informe" type="text" name="nro_informe_policial" maxlength="40" value="<?= h((string) ($accidenteBase['nro_informe_policial'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-comisaria">Comisaría</label>
+              <select class="edit-control" id="acc-comisaria" name="comisaria_id" data-current="<?= h((string) ($accidenteBase['comisaria_id'] ?? '')) ?>" <?= empty($comis) ? 'disabled' : '' ?>>
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($comis as $item): ?>
+                  <?php $label = $item['nombre'] . (!empty($item['_fuera']) ? ' (fuera del distrito)' : ''); ?>
+                  <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['comisaria_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Fechas</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-accidente">Fecha y hora del accidente</label>
+              <input class="edit-control" id="acc-fecha-accidente" type="datetime-local" name="fecha_accidente" value="<?= h((string) ($accidenteBase['fecha_accidente'] ?? '')) ?>" required>
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-comunicacion">Comunicación</label>
+              <input class="edit-control" id="acc-fecha-comunicacion" type="datetime-local" name="fecha_comunicacion" value="<?= h((string) ($accidenteBase['fecha_comunicacion'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-intervencion">Intervención</label>
+              <input class="edit-control" id="acc-fecha-intervencion" type="datetime-local" name="fecha_intervencion" value="<?= h((string) ($accidenteBase['fecha_intervencion'] ?? '')) ?>">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Ubicación</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-6">
+              <label for="acc-lugar">Lugar</label>
+              <input class="edit-control" id="acc-lugar" type="text" name="lugar" maxlength="200" value="<?= h((string) ($accidenteBase['lugar'] ?? '')) ?>" required>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-dep">Departamento</label>
+              <select class="edit-control" id="acc-dep" name="cod_dep" required>
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($deps as $item): ?>
+                  <option value="<?= h((string) $item['cod_dep']) ?>" <?= (string) ($accidenteBase['cod_dep'] ?? '') === (string) $item['cod_dep'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-prov">Provincia</label>
+              <select class="edit-control" id="acc-prov" name="cod_prov" data-current="<?= h((string) ($accidenteBase['cod_prov'] ?? '')) ?>" required>
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($provs as $item): ?>
+                  <option value="<?= h((string) $item['cod_prov']) ?>" <?= (string) ($accidenteBase['cod_prov'] ?? '') === (string) $item['cod_prov'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-dist">Distrito</label>
+              <select class="edit-control" id="acc-dist" name="cod_dist" data-current="<?= h((string) ($accidenteBase['cod_dist'] ?? '')) ?>" required>
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($dists as $item): ?>
+                  <option value="<?= h((string) $item['cod_dist']) ?>" <?= (string) ($accidenteBase['cod_dist'] ?? '') === (string) $item['cod_dist'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-9">
+              <label for="acc-referencia">Referencia</label>
+              <input class="edit-control" id="acc-referencia" type="text" name="referencia" maxlength="200" value="<?= h((string) ($accidenteBase['referencia'] ?? '')) ?>">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Autoridades</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-4">
+              <label for="acc-fiscalia">Fiscalía</label>
+              <select class="edit-control" id="acc-fiscalia" name="fiscalia_id">
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($fiscaliasCatalog as $item): ?>
+                  <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['fiscalia_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fiscal">Fiscal a cargo</label>
+              <select class="edit-control" id="acc-fiscal" name="fiscal_id" data-current="<?= h((string) ($accidenteBase['fiscal_id'] ?? '')) ?>">
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($fiscalesDeFiscalia as $item): ?>
+                  <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['fiscal_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fiscal-tel">Tel. fiscal</label>
+              <input class="edit-control" id="acc-fiscal-tel" type="text" value="<?= h((string) ($fiscalTelData['telefono'] ?? '')) ?>" readonly>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Comunicación</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-6">
+              <label for="acc-comunicante">Comunicante</label>
+              <input class="edit-control" id="acc-comunicante" type="text" name="comunicante_nombre" maxlength="120" value="<?= h((string) ($accidenteBase['comunicante_nombre'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-6">
+              <label for="acc-comunicante-tel">Tel. comunicante</label>
+              <input class="edit-control" id="acc-comunicante-tel" type="text" name="comunicante_telefono" maxlength="20" value="<?= h((string) ($accidenteBase['comunicante_telefono'] ?? '')) ?>">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Descripción</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-6">
+              <label for="acc-sentido">Sentido / dirección</label>
+              <input class="edit-control" id="acc-sentido" type="text" name="sentido" maxlength="100" value="<?= h((string) ($accidenteBase['sentido'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-6">
+              <label for="acc-secuencia">Secuencia de eventos</label>
+              <textarea class="edit-control" id="acc-secuencia" name="secuencia" rows="5"><?= h((string) ($accidenteBase['secuencia'] ?? '')) ?></textarea>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1170,7 +1936,7 @@ include __DIR__ . '/sidebar.php';
       <?php $tabIndex = 0; ?>
       <?php foreach ($personas as $persona): ?>
         <?php $tabId = 'persona-' . (int) $persona['involucrado_id']; ?>
-        <button class="nav-link <?= $tabIndex === 0 ? 'active' : '' ?>" id="<?= h($tabId) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tabId) ?>" type="button" role="tab">
+        <button class="nav-link <?= h(person_tab_tone_class($persona)) ?> <?= $tabIndex === 0 ? 'active' : '' ?>" id="<?= h($tabId) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tabId) ?>" type="button" role="tab">
           <?= h(tab_person_short_name($persona)) ?>
           <span class="tab-sub"><?= h(tab_person_label($persona)) ?></span>
         </button>
@@ -1182,7 +1948,7 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'propietario-vehiculo', 'label' => 'Propietario vehículo', 'count' => count($propietarios)],
             ['id' => 'familiar-fallecido', 'label' => 'Familiar fallecido', 'count' => count($familiares)],
             ['id' => 'abogados', 'label' => 'Abogados', 'count' => count($abogados)],
-            ['id' => 'oficios', 'label' => 'Oficios', 'count' => count($oficios)],
+            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
             ['id' => 'diligencias-pendientes', 'label' => 'Diligencias pendientes', 'count' => count($diligencias)],
         ];
       ?>
@@ -1207,10 +1973,16 @@ include __DIR__ . '/sidebar.php';
           $personPaneId = 'person-pane-' . (int) $persona['involucrado_id'];
         ?>
         <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="<?= h($tabId) ?>" role="tabpanel">
-          <div class="tab-panel">
+          <div class="tab-panel <?= h(person_panel_tone_class($persona)) ?>">
             <div class="person-hero">
               <div class="person-title">
-                <h2><?= h(person_label($persona)) ?></h2>
+                <h2>
+                  <span class="person-name-copy">
+                    <span><?= h(person_label($persona)) ?></span>
+                    <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($persona)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
+                  </span>
+                  <?php if (person_heading_suffix($persona) !== ''): ?><span style="font-size:.68em;font-weight:800;color:#6b7a92;letter-spacing:0;"><?= h(person_heading_suffix($persona)) ?></span><?php endif; ?>
+                </h2>
                 <p><?= h(tab_person_label($persona)) ?><?php if (!empty($persona['orden_participacion'])): ?> · <?= h((string) $persona['orden_participacion']) ?><?php endif; ?></p>
               </div>
               <div class="chip-row">
@@ -1528,7 +2300,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-occ" role="tabpanel">
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell" href="documento_occiso_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&personaId=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&accidenteId=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">+ Nuevo documento de occiso</a>
+                      <a class="btn-shell js-inline-open" href="documento_occiso_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&personaId=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&accidenteId=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Documento de occiso">+ Nuevo documento de occiso</a>
                     </div>
                     <?php if (!$extras['occ']): ?>
                       <div class="empty-state">No hay documentos de occiso para esta persona en este accidente.</div>
@@ -1544,7 +2316,7 @@ include __DIR__ . '/sidebar.php';
                             <?php if (!empty($occ['observaciones_levantamiento'])): ?><p><?= nl2br(h((string) $occ['observaciones_levantamiento'])) ?></p><?php endif; ?>
                             <div class="record-actions">
                               <a class="btn-shell" href="documento_occiso_ver.php?id=<?= (int) $occ['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                              <a class="btn-shell" href="documento_occiso_editar.php?id=<?= (int) $occ['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
+                              <a class="btn-shell js-inline-open" href="documento_occiso_editar.php?id=<?= (int) $occ['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Documento de occiso">Editar</a>
                             </div>
                           </article>
                         <?php endforeach; ?>
@@ -1569,7 +2341,12 @@ include __DIR__ . '/sidebar.php';
                 <article class="module-card">
                   <header>
                     <div>
-                      <h4><?= h(person_label($row)) ?></h4>
+                      <h4>
+                        <span class="module-title-copy">
+                          <span><?= h(person_label($row)) ?></span>
+                          <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($row)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
+                        </span>
+                      </h4>
                       <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' · CIP ' . ($row['cip'] ?? '-')))) ?></p>
                     </div>
                     <span class="chip-simple">Registro #<?= (int) $row['id'] ?></span>
@@ -1582,6 +2359,12 @@ include __DIR__ . '/sidebar.php';
                     <span class="chip-simple"><?= h((string) (($row['email'] ?? '') !== '' ? $row['email'] : 'Sin email')) ?></span>
                   </div>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
+                  <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                    <div class="section-block">
+                      <h3><?= h($sectionTitle) ?></h3>
+                      <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                    </div>
+                  <?php endforeach; ?>
                   <div class="module-actions">
                     <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                     <a class="btn-shell" href="policial_interviniente_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
@@ -1602,18 +2385,25 @@ include __DIR__ . '/sidebar.php';
             <div class="module-grid">
               <?php foreach ($propietarios as $row): ?>
                 <?php
+                  $ownerRecord = project_prefixed_record($row, 'owner_');
+                  $repRecord = project_prefixed_record($row, 'rep_');
                   $principal = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
-                    ? trim((string) (($row['ap_nat'] ?? '') . ' ' . ($row['am_nat'] ?? '') . ' ' . ($row['no_nat'] ?? '')))
+                    ? trim((string) (($ownerRecord['nombres'] ?? '') . ' ' . ($ownerRecord['apellido_paterno'] ?? '') . ' ' . ($ownerRecord['apellido_materno'] ?? '')))
                     : (string) ($row['razon_social'] ?? 'Sin razón social');
                   $principalDoc = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
-                    ? trim((string) (($row['tipo_doc_nat'] ?? '') . ' ' . ($row['dni_nat'] ?? '')))
+                    ? trim((string) (((string) ($ownerRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($ownerRecord['tipo_doc'] ?? '')) . ' ' : '') . ($ownerRecord['num_doc'] ?? '')))
                     : trim((string) ('RUC ' . ($row['ruc'] ?? '')));
-                  $representante = trim((string) (($row['ap_rep'] ?? '') . ' ' . ($row['am_rep'] ?? '') . ' ' . ($row['no_rep'] ?? '')));
+                  $representante = trim((string) (($repRecord['nombres'] ?? '') . ' ' . ($repRecord['apellido_paterno'] ?? '') . ' ' . ($repRecord['apellido_materno'] ?? '')));
                 ?>
                 <article class="module-card">
                   <header>
                     <div>
-                      <h4><?= h($principal !== '' ? $principal : 'Sin propietario') ?></h4>
+                      <h4>
+                        <span class="module-title-copy">
+                          <span><?= h($principal !== '' ? $principal : 'Sin propietario') ?></span>
+                          <?php if ($principal !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($principal) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
+                        </span>
+                      </h4>
                       <p><?= h(trim((string) (($row['orden_participacion'] ?? '') . ' · Placa ' . ($row['placa'] ?? 'SIN PLACA')))) ?></p>
                     </div>
                     <span class="chip-simple"><?= h((string) ($row['tipo_propietario'] ?? '')) ?></span>
@@ -1625,6 +2415,22 @@ include __DIR__ . '/sidebar.php';
                   </div>
                   <?php if (!empty($row['domicilio_fiscal'])): ?><p style="margin-top:10px;">Domicilio fiscal: <?= nl2br(h((string) $row['domicilio_fiscal'])) ?></p><?php endif; ?>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
+                  <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL' && trim((string) ($ownerRecord['nombres'] ?? '')) !== ''): ?>
+                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                      <div class="section-block">
+                        <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
+                        <div class="field-grid"><?= render_field_cards($ownerRecord, $sectionFields) ?></div>
+                      </div>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                  <?php if ($representante !== ''): ?>
+                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                      <div class="section-block">
+                        <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
+                        <div class="field-grid"><?= render_field_cards($repRecord, $sectionFields) ?></div>
+                      </div>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
                   <div class="module-actions">
                     <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                     <a class="btn-shell" href="propietario_vehiculo_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
@@ -1644,21 +2450,40 @@ include __DIR__ . '/sidebar.php';
           <?php else: ?>
             <div class="module-grid">
               <?php foreach ($familiares as $row): ?>
+                <?php
+                  $famRecord = project_prefixed_record($row, 'fam_');
+                  $fallRecord = project_prefixed_record($row, 'fall_');
+                  $nombreFamiliar = trim((string) (($famRecord['nombres'] ?? '') . ' ' . ($famRecord['apellido_paterno'] ?? '') . ' ' . ($famRecord['apellido_materno'] ?? '')));
+                  $nombreFallecido = trim((string) (($fallRecord['nombres'] ?? '') . ' ' . ($fallRecord['apellido_paterno'] ?? '') . ' ' . ($fallRecord['apellido_materno'] ?? '')));
+                ?>
                 <article class="module-card">
                   <header>
                     <div>
-                      <h4><?= h(trim((string) (($row['ap_fam'] ?? '') . ' ' . ($row['am_fam'] ?? '') . ' ' . ($row['no_fam'] ?? '')))) ?></h4>
-                      <p>Familiar de <?= h(trim((string) (($row['ap_fall'] ?? '') . ' ' . ($row['am_fall'] ?? '') . ' ' . ($row['no_fall'] ?? '')))) ?></p>
+                      <h4>
+                        <span class="module-title-copy">
+                          <span><?= h($nombreFamiliar !== '' ? $nombreFamiliar : 'Sin familiar asociado') ?></span>
+                          <?php if ($nombreFamiliar !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreFamiliar) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
+                        </span>
+                      </h4>
+                      <p>Familiar de <?= h($nombreFallecido !== '' ? $nombreFallecido : 'Sin fallecido asociado') ?></p>
                     </div>
                     <span class="chip-simple"><?= h((string) (($row['parentesco'] ?? '') !== '' ? $row['parentesco'] : 'Sin parentesco')) ?></span>
                   </header>
                   <div class="module-meta">
-                    <span class="chip-simple"><?= h(trim((string) (($row['tipo_doc_fam'] ?? '') . ' ' . ($row['dni_fam'] ?? '')))) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['cel_fam'] ?? '') !== '' ? $row['cel_fam'] : 'Sin celular')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['email_fam'] ?? $row['em_fam'] ?? '') !== '' ? ($row['email_fam'] ?? $row['em_fam']) : 'Sin email')) ?></span>
-                    <span class="chip-simple">Fallecido DNI: <?= h((string) (($row['dni_fall'] ?? '') !== '' ? $row['dni_fall'] : '—')) ?></span>
+                    <span class="chip-simple"><?= h(trim((string) (((string) ($famRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($famRecord['tipo_doc'] ?? '')) . ' ' : '') . ($famRecord['num_doc'] ?? '')))) ?></span>
+                    <span class="chip-simple"><?= h((string) (($famRecord['celular'] ?? '') !== '' ? $famRecord['celular'] : 'Sin celular')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($famRecord['email'] ?? '') !== '' ? $famRecord['email'] : 'Sin email')) ?></span>
+                    <span class="chip-simple">Fallecido: <?= h(trim((string) (((string) ($fallRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($fallRecord['tipo_doc'] ?? '')) . ' ' : '') . ($fallRecord['num_doc'] ?? '')))) ?></span>
                   </div>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
+                  <?php if ($nombreFamiliar !== ''): ?>
+                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                      <div class="section-block">
+                        <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+                        <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
+                      </div>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
                   <div class="module-actions">
                     <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                     <a class="btn-shell" href="familiar_fallecido_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
@@ -1692,7 +2517,12 @@ include __DIR__ . '/sidebar.php';
                 <article class="module-card">
                   <header>
                     <div>
-                      <h4><?= h($nombreAbogado !== '' ? $nombreAbogado : 'Sin nombre') ?></h4>
+                      <h4>
+                        <span class="module-title-copy">
+                          <span><?= h($nombreAbogado !== '' ? $nombreAbogado : 'Sin nombre') ?></span>
+                          <?php if ($nombreAbogado !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreAbogado) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
+                        </span>
+                      </h4>
                       <p><?= h((string) (($row['persona_rep_nom'] ?? '') !== '' ? $row['persona_rep_nom'] : 'Sin persona asociada')) ?></p>
                     </div>
                     <span class="chip-simple">Registro #<?= (int) $row['id'] ?></span>
@@ -1705,6 +2535,12 @@ include __DIR__ . '/sidebar.php';
                   </div>
                   <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrónica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
                   <?php if (!empty($row['domicilio_procesal'])): ?><p style="margin-top:10px;">Domicilio procesal: <?= nl2br(h((string) $row['domicilio_procesal'])) ?></p><?php endif; ?>
+                  <?php foreach ($abogadoSections as $sectionTitle => $sectionFields): ?>
+                    <div class="section-block">
+                      <h3><?= h($sectionTitle) ?></h3>
+                      <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                    </div>
+                  <?php endforeach; ?>
                   <div class="module-actions">
                     <a class="btn-shell" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                     <a class="btn-shell" href="abogado_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
@@ -1718,37 +2554,121 @@ include __DIR__ . '/sidebar.php';
       </div>
       <?php $paneIndex++; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="oficios" role="tabpanel">
+      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="documentos" role="tabpanel">
         <div class="tab-panel">
-          <?php if (!$oficios): ?>
-            <div class="empty-state">No hay oficios registrados para este accidente.</div>
-          <?php else: ?>
-            <div class="module-grid">
-              <?php foreach ($oficios as $row): ?>
-                <article class="module-card">
-                  <header>
-                    <div>
-                      <h4>Oficio <?= h((string) ($row['numero'] ?? '')) ?>/<?= h((string) ($row['anio'] ?? '')) ?></h4>
-                      <p><?= h((string) (($row['entidad'] ?? '') !== '' ? $row['entidad'] : 'Sin entidad')) ?></p>
-                    </div>
-                    <span class="chip-simple"><?= h((string) (($row['estado'] ?? '') !== '' ? $row['estado'] : 'Sin estado')) ?></span>
-                  </header>
-                  <div class="module-meta">
-                    <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
-                    <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
-                    <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . $row['veh_placa']))) ?></span><?php endif; ?>
-                    <?php if (!empty(trim((string) ($row['persona_nombre'] ?? '')))): ?><span class="chip-simple"><?= h(trim((string) $row['persona_nombre'])) ?></span><?php endif; ?>
-                  </div>
-                  <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
-                  <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
-                    <a class="btn-shell" href="oficios_editar.php?id=<?= (int) $row['id'] ?>">Editar</a>
-                  </div>
-                </article>
-              <?php endforeach; ?>
+          <div class="inline-workbench" id="documentos-workbench" hidden>
+            <div class="inline-head">
+              <strong id="documentos-workbench-title">Formulario</strong>
+              <button type="button" class="btn-shell js-inline-close" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame">Cerrar</button>
             </div>
-          <?php endif; ?>
+            <iframe class="inline-frame" id="documentos-workbench-frame" src="about:blank" loading="lazy"></iframe>
+          </div>
+
+          <div class="inner-tabs nav nav-tabs flex-nowrap" id="documentos-tabs" role="tablist">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#documentos-oficios" type="button" role="tab">
+              Oficios
+              <span class="tab-mini"><?= count($oficios) ?> registro(s)</span>
+            </button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-recibidos" type="button" role="tab">
+              Documentos recibidos
+              <span class="tab-mini"><?= count($documentosRecibidos) ?> registro(s)</span>
+            </button>
+          </div>
+
+          <div class="tab-content mt-2">
+            <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
+              <div class="inner-panel">
+                <div class="module-actions" style="margin-bottom:8px;">
+                  <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo oficio">+ Nuevo oficio</a>
+                  <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+                </div>
+
+                <?php if (!$oficios): ?>
+                  <div class="empty-state">No hay oficios registrados para este accidente.</div>
+                <?php else: ?>
+                  <div class="module-grid">
+                    <?php foreach ($oficios as $row): ?>
+                      <?php
+                        $oficioIcon = oficio_icon($row);
+                        $oficioEstadoClass = oficio_status_class((string) ($row['estado'] ?? ''));
+                      ?>
+                      <article class="module-card">
+                        <header>
+                          <div>
+                            <h4><?= h($oficioIcon) ?> Oficio <?= h((string) ($row['numero'] ?? '')) ?>/<?= h((string) ($row['anio'] ?? '')) ?></h4>
+                            <p><?= h((string) (($row['entidad'] ?? '') !== '' ? $row['entidad'] : 'Sin entidad')) ?></p>
+                          </div>
+                          <select class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
+                            <?php foreach ($oficioEstados as $estadoOpt): ?>
+                              <option value="<?= h((string) $estadoOpt) ?>" <?= (string) ($row['estado'] ?? 'BORRADOR') === (string) $estadoOpt ? 'selected' : '' ?>><?= h((string) $estadoOpt) ?></option>
+                            <?php endforeach; ?>
+                          </select>
+                        </header>
+                        <div class="module-meta">
+                          <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
+                          <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
+                          <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
+                          <?php if (!empty(trim((string) ($row['persona_nombre'] ?? '')))): ?><span class="chip-simple"><?= h(trim((string) $row['persona_nombre'])) ?></span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
+                        <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
+                        <div class="module-actions">
+                          <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
+                          <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar oficio">Editar</a>
+                          <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar oficio">Eliminar</a>
+                        </div>
+                      </article>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
+              <div class="inner-panel">
+                <div class="module-actions" style="margin-bottom:8px;">
+                  <a class="btn-shell js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo documento recibido">+ Nuevo documento recibido</a>
+                  <a class="btn-shell" href="documento_recibido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+                </div>
+
+                <?php if (!$documentosRecibidos): ?>
+                  <div class="empty-state">No hay documentos recibidos registrados para este accidente.</div>
+                <?php else: ?>
+                  <div class="module-grid">
+                    <?php foreach ($documentosRecibidos as $row): ?>
+                      <?php
+                        $docEstado = trim((string) ($row['estado'] ?? ''));
+                        $docEstadoClass = mb_strtolower($docEstado, 'UTF-8') === 'revisado'
+                          ? 'chip-status-ok'
+                          : (mb_strtolower($docEstado, 'UTF-8') === 'archivado' ? 'chip-testigo' : 'chip-status-warn');
+                      ?>
+                      <article class="module-card">
+                        <header>
+                          <div>
+                            <h4><?= h((string) (($row['asunto'] ?? '') !== '' ? $row['asunto'] : 'Documento recibido #' . (int) $row['id'])) ?></h4>
+                            <p><?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></p>
+                          </div>
+                          <span class="chip-simple <?= h($docEstadoClass) ?>"><?= h($docEstado !== '' ? $docEstado : 'Sin estado') ?></span>
+                        </header>
+                        <div class="module-meta">
+                          <span class="chip-simple"><?= h((string) (($row['tipo_documento'] ?? '') !== '' ? $row['tipo_documento'] : 'Sin tipo')) ?></span>
+                          <span class="chip-simple">N° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : '—')) ?></span>
+                          <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha'] ?? null)) ?></span>
+                          <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($row['contenido'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['contenido'])) ?></p><?php endif; ?>
+                        <div class="module-actions">
+                          <a class="btn-shell" href="documento_recibido_ver.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                          <a class="btn-shell js-inline-open" href="documento_recibido_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar documento recibido">Editar</a>
+                          <a class="btn-shell js-inline-open" href="documento_recibido_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar documento recibido">Eliminar</a>
+                        </div>
+                      </article>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <?php $paneIndex++; ?>
@@ -1984,6 +2904,164 @@ include __DIR__ . '/sidebar.php';
       }
     }
 
+    async function fetchAccidenteJson(params) {
+      const url = new URL(window.location.href);
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+      });
+      const response = await fetch(url.toString(), {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      return response.json();
+    }
+
+    function fillAccSelect(select, rows, valueKey, labelKey, placeholder, selectedValue, labelBuilder) {
+      if (!select) return;
+      select.innerHTML = '';
+      select.appendChild(optionNode('', placeholder, selectedValue === ''));
+      rows.forEach((row) => {
+        const value = String(row[valueKey] ?? '');
+        const label = typeof labelBuilder === 'function' ? labelBuilder(row) : String(row[labelKey] ?? '');
+        select.appendChild(optionNode(value, label, value === selectedValue));
+      });
+      select.disabled = false;
+    }
+
+    function clearAccSelect(select, placeholder) {
+      if (!select) return;
+      select.innerHTML = '';
+      select.appendChild(optionNode('', placeholder, true));
+      select.disabled = true;
+    }
+
+    function initAccidenteInlineForm(form) {
+      if (!form || form.dataset.accidenteBound === '1') return;
+      form.dataset.accidenteBound = '1';
+
+      const dep = form.querySelector('[name="cod_dep"]');
+      const prov = form.querySelector('[name="cod_prov"]');
+      const dist = form.querySelector('[name="cod_dist"]');
+      const comisaria = form.querySelector('[name="comisaria_id"]');
+      const fiscalia = form.querySelector('[name="fiscalia_id"]');
+      const fiscal = form.querySelector('[name="fiscal_id"]');
+      const fiscalTel = form.querySelector('#acc-fiscal-tel');
+
+      const loadProvincias = async (preserveCurrent = false) => {
+        const depValue = String(dep?.value || '');
+        const selected = preserveCurrent ? String(prov?.dataset.current || prov?.value || '') : '';
+        if (!depValue) {
+          clearAccSelect(prov, '-- Selecciona --');
+          clearAccSelect(dist, '-- Selecciona --');
+          clearAccSelect(comisaria, '-- Selecciona --');
+          return;
+        }
+
+        const json = await fetchAccidenteJson({ ajax: 'prov', dep: depValue });
+        fillAccSelect(prov, json.data || [], 'cod_prov', 'nombre', '-- Selecciona --', selected);
+        if (!preserveCurrent) {
+          prov.dataset.current = '';
+        }
+      };
+
+      const loadDistritos = async (preserveCurrent = false) => {
+        const depValue = String(dep?.value || '');
+        const provValue = String(prov?.value || '');
+        const selected = preserveCurrent ? String(dist?.dataset.current || dist?.value || '') : '';
+        if (!depValue || !provValue) {
+          clearAccSelect(dist, '-- Selecciona --');
+          clearAccSelect(comisaria, '-- Selecciona --');
+          return;
+        }
+
+        const json = await fetchAccidenteJson({ ajax: 'dist', dep: depValue, prov: provValue });
+        fillAccSelect(dist, json.data || [], 'cod_dist', 'nombre', '-- Selecciona --', selected);
+        if (!preserveCurrent) {
+          dist.dataset.current = '';
+        }
+      };
+
+      const loadComisarias = async (preserveCurrent = false) => {
+        const depValue = String(dep?.value || '');
+        const provValue = String(prov?.value || '');
+        const distValue = String(dist?.value || '');
+        const selected = preserveCurrent ? String(comisaria?.dataset.current || comisaria?.value || '') : '';
+        if (!depValue || !provValue || !distValue) {
+          clearAccSelect(comisaria, '-- Selecciona --');
+          return;
+        }
+
+        const json = await fetchAccidenteJson({ ajax: 'comisarias_dist', dep: depValue, prov: provValue, dist: distValue });
+        fillAccSelect(comisaria, json.data || [], 'id', 'nombre', '-- Selecciona --', selected, (row) => {
+          return String(row.nombre || '') + (row._fuera ? ' (fuera del distrito)' : '');
+        });
+        if (!preserveCurrent) {
+          comisaria.dataset.current = '';
+        }
+      };
+
+      const loadFiscales = async (preserveCurrent = false) => {
+        const fiscaliaValue = String(fiscalia?.value || '');
+        const selected = preserveCurrent ? String(fiscal?.dataset.current || fiscal?.value || '') : '';
+        if (!fiscaliaValue) {
+          clearAccSelect(fiscal, '-- Selecciona --');
+          if (fiscalTel) fiscalTel.value = '';
+          return;
+        }
+
+        const json = await fetchAccidenteJson({ ajax: 'fiscales', fiscalia_id: fiscaliaValue });
+        fillAccSelect(fiscal, json.data || [], 'id', 'nombre', '-- Selecciona --', selected);
+        if (!preserveCurrent) {
+          fiscal.dataset.current = '';
+        }
+      };
+
+      const loadFiscalInfo = async () => {
+        const fiscalValue = String(fiscal?.value || '');
+        if (!fiscalValue) {
+          if (fiscalTel) fiscalTel.value = '';
+          return;
+        }
+
+        const json = await fetchAccidenteJson({ ajax: 'fiscal_info', fiscal_id: fiscalValue });
+        if (fiscalTel) {
+          fiscalTel.value = String((json.data && json.data.telefono) || '');
+        }
+      };
+
+      dep?.addEventListener('change', async () => {
+        if (prov) prov.dataset.current = '';
+        if (dist) dist.dataset.current = '';
+        if (comisaria) comisaria.dataset.current = '';
+        await loadProvincias(false);
+        await loadDistritos(false);
+        await loadComisarias(false);
+      });
+
+      prov?.addEventListener('change', async () => {
+        if (dist) dist.dataset.current = '';
+        if (comisaria) comisaria.dataset.current = '';
+        await loadDistritos(false);
+        await loadComisarias(false);
+      });
+
+      dist?.addEventListener('change', async () => {
+        if (comisaria) comisaria.dataset.current = '';
+        await loadComisarias(false);
+      });
+
+      fiscalia?.addEventListener('change', async () => {
+        if (fiscal) fiscal.dataset.current = '';
+        await loadFiscales(false);
+        await loadFiscalInfo();
+      });
+
+      fiscal?.addEventListener('change', loadFiscalInfo);
+
+      form.__accidenteLoaders = { loadProvincias, loadDistritos, loadComisarias, loadFiscales, loadFiscalInfo };
+    }
+
     function initPersonaInlineForm(form) {
       if (!form || form.dataset.personaBound === '1') return;
       form.dataset.personaBound = '1';
@@ -2039,9 +3117,23 @@ include __DIR__ . '/sidebar.php';
       const opener = shell.querySelector('.js-edit-start[data-shell="' + shellName + '"]');
       if (!form || !view || !actions || !opener) return;
 
+      let preparePromise = Promise.resolve();
+
       if (form.classList.contains('js-veh-inline-form')) {
         initVehicleInlineForm(form);
         syncVehicleForm(form, true);
+      }
+      if (form.classList.contains('js-accidente-inline-form')) {
+        initAccidenteInlineForm(form);
+        const loaders = form.__accidenteLoaders || null;
+        if (loaders) {
+          preparePromise = Promise.resolve()
+            .then(() => loaders.loadProvincias(true))
+            .then(() => loaders.loadDistritos(true))
+            .then(() => loaders.loadComisarias(true))
+            .then(() => loaders.loadFiscales(true))
+            .then(() => loaders.loadFiscalInfo());
+        }
       }
       if (form.classList.contains('js-persona-inline-form')) {
         initPersonaInlineForm(form);
@@ -2060,10 +3152,17 @@ include __DIR__ . '/sidebar.php';
         view,
         actions,
         opener,
-        initial: serializeForm(form),
+        initial: '',
         dirty: false,
       };
       editStates.set(shellName, state);
+
+      preparePromise.finally(() => {
+        const latest = getEditState(shellName);
+        if (!latest) return;
+        latest.initial = serializeForm(form);
+        latest.dirty = false;
+      });
 
       const firstControl = form.querySelector('input:not([type="hidden"]), select, textarea');
       if (firstControl) firstControl.focus();
@@ -2076,6 +3175,17 @@ include __DIR__ . '/sidebar.php';
       state.form.reset();
       if (state.form.classList.contains('js-veh-inline-form')) {
         syncVehicleForm(state.form, true);
+      }
+      if (state.form.classList.contains('js-accidente-inline-form')) {
+        const loaders = state.form.__accidenteLoaders || null;
+        if (loaders) {
+          Promise.resolve()
+            .then(() => loaders.loadProvincias(true))
+            .then(() => loaders.loadDistritos(true))
+            .then(() => loaders.loadComisarias(true))
+            .then(() => loaders.loadFiscales(true))
+            .then(() => loaders.loadFiscalInfo());
+        }
       }
       if (state.form.classList.contains('js-persona-inline-form')) {
         initPersonaInlineForm(state.form);
@@ -2165,12 +3275,133 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    document.querySelectorAll('.js-quick-status').forEach((select) => {
+      const paintStatus = () => {
+        const value = String(select.value || '').toLowerCase();
+        select.classList.remove('status-pendiente', 'status-resuelto', 'status-diligencias');
+        if (value === 'pendiente') {
+          select.classList.add('status-pendiente');
+        } else if (value === 'resuelto') {
+          select.classList.add('status-resuelto');
+        } else if (value === 'con diligencias') {
+          select.classList.add('status-diligencias');
+        }
+      };
+
+      paintStatus();
+
+      select.addEventListener('change', async () => {
+        const previous = String(select.dataset.prev || '');
+        const nextValue = String(select.value || '');
+        paintStatus();
+        select.disabled = true;
+
+        try {
+          const formData = new FormData();
+          formData.append('action', 'save_accidente_estado_inline');
+          formData.append('accidente_id', String(select.dataset.accidenteId || '0'));
+          formData.append('estado', nextValue);
+
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = null;
+          }
+
+          if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.message) ? data.message : 'No se pudo actualizar el estado.');
+          }
+
+          select.dataset.prev = nextValue;
+        } catch (error) {
+          select.value = previous;
+          paintStatus();
+          window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado.');
+        } finally {
+          select.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('.js-quick-oficio-status').forEach((select) => {
+      const paintStatus = () => {
+        const value = String(select.value || '').toLowerCase();
+        select.classList.remove('status-borrador', 'status-firmado', 'status-enviado', 'status-anulado', 'status-archivado');
+        if (value === 'borrador') {
+          select.classList.add('status-borrador');
+        } else if (value === 'firmado') {
+          select.classList.add('status-firmado');
+        } else if (value === 'enviado') {
+          select.classList.add('status-enviado');
+        } else if (value === 'anulado') {
+          select.classList.add('status-anulado');
+        } else if (value === 'archivado') {
+          select.classList.add('status-archivado');
+        }
+      };
+
+      paintStatus();
+
+      select.addEventListener('change', async () => {
+        const previous = String(select.dataset.prev || '');
+        const nextValue = String(select.value || '');
+        paintStatus();
+        select.disabled = true;
+
+        try {
+          const formData = new FormData();
+          formData.append('action', 'save_oficio_estado_inline');
+          formData.append('oficio_id', String(select.dataset.oficioId || '0'));
+          formData.append('estado', nextValue);
+
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = null;
+          }
+
+          if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.message) ? data.message : 'No se pudo actualizar el estado del oficio.');
+          }
+
+          select.dataset.prev = nextValue;
+        } catch (error) {
+          select.value = previous;
+          paintStatus();
+          window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado del oficio.');
+        } finally {
+          select.disabled = false;
+        }
+      });
+    });
+
     document.querySelectorAll('.js-inline-ajax-form').forEach((form) => {
       const shellName = form.dataset.shell;
       if (!shellName) return;
 
       if (form.classList.contains('js-veh-inline-form')) {
         initVehicleInlineForm(form);
+      }
+      if (form.classList.contains('js-accidente-inline-form')) {
+        initAccidenteInlineForm(form);
       }
       if (form.classList.contains('js-persona-inline-form')) {
         initPersonaInlineForm(form);
@@ -2234,6 +3465,42 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    document.querySelectorAll('.js-copy-name').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const originalText = button.textContent;
+        const text = String(button.dataset.copyText || '').trim();
+        if (!text) return;
+
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            temp.setAttribute('readonly', 'readonly');
+            temp.style.position = 'absolute';
+            temp.style.left = '-9999px';
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+          }
+
+          button.classList.add('is-copied');
+          button.textContent = 'Copiado';
+          window.setTimeout(() => {
+            button.classList.remove('is-copied');
+            button.textContent = originalText || 'Copiar';
+          }, 1400);
+        } catch (error) {
+          button.textContent = 'Error';
+          window.setTimeout(() => {
+            button.textContent = originalText || 'Copiar';
+          }, 1400);
+        }
+      });
+    });
+
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
       const workbench = visibleWorkbench();
@@ -2253,7 +3520,7 @@ include __DIR__ . '/sidebar.php';
 
     window.addEventListener('message', (event) => {
       const data = event.data || {};
-      if (data.type === 'occiso.close') {
+      if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close') {
         const workbench = visibleWorkbench();
         if (!workbench) return;
         const frame = workbench.querySelector('.inline-frame');
@@ -2261,7 +3528,7 @@ include __DIR__ . '/sidebar.php';
         closeWorkbenchImmediate(workbench, frame);
         return;
       }
-      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated'].includes(data.type)) {
+      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted'].includes(data.type)) {
         window.location.reload();
       }
     });

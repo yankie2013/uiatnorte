@@ -16,6 +16,8 @@ if (!function_exists('h')) {
 }
 
 $service = new OficioService(new OficioRepository($pdo));
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $oficio = $id > 0 ? $service->oficio($id) : null;
 if ($id <= 0 || $oficio === null) {
@@ -93,6 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     try {
         $service->update($id, $data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"oficio.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
         $success = 'Cambios guardados correctamente.';
         $oficio = $service->oficio($id);
         $data = $service->defaultData($oficio);
@@ -110,7 +116,9 @@ $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccident
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : '');
 
-include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    include __DIR__ . '/sidebar.php';
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -129,17 +137,23 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
 <div class="wrap">
   <h1>Editar Oficio #<?= h($id) ?></h1>
 <div class="toolbar">
-  <a class="btn" href="<?= h($listarHref) ?>">← Volver</a>
-  <?php if (!empty($data['accidente_id'])): ?>
-    <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $data['accidente_id']) ?>">Datos generales SIDPOL</a>
+  <?php if ($embed): ?>
+    <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
+  <?php else: ?>
+    <a class="btn" href="<?= h($listarHref) ?>">← Volver</a>
+    <?php if (!empty($data['accidente_id'])): ?>
+      <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $data['accidente_id']) ?>">Datos generales SIDPOL</a>
+    <?php endif; ?>
+    <a class="btn" href="oficios_leer.php?id=<?= h($id) ?>">Ver detalle</a>
   <?php endif; ?>
-  <a class="btn" href="oficios_leer.php?id=<?= h($id) ?>">Ver detalle</a>
 </div>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?></div><?php endif; ?>
 
   <form method="post" class="card">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <div class="grid">
       <div class="c12">
         <label>Accidente asociado*</label>
@@ -166,7 +180,14 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
       <div class="c6" id="vehiculoBox" style="display:none;"><label>Vehículo involucrado</label><select name="involucrado_vehiculo_id" id="involucrado_vehiculo_id"><option value="">Selecciona</option><?php foreach ($vehiculosActuales as $item): ?><option value="<?= h($item['id']) ?>" <?= (string) $data['involucrado_vehiculo_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option><?php endforeach; ?></select></div>
       <div class="c6" id="fallecidoBox" style="display:none;"><label>Persona fallecida</label><select name="involucrado_persona_id" id="involucrado_persona_id"><option value="">Selecciona</option><?php foreach ($fallecidosActuales as $item): ?><option value="<?= h($item['id']) ?>" <?= (string) $data['involucrado_persona_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option><?php endforeach; ?></select></div>
       <div class="c4"><label>Estado</label><select name="estado"><?php foreach ($ctx['estados'] as $estado): ?><option value="<?= h($estado) ?>" <?= (string) $data['estado'] === (string) $estado ? 'selected' : '' ?>><?= h($estado) ?></option><?php endforeach; ?></select></div>
-      <div class="c12" style="display:flex;justify-content:flex-end;gap:10px;"><a class="btn" href="<?= h($listarHref) ?>">Cancelar</a><button class="btn primary" type="submit">Guardar cambios</button></div>
+      <div class="c12" style="display:flex;justify-content:flex-end;gap:10px;">
+        <?php if ($embed): ?>
+          <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
+        <?php else: ?>
+          <a class="btn" href="<?= h($listarHref) ?>">Cancelar</a>
+        <?php endif; ?>
+        <button class="btn primary" type="submit">Guardar cambios</button>
+      </div>
     </div>
   </form>
 </div>

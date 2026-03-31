@@ -11,6 +11,8 @@ header('Content-Type: text/html; charset=utf-8');
 function h($s){ return htmlspecialchars((string)($s ?? ''), ENT_QUOTES, 'UTF-8'); }
 
 $service = new DocumentoRecibidoService(new DocumentoRecibidoRepository($pdo));
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $id = (int)($_GET['id'] ?? ($_POST['id'] ?? 0));
 $row = $service->detalle($id);
 if(!$row){
@@ -25,6 +27,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $data = $service->defaultData($_POST);
     try {
         $service->actualizar($id, $_POST);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"documento_recibido.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
         header('Location: documento_recibido_ver.php?id=' . $id);
         exit;
     } catch (Throwable $e) {
@@ -49,7 +55,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="wrap">
 <h1 style="margin-top:0">Editar Documento Recibido #<?= (int)$id ?></h1>
 <?php if($errores): ?><div class="error"><?php foreach($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div><?php endif; ?>
-<form method="post"><input type="hidden" name="id" value="<?= (int)$id ?>">
+<form method="post"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 <div><label>Accidente</label><select name="accidente_id"><option value="">(ninguno)</option><?php foreach($ctx['accidentes'] as $a): ?><option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id']===(string)$a['id'])?'selected':'' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty($a['lugar']) ? (' - '.h($a['lugar'])) : '' ?></option><?php endforeach; ?></select></div>
 <div><label>Fecha</label><input type="date" name="fecha" value="<?= h($data['fecha']) ?>"></div>
 <div class="full"><label>Asunto</label><input type="text" name="asunto" value="<?= h($data['asunto']) ?>"></div>
@@ -59,5 +65,5 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div><label>Estado</label><select name="estado"><option value="">(ninguno)</option><?php foreach($ctx['estados'] as $estado): ?><option value="<?= h($estado) ?>" <?= ($data['estado']===$estado)?'selected':'' ?>><?= h($estado) ?></option><?php endforeach; ?></select></div>
 <div class="full"><label>Contenido</label><textarea name="contenido"><?= h($data['contenido']) ?></textarea></div>
 <div><label>Referencia a oficio</label><select name="referencia_oficio_id"><option value="">(ninguno)</option><?php foreach($ctx['oficios'] as $o): ?><option value="<?= h($o['id']) ?>" <?= ((string)$data['referencia_oficio_id']===(string)$o['id'])?'selected':'' ?>><?= h($service->oficioLabel($o, $ctx['asuntos'])) ?></option><?php endforeach; ?></select></div>
-<div class="actions"><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>">Cancelar</a><button class="btn primary" type="submit">Guardar cambios</button></div>
+<div class="actions"><?php if ($embed): ?><button type="button" class="btn" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cancelar</button><?php else: ?><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar cambios</button></div>
 </form></div></body></html>
