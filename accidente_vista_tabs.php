@@ -361,6 +361,22 @@ function human_label(string $key): string
         'veh_participacion' => 'Participación del vehículo',
         'veh_combo_placas' => 'Placas de la unidad combinada',
         'inv_vehiculo_observaciones' => 'Obs. vehículo involucrado',
+        'numero_propiedad' => 'Número',
+        'titulo_propiedad' => 'Título',
+        'partida_propiedad' => 'Partida',
+        'sede_propiedad' => 'Sede',
+        'numero_soat' => 'Número',
+        'aseguradora_soat' => 'Aseguradora',
+        'vigente_soat' => 'Vigente desde',
+        'vencimiento_soat' => 'Vence',
+        'numero_revision' => 'Número',
+        'certificadora_revision' => 'Certificadora',
+        'vigente_revision' => 'Vigente desde',
+        'vencimiento_revision' => 'Vence',
+        'numero_peritaje' => 'Número',
+        'fecha_peritaje' => 'Fecha',
+        'perito_peritaje' => 'Perito',
+        'danos_peritaje' => 'Daños observados',
         'veh_placa' => 'Placa',
         'veh_serie_vin' => 'Serie VIN',
         'veh_nro_motor' => 'Nro. motor',
@@ -429,6 +445,27 @@ function render_field_cards(array $record, array $fields): string
         $html .= '</div>';
     }
     return $html;
+}
+
+function record_has_any_content(array $record, array $fields): bool
+{
+    foreach ($fields as $field) {
+        $key = is_array($field) ? (string) ($field['key'] ?? '') : (string) $field;
+        if ($key === '') {
+            continue;
+        }
+
+        $value = $record[$key] ?? null;
+        if ($value === null) {
+            continue;
+        }
+
+        if (trim((string) $value) !== '') {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function project_prefixed_record(array $row, string $prefix): array
@@ -1178,6 +1215,7 @@ $personas = safe_query_all(
 $comboVehiculosRows = safe_query_all(
     $pdo,
     "SELECT
+            iv.id AS inv_vehiculo_id,
             iv.accidente_id,
             iv.orden_participacion,
             iv.tipo AS veh_participacion,
@@ -1238,6 +1276,45 @@ foreach ($comboVehiculosRows as $comboVehiculo) {
     $comboVehiculo['veh_numero'] = (string) ($comboVehiculo['veh_participacion'] ?? '') === 'Combinado vehicular 2' ? '2' : '1';
     $comboVehiculo['veh_placa'] = vehiculo_placa_visible((string) ($comboVehiculo['veh_placa'] ?? ''));
     $comboVehiculosPorUnidad[$ut][] = $comboVehiculo;
+}
+
+$vehiculoInvIds = [];
+foreach ($personas as $persona) {
+    if (!empty($persona['inv_vehiculo_id'])) {
+        $vehiculoInvIds[] = (int) $persona['inv_vehiculo_id'];
+    }
+}
+foreach ($comboVehiculosRows as $comboVehiculo) {
+    if (!empty($comboVehiculo['inv_vehiculo_id'])) {
+        $vehiculoInvIds[] = (int) $comboVehiculo['inv_vehiculo_id'];
+    }
+}
+$vehiculoInvIds = array_values(array_unique(array_filter($vehiculoInvIds)));
+
+$docVehiculoPorInvolucrado = [];
+$docVehiculoCantidadPorInvolucrado = [];
+if ($vehiculoInvIds !== []) {
+    $placeholders = implode(',', array_fill(0, count($vehiculoInvIds), '?'));
+    $docVehiculoRows = safe_query_all(
+        $pdo,
+        "SELECT *
+           FROM documento_vehiculo
+          WHERE involucrado_vehiculo_id IN ($placeholders)
+       ORDER BY involucrado_vehiculo_id, id DESC",
+        $vehiculoInvIds
+    );
+
+    foreach ($docVehiculoRows as $docVehiculo) {
+        $involucradoVehiculoId = (int) ($docVehiculo['involucrado_vehiculo_id'] ?? 0);
+        if ($involucradoVehiculoId <= 0) {
+            continue;
+        }
+
+        $docVehiculoCantidadPorInvolucrado[$involucradoVehiculoId] = ($docVehiculoCantidadPorInvolucrado[$involucradoVehiculoId] ?? 0) + 1;
+        if (!isset($docVehiculoPorInvolucrado[$involucradoVehiculoId])) {
+            $docVehiculoPorInvolucrado[$involucradoVehiculoId] = $docVehiculo;
+        }
+    }
 }
 
 foreach ($personas as &$persona) {
@@ -1712,6 +1789,107 @@ $vehiculoFields = [
     ['key' => 'veh_notas', 'class' => 'span-2'],
     'veh_creado_en', 'veh_actualizado_en',
 ];
+
+$docVehiculoSections = [
+    'propiedad' => [
+        'label' => 'Tarjeta de propiedad',
+        'fields' => ['numero_propiedad', 'titulo_propiedad', 'partida_propiedad', 'sede_propiedad'],
+    ],
+    'soat' => [
+        'label' => 'SOAT',
+        'fields' => ['numero_soat', 'aseguradora_soat', 'vigente_soat', 'vencimiento_soat'],
+    ],
+    'peritaje' => [
+        'label' => 'Peritaje',
+        'fields' => ['numero_peritaje', 'fecha_peritaje', 'perito_peritaje', ['key' => 'danos_peritaje', 'class' => 'span-2']],
+    ],
+    'revision' => [
+        'label' => 'Revisión técnica',
+        'fields' => ['numero_revision', 'certificadora_revision', 'vigente_revision', 'vencimiento_revision'],
+    ],
+];
+
+$renderVehiculoSubtabs = static function (
+    array $vehiculoRecord,
+    ?array $documentoVehiculo,
+    int $documentoVehiculoCount,
+    string $tabPrefix,
+    string $workbenchId,
+    string $frameId,
+    string $returnTo,
+    array $vehiculoFields,
+    array $docVehiculoSections,
+    ?array $unidadRecord = null
+): string {
+    $documentoVehiculoId = (int) ($documentoVehiculo['id'] ?? 0);
+    $involucradoVehiculoId = (int) ($vehiculoRecord['inv_vehiculo_id'] ?? 0);
+    $vehiculoNumero = trim((string) ($vehiculoRecord['veh_numero'] ?? ''));
+    $vehiculoTitulo = $vehiculoNumero !== '' ? 'Vehículo ' . $vehiculoNumero : 'Vehículo vinculado al conductor';
+    $returnToEncoded = urlencode($returnTo);
+
+    ob_start();
+    ?>
+    <div class="inner-tabs nav nav-tabs flex-nowrap" id="<?= h($tabPrefix) ?>-subtabs" role="tablist">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#<?= h($tabPrefix) ?>-resumen" type="button" role="tab">
+        Resumen
+        <span class="tab-mini">Ficha del vehículo</span>
+      </button>
+      <?php foreach ($docVehiculoSections as $slug => $section): ?>
+        <?php $sectionHasData = $documentoVehiculoId > 0 && record_has_any_content($documentoVehiculo ?? [], $section['fields']); ?>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#<?= h($tabPrefix) ?>-<?= h($slug) ?>" type="button" role="tab">
+          <?= h((string) $section['label']) ?>
+          <span class="tab-mini"><?= $sectionHasData ? '1 registro(s)' : '0 registro(s)' ?></span>
+        </button>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="tab-content mt-2">
+      <div class="tab-pane fade show active" id="<?= h($tabPrefix) ?>-resumen" role="tabpanel">
+        <div class="inner-panel">
+          <?php if ($unidadRecord !== null): ?>
+            <div class="section-block" style="margin-top:0">
+              <h3>Unidad combinada vinculada al conductor</h3>
+              <div class="field-grid"><?= render_field_cards($unidadRecord, ['orden_participacion', ['key' => 'veh_combo_placas', 'class' => 'span-2']]) ?></div>
+            </div>
+          <?php endif; ?>
+          <div class="section-block" style="margin-top:0">
+            <h3><?= h($vehiculoTitulo) ?></h3>
+            <div class="field-grid"><?= render_field_cards($vehiculoRecord, $vehiculoFields) ?></div>
+          </div>
+        </div>
+      </div>
+
+      <?php foreach ($docVehiculoSections as $slug => $section): ?>
+        <?php $sectionHasData = $documentoVehiculoId > 0 && record_has_any_content($documentoVehiculo ?? [], $section['fields']); ?>
+        <div class="tab-pane fade" id="<?= h($tabPrefix) ?>-<?= h($slug) ?>" role="tabpanel">
+          <div class="inner-panel">
+            <div class="module-actions" style="margin-bottom:8px;">
+              <?php if ($documentoVehiculoId > 0): ?>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
+                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
+              <?php elseif ($involucradoVehiculoId > 0): ?>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
+              <?php endif; ?>
+            </div>
+
+            <?php if ($sectionHasData): ?>
+              <div class="section-block" style="margin-top:0">
+                <h3><?= h((string) $section['label']) ?></h3>
+                <div class="field-grid"><?= render_field_cards($documentoVehiculo ?? [], $section['fields']) ?></div>
+              </div>
+            <?php elseif ($documentoVehiculoId > 0): ?>
+              <div class="empty-state">El documento existe, pero esta sección aún no tiene datos registrados.</div>
+            <?php else: ?>
+              <div class="empty-state">No hay <?= h(mb_strtolower((string) $section['label'], 'UTF-8')) ?> registrada para este vehículo.</div>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <?php
+
+    return (string) ob_get_clean();
+};
 
 $personaEditSections = [
     'Identidad' => [
@@ -2532,10 +2710,18 @@ include __DIR__ . '/sidebar.php';
               $comboVehiculos = $comboVehiculosPorUnidad[trim((string) $persona['orden_participacion'])] ?? [];
           }
           $hasComboVehiculos = count($comboVehiculos) > 1;
+          $singleDocVehiculo = null;
+          $singleDocVehiculoCount = 0;
+          if (!$hasComboVehiculos && !empty($persona['inv_vehiculo_id'])) {
+              $singleInvVehiculoId = (int) $persona['inv_vehiculo_id'];
+              $singleDocVehiculo = $docVehiculoPorInvolucrado[$singleInvVehiculoId] ?? null;
+              $singleDocVehiculoCount = (int) ($docVehiculoCantidadPorInvolucrado[$singleInvVehiculoId] ?? 0);
+          }
           $extras = $personaExtras[(int) $persona['involucrado_id']] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[],'show_lc'=>false,'show_rml'=>false,'show_dos'=>false,'show_man'=>false,'show_occ'=>false];
           $wa = preg_replace('/\D+/', '', (string) ($persona['celular'] ?? ''));
           $whatsAppMsg = "Buen día le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigación por el accidente de tránsito " . join_con_y($modalidades) . ", suscitado el día " . fecha_simple($A['fecha_accidente'] ?? null) . " en " . ($A['lugar'] ?? 'el lugar del accidente') . ".";
           $personPaneId = 'person-pane-' . (int) $persona['involucrado_id'];
+          $returnToTabs = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
         ?>
         <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="<?= h($tabId) ?>" role="tabpanel">
           <div class="tab-panel <?= h(person_panel_tone_class($persona)) ?>">
@@ -2578,9 +2764,16 @@ include __DIR__ . '/sidebar.php';
                 Persona
                 <span class="tab-mini">Ficha principal</span>
               </button>
-              <?php if ($isDriver && !empty($persona['veh_id'])): ?>
+              <?php if ($hasComboVehiculos): ?>
+                <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#<?= h($personPaneId) ?>-vehiculo-<?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?>" type="button" role="tab">
+                    Vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?>
+                    <span class="tab-mini">Solo conductor</span>
+                  </button>
+                <?php endforeach; ?>
+              <?php elseif ($isDriver && !empty($persona['veh_id'])): ?>
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#<?= h($personPaneId) ?>-vehiculo" type="button" role="tab">
-                  <?= $hasComboVehiculos ? 'Vehículos' : 'Vehículo' ?>
+                  Vehículo
                   <span class="tab-mini">Solo conductor</span>
                 </button>
               <?php endif; ?>
@@ -2675,7 +2868,41 @@ include __DIR__ . '/sidebar.php';
                 </div>
               </div>
 
-              <?php if ($isDriver && !empty($persona['veh_id'])): ?>
+              <?php if ($hasComboVehiculos): ?>
+                <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                  <?php
+                    $comboInvVehiculoId = (int) ($comboVehiculo['inv_vehiculo_id'] ?? 0);
+                    $comboDocumentoVehiculo = $docVehiculoPorInvolucrado[$comboInvVehiculoId] ?? null;
+                    $comboDocumentoVehiculoCount = (int) ($docVehiculoCantidadPorInvolucrado[$comboInvVehiculoId] ?? 0);
+                  ?>
+                  <div class="tab-pane fade" id="<?= h($personPaneId) ?>-vehiculo-<?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?>" role="tabpanel">
+                    <div class="inner-panel">
+                      <div class="editable-shell">
+                        <div class="editable-toolbar">
+                          <div class="record-actions" style="margin-top:0">
+                            <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
+                          </div>
+                        </div>
+
+                        <div class="editable-view">
+                          <?= $renderVehiculoSubtabs(
+                              $comboVehiculo,
+                              $comboDocumentoVehiculo,
+                              $comboDocumentoVehiculoCount,
+                              $personPaneId . '-vehiculo-' . (string) ($comboVehiculo['veh_numero'] ?? ''),
+                              'workbench-' . (int) $persona['involucrado_id'],
+                              'workbench-frame-' . (int) $persona['involucrado_id'],
+                              $returnToTabs,
+                              $vehiculoFields,
+                              $docVehiculoSections,
+                              $persona
+                          ) ?>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              <?php elseif ($isDriver && !empty($persona['veh_id'])): ?>
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-vehiculo" role="tabpanel">
                   <div class="inner-panel">
                     <div class="editable-shell" data-edit-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">
@@ -2703,72 +2930,64 @@ include __DIR__ . '/sidebar.php';
                       <div class="inline-edit-error" id="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
 
                       <div class="editable-view" data-edit-view="vehiculo-<?= (int) $persona['involucrado_id'] ?>">
-                        <?php if ($hasComboVehiculos): ?>
-                          <div class="section-block" style="margin-top:0">
-                            <h3>Unidad combinada vinculada al conductor</h3>
-                            <div class="field-grid"><?= render_field_cards($persona, ['orden_participacion', ['key' => 'veh_combo_placas', 'class' => 'span-2']]) ?></div>
-                          </div>
-                          <?php foreach ($comboVehiculos as $comboVehiculo): ?>
-                            <div class="section-block">
-                              <h3>Vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></h3>
-                              <div class="field-grid"><?= render_field_cards($comboVehiculo, $vehiculoFields) ?></div>
-                            </div>
-                          <?php endforeach; ?>
-                        <?php else: ?>
-                          <div class="section-block" style="margin-top:0">
-                            <h3>Vehículo vinculado al conductor</h3>
-                            <div class="field-grid"><?= render_field_cards($persona, $vehiculoFields) ?></div>
-                          </div>
-                        <?php endif; ?>
+                        <?= $renderVehiculoSubtabs(
+                            $persona,
+                            $singleDocVehiculo,
+                            $singleDocVehiculoCount,
+                            $personPaneId . '-vehiculo',
+                            'workbench-' . (int) $persona['involucrado_id'],
+                            'workbench-frame-' . (int) $persona['involucrado_id'],
+                            $returnToTabs,
+                            $vehiculoFields,
+                            $docVehiculoSections
+                        ) ?>
                       </div>
 
-                      <?php if (!$hasComboVehiculos): ?>
-                        <form class="editable-form js-inline-ajax-form js-veh-inline-form" id="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>" data-error="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
-                          <input type="hidden" name="action" value="save_vehiculo_inline">
-                          <input type="hidden" name="vehiculo_id" value="<?= (int) $persona['veh_id'] ?>">
+                      <form class="editable-form js-inline-ajax-form js-veh-inline-form" id="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>" data-error="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
+                        <input type="hidden" name="action" value="save_vehiculo_inline">
+                        <input type="hidden" name="vehiculo_id" value="<?= (int) $persona['veh_id'] ?>">
 
-                          <div class="section-block" style="margin-top:0">
-                            <h3>Vehículo vinculado al conductor</h3>
-                            <div class="field-grid">
-                              <?= render_editable_fields($persona, [
-                                  ['name' => 'placa', 'value_key' => 'veh_placa', 'label' => 'Placa', 'required' => true, 'maxlength' => 12],
-                                  ['name' => 'serie_vin', 'value_key' => 'veh_serie_vin', 'label' => 'Serie / VIN', 'class' => 'span-2'],
-                                  ['name' => 'nro_motor', 'value_key' => 'veh_nro_motor', 'label' => 'Nro. motor', 'class' => 'span-2'],
-                                  ['name' => 'anio', 'value_key' => 'veh_anio', 'label' => 'Año', 'maxlength' => 4, 'inputmode' => 'numeric'],
-                                  ['name' => 'categoria_id', 'value_key' => 'veh_categoria_id', 'label' => 'Categoría', 'type' => 'select', 'required' => true, 'options' => $vehiculoCategoriasOptions],
-                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
-                              <div class="field-card edit-field">
-                                <label class="field-label" for="tipo_id_<?= (int) $persona['involucrado_id'] ?>">Tipo</label>
-                                <select class="edit-control js-veh-tipo" id="tipo_id_<?= (int) $persona['involucrado_id'] ?>" name="tipo_id" data-current="<?= h((string) ($persona['veh_tipo_id'] ?? '')) ?>">
-                                  <option value="">(Selecciona una categoría primero)</option>
-                                </select>
-                              </div>
-                              <div class="field-card edit-field">
-                                <label class="field-label" for="carroceria_id_<?= (int) $persona['involucrado_id'] ?>">Carrocería</label>
-                                <select class="edit-control js-veh-carroceria" id="carroceria_id_<?= (int) $persona['involucrado_id'] ?>" name="carroceria_id" data-current="<?= h((string) ($persona['veh_carroceria_id'] ?? '')) ?>">
-                                  <option value="">(Selecciona un tipo primero)</option>
-                                </select>
-                              </div>
-                              <?= render_editable_fields($persona, [
-                                  ['name' => 'marca_id', 'value_key' => 'veh_marca_id', 'label' => 'Marca', 'type' => 'select', 'required' => true, 'options' => $vehiculoMarcasOptions],
-                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
-                              <div class="field-card edit-field">
-                                <label class="field-label" for="modelo_id_<?= (int) $persona['involucrado_id'] ?>">Modelo</label>
-                                <select class="edit-control js-veh-modelo" id="modelo_id_<?= (int) $persona['involucrado_id'] ?>" name="modelo_id" data-current="<?= h((string) ($persona['veh_modelo_id'] ?? '')) ?>">
-                                  <option value="">(Selecciona una marca primero)</option>
-                                </select>
-                              </div>
-                              <?= render_editable_fields($persona, [
-                                  ['name' => 'color', 'value_key' => 'veh_color', 'label' => 'Color'],
-                                  ['name' => 'largo_mm', 'value_key' => 'veh_largo_mm', 'label' => 'Largo', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                  ['name' => 'ancho_mm', 'value_key' => 'veh_ancho_mm', 'label' => 'Ancho', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                  ['name' => 'alto_mm', 'value_key' => 'veh_alto_mm', 'label' => 'Alto', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                  ['name' => 'notas', 'value_key' => 'veh_notas', 'label' => 'Notas', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
-                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
+                        <div class="section-block" style="margin-top:0">
+                          <h3>Vehículo vinculado al conductor</h3>
+                          <div class="field-grid">
+                            <?= render_editable_fields($persona, [
+                                ['name' => 'placa', 'value_key' => 'veh_placa', 'label' => 'Placa', 'required' => true, 'maxlength' => 12],
+                                ['name' => 'serie_vin', 'value_key' => 'veh_serie_vin', 'label' => 'Serie / VIN', 'class' => 'span-2'],
+                                ['name' => 'nro_motor', 'value_key' => 'veh_nro_motor', 'label' => 'Nro. motor', 'class' => 'span-2'],
+                                ['name' => 'anio', 'value_key' => 'veh_anio', 'label' => 'Año', 'maxlength' => 4, 'inputmode' => 'numeric'],
+                                ['name' => 'categoria_id', 'value_key' => 'veh_categoria_id', 'label' => 'Categoría', 'type' => 'select', 'required' => true, 'options' => $vehiculoCategoriasOptions],
+                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
+                            <div class="field-card edit-field">
+                              <label class="field-label" for="tipo_id_<?= (int) $persona['involucrado_id'] ?>">Tipo</label>
+                              <select class="edit-control js-veh-tipo" id="tipo_id_<?= (int) $persona['involucrado_id'] ?>" name="tipo_id" data-current="<?= h((string) ($persona['veh_tipo_id'] ?? '')) ?>">
+                                <option value="">(Selecciona una categoría primero)</option>
+                              </select>
                             </div>
+                            <div class="field-card edit-field">
+                              <label class="field-label" for="carroceria_id_<?= (int) $persona['involucrado_id'] ?>">Carrocería</label>
+                              <select class="edit-control js-veh-carroceria" id="carroceria_id_<?= (int) $persona['involucrado_id'] ?>" name="carroceria_id" data-current="<?= h((string) ($persona['veh_carroceria_id'] ?? '')) ?>">
+                                <option value="">(Selecciona un tipo primero)</option>
+                              </select>
+                            </div>
+                            <?= render_editable_fields($persona, [
+                                ['name' => 'marca_id', 'value_key' => 'veh_marca_id', 'label' => 'Marca', 'type' => 'select', 'required' => true, 'options' => $vehiculoMarcasOptions],
+                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
+                            <div class="field-card edit-field">
+                              <label class="field-label" for="modelo_id_<?= (int) $persona['involucrado_id'] ?>">Modelo</label>
+                              <select class="edit-control js-veh-modelo" id="modelo_id_<?= (int) $persona['involucrado_id'] ?>" name="modelo_id" data-current="<?= h((string) ($persona['veh_modelo_id'] ?? '')) ?>">
+                                <option value="">(Selecciona una marca primero)</option>
+                              </select>
+                            </div>
+                            <?= render_editable_fields($persona, [
+                                ['name' => 'color', 'value_key' => 'veh_color', 'label' => 'Color'],
+                                ['name' => 'largo_mm', 'value_key' => 'veh_largo_mm', 'label' => 'Largo', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                ['name' => 'ancho_mm', 'value_key' => 'veh_ancho_mm', 'label' => 'Ancho', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                ['name' => 'alto_mm', 'value_key' => 'veh_alto_mm', 'label' => 'Alto', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                ['name' => 'notas', 'value_key' => 'veh_notas', 'label' => 'Notas', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
                           </div>
-                        </form>
-                      <?php endif; ?>
+                        </div>
+                      </form>
                     </div>
                   </div>
                 </div>
@@ -4026,6 +4245,13 @@ include __DIR__ . '/sidebar.php';
         if (!workbench || !frame) return;
         requestCloseWorkbench(workbench, frame);
       });
+    });
+
+    window.addEventListener('message', (event) => {
+      const payload = event.data || {};
+      if (payload.type === 'docveh:created' || payload.type === 'docveh:updated') {
+        window.location.reload();
+      }
     });
 
     document.querySelectorAll('.js-quick-status').forEach((select) => {
