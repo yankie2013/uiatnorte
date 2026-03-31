@@ -6,10 +6,22 @@
 // ---------------------- Config / entorno ----------------------
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
+ob_start();
 
 // ---------------------- Dependencias --------------------------
 require __DIR__ . '/vendor/autoload.php';
 use PhpOffice\PhpWord\TemplateProcessor;
+
+if (class_exists('ZipArchive')) {
+    \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::ZIPARCHIVE);
+} else {
+    \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::PCLZIP);
+}
+$tmpDir = __DIR__ . '/tmp';
+if (!is_dir($tmpDir)) {
+    @mkdir($tmpDir, 0775, true);
+}
+\PhpOffice\PhpWord\Settings::setTempDir($tmpDir);
 
 // ---------------------- Conexion DB ---------------------------
 require __DIR__ . '/db.php';
@@ -56,6 +68,32 @@ function calcula_edad($fecha_nac, $fecha_ref) {
 
 function to_str($v) {
     return ($v === null) ? '' : (string)$v;
+}
+
+function slug_nombre_archivo($texto) {
+    $texto = trim((string) $texto);
+    if ($texto === '') {
+        return 'sin_nombre';
+    }
+
+    $reemplazos = [
+        'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A',
+        'É' => 'E', 'È' => 'E', 'Ë' => 'E', 'Ê' => 'E',
+        'Í' => 'I', 'Ì' => 'I', 'Ï' => 'I', 'Î' => 'I',
+        'Ó' => 'O', 'Ò' => 'O', 'Ö' => 'O', 'Ô' => 'O',
+        'Ú' => 'U', 'Ù' => 'U', 'Ü' => 'U', 'Û' => 'U',
+        'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a',
+        'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
+        'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o',
+        'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+        'Ñ' => 'N', 'ñ' => 'n',
+    ];
+    $texto = strtr($texto, $reemplazos);
+    $texto = preg_replace('/[^A-Za-z0-9]+/', '_', $texto);
+    $texto = trim((string) $texto, '_');
+
+    return $texto !== '' ? strtolower($texto) : 'sin_nombre';
 }
 
 // ---------------------- Obtener datos -------------------------
@@ -332,11 +370,30 @@ try {
     }
 
     // Guardar en archivo temporal y forzar descarga si corresponde
-    $outputName = "manifestacion_investigado_i{$involucrado_id}_a{$accidente_id}.docx";
+    $apellidoArchivo = '';
+    if ($persona) {
+        $apellidoArchivo = trim((string) ($persona['apellido_paterno'] ?? ''));
+    }
+    if ($apellidoArchivo === '') {
+        $apellidosFallback = trim((string) ($replacements['CONDUCTOR_APELLIDOS'] ?? ''));
+        if ($apellidosFallback !== '') {
+            $partesApellidos = preg_split('/\s+/', $apellidosFallback);
+            $apellidoArchivo = trim((string) ($partesApellidos[0] ?? ''));
+        }
+    }
+
+    $outputName = 'manifestacion_investigado_' . slug_nombre_archivo($apellidoArchivo) . '.docx';
     $tempFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $outputName;
     $template->saveAs($tempFile);
 
     if ($download) {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('X-Content-Type-Options: nosniff');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         header('Content-Disposition: attachment; filename="' . basename($outputName) . '"');
         header('Content-Length: ' . filesize($tempFile));

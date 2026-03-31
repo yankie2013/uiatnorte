@@ -10,6 +10,7 @@
 
 ini_set('display_errors', 0);
 header('Content-Type: text/html; charset=utf-8');
+ob_start();
 
 require __DIR__.'/auth.php';
 require_login();
@@ -21,6 +22,27 @@ $pdo->exec("SET NAMES utf8mb4");
 /* ---------------- Helpers ---------------- */
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function ig($k,$d=null){ return isset($_GET[$k]) ? trim($_GET[$k]) : $d; }
+function slug_nombre_archivo($texto){
+  $texto = trim((string)$texto);
+  if ($texto === '') return 'sin_apellido';
+  $reemplazos = [
+    'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A',
+    'É' => 'E', 'È' => 'E', 'Ë' => 'E', 'Ê' => 'E',
+    'Í' => 'I', 'Ì' => 'I', 'Ï' => 'I', 'Î' => 'I',
+    'Ó' => 'O', 'Ò' => 'O', 'Ö' => 'O', 'Ô' => 'O',
+    'Ú' => 'U', 'Ù' => 'U', 'Ü' => 'U', 'Û' => 'U',
+    'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a',
+    'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
+    'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
+    'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o',
+    'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+    'Ñ' => 'N', 'ñ' => 'n',
+  ];
+  $texto = strtr($texto, $reemplazos);
+  $texto = preg_replace('/[^A-Za-z0-9]+/', '_', $texto);
+  $texto = trim((string)$texto, '_');
+  return $texto !== '' ? strtolower($texto) : 'sin_apellido';
+}
 
 function fecha_larga_es($dt){ // "10 de octubre de 2025"
   if(!$dt) return '';
@@ -52,6 +74,17 @@ if(!$autoload_ok){
   exit;
 }
 use PhpOffice\PhpWord\TemplateProcessor;
+
+if (class_exists('ZipArchive')) {
+  \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::ZIPARCHIVE);
+} else {
+  \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::PCLZIP);
+}
+$tmpDir = __DIR__.'/tmp';
+if (!is_dir($tmpDir)) {
+  @mkdir($tmpDir, 0775, true);
+}
+\PhpOffice\PhpWord\Settings::setTempDir($tmpDir);
 
 /* ---------------- Entrada ---------------- */
 $fam_id = (int) ig('fam_id', 0);
@@ -301,11 +334,17 @@ $tpl->setValue('fallecido_inv_id',      $row['fallecido_inv_id']);
 $tpl->setValue('familiar_persona_id',   $row['familiar_persona_id']);
 
 /* -------- Descargar archivo -------- */
-$fname = 'manifestacion_familiar_'.$fam_id.'.docx';
+$fname = 'manifestacion_familiar_'.slug_nombre_archivo($row['fam_apellido_paterno'] ?? '').'.docx';
+while (ob_get_level() > 0) {
+  ob_end_clean();
+}
 header('Content-Description: File Transfer');
 header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 header('Content-Disposition: attachment; filename="'.$fname.'"');
-header('Cache-Control: max-age=0');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-Content-Type-Options: nosniff');
 
 $temp = tempnam(sys_get_temp_dir(), 'tpl');
 $tpl->saveAs($temp);

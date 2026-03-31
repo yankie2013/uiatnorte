@@ -276,6 +276,24 @@ function needs_herido(array $row): bool
     return str_contains($lesion, 'heri');
 }
 
+function whatsapp_contact_message(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente): string
+{
+    $inicio = html_entity_decode(
+        'Buen d&iacute;a le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigaci&oacute;n por el accidente de tr&aacute;nsito ',
+        ENT_QUOTES | ENT_HTML5,
+        'UTF-8'
+    );
+    $medio = html_entity_decode(', suscitado el d&iacute;a ', ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    return $inicio
+        . join_con_y($modalidades)
+        . $medio
+        . fecha_simple($fechaAccidente)
+        . ' en '
+        . ($lugarAccidente ?? 'el lugar del accidente')
+        . '.';
+}
+
 function person_tab_tone_class(array $row): string
 {
     if (needs_occ($row)) {
@@ -2209,10 +2227,17 @@ include __DIR__ . '/sidebar.php';
   .person-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
   .person-title h2{margin:0;font-size:17px;font-weight:900;line-height:1.15;color:var(--title-blue);letter-spacing:-.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .person-title p{margin:3px 0 0;color:var(--muted);font-weight:700;font-size:12px}
-  .person-name-copy{display:inline-flex;align-items:center;gap:6px}
+  .person-name-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .person-quick-actions{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#40506d;font-size:12px;font-weight:900;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
+  .quick-pill-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#40506d;font-size:12px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+  .quick-pill-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
+  .quick-pill-btn.whatsapp{border-color:#9fe0b7;background:#f0fff5;color:#178248}
+  .quick-pill-btn.whatsapp:hover{background:#25d366;color:#fff;border-color:#25d366}
+  .quick-pill-btn.download{border-color:#d7c07b;background:#fff8df;color:#7f5a00}
+  .quick-pill-btn.download:hover{background:#f0c654;color:#4d3600;border-color:#f0c654}
   .chip-row{display:flex;flex-wrap:wrap;gap:6px}
   .chip-role,.chip-status,.chip-simple{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid var(--line);font-size:10px;font-weight:900;background:#fff;line-height:1.1}
   .chip-conductor{background:#e8fbef;border-color:#b7e6c3;color:#19734d}
@@ -2719,7 +2744,11 @@ include __DIR__ . '/sidebar.php';
           }
           $extras = $personaExtras[(int) $persona['involucrado_id']] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[],'show_lc'=>false,'show_rml'=>false,'show_dos'=>false,'show_man'=>false,'show_occ'=>false];
           $wa = preg_replace('/\D+/', '', (string) ($persona['celular'] ?? ''));
-          $whatsAppMsg = "Buen día le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigación por el accidente de tránsito " . join_con_y($modalidades) . ", suscitado el día " . fecha_simple($A['fecha_accidente'] ?? null) . " en " . ($A['lugar'] ?? 'el lugar del accidente') . ".";
+          $whatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+          $manifestDownloadUrl = '';
+          if (!empty($extras['show_man']) && (int) $persona['involucrado_id'] > 0 && (int) $accidente_id > 0) {
+              $manifestDownloadUrl = 'marcador_manifestacion_investigado.php?involucrado_id=' . (int) $persona['involucrado_id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
+          }
           $personPaneId = 'person-pane-' . (int) $persona['involucrado_id'];
           $returnToTabs = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
         ?>
@@ -2731,6 +2760,14 @@ include __DIR__ . '/sidebar.php';
                   <span class="person-name-copy">
                     <span><?= h(person_label($persona)) ?></span>
                     <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($persona)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
+                    <span class="person-quick-actions">
+                      <?php if ($wa): ?>
+                        <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($wa) ?>?text=<?= rawurlencode($whatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                      <?php endif; ?>
+                      <?php if ($manifestDownloadUrl !== ''): ?>
+                        <a class="quick-pill-btn download" href="<?= h($manifestDownloadUrl) ?>" aria-label="Descargar manifestacion" title="Descargar manifestacion">DOCX</a>
+                      <?php endif; ?>
+                    </span>
                   </span>
                   <?php if (person_heading_suffix($persona) !== ''): ?><span style="font-size:.68em;font-weight:800;color:#6b7a92;letter-spacing:0;"><?= h(person_heading_suffix($persona)) ?></span><?php endif; ?>
                 </h2>
@@ -2753,9 +2790,6 @@ include __DIR__ . '/sidebar.php';
                 <?php endforeach; ?>
               <?php elseif ($isDriver && !empty($persona['veh_id'])): ?>
                 <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver vehículo</a>
-              <?php endif; ?>
-              <?php if ($wa): ?>
-                <a class="btn-shell" href="https://wa.me/<?= h($wa) ?>?text=<?= rawurlencode($whatsAppMsg) ?>" target="_blank" rel="noopener">WhatsApp</a>
               <?php endif; ?>
             </div>
 
@@ -3153,6 +3187,11 @@ include __DIR__ . '/sidebar.php';
           <?php else: ?>
             <div class="module-grid">
               <?php foreach ($policias as $row): ?>
+                <?php
+                  $policiaWa = preg_replace('/\D+/', '', (string) ($row['celular'] ?? ''));
+                  $policiaWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+                  $policiaManifestUrl = 'marcador_manifestacion_policia.php?policia_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
+                ?>
                 <article class="module-card">
                   <header>
                     <div>
@@ -3160,6 +3199,12 @@ include __DIR__ . '/sidebar.php';
                         <span class="module-title-copy">
                           <span><?= h(person_label($row)) ?></span>
                           <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($row)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
+                          <span class="person-quick-actions">
+                            <?php if ($policiaWa !== ''): ?>
+                              <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($policiaWa) ?>?text=<?= rawurlencode($policiaWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                            <?php endif; ?>
+                            <a class="quick-pill-btn download" href="<?= h($policiaManifestUrl) ?>" aria-label="Descargar manifestacion" title="Descargar manifestacion">DOCX</a>
+                          </span>
                         </span>
                       </h4>
                       <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' · CIP ' . ($row['cip'] ?? '-')))) ?></p>
@@ -3252,6 +3297,12 @@ include __DIR__ . '/sidebar.php';
                     ? trim((string) (((string) ($ownerRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($ownerRecord['tipo_doc'] ?? '')) . ' ' : '') . ($ownerRecord['num_doc'] ?? '')))
                     : trim((string) ('RUC ' . ($row['ruc'] ?? '')));
                   $representante = trim((string) (($repRecord['nombres'] ?? '') . ' ' . ($repRecord['apellido_paterno'] ?? '') . ' ' . ($repRecord['apellido_materno'] ?? '')));
+                  $propietarioCelular = (string) (($row['tipo_propietario'] ?? '') === 'JURIDICA'
+                    ? ($repRecord['celular'] ?? '')
+                    : ($ownerRecord['celular'] ?? ''));
+                  $propietarioWa = preg_replace('/\D+/', '', $propietarioCelular);
+                  $propietarioWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+                  $propietarioManifestUrl = 'marcador_manifestacion_propietario.php?propietario_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
                 ?>
                 <article class="module-card">
                   <header>
@@ -3260,6 +3311,16 @@ include __DIR__ . '/sidebar.php';
                         <span class="module-title-copy">
                           <span><?= h($principal !== '' ? $principal : 'Sin propietario') ?></span>
                           <?php if ($principal !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($principal) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
+                          <?php if ($propietarioWa !== ''): ?>
+                            <span class="person-quick-actions">
+                              <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($propietarioWa) ?>?text=<?= rawurlencode($propietarioWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                              <a class="quick-pill-btn download" href="<?= h($propietarioManifestUrl) ?>" aria-label="Descargar manifestacion" title="Descargar manifestacion">DOCX</a>
+                            </span>
+                          <?php else: ?>
+                            <span class="person-quick-actions">
+                              <a class="quick-pill-btn download" href="<?= h($propietarioManifestUrl) ?>" aria-label="Descargar manifestacion" title="Descargar manifestacion">DOCX</a>
+                            </span>
+                          <?php endif; ?>
                         </span>
                       </h4>
                       <p><?= h(trim((string) (($row['orden_participacion'] ?? '') . ' · Placa ' . ($row['placa'] ?? 'SIN PLACA')))) ?></p>
@@ -3370,6 +3431,9 @@ include __DIR__ . '/sidebar.php';
                   $fallRecord = project_prefixed_record($row, 'fall_');
                   $nombreFamiliar = trim((string) (($famRecord['nombres'] ?? '') . ' ' . ($famRecord['apellido_paterno'] ?? '') . ' ' . ($famRecord['apellido_materno'] ?? '')));
                   $nombreFallecido = trim((string) (($fallRecord['nombres'] ?? '') . ' ' . ($fallRecord['apellido_paterno'] ?? '') . ' ' . ($fallRecord['apellido_materno'] ?? '')));
+                  $familiarWa = preg_replace('/\D+/', '', (string) ($famRecord['celular'] ?? ''));
+                  $familiarWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+                  $familiarManifestUrl = 'marcador_manifestacion_familiar.php?fam_id=' . (int) $row['id'];
                 ?>
                 <article class="module-card">
                   <header>
@@ -3378,6 +3442,12 @@ include __DIR__ . '/sidebar.php';
                         <span class="module-title-copy">
                           <span><?= h($nombreFamiliar !== '' ? $nombreFamiliar : 'Sin familiar asociado') ?></span>
                           <?php if ($nombreFamiliar !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreFamiliar) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
+                          <span class="person-quick-actions">
+                            <?php if ($familiarWa !== ''): ?>
+                              <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($familiarWa) ?>?text=<?= rawurlencode($familiarWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                            <?php endif; ?>
+                            <a class="quick-pill-btn download" href="<?= h($familiarManifestUrl) ?>" aria-label="Descargar manifestacion" title="Descargar manifestacion">DOCX</a>
+                          </span>
                         </span>
                       </h4>
                       <p>Familiar de <?= h($nombreFallecido !== '' ? $nombreFallecido : 'Sin fallecido asociado') ?></p>
