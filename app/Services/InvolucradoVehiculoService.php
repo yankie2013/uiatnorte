@@ -11,6 +11,7 @@ final class InvolucradoVehiculoService
 {
     private const UT_OPTIONS = ['UT-1','UT-2','UT-3','UT-4','UT-5','UT-6','UT-7'];
     private const TIPO_OPTIONS = ['Unidad','Combinado vehicular 1','Combinado vehicular 2','Fugado'];
+    private const SIN_PLACA_PREFIX = 'SPLACA';
 
     public function __construct(private InvolucradoVehiculoRepository $repository)
     {
@@ -20,7 +21,8 @@ final class InvolucradoVehiculoService
     {
         $rows = $this->repository->buscarVehiculos(trim($q));
         foreach ($rows as &$row) {
-            $row['texto'] = $row['placa'] . (!empty($row['color']) ? '  ' . $row['color'] : '') . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
+            $placa = $this->displayPlaca((string) ($row['placa'] ?? ''));
+            $row['texto'] = $placa . (!empty($row['color']) ? ' - ' . $row['color'] : '') . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
         }
         return $rows;
     }
@@ -114,8 +116,8 @@ final class InvolucradoVehiculoService
             throw $e;
         }
 
-        $texto = $placa
-          . ($this->nullableString($input['color'] ?? null) ? '  ' . $this->nullableString($input['color'] ?? null) : '')
+        $texto = $this->displayPlaca($placa)
+          . ($this->nullableString($input['color'] ?? null) ? ' - ' . $this->nullableString($input['color'] ?? null) : '')
           . ($this->nullableInt($input['anio'] ?? null) ? ' (' . $this->nullableInt($input['anio'] ?? null) . ')' : '');
 
         return ['id' => $id, 'texto' => $texto];
@@ -141,6 +143,7 @@ final class InvolucradoVehiculoService
     {
         $accidenteId = (int) ($input['accidente_id'] ?? 0);
         $vehiculoId = (int) ($input['vehiculo_id'] ?? 0);
+        $vehiculoId2 = (int) ($input['vehiculo_id_2'] ?? 0);
         $tipo = trim((string) ($input['tipo'] ?? 'Unidad'));
         $orden = trim((string) ($input['orden_participacion'] ?? $this->sugerirOrdenParticipacion($accidenteId)));
         $observaciones = trim((string) ($input['observaciones'] ?? '')) ?: null;
@@ -158,9 +161,36 @@ final class InvolucradoVehiculoService
         if (!in_array($orden, self::UT_OPTIONS, true)) {
             throw new InvalidArgumentException('Orden de participación inválido.');
         }
+        if ($tipo === 'Combinado vehicular 1') {
+            if ($vehiculoId2 <= 0) {
+                throw new InvalidArgumentException('Debes seleccionar el vehículo combinado vehicular 2.');
+            }
+            if ($vehiculoId2 === $vehiculoId) {
+                throw new InvalidArgumentException('El combinado vehicular 2 debe ser distinto al combinado vehicular 1.');
+            }
+        }
 
         try {
-            $this->repository->createInvolucradoVehiculo($accidenteId, $vehiculoId, $orden, $tipo, $observaciones);
+            if ($tipo === 'Combinado vehicular 1') {
+                $this->repository->createInvolucradosVehiculo([
+                    [
+                        'accidente_id' => $accidenteId,
+                        'vehiculo_id' => $vehiculoId,
+                        'orden_participacion' => $orden,
+                        'tipo' => 'Combinado vehicular 1',
+                        'observaciones' => $observaciones,
+                    ],
+                    [
+                        'accidente_id' => $accidenteId,
+                        'vehiculo_id' => $vehiculoId2,
+                        'orden_participacion' => $orden,
+                        'tipo' => 'Combinado vehicular 2',
+                        'observaciones' => $observaciones,
+                    ],
+                ]);
+            } else {
+                $this->repository->createInvolucradoVehiculo($accidenteId, $vehiculoId, $orden, $tipo, $observaciones);
+            }
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
                 throw new InvalidArgumentException('Ese vehículo ya está vinculado a este accidente.');
@@ -217,5 +247,10 @@ final class InvolucradoVehiculoService
             return null;
         }
         return (int) $value;
+    }
+
+    private function displayPlaca(string $placa): string
+    {
+        return str_starts_with($placa, self::SIN_PLACA_PREFIX) ? 'SIN PLACA' : $placa;
     }
 }

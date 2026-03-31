@@ -29,6 +29,11 @@ function short_text($text, int $limit = 60): string
     return mb_strimwidth($text, 0, $limit, '...', 'UTF-8');
 }
 
+function placa_visible(string $placa): string
+{
+    return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
+}
+
 $ok = g('ok', '');
 $msg = g('msg', '');
 $accidenteId = (int) g('accidente_id', 0);
@@ -53,11 +58,31 @@ SELECT ip.id, ip.accidente_id, ip.rol_id, ip.vehiculo_id, ip.lesion, ip.observac
        a.fecha_accidente, a.lugar,
        p.id AS persona_id, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres,
        v.placa, v.color,
+       iv_ref.tipo AS veh_tipo_ref,
+       iv_ref.orden_participacion AS veh_ut,
+       combo.combo_placas,
        r.Nombre AS rol_nombre
 FROM involucrados_personas ip
 JOIN accidentes a            ON a.id = ip.accidente_id
 JOIN personas p              ON p.id = ip.persona_id
 LEFT JOIN vehiculos v        ON v.id = ip.vehiculo_id
+LEFT JOIN involucrados_vehiculos iv_ref ON iv_ref.accidente_id = ip.accidente_id AND iv_ref.vehiculo_id = ip.vehiculo_id
+LEFT JOIN (
+    SELECT iv.accidente_id,
+           iv.orden_participacion,
+           GROUP_CONCAT(
+               CASE
+                   WHEN v2.placa LIKE 'SPLACA%' THEN 'SIN PLACA'
+                   ELSE v2.placa
+               END
+               ORDER BY FIELD(iv.tipo, 'Combinado vehicular 1', 'Combinado vehicular 2'), v2.placa
+               SEPARATOR ' + '
+           ) AS combo_placas
+    FROM involucrados_vehiculos iv
+    JOIN vehiculos v2 ON v2.id = iv.vehiculo_id
+    WHERE iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
+    GROUP BY iv.accidente_id, iv.orden_participacion
+) combo ON combo.accidente_id = iv_ref.accidente_id AND combo.orden_participacion = iv_ref.orden_participacion
 JOIN participacion_persona r ON r.Id = ip.rol_id
 WHERE 1=1";
 
@@ -211,8 +236,10 @@ $messages = [
               </td>
               <td><?= h($r['rol_nombre']) ?></td>
               <td>
-                <?php if (!empty($r['placa'])): ?>
-                  <strong><?= h($r['placa']) ?></strong>
+                <?php if (($r['veh_tipo_ref'] ?? '') === 'Combinado vehicular 1' || ($r['veh_tipo_ref'] ?? '') === 'Combinado vehicular 2'): ?>
+                  <strong><?= h(trim((string) ($r['veh_ut'] ?? ''))) ?> - <?= h((string) ($r['combo_placas'] ?? '-')) ?></strong>
+                <?php elseif (!empty($r['placa'])): ?>
+                  <strong><?= h(placa_visible((string) $r['placa'])) ?></strong>
                   <?php if (!empty($r['color'])): ?><span class="muted"> - <?= h($r['color']) ?></span><?php endif; ?>
                 <?php else: ?>
                   <span class="muted">-</span>

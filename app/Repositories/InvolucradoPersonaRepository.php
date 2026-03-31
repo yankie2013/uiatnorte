@@ -13,7 +13,7 @@ final class InvolucradoPersonaRepository
 
     public function accidentes(): array
     {
-        $sql = "SELECT id, CONCAT('#',id,' – ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' – ',COALESCE(lugar,'')) AS nom
+        $sql = "SELECT id, CONCAT('#',id,' - ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' - ',COALESCE(lugar,'')) AS nom
                   FROM accidentes
               ORDER BY id DESC";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
@@ -98,15 +98,90 @@ final class InvolucradoPersonaRepository
 
     public function vehiculosPorAccidente(int $accidenteId): array
     {
-        $sql = "SELECT v.id, v.placa, v.color, v.anio,
-                       CONCAT(v.placa, COALESCE(CONCAT(' – ',v.color),''), COALESCE(CONCAT(' (',v.anio,')'),'')) AS t
+        $sql = "SELECT iv.orden_participacion, iv.tipo,
+                       v.id, v.placa, v.color, v.anio
                   FROM involucrados_vehiculos iv
                   JOIN vehiculos v ON v.id=iv.vehiculo_id
                  WHERE iv.accidente_id=?
-              ORDER BY v.placa";
+              ORDER BY iv.orden_participacion,
+                       FIELD(iv.tipo, 'Combinado vehicular 1', 'Combinado vehicular 2', 'Unidad', 'Fugado'),
+                       v.placa";
         $st = $this->pdo->prepare($sql);
         $st->execute([$accidenteId]);
-        return $st->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+        $items = [];
+        $used = [];
+
+        foreach ($rows as $index => $row) {
+            if (isset($used[$index])) {
+                continue;
+            }
+
+            if ((string) $row['tipo'] === 'Combinado vehicular 1') {
+                $pairIndex = $this->findCombinadoPairIndex($rows, (string) $row['orden_participacion'], $index);
+                if ($pairIndex !== null) {
+                    $pair = $rows[$pairIndex];
+                    $used[$pairIndex] = true;
+
+                    $placa1 = $this->displayPlaca((string) $row['placa']);
+                    $placa2 = $this->displayPlaca((string) $pair['placa']);
+                    $items[] = [
+                        'id' => (int) $row['id'],
+                        'ids' => [(int) $row['id'], (int) $pair['id']],
+                        'placa' => $placa1 . ' + ' . $placa2,
+                        'color' => null,
+                        'anio' => null,
+                        'tipo' => 'Combinado vehicular',
+                        'orden_participacion' => (string) $row['orden_participacion'],
+                        't' => trim((string) $row['orden_participacion']) . ' - ' . $placa1 . ' + ' . $placa2,
+                    ];
+                    continue;
+                }
+            }
+
+            $placa = $this->displayPlaca((string) $row['placa']);
+            $texto = trim((string) $row['orden_participacion']) . ' - ' . $placa
+                . (!empty($row['color']) ? ' - ' . $row['color'] : '')
+                . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
+
+            $items[] = [
+                'id' => (int) $row['id'],
+                'ids' => [(int) $row['id']],
+                'placa' => $placa,
+                'color' => $row['color'],
+                'anio' => $row['anio'],
+                'tipo' => $row['tipo'],
+                'orden_participacion' => (string) $row['orden_participacion'],
+                't' => $texto,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function findCombinadoPairIndex(array $rows, string $ordenParticipacion, int $currentIndex): ?int
+    {
+        foreach ($rows as $index => $row) {
+            if ($index === $currentIndex) {
+                continue;
+            }
+            if ((string) ($row['orden_participacion'] ?? '') !== $ordenParticipacion) {
+                continue;
+            }
+            if ((string) ($row['tipo'] ?? '') !== 'Combinado vehicular 2') {
+                continue;
+            }
+
+            return $index;
+        }
+
+        return null;
+    }
+
+    private function displayPlaca(string $placa): string
+    {
+        return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
     }
 
     public function createInvolucrado(array $payload): int

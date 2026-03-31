@@ -9,8 +9,11 @@ use App\Services\VehiculoService;
 header('Content-Type: text/html; charset=utf-8');
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
+function placa_visible(string $placa): string {
+    return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
+}
 function vehiculo_resumen(array $vehiculo): string {
-    $texto = trim((string) ($vehiculo['placa'] ?? ''));
+    $texto = placa_visible(trim((string) ($vehiculo['placa'] ?? '')));
     $color = trim((string) ($vehiculo['color'] ?? ''));
     $anio = trim((string) ($vehiculo['anio'] ?? ''));
 
@@ -28,6 +31,7 @@ $vehiculoRepo = new VehiculoRepository($pdo);
 $vehiculoService = new VehiculoService($vehiculoRepo);
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] !== '0';
 $prefillPlaca = trim((string) ($_GET['placa'] ?? ''));
+$prefillSinPlaca = isset($_GET['sin_placa']) && $_GET['sin_placa'] !== '0';
 
 $catalogos = $vehiculoService->catalogos();
 $categorias = $catalogos['categorias'];
@@ -46,6 +50,10 @@ $old = $vehiculoService->oldInput();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $prefillPlaca !== '' && $old['placa'] === '') {
     $old['placa'] = mb_strtoupper($prefillPlaca, 'UTF-8');
+}
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $prefillSinPlaca && $old['sin_placa'] === '') {
+    $old['sin_placa'] = '1';
+    $old['placa'] = '';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -166,7 +174,11 @@ if (window.parent && window.parent !== window) {
         <!-- Placa + acciones -->
         <div class="col-3">
           <label for="placa">Placa</label>
-          <input id="placa" name="placa" value="<?=h($old['placa'])?>" required maxlength="12" placeholder="ABC-123">
+          <input id="placa" name="placa" value="<?=h($old['placa'])?>" <?= !in_array(strtolower((string) $old['sin_placa']), ['1','on','true','si','sí'], true) ? 'required' : '' ?> maxlength="12" placeholder="ABC-123">
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:600;">
+            <input type="checkbox" id="sin_placa" name="sin_placa" value="1" <?= in_array(strtolower((string) $old['sin_placa']), ['1','on','true','si','sí'], true) ? 'checked' : '' ?> style="width:auto;">
+            Registrar como fugado sin placa
+          </label>
           <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button type="button" class="btn small" id="btnCheckPlaca">Verificar</button>
             <button type="button" class="btn small" id="btnAbrirSeeker">Abrir Seeker</button>
@@ -1192,6 +1204,21 @@ if (btnCerrarEmbed) {
       window.parent.postMessage({ type:'vehiculo_modal_cerrar' }, window.location.origin);
     }
   });
+}
+
+const sinPlacaCheckbox = document.getElementById('sin_placa');
+if (sinPlacaCheckbox) {
+  const syncSinPlaca = ()=>{
+    const active = sinPlacaCheckbox.checked;
+    placaInput.disabled = active;
+    placaInput.required = !active;
+    placaInput.placeholder = active ? 'SIN PLACA' : 'ABC-123';
+    if (active) {
+      placaInput.value = '';
+    }
+  };
+  sinPlacaCheckbox.addEventListener('change', syncSinPlaca);
+  syncSinPlaca();
 }
 </script>
 

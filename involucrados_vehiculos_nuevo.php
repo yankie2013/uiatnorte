@@ -76,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
     $result = $service->registrar([
       'accidente_id' => $accidente_id,
       'vehiculo_id' => (int)ipost('vehiculo_id', 0),
+      'vehiculo_id_2' => (int)ipost('vehiculo_id_2', 0),
       'tipo' => ipost('tipo','Unidad'),
       'orden_participacion' => ipost('orden_participacion', $orden_sugerido),
       'observaciones' => ipost('observaciones',''),
@@ -527,6 +528,38 @@ body.modal-open{ overflow: hidden !important; }
       </div>
     </div>
 
+    <div id="fugadoHint" class="muted" style="display:none; margin-top:8px;">
+      Si el vehículo es fugado y no tiene placa identificada, usa “Nuevo vehículo” y marca “Registrar como fugado sin placa”.
+    </div>
+
+    <div id="vehiculoCombinadoBox" style="display:none; margin-top:10px;">
+      <div class="row">
+        <div>
+          <label>Placa combinado vehicular 2</label>
+          <div class="inline">
+            <input type="text" id="qplaca_2" placeholder="Ej. ABC123">
+            <button class="btn mini" type="button" id="btnBuscarPlaca2">Buscar</button>
+            <button class="btn mini" type="button" id="btnNuevoVehiculo2">＋ Nuevo vehículo</button>
+          </div>
+        </div>
+        <div>
+          <label>Vehículo combinado vehicular 2</label>
+          <select name="vehiculo_id_2" id="vehiculo_id_2">
+            <option value="">— Selecciona de la búsqueda —</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <label>Resumen combinado vehicular 2</label>
+          <input type="text" id="veh_resumen_2" placeholder="Remolque / semirremolque" readonly>
+        </div>
+        <div class="muted" style="align-self:end;">
+          Se guardarán dos registros con la misma UT: “Combinado vehicular 1” y “Combinado vehicular 2”.
+        </div>
+      </div>
+    </div>
+
     <div class="row" style="margin-top:6px;">
       <div>
         <label>Resumen</label>
@@ -649,14 +682,18 @@ window.addEventListener('keydown', e => {
   }
 });
 
-function abrirModalNuevoVehiculo(placa = ''){
+function abrirModalNuevoVehiculo(placa = '', targetId = 'vehiculo_id'){
   const frame = $('#vehiculoNuevoFrame');
   if (!frame) return;
   const url = new URL('vehiculo_nuevo.php', window.location.href);
   url.searchParams.set('embed', '1');
+  url.searchParams.set('target', targetId);
   if (placa) {
     url.searchParams.set('placa', placa);
+  } else if ($('#tipo')?.value === 'Fugado' && targetId === 'vehiculo_id') {
+    url.searchParams.set('sin_placa', '1');
   }
+  frame.dataset.targetId = targetId;
   frame.src = url.toString();
   openModal('mdVehiculo');
 }
@@ -672,7 +709,12 @@ function normalizePlateText(value){
 $('#btnNuevoVehiculo')?.addEventListener('click', ()=>{
   const placa = normalizePlateText(($('#qplaca').value || '').trim());
   $('#qplaca').value = placa;
-  abrirModalNuevoVehiculo(placa);
+  abrirModalNuevoVehiculo(placa, 'vehiculo_id');
+});
+$('#btnNuevoVehiculo2')?.addEventListener('click', ()=>{
+  const placa = normalizePlateText(($('#qplaca_2').value || '').trim());
+  $('#qplaca_2').value = placa;
+  abrirModalNuevoVehiculo(placa, 'vehiculo_id_2');
 });
 
 $('#qplaca')?.addEventListener('input', (e)=>{
@@ -683,36 +725,78 @@ $('#qplaca')?.addEventListener('input', (e)=>{
     e.target.setSelectionRange(normalized.length, normalized.length);
   }
 });
+$('#qplaca_2')?.addEventListener('input', (e)=>{
+  const cursorAtEnd = e.target.selectionStart === e.target.value.length;
+  const normalized = normalizePlateText(e.target.value);
+  e.target.value = normalized;
+  if (cursorAtEnd) {
+    e.target.setSelectionRange(normalized.length, normalized.length);
+  }
+});
 
 /* ==== Buscar por placa ==== */
-$('#btnBuscarPlaca')?.addEventListener('click', async ()=>{
-  const q = normalizePlateText($('#qplaca').value.trim());
-  $('#qplaca').value = q;
-  const sel = $('#vehiculo_id');
+async function buscarVehiculoPorPlaca(inputId, selectId, targetId){
+  const input = $('#' + inputId);
+  const sel = $('#' + selectId);
+  if (!input || !sel) return;
+
+  const q = normalizePlateText(input.value.trim());
+  input.value = q;
   sel.innerHTML = '<option value="">Buscando…</option>';
   const r = await fetch(`?ajax=buscar_vehiculos&q=${encodeURIComponent(q)}`);
   const j = await r.json();
   sel.innerHTML = '<option value="">— Selecciona de la búsqueda —</option>';
   if (!j.length) {
     if (confirm('No se encontraron vehículos. ¿Deseas registrarlo ahora?')) {
-      abrirModalNuevoVehiculo(q);
+      abrirModalNuevoVehiculo(q, targetId);
     }
     return;
   }
   j.forEach(it=>{
-    const o=document.createElement('option'); o.value=it.id; o.textContent=it.texto; sel.appendChild(o);
+    const o = document.createElement('option');
+    o.value = it.id;
+    o.textContent = it.texto;
+    sel.appendChild(o);
   });
-  if (j.length > 0) {
-    sel.value = String(j[0].id);
-    sel.dispatchEvent(new Event('change'));
-  }
-});
+  sel.value = String(j[0].id);
+  sel.dispatchEvent(new Event('change'));
+}
+$('#btnBuscarPlaca')?.addEventListener('click', ()=>buscarVehiculoPorPlaca('qplaca', 'vehiculo_id', 'vehiculo_id'));
+$('#btnBuscarPlaca2')?.addEventListener('click', ()=>buscarVehiculoPorPlaca('qplaca_2', 'vehiculo_id_2', 'vehiculo_id_2'));
 
 /* Resumen vehículo */
 $('#vehiculo_id')?.addEventListener('change', ()=>{
   const t = $('#vehiculo_id').selectedOptions[0]?.textContent || '';
   $('#veh_resumen').value = t;
 });
+$('#vehiculo_id_2')?.addEventListener('change', ()=>{
+  const t = $('#vehiculo_id_2').selectedOptions[0]?.textContent || '';
+  $('#veh_resumen_2').value = t;
+});
+
+function syncTipoParticipacion(){
+  const tipo = $('#tipo')?.value || 'Unidad';
+  const combinadoBox = $('#vehiculoCombinadoBox');
+  const fugadoHint = $('#fugadoHint');
+  const vehiculo2 = $('#vehiculo_id_2');
+  const resumen2 = $('#veh_resumen_2');
+  const qplaca2 = $('#qplaca_2');
+
+  const esCombinado1 = tipo === 'Combinado vehicular 1';
+  const esFugado = tipo === 'Fugado';
+
+  if (combinadoBox) combinadoBox.style.display = esCombinado1 ? 'block' : 'none';
+  if (fugadoHint) fugadoHint.style.display = esFugado ? 'block' : 'none';
+  if (vehiculo2) vehiculo2.required = esCombinado1;
+
+  if (!esCombinado1) {
+    if (vehiculo2) vehiculo2.value = '';
+    if (resumen2) resumen2.value = '';
+    if (qplaca2) qplaca2.value = '';
+  }
+}
+$('#tipo')?.addEventListener('change', syncTipoParticipacion);
+syncTipoParticipacion();
 
 /* ==== Altas rápidas de catálogo ==== */
 async function postForm(url, data){
@@ -768,7 +852,9 @@ window.addEventListener('message', (event)=>{
 
   if (data.type !== 'vehiculo_creado' || !data.vehiculo || !data.vehiculo.id) return;
 
-  const sel = $('#vehiculo_id');
+  const targetId = $('#vehiculoNuevoFrame')?.dataset.targetId || 'vehiculo_id';
+  const sel = $('#' + targetId);
+  if (!sel) return;
   let option = Array.from(sel.options).find(opt => String(opt.value) === String(data.vehiculo.id));
   if (!option) {
     option = document.createElement('option');
@@ -781,6 +867,27 @@ window.addEventListener('message', (event)=>{
   sel.value = String(data.vehiculo.id);
   sel.dispatchEvent(new Event('change'));
   closeModal('mdVehiculo');
+});
+
+$('#formIV')?.addEventListener('submit', (event)=>{
+  const tipo = $('#tipo')?.value || 'Unidad';
+  const vehiculo1 = $('#vehiculo_id')?.value || '';
+  const vehiculo2 = $('#vehiculo_id_2')?.value || '';
+
+  if (!vehiculo1) {
+    event.preventDefault();
+    alert('Selecciona el vehículo principal.');
+    return;
+  }
+  if (tipo === 'Combinado vehicular 1' && !vehiculo2) {
+    event.preventDefault();
+    alert('Debes seleccionar el combinado vehicular 2.');
+    return;
+  }
+  if (tipo === 'Combinado vehicular 1' && vehiculo1 === vehiculo2) {
+    event.preventDefault();
+    alert('El combinado vehicular 2 debe ser distinto al vehículo principal.');
+  }
 });
 </script>
 </body>

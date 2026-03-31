@@ -33,18 +33,21 @@ final class InvolucradoVehiculoRepository
     {
         $q = trim($q);
         $normalized = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $q));
+        $buscarSinPlaca = in_array($normalized, ['SINPLACA', 'NOPLACA', 'SIN'], true);
 
         $st = $this->pdo->prepare(
             "SELECT id, placa, color, anio
                FROM vehiculos
               WHERE placa LIKE :raw
                  OR UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) LIKE :normalized
+                 OR (:buscar_sin_placa = 1 AND placa LIKE 'SPLACA%')
               ORDER BY placa
               LIMIT 50"
         );
         $st->execute([
             ':raw' => '%' . $q . '%',
             ':normalized' => '%' . $normalized . '%',
+            ':buscar_sin_placa' => $buscarSinPlaca ? 1 : 0,
         ]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -141,6 +144,42 @@ final class InvolucradoVehiculoRepository
         $st = $this->pdo->prepare('INSERT INTO involucrados_vehiculos(accidente_id,vehiculo_id,orden_participacion,tipo,observaciones) VALUES (?,?,?,?,?)');
         $st->execute([$accidenteId, $vehiculoId, $orden, $tipo, $observaciones]);
         return (int) $this->pdo->lastInsertId();
+    }
+
+    public function createInvolucradosVehiculo(array $rows): array
+    {
+        $ids = [];
+        $st = $this->pdo->prepare('INSERT INTO involucrados_vehiculos(accidente_id,vehiculo_id,orden_participacion,tipo,observaciones) VALUES (?,?,?,?,?)');
+
+        $started = false;
+        if (!$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+            $started = true;
+        }
+
+        try {
+            foreach ($rows as $row) {
+                $st->execute([
+                    $row['accidente_id'],
+                    $row['vehiculo_id'],
+                    $row['orden_participacion'],
+                    $row['tipo'],
+                    $row['observaciones'],
+                ]);
+                $ids[] = (int) $this->pdo->lastInsertId();
+            }
+
+            if ($started) {
+                $this->pdo->commit();
+            }
+
+            return $ids;
+        } catch (\Throwable $e) {
+            if ($started && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     public function involucradoById(int $id): ?array

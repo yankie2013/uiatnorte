@@ -14,6 +14,10 @@ $pdo->exec("SET NAMES utf8mb4");
 include __DIR__ . '/sidebar.php';
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function g($k,$d=null){ return isset($_GET[$k]) ? trim($_GET[$k]) : $d; }
+function placa_visible($placa){
+  $placa = (string) ($placa ?? '');
+  return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
+}
 
 $ok = g('ok','');
 $msg = g('msg','');
@@ -41,8 +45,13 @@ $params = [];
 if ($accidente_id>0){ $sql.=" AND iv.accidente_id=?"; $params[]=$accidente_id; }
 if ($tipo!==''){      $sql.=" AND iv.tipo=?";          $params[]=$tipo; }
 if ($q!==''){
-  $sql.=" AND (v.placa LIKE ? OR v.color LIKE ?)";
+  $normalizedQ = strtoupper(preg_replace('/[^A-Z0-9]/', '', $q));
+  $sql.=" AND (v.placa LIKE ? OR v.color LIKE ?";
   $like = "%$q%"; array_push($params,$like,$like);
+  if (in_array($normalizedQ, ['SINPLACA', 'NOPLACA', 'SIN'], true)) {
+    $sql.=" OR v.placa LIKE 'SPLACA%'";
+  }
+  $sql.=")";
 }
 $sql.=" ORDER BY iv.id DESC LIMIT 200";
 $st = $pdo->prepare($sql); $st->execute($params);
@@ -234,7 +243,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
         <label>Tipo</label>
         <select name="tipo">
           <option value="">— Todos —</option>
-          <?php foreach(['Unidad','Impactada','Remolcada'] as $t): ?>
+          <?php foreach(['Unidad','Combinado vehicular 1','Combinado vehicular 2','Fugado'] as $t): ?>
             <option value="<?=$t?>" <?=($tipo===$t?'selected':'')?>><?=$t?></option>
           <?php endforeach; ?>
         </select>
@@ -273,7 +282,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
               <div class="muted"><?=h($r['lugar'])?></div>
             </td>
             <td>
-              <div><strong><?=h($r['placa'])?></strong></div>
+              <div><strong><?=h(placa_visible($r['placa']))?></strong></div>
               <?php if($r['color']||$r['anio']): ?>
                 <div class="muted"><?=h(($r['color']??'').($r['anio']?(' · '.$r['anio']):''))?></div>
               <?php endif; ?>

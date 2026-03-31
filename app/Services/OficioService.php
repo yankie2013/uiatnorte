@@ -229,6 +229,9 @@ final class OficioService
         if ($motivo === '') {
             throw new InvalidArgumentException('El motivo es obligatorio.');
         }
+        if ($vehiculoId !== null && !$this->repository->vehiculoBelongsAccidente($accidenteId, $vehiculoId)) {
+            throw new InvalidArgumentException('El vehículo involucrado no pertenece al accidente seleccionado.');
+        }
         if ($anio <= 0) {
             $anio = (int) date('Y', strtotime($fecha));
         }

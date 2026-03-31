@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   UIAT Norte Ã¯Â¿Â½ involucrados_vehiculos_editar.php (REFACTORIZADO)
+   UIAT Norte - involucrados_vehiculos_editar.php (REFACTORIZADO)
    ============================================================ */
 
 require __DIR__.'/auth.php';
@@ -19,25 +19,25 @@ function iget($k,$d=null){ return isset($_GET[$k])  ? trim($_GET[$k])  : $d; }
 function okjson($arr){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($arr,JSON_UNESCAPED_UNICODE); exit; }
 
 function yesno($v){
-  if($v===null || $v==='') return 'Ã¯Â¿Â½';
+  if($v===null || $v==='') return '—';
   $v = strtolower((string)$v);
-  return (in_array($v, ['1','si','sÃ¯Â¿Â½','true','vigente','y'])) ? 'Vigente' : 'No vigente';
+  return (in_array($v, ['1','si','sí','true','vigente','y'])) ? 'Vigente' : 'No vigente';
 }
 function badge_date($d){
-  if(!$d) return '<span class="pill">Ã¯Â¿Â½</span>';
+  if(!$d) return '<span class="pill">—</span>';
   $today = date('Y-m-d');
   $ok = ($d >= $today);
   return '<span class="pill '.($ok?'pill-ok':'pill-bad').'">'.h($d).'</span>';
 }
 function vehiculo_text($row){
-  return ($row['placa'] ?? 'ID '.$row['id']).(($row['color']??'') ? (' Ã¯Â¿Â½ '.$row['color']) : '').(($row['anio']??'') ? (' ('.$row['anio'].')') : '');
+  return ($row['placa'] ?? 'ID '.$row['id']).(($row['color']??'') ? (' · '.$row['color']) : '').(($row['anio']??'') ? (' ('.$row['anio'].')') : '');
 }
 
 $repo = new InvolucradoVehiculoRepository($pdo);
 $service = new InvolucradoVehiculoService($repo);
 
 $id = (int)iget('id', 0);
-if ($id<=0) { http_response_code(400); echo 'ID invÃ¯Â¿Â½lido'; exit; }
+if ($id<=0) { http_response_code(400); echo 'ID inválido'; exit; }
 
 $iv = $repo->involucradoById($id);
 if(!$iv){ http_response_code(404); echo 'Registro no encontrado'; exit; }
@@ -81,7 +81,7 @@ include __DIR__ . '/sidebar.php';
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Editar involucrado Ã¢â‚¬â€œ VehÃƒÂ­culo</title>
+<title>Editar involucrado - Vehículo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
 <style>
@@ -122,7 +122,7 @@ include __DIR__ . '/sidebar.php';
   .chip:hover{transform:translateY(-1px)}
   .chip.danger{border-color:#b91c1c;background:rgba(185,28,28,.15);color:#fee2e2}
 
-  /* Modal iframe genÃƒÂ©rico */
+  /* Modal iframe genérico */
   .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:16px; z-index:99; }
   .modal.open{ display:flex; }
   .modal .box{ background:var(--bg); border:1px solid var(--line); border-radius:16px; padding:12px; width:min(1000px,95%); height:90vh; color:var(--fg); display:flex; flex-direction:column; }
@@ -176,7 +176,7 @@ include __DIR__ . '/sidebar.php';
   word-break: break-word;
 }
 
-/* AlineaciÃƒÂ³n izquierda en resumen del documento */
+/* Alineación izquierda en resumen del documento */
 .dv-card, .dv-row, .dv-val {
   text-align: left !important;
 }
@@ -186,11 +186,11 @@ include __DIR__ . '/sidebar.php';
   color: var(--fg);
 }
   
-  /* Lista de daÃƒÂ±os en formato limpio */
+  /* Lista de daños en formato limpio */
 .dv-list {
   margin: 6px 0 0 0;
   padding-left: 20px;
-  list-style-type: "Ã¢â‚¬â€œ ";
+  list-style-type: "– ";
 }
 .dv-list li {
   margin-bottom: 2px;
@@ -203,12 +203,12 @@ include __DIR__ . '/sidebar.php';
 <div class="wrap">
 
   <div class="top">
-    <h1 class="h1">Editar involucrado Ã¢â‚¬â€œ VehÃƒÂ­culo <span class="pill">ID #<?=h($id)?></span></h1>
-    <a class="btn" href="<?=h($return)?>">Ã¢Å¸Âµ Regresar</a>
+    <h1 class="h1">Editar involucrado - Vehículo <span class="pill">ID #<?=h($id)?></span></h1>
+    <a class="btn" href="<?=h($return)?>">Regresar</a>
   </div>
 
   <div class="card soft">
-    <div class="muted">Accidente #<?=h($accidente_id)?> Ã‚Â· <?=h(date('Y-m-d H:i', strtotime($iv['fecha_accidente'])))?> Ã¢â‚¬â€ <?=h($iv['lugar'])?></div>
+    <div class="muted">Accidente #<?=h($accidente_id)?> · <?=h(date('Y-m-d H:i', strtotime($iv['fecha_accidente'])))?> — <?=h($iv['lugar'])?></div>
   </div>
 
   <?php if($err): ?><div class="card warn"><?=h($err)?></div><?php endif; ?>
@@ -219,7 +219,7 @@ include __DIR__ . '/sidebar.php';
 
     <div class="grid">
       <div>
-        <label>BÃƒÂºsqueda por placa</label>
+        <label>Búsqueda por placa</label>
         <div class="inline" style="display:flex; gap:8px;">
           <input type="text" id="qplaca" placeholder="Ej. ABC123" style="flex:1">
           <button class="btn small" type="button" id="btnBuscarPlaca">Buscar</button>
@@ -228,20 +228,20 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
       <div>
-        <label>VehÃƒÂ­culo actual</label>
+        <label>Vehículo actual</label>
         <input type="text" value="<?=h(vehiculo_text($iv))?>" readonly>
       </div>
     </div>
 
     <div class="grid-3">
       <div>
-        <label>VehÃƒÂ­culo (reemplazar porÃ¢â‚¬Â¦)</label>
+        <label>Vehículo (reemplazar por...)</label>
         <select name="vehiculo_id" id="vehiculo_id" required>
           <option value="<?=$iv['vehiculo_id']?>" selected><?=h(vehiculo_text($iv))?></option>
         </select>
       </div>
       <div>
-        <label>Tipo de participaciÃƒÂ³n</label>
+        <label>Tipo de participación</label>
         <select name="tipo" id="tipo" required>
           <?php foreach($tipo_opts as $t): ?>
             <option value="<?=h($t)?>" <?=$iv['tipo']===$t?'selected':''?>><?=h($t)?></option>
@@ -261,7 +261,7 @@ include __DIR__ . '/sidebar.php';
       <a class="btn" href="<?=h($return)?>">Cancelar</a>
       <a class="btn" style="border-color:#c33;color:#c33;background:transparent"
          href="involucrados_vehiculos_eliminar.php?id=<?=$id?>&return_to=<?=urlencode($return)?>"
-         onclick="return confirm('Ã‚Â¿Eliminar este involucrado?');">Eliminar</a>
+         onclick="return confirm('¿Eliminar este involucrado?');">Eliminar</a>
       <button class="btn primary" type="submit">Guardar cambios</button>
     </div>
   </form>
@@ -269,11 +269,11 @@ include __DIR__ . '/sidebar.php';
   <?php if ($__es_unidad): ?>
     <!-- ================== DOCUMENTO DEL VEHICULO ================== -->
     <div class="card" id="docveh-card" style="display:block; margin-top:12px;">
-      <div class="card-h">Documento del vehiculo</div>
+      <div class="card-h">Documento del vehículo</div>
       <div class="card-b">
         <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:8px">
-          <div class="muted">Registra SOAT, Revision Tecnica y Peritaje del vehiculo.</div>
-          <button type="button" class="btn primary" onclick="openDocVehNew(<?= (int)$id ?>)" id="btnDocVeh">+ Documento del vehiculo</button>
+          <div class="muted">Registra SOAT, Revisión Técnica y Peritaje del vehículo.</div>
+          <button type="button" class="btn primary" onclick="openDocVehNew(<?= (int)$id ?>)" id="btnDocVeh">+ Documento del vehículo</button>
         </div>
 
         <div class="table-wrap">
@@ -283,7 +283,7 @@ include __DIR__ . '/sidebar.php';
               <tr>
                 <th style="width:80px">ID</th>
                 <th>SOAT</th>
-                <th>Revision Tecnica</th>
+                <th>Revisión Técnica</th>
                 <th>Peritaje</th>
                 <th style="width:200px" class="td-actions">Acciones</th>
               </tr>
@@ -325,7 +325,7 @@ include __DIR__ . '/sidebar.php';
     <div class="modal" id="mdDocVeh">
       <div class="box">
         <div class="head">
-          <h3 style="margin:0" id="mdDocVehTitle">Documento de vehiculo</h3>
+          <h3 style="margin:0" id="mdDocVehTitle">Documento de vehículo</h3>
           <button class="btn small" type="button" data-close="mdDocVeh">Cerrar</button>
         </div>
         <iframe id="ifrDocVeh" src="about:blank"></iframe>
@@ -363,9 +363,9 @@ if ($doc_ult):
       <div class="dv-row"><div class="dv-key">Vence</div><div class="dv-val"><?= badge_date($doc_ult['vencimiento_soat'] ?? '') ?></div></div>
     </div>
 
-    <!-- Revision Tecnica -->
+    <!-- Revisión Técnica -->
     <div class="card soft dv-card">
-      <h4>Revision Tecnica</h4>
+      <h4>Revisión Técnica</h4>
       <div class="dv-row"><div class="dv-key">Nro.</div><div class="dv-val"><?= h($doc_ult['numero_revision'] ?? '') ?></div></div>
       <div class="dv-row"><div class="dv-key">Certificadora</div><div class="dv-val"><?= h($doc_ult['certificadora_revision'] ?? '') ?></div></div>
       <div class="dv-row"><div class="dv-key">Vigente</div><div class="dv-val"><span class="pill"><?= yesno($doc_ult['vigente_revision'] ?? null) ?></span></div></div>
@@ -381,7 +381,7 @@ if ($doc_ult):
       <?php
 $danosRaw = trim($doc_ult['danos_peritaje'] ?? '');
 if ($danosRaw) {
-    // Divide en lÃƒÂ­neas, elimina vacÃƒÂ­os, muestra cada uno con guiÃƒÂ³n
+    // Divide en líneas, elimina vacíos, muestra cada uno con guion
     $danosList = array_filter(preg_split('/[\r\n]+/', $danosRaw));
     echo '<ul class="dv-list">';
     foreach ($danosList as $d) {
@@ -389,7 +389,7 @@ if ($danosRaw) {
     }
     echo '</ul>';
 } else {
-    echo '<div class="dv-val">Ã¢â‚¬â€</div>';
+    echo '<div class="dv-val">—</div>';
 }
 ?>
     </div>
@@ -399,12 +399,12 @@ if ($danosRaw) {
     
   <?php endif; ?>
 
-  <!-- Modal NUEVO VEHÃƒÂCULO -->
+  <!-- Modal NUEVO VEHÍCULO -->
   <div class="modal" id="mdVehiculoNuevo">
     <div class="box">
       <div class="head">
-        <h3 style="margin:0">Registrar nuevo vehÃƒÂ­culo</h3>
-        <button class="btn small" type="button" data-close="mdVehiculoNuevo">Cerrar Ã¢Å“â€¢</button>
+        <h3 style="margin:0">Registrar nuevo vehículo</h3>
+        <button class="btn small" type="button" data-close="mdVehiculoNuevo">Cerrar</button>
       </div>
       <iframe id="ifrNuevoVehiculo"
               src="vehiculo_nuevo.php?return=<?=urlencode($_SERVER['REQUEST_URI'])?>"></iframe>
@@ -438,7 +438,7 @@ document.getElementById('btnBuscarPlaca').addEventListener('click', async ()=>{
   const r = await fetch(`involucrados_vehiculos_editar.php?id=<?= (int)$id ?>&ajax=buscar_vehiculos&q=${encodeURIComponent(q)}`);
   const data = await r.json();
   if (!Array.isArray(data) || data.length===0){
-    if (confirm('No se encontraron vehÃƒÂ­culos. Ã‚Â¿Deseas registrarlo ahora?')) {
+    if (confirm('No se encontraron vehículos. ¿Deseas registrarlo ahora?')) {
       openVehiculoNuevo();
     }
     return;
@@ -450,7 +450,7 @@ document.getElementById('btnBuscarPlaca').addEventListener('click', async ()=>{
   if (selVeh.options.length > 1){ selVeh.selectedIndex = 1; actualizarResumen(); }
 }); 
 
-/* Abrir modal nuevo vehÃƒÂ­culo */
+/* Abrir modal nuevo vehículo */
 function openVehiculoNuevo(){
   const modal=document.getElementById('mdVehiculoNuevo');
   const ifr=document.getElementById('ifrNuevoVehiculo');
@@ -465,8 +465,8 @@ function openVehiculoNuevo(){
 }
 document.getElementById('btnVehNuevo').addEventListener('click', openVehiculoNuevo);
 
-/* Mostrar/ocultar secciÃƒÂ³n Documento segÃƒÂºn tipo
-   Ahora muestra la secciÃƒÂ³n para: Unidad, Combinado vehicular 1, Combinado vehicular 2 */
+/* Mostrar/ocultar sección Documento según tipo
+   Ahora muestra la sección para: Unidad, Combinado vehicular 1, Combinado vehicular 2 */
 function toggleDocCard(){
   const card = document.getElementById('docveh-card');
   if (!card) return;
@@ -477,12 +477,12 @@ function toggleDocCard(){
 document.getElementById('tipo').addEventListener('change', toggleDocCard);
 toggleDocCard();
 
-/* Modal DOC VehÃƒÂ­culo (Nuevo / Editar) */
+/* Modal DOC Vehículo (Nuevo / Editar) */
 function openDocVehNew(involId){
   const modal = document.getElementById('mdDocVeh');
   const ifr   = document.getElementById('ifrDocVeh');
   const ttl   = document.getElementById('mdDocVehTitle');
-  if (ttl) ttl.textContent = 'Nuevo Ã¢â‚¬â€ Documento de vehÃƒÂ­culo';
+  if (ttl) ttl.textContent = 'Nuevo - Documento de vehículo';
   ifr.src = 'documento_vehiculo_nuevo.php?invol_id=' + encodeURIComponent(involId);
   modal.classList.add('open');
   return false;
@@ -491,7 +491,7 @@ function openDocVehEdit(docId){
   const modal = document.getElementById('mdDocVeh');
   const ifr   = document.getElementById('ifrDocVeh');
   const ttl   = document.getElementById('mdDocVehTitle');
-  if (ttl) ttl.textContent = 'Editar Ã¢â‚¬â€ Documento de vehÃƒÂ­culo #' + docId;
+  if (ttl) ttl.textContent = 'Editar - Documento de vehículo #' + docId;
   ifr.src = 'documento_vehiculo_editar.php?id=' + encodeURIComponent(docId);
   modal.classList.add('open');
   return false;
@@ -504,10 +504,10 @@ document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',
   if(modal) modal.classList.remove('open');
 }));
 
-/* Mensajes desde iframes (vehÃƒÂ­culo nuevo / doc creado-actualizado-eliminado) */
+/* Mensajes desde iframes (vehículo nuevo / doc creado-actualizado-eliminado) */
 window.addEventListener('message', (ev)=>{
   const d = ev.data;
-  // VehÃƒÂ­culo creado (dos variantes soportadas)
+  // Vehículo creado (dos variantes soportadas)
   if (d && typeof d === 'object' && d.ok && d.vehiculo && d.vehiculo.id) {
     const { id, texto } = d.vehiculo;
     selVeh.add(new Option(texto || ('ID '+id), id, true, true));
@@ -519,7 +519,7 @@ window.addEventListener('message', (ev)=>{
     location.reload();
     return;
   }
-  // Documentos de vehÃƒÂ­culo
+  // Documentos de vehículo
   if (d && typeof d === 'object' && (d.type==='docveh:created' || d.type==='docveh:updated' || d.type==='docveh:deleted')) {
     const m=document.getElementById('mdDocVeh'); if (m) m.classList.remove('open');
     location.reload();

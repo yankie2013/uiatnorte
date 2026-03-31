@@ -24,6 +24,8 @@ if ($id <= 0 || $detail === null) {
 }
 
 $persona = trim((string) (($detail['per_nombres'] ?? '') . ' ' . ($detail['per_ap'] ?? '') . ' ' . ($detail['per_am'] ?? '')));
+$personaFallecida = trim((string) (($detail['fall_nombres'] ?? '') . ' ' . ($detail['fall_ap'] ?? '') . ' ' . ($detail['fall_am'] ?? '')));
+$vehiculoVinculado = trim((string) (($detail['veh_ut'] ?? '') !== '' ? ($detail['veh_ut'] . ' - ') : '') . ($detail['veh_placa'] ?? ''));
 $listarHref = 'oficios_listar.php' . (!empty($detail['accidente_id']) ? ('?accidente_id=' . urlencode((string) $detail['accidente_id'])) : '');
 
 include __DIR__ . '/sidebar.php';
@@ -64,8 +66,8 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:980px;margin:24px 
     <div class="row"><div class="label">Asunto</div><div><?= h($detail['asunto_nombre'] ?? '-') ?></div></div>
     <div class="row"><div class="label">Nombre oficial del año</div><div><?= h(trim((string) (($detail['anio_nom'] ?? '') . ' - ' . ($detail['nombre_anio'] ?? '')))) ?></div></div>
     <div class="row"><div class="label">Referencia</div><div><?= h($detail['referencia_texto'] ?? '') ?: '-' ?></div></div>
-    <div class="row"><div class="label">Vehículo vinculado</div><div><?= !empty($detail['involucrado_vehiculo_id']) ? ('ID ' . h($detail['involucrado_vehiculo_id'])) : '-' ?></div></div>
-    <div class="row"><div class="label">Persona fallecida vinculada</div><div><?= !empty($detail['involucrado_persona_id']) ? ('ID ' . h($detail['involucrado_persona_id'])) : '-' ?></div></div>
+    <div class="row"><div class="label">Vehículo vinculado</div><div><?= $vehiculoVinculado !== '' ? h($vehiculoVinculado) : (!empty($detail['involucrado_vehiculo_id']) ? ('ID ' . h($detail['involucrado_vehiculo_id'])) : '-') ?></div></div>
+    <div class="row"><div class="label">Persona fallecida vinculada</div><div><?= $personaFallecida !== '' ? h($personaFallecida) : (!empty($detail['involucrado_persona_id']) ? ('ID ' . h($detail['involucrado_persona_id'])) : '-') ?></div></div>
     <div style="margin-top:14px;">
       <div class="label">Motivo / contexto</div>
       <div class="text-block"><?= h($detail['motivo'] ?? '') ?></div>

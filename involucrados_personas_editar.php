@@ -205,8 +205,8 @@ include __DIR__ . '/sidebar.php';
         <select name="vehiculo_id" id="vehiculo_id" <?= $requiereVehInicial ? '' : 'disabled' ?>>
           <option value="">— Sin vehículo —</option>
           <?php foreach($vehiculos as $v): ?>
-            <?php $lbl = $v['placa'] . ($v['color']?(' · '.$v['color']):'') . ($v['anio']?(' ('.$v['anio'].')'):''); ?>
-            <option value="<?=$v['id']?>" <?=((int)$inv['vehiculo_id']===(int)$v['id']?'selected':'')?>><?=h($lbl)?></option>
+            <?php $vehiculoIds = array_map('intval', (array)($v['ids'] ?? [$v['id']])); ?>
+            <option value="<?=$v['id']?>" <?=in_array((int)$inv['vehiculo_id'], $vehiculoIds, true)?'selected':''?>><?=h($v['t'] ?? '')?></option>
           <?php endforeach; ?>
         </select>
         <div id="vehReqHelp" class="mut" style="margin-top:4px; display:<?= $requiereVehInicial ? 'block':'none' ?>">Este rol requiere vehículo. Selecciona uno.</div>

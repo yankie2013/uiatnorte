@@ -198,6 +198,17 @@ final class OficioRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function vehiculoBelongsAccidente(int $accidenteId, int $involucradoVehiculoId): bool
+    {
+        if ($accidenteId <= 0 || $involucradoVehiculoId <= 0) {
+            return false;
+        }
+
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos WHERE id = ? AND accidente_id = ?');
+        $st->execute([$involucradoVehiculoId, $accidenteId]);
+        return (int) $st->fetchColumn() > 0;
+    }
+
     public function fallecidosByAccidente(int $accidenteId): array
     {
         if ($accidenteId <= 0) {
@@ -383,9 +394,14 @@ final class OficioRepository
             'p.nombres AS per_nombres',
             'p.apellido_paterno AS per_ap',
             'p.apellido_materno AS per_am',
+            'pf.nombres AS fall_nombres',
+            'pf.apellido_paterno AS fall_ap',
+            'pf.apellido_materno AS fall_am',
             'a.registro_sidpol',
             'a.lugar',
             'a.fecha_accidente',
+            'COALESCE(iv.orden_participacion, \'\') AS veh_ut',
+            'COALESCE(v.placa, \'\') AS veh_placa',
             'ao.nombre AS nombre_anio',
             'ao.anio AS anio_nom',
             'oa.nombre AS asunto_nombre',
@@ -395,7 +411,11 @@ final class OficioRepository
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             'LEFT JOIN oficio_subentidad se ON se.id = o.subentidad_destino_id',
             'LEFT JOIN oficio_persona_entidad p ON p.id = o.persona_destino_id',
+            'LEFT JOIN involucrados_personas ipf ON ipf.id = o.involucrado_persona_id',
+            'LEFT JOIN personas pf ON pf.id = ipf.persona_id',
             'LEFT JOIN accidentes a ON a.id = o.accidente_id',
+            'LEFT JOIN involucrados_vehiculos iv ON iv.id = o.involucrado_vehiculo_id',
+            'LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id',
             'LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id',
             'LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id'
         ];

@@ -4,12 +4,20 @@ require_login();
 require __DIR__ . '/db.php';
 
 use App\Repositories\PersonaRepository;
+use App\Repositories\AbogadoRepository;
 use App\Repositories\AccidenteRepository;
+use App\Repositories\DiligenciaPendienteRepository;
 use App\Repositories\OficioRepository;
+use App\Repositories\PolicialIntervinienteRepository;
+use App\Repositories\PropietarioVehiculoRepository;
 use App\Repositories\VehiculoRepository;
+use App\Services\AbogadoService;
 use App\Services\AccidenteService;
+use App\Services\DiligenciaPendienteService;
 use App\Services\OficioService;
 use App\Services\PersonaService;
+use App\Services\PolicialIntervinienteService;
+use App\Services\PropietarioVehiculoService;
 use App\Services\VehiculoService;
 
 header('Content-Type: text/html; charset=utf-8');
@@ -296,6 +304,21 @@ function person_panel_tone_class(array $row): string
     return '';
 }
 
+function es_participacion_combinada(?string $tipo): bool
+{
+    return in_array((string) ($tipo ?? ''), ['Combinado vehicular 1', 'Combinado vehicular 2'], true);
+}
+
+function vehiculo_placa_visible(?string $placa): string
+{
+    $placa = trim((string) ($placa ?? ''));
+    if ($placa === '') {
+        return '';
+    }
+
+    return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
+}
+
 function human_label(string $key): string
 {
     static $map = [
@@ -336,6 +359,7 @@ function human_label(string $key): string
         'involucrado_actualizado_en' => 'Involucrado actualizado en',
         'orden_participacion' => 'Unidad de tránsito',
         'veh_participacion' => 'Participación del vehículo',
+        'veh_combo_placas' => 'Placas de la unidad combinada',
         'inv_vehiculo_observaciones' => 'Obs. vehículo involucrado',
         'veh_placa' => 'Placa',
         'veh_serie_vin' => 'Serie VIN',
@@ -383,6 +407,10 @@ function field_html(string $key, mixed $value): string
     }
 
     $text = trim((string) $value);
+    if (in_array($key, ['veh_placa', 'veh_combo_placas'], true)) {
+        $text = vehiculo_placa_visible($text);
+    }
+
     return nl2br(h($text !== '' ? $text : '—'));
 }
 
@@ -654,6 +682,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_policial_inline') {
+        try {
+            $policialId = (int) ($_POST['policial_id'] ?? 0);
+            if ($policialId <= 0) {
+                throw new InvalidArgumentException('Registro policial no encontrado.');
+            }
+
+            $policialService = new PolicialIntervinienteService(new PolicialIntervinienteRepository($pdo));
+            $personaService = new PersonaService(new PersonaRepository($pdo));
+
+            $registro = $policialService->detalle($policialId);
+            if ($registro === null) {
+                throw new InvalidArgumentException('Registro policial no encontrado.');
+            }
+
+            $personaId = (int) ($registro['persona_id'] ?? 0);
+            if ($personaId <= 0) {
+                throw new InvalidArgumentException('Persona no encontrada.');
+            }
+
+            $current = $personaService->find($personaId);
+            if ($current === null) {
+                throw new InvalidArgumentException('Persona no encontrada.');
+            }
+
+            $personaPayload = [
+                'tipo_doc' => $_POST['tipo_doc'] ?? 'DNI',
+                'num_doc' => $_POST['num_doc'] ?? '',
+                'apellido_paterno' => $_POST['apellido_paterno'] ?? '',
+                'apellido_materno' => $_POST['apellido_materno'] ?? '',
+                'nombres' => $_POST['nombres'] ?? '',
+                'sexo' => $_POST['sexo'] ?? '',
+                'fecha_nacimiento' => $_POST['fecha_nacimiento'] ?? '',
+                'estado_civil' => $_POST['estado_civil'] ?? '',
+                'nacionalidad' => $_POST['nacionalidad'] ?? '',
+                'departamento_nac' => $_POST['departamento_nac'] ?? '',
+                'provincia_nac' => $_POST['provincia_nac'] ?? '',
+                'distrito_nac' => $_POST['distrito_nac'] ?? '',
+                'domicilio' => $_POST['domicilio'] ?? '',
+                'domicilio_departamento' => $_POST['domicilio_departamento'] ?? '',
+                'domicilio_provincia' => $_POST['domicilio_provincia'] ?? '',
+                'domicilio_distrito' => $_POST['domicilio_distrito'] ?? '',
+                'ocupacion' => $_POST['ocupacion'] ?? '',
+                'grado_instruccion' => $_POST['grado_instruccion'] ?? '',
+                'nombre_padre' => $_POST['nombre_padre'] ?? '',
+                'nombre_madre' => $_POST['nombre_madre'] ?? '',
+                'celular' => $_POST['celular'] ?? '',
+                'email' => $_POST['email'] ?? '',
+                'notas' => $_POST['notas'] ?? '',
+                'foto_path' => $_POST['foto_path'] ?? ($current['foto_path'] ?? ''),
+                'api_fuente' => $_POST['api_fuente'] ?? ($current['api_fuente'] ?? ''),
+                'api_ref' => $_POST['api_ref'] ?? ($current['api_ref'] ?? ''),
+            ];
+            $personaService->update($personaId, $personaPayload);
+
+            $policialService->update($policialId, [
+                'accidente_id' => (int) ($registro['accidente_id'] ?? 0),
+                'persona_id' => $personaId,
+                'grado_policial' => $_POST['grado_policial'] ?? '',
+                'cip' => $_POST['cip'] ?? '',
+                'dependencia_policial' => $_POST['dependencia_policial'] ?? '',
+                'rol_funcion' => $_POST['rol_funcion'] ?? '',
+                'observaciones' => $_POST['observaciones'] ?? '',
+                'celular' => $_POST['celular'] ?? '',
+                'email' => $_POST['email'] ?? '',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Efectivo policial actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
     if ($action === 'save_vehiculo_inline') {
         try {
             $vehiculoId = (int) ($_POST['vehiculo_id'] ?? 0);
@@ -664,6 +765,169 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $vehiculoService = new VehiculoService(new VehiculoRepository($pdo));
             $vehiculoService->actualizar($vehiculoId, $_POST);
             json_response(['ok' => true, 'message' => 'Vehículo actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_propietario_inline') {
+        try {
+            $propietarioId = (int) ($_POST['propietario_id'] ?? 0);
+            if ($propietarioId <= 0) {
+                throw new InvalidArgumentException('Propietario no encontrado.');
+            }
+
+            $propietarioService = new PropietarioVehiculoService(new PropietarioVehiculoRepository($pdo));
+            $personaService = new PersonaService(new PersonaRepository($pdo));
+
+            $registro = $propietarioService->detalle($propietarioId);
+            if ($registro === null) {
+                throw new InvalidArgumentException('Propietario no encontrado.');
+            }
+
+            $tipo = mb_strtoupper(trim((string) ($registro['tipo_propietario'] ?? 'NATURAL')), 'UTF-8');
+            $personaId = $tipo === 'JURIDICA'
+                ? (int) ($registro['representante_persona_id'] ?? 0)
+                : (int) ($registro['propietario_persona_id'] ?? 0);
+
+            if ($personaId > 0) {
+                $current = $personaService->find($personaId);
+                if ($current === null) {
+                    throw new InvalidArgumentException('Persona no encontrada.');
+                }
+
+                $personaPayload = [
+                    'tipo_doc' => $_POST['tipo_doc'] ?? 'DNI',
+                    'num_doc' => $_POST['num_doc'] ?? '',
+                    'apellido_paterno' => $_POST['apellido_paterno'] ?? '',
+                    'apellido_materno' => $_POST['apellido_materno'] ?? '',
+                    'nombres' => $_POST['nombres'] ?? '',
+                    'sexo' => $_POST['sexo'] ?? '',
+                    'fecha_nacimiento' => $_POST['fecha_nacimiento'] ?? '',
+                    'estado_civil' => $_POST['estado_civil'] ?? '',
+                    'nacionalidad' => $_POST['nacionalidad'] ?? '',
+                    'departamento_nac' => $_POST['departamento_nac'] ?? '',
+                    'provincia_nac' => $_POST['provincia_nac'] ?? '',
+                    'distrito_nac' => $_POST['distrito_nac'] ?? '',
+                    'domicilio' => $_POST['domicilio'] ?? '',
+                    'domicilio_departamento' => $_POST['domicilio_departamento'] ?? '',
+                    'domicilio_provincia' => $_POST['domicilio_provincia'] ?? '',
+                    'domicilio_distrito' => $_POST['domicilio_distrito'] ?? '',
+                    'ocupacion' => $_POST['ocupacion'] ?? '',
+                    'grado_instruccion' => $_POST['grado_instruccion'] ?? '',
+                    'nombre_padre' => $_POST['nombre_padre'] ?? '',
+                    'nombre_madre' => $_POST['nombre_madre'] ?? '',
+                    'celular' => $_POST['celular'] ?? '',
+                    'email' => $_POST['email'] ?? '',
+                    'notas' => $_POST['notas'] ?? '',
+                    'foto_path' => $_POST['foto_path'] ?? ($current['foto_path'] ?? ''),
+                    'api_fuente' => $_POST['api_fuente'] ?? ($current['api_fuente'] ?? ''),
+                    'api_ref' => $_POST['api_ref'] ?? ($current['api_ref'] ?? ''),
+                ];
+                $personaService->update($personaId, $personaPayload);
+            }
+
+            $propietarioService->update($propietarioId, [
+                'accidente_id' => (int) ($registro['accidente_id'] ?? 0),
+                'vehiculo_inv_id' => (int) ($registro['vehiculo_inv_id'] ?? 0),
+                'tipo_propietario' => $tipo,
+                'propietario_persona_id' => (int) ($registro['propietario_persona_id'] ?? 0),
+                'representante_persona_id' => (int) ($registro['representante_persona_id'] ?? 0),
+                'ruc' => $_POST['ruc'] ?? ($registro['ruc'] ?? ''),
+                'razon_social' => $_POST['razon_social'] ?? ($registro['razon_social'] ?? ''),
+                'domicilio_fiscal' => $_POST['domicilio_fiscal'] ?? ($registro['domicilio_fiscal'] ?? ''),
+                'rol_legal' => $_POST['rol_legal'] ?? ($registro['rol_legal'] ?? ''),
+                'observaciones' => $_POST['observaciones'] ?? ($registro['observaciones'] ?? ''),
+                'celular_nat' => $tipo === 'NATURAL' ? ($_POST['celular'] ?? '') : '',
+                'email_nat' => $tipo === 'NATURAL' ? ($_POST['email'] ?? '') : '',
+                'celular_rep' => $tipo === 'JURIDICA' ? ($_POST['celular'] ?? '') : '',
+                'email_rep' => $tipo === 'JURIDICA' ? ($_POST['email'] ?? '') : '',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Propietario actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_abogado_inline') {
+        try {
+            $abogadoId = (int) ($_POST['abogado_id'] ?? 0);
+            if ($abogadoId <= 0) {
+                throw new InvalidArgumentException('Abogado no encontrado.');
+            }
+
+            $abogadoService = new AbogadoService(new AbogadoRepository($pdo));
+            $registro = $abogadoService->detalle($abogadoId);
+            if ($registro === null) {
+                throw new InvalidArgumentException('Abogado no encontrado.');
+            }
+
+            $abogadoService->update($abogadoId, [
+                'accidente_id' => (int) ($registro['accidente_id'] ?? 0),
+                'persona_id' => $_POST['persona_id'] ?? ($registro['persona_id'] ?? 0),
+                'nombres' => $_POST['nombres'] ?? '',
+                'apellido_paterno' => $_POST['apellido_paterno'] ?? '',
+                'apellido_materno' => $_POST['apellido_materno'] ?? '',
+                'colegiatura' => $_POST['colegiatura'] ?? '',
+                'registro' => $_POST['registro'] ?? '',
+                'casilla_electronica' => $_POST['casilla_electronica'] ?? '',
+                'domicilio_procesal' => $_POST['domicilio_procesal'] ?? '',
+                'celular' => $_POST['celular'] ?? '',
+                'email' => $_POST['email'] ?? '',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Abogado actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_diligencia_inline') {
+        try {
+            $diligenciaId = (int) ($_POST['diligencia_id'] ?? 0);
+            if ($diligenciaId <= 0) {
+                throw new InvalidArgumentException('Diligencia no encontrada.');
+            }
+
+            $diligenciaService = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
+            $detail = $diligenciaService->detalle($diligenciaId);
+            if ($detail === null) {
+                throw new InvalidArgumentException('Diligencia no encontrada.');
+            }
+
+            $current = $detail['row'] ?? [];
+            $diligenciaService->actualizar($diligenciaId, [
+                'accidente_id' => (int) ($current['accidente_id'] ?? 0),
+                'tipo_diligencia_id' => (int) ($_POST['tipo_diligencia_id'] ?? ($current['tipo_diligencia_id'] ?? 0)),
+                'contenido' => $_POST['contenido'] ?? '',
+                'estado' => $_POST['estado'] ?? ($current['estado'] ?? 'Pendiente'),
+                'oficio_id' => $_POST['oficio_id'] ?? ($current['oficio_id'] ?? ''),
+                'citacion_id' => !empty($current['citacion_id']) ? [(int) $current['citacion_id']] : [],
+                'documento_realizado' => $_POST['documento_realizado'] ?? '',
+                'documentos_recibidos' => $_POST['documentos_recibidos'] ?? '',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'Diligencia actualizada correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_diligencia_estado_inline') {
+        try {
+            $diligenciaId = (int) ($_POST['diligencia_id'] ?? 0);
+            if ($diligenciaId <= 0) {
+                throw new InvalidArgumentException('Diligencia no encontrada.');
+            }
+
+            $estadoUi = trim((string) ($_POST['estado'] ?? 'Pendiente'));
+            $estadoReal = $estadoUi === 'Resuelto' ? 'Realizado' : 'Pendiente';
+
+            $diligenciaService = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
+            $diligenciaService->cambiarEstado($diligenciaId, $estadoReal);
+
+            json_response(['ok' => true, 'message' => 'Estado de la diligencia actualizado correctamente.']);
         } catch (Throwable $e) {
             json_response(['ok' => false, 'message' => $e->getMessage()], 422);
         }
@@ -735,6 +999,8 @@ if (!$accidente) {
 }
 
 $accidente_id = (int) $accidente['id'];
+$abogadoInlineService = new AbogadoService(new AbogadoRepository($pdo));
+$abogadoInlineContext = $abogadoInlineService->formContext($accidente_id);
 $accidenteBase = $accidenteRepo->accidenteById($accidente_id) ?: $accidente;
 $deps = $accidenteRepo->departamentos();
 $fiscaliasCatalog = $accidenteRepo->fiscalias();
@@ -908,6 +1174,101 @@ $personas = safe_query_all(
             p.nombres",
     [$accidente_id]
 );
+
+$comboVehiculosRows = safe_query_all(
+    $pdo,
+    "SELECT
+            iv.accidente_id,
+            iv.orden_participacion,
+            iv.tipo AS veh_participacion,
+            v.id AS veh_id,
+            v.categoria_id AS veh_categoria_id,
+            v.tipo_id AS veh_tipo_id,
+            v.carroceria_id AS veh_carroceria_id,
+            v.marca_id AS veh_marca_id,
+            v.modelo_id AS veh_modelo_id,
+            v.placa AS veh_placa,
+            v.serie_vin AS veh_serie_vin,
+            v.nro_motor AS veh_nro_motor,
+            TRIM(CONCAT_WS(' - ', cv.codigo, cv.descripcion)) AS veh_categoria,
+            TRIM(CONCAT_WS(' - ', tv.codigo, tv.nombre)) AS veh_tipo,
+            COALESCE(car.nombre, '') AS veh_carroceria,
+            COALESCE(mar.nombre, '') AS veh_marca,
+            COALESCE(modv.nombre, '') AS veh_modelo,
+            v.anio AS veh_anio,
+            v.color AS veh_color,
+            v.largo_mm AS veh_largo_mm,
+            v.ancho_mm AS veh_ancho_mm,
+            v.alto_mm AS veh_alto_mm,
+            v.notas AS veh_notas,
+            v.creado_en AS veh_creado_en,
+            v.actualizado_en AS veh_actualizado_en
+       FROM involucrados_vehiculos iv
+       JOIN vehiculos v ON v.id = iv.vehiculo_id
+  LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
+  LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
+  LEFT JOIN carroceria_vehiculo car ON car.id = v.carroceria_id
+  LEFT JOIN marcas_vehiculo mar ON mar.id = v.marca_id
+  LEFT JOIN modelos_vehiculo modv ON modv.id = v.modelo_id
+      WHERE iv.accidente_id = ?
+        AND iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
+   ORDER BY
+            CASE COALESCE(iv.orden_participacion, '')
+                WHEN 'UT-1' THEN 1
+                WHEN 'UT-2' THEN 2
+                WHEN 'UT-3' THEN 3
+                WHEN 'UT-4' THEN 4
+                WHEN 'UT-5' THEN 5
+                WHEN 'UT-6' THEN 6
+                WHEN 'UT-7' THEN 7
+                ELSE 99
+            END,
+            FIELD(iv.tipo, 'Combinado vehicular 1', 'Combinado vehicular 2'),
+            v.placa",
+    [$accidente_id]
+);
+
+$comboVehiculosPorUnidad = [];
+foreach ($comboVehiculosRows as $comboVehiculo) {
+    $ut = trim((string) ($comboVehiculo['orden_participacion'] ?? ''));
+    if ($ut === '') {
+        continue;
+    }
+
+    $comboVehiculo['veh_numero'] = (string) ($comboVehiculo['veh_participacion'] ?? '') === 'Combinado vehicular 2' ? '2' : '1';
+    $comboVehiculo['veh_placa'] = vehiculo_placa_visible((string) ($comboVehiculo['veh_placa'] ?? ''));
+    $comboVehiculosPorUnidad[$ut][] = $comboVehiculo;
+}
+
+foreach ($personas as &$persona) {
+    $persona['veh_chip_text'] = '';
+    if (!empty($persona['veh_placa'])) {
+        $persona['veh_chip_text'] = vehiculo_placa_visible((string) $persona['veh_placa']);
+    }
+
+    if (!es_participacion_combinada($persona['veh_participacion'] ?? null)) {
+        continue;
+    }
+
+    $ut = trim((string) ($persona['orden_participacion'] ?? ''));
+    if ($ut === '' || empty($comboVehiculosPorUnidad[$ut])) {
+        continue;
+    }
+
+    $placas = [];
+    foreach ($comboVehiculosPorUnidad[$ut] as $comboVehiculo) {
+        $placa = trim((string) ($comboVehiculo['veh_placa'] ?? ''));
+        if ($placa !== '') {
+            $placas[] = $placa;
+        }
+    }
+
+    if ($placas) {
+        $persona['veh_combo_placas'] = implode(' + ', $placas);
+        $persona['veh_chip_text'] = $ut . ' - ' . $persona['veh_combo_placas'];
+    }
+}
+unset($persona);
 
 $policias = safe_query_all(
     $pdo,
@@ -1179,6 +1540,141 @@ $diligencias = safe_query_all(
     [$accidente_id]
 );
 
+$diligenciaOficioOptions = ['' => 'Sin oficio relacionado'];
+foreach ($oficios as $oficioOption) {
+    $label = trim((string) ('Oficio N° ' . ($oficioOption['numero'] ?? '—') . '/' . ($oficioOption['anio'] ?? '—')));
+    if (!empty($oficioOption['asunto_nombre'])) {
+        $label .= ' · ' . trim((string) $oficioOption['asunto_nombre']);
+    }
+    $diligenciaOficioOptions[(string) ($oficioOption['id'] ?? '')] = $label;
+}
+
+$diligenciaDocumentoRecibidoOptions = ['' => 'Sin documento recibido'];
+foreach ($documentosRecibidos as $documentoRecibido) {
+    $labelParts = [];
+    if (!empty($documentoRecibido['tipo_documento'])) {
+        $labelParts[] = (string) $documentoRecibido['tipo_documento'];
+    }
+    if (!empty($documentoRecibido['numero_documento'])) {
+        $labelParts[] = (string) $documentoRecibido['numero_documento'];
+    }
+    if (!empty($documentoRecibido['asunto'])) {
+        $labelParts[] = (string) $documentoRecibido['asunto'];
+    }
+    $label = trim((string) implode(' · ', array_filter($labelParts, static fn($item): bool => trim((string) $item) !== '')));
+    if ($label === '') {
+        $label = 'Documento recibido #' . (int) ($documentoRecibido['id'] ?? 0);
+    }
+    $diligenciaDocumentoRecibidoOptions[$label] = $label;
+}
+
+$diligenciasPendientesSolo = array_values(array_filter(
+    $diligencias,
+    static fn(array $row): bool => trim((string) ($row['estado'] ?? 'Pendiente')) !== 'Realizado'
+));
+$diligenciasRealizadas = array_values(array_filter(
+    $diligencias,
+    static fn(array $row): bool => trim((string) ($row['estado'] ?? 'Pendiente')) === 'Realizado'
+));
+
+$renderDiligenciaCards = static function (array $items) use ($diligenciaDocumentoRecibidoOptions, $diligenciaOficioOptions): string {
+    ob_start();
+    if (!$items): ?>
+      <div class="empty-state">No hay diligencias en esta pestaña.</div>
+    <?php else: ?>
+      <div class="module-grid">
+        <?php foreach ($items as $row): ?>
+          <?php
+            $estadoDiligenciaRaw = trim((string) ($row['estado'] ?? 'Pendiente'));
+            $estadoDiligenciaUi = $estadoDiligenciaRaw === 'Realizado' ? 'Resuelto' : 'Pendiente';
+            $documentoRecibidoValue = trim((string) ($row['documentos_recibidos'] ?? ''));
+            $diligenciaDocOptions = $diligenciaDocumentoRecibidoOptions;
+            if ($documentoRecibidoValue !== '' && !array_key_exists($documentoRecibidoValue, $diligenciaDocOptions)) {
+                $diligenciaDocOptions[$documentoRecibidoValue] = $documentoRecibidoValue;
+            }
+          ?>
+          <article class="module-card">
+            <div class="editable-shell" data-edit-shell="diligencia-<?= (int) $row['id'] ?>">
+              <div class="diligencia-card">
+                <div class="diligencia-main">
+                  <div class="diligencia-head">
+                    <div>
+                      <h4>Diligencia #<?= (int) $row['id'] ?></h4>
+                      <p><?= h((string) (($row['tipo_nombre'] ?? '') !== '' ? $row['tipo_nombre'] : (($row['tipo_diligencia'] ?? '') !== '' ? $row['tipo_diligencia'] : 'Sin tipo'))) ?></p>
+                      <div class="module-meta" style="margin-top:6px">
+                        <?php if (!empty($row['oficio_id'])): ?><span class="chip-simple">Oficio #<?= (int) $row['oficio_id'] ?></span><?php endif; ?>
+                        <?php if (!empty($row['citacion_id'])): ?><span class="chip-simple">Citación #<?= (int) $row['citacion_id'] ?></span><?php endif; ?>
+                        <?php if (!empty($row['creado_en'])): ?><span class="chip-simple">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></span><?php endif; ?>
+                      </div>
+                    </div>
+                    <div class="diligencia-side">
+                      <select class="diligencia-status-select js-quick-diligencia-status <?= $estadoDiligenciaUi === 'Resuelto' ? 'status-resuelto' : 'status-pendiente' ?>" data-diligencia-id="<?= (int) $row['id'] ?>" data-prev="<?= h($estadoDiligenciaUi) ?>" aria-label="Estado de la diligencia">
+                        <option value="Pendiente" <?= $estadoDiligenciaUi === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
+                        <option value="Resuelto" <?= $estadoDiligenciaUi === 'Resuelto' ? 'selected' : '' ?>>Resuelto</option>
+                      </select>
+                      <div class="diligencia-actions">
+                        <a class="btn-shell" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>">Ver</a>
+                        <button type="button" class="btn-shell js-edit-start" data-shell="diligencia-<?= (int) $row['id'] ?>">Editar</button>
+                        <a class="btn-shell" href="diligenciapendiente_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>">Eliminar</a>
+                        <div class="editable-actions" data-edit-actions="diligencia-<?= (int) $row['id'] ?>" hidden>
+                          <button type="button" class="btn-shell js-edit-cancel" data-shell="diligencia-<?= (int) $row['id'] ?>">Cancelar</button>
+                          <button type="submit" class="btn-shell btn-primary" form="diligencia-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="inline-edit-error" id="diligencia-inline-error-<?= (int) $row['id'] ?>"></div>
+                  <div class="editable-view" data-edit-view="diligencia-<?= (int) $row['id'] ?>">
+                    <div class="diligencia-inline-fields">
+                      <div class="diligencia-inline-row">
+                        <div class="diligencia-inline-box">
+                          <strong>Contenido</strong>
+                          <div><?= !empty($row['contenido']) ? nl2br(h((string) $row['contenido'])) : '—' ?></div>
+                        </div>
+                        <div class="diligencia-inline-box">
+                          <strong>Documento realizado</strong>
+                          <div><?= h((string) (($row['documento_realizado'] ?? '') !== '' ? $row['documento_realizado'] : '—')) ?></div>
+                        </div>
+                      </div>
+                      <div class="diligencia-inline-row">
+                        <div class="diligencia-inline-box">
+                          <strong>Documento recibido</strong>
+                          <div><?= h($documentoRecibidoValue !== '' ? $documentoRecibidoValue : '—') ?></div>
+                        </div>
+                        <div class="diligencia-inline-box">
+                          <strong>Oficio relacionado</strong>
+                          <div><?= !empty($row['oficio_id']) && isset($diligenciaOficioOptions[(string) $row['oficio_id']]) ? h($diligenciaOficioOptions[(string) $row['oficio_id']]) : '—' ?></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <form class="editable-form js-inline-ajax-form" id="diligencia-inline-form-<?= (int) $row['id'] ?>" data-shell="diligencia-<?= (int) $row['id'] ?>" data-error="diligencia-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                    <input type="hidden" name="action" value="save_diligencia_inline">
+                    <input type="hidden" name="diligencia_id" value="<?= (int) $row['id'] ?>">
+                    <input type="hidden" name="tipo_diligencia_id" value="<?= (int) ($row['tipo_diligencia_id'] ?? 0) ?>">
+                    <input type="hidden" name="estado" value="<?= h($estadoDiligenciaRaw) ?>">
+                    <div class="section-block">
+                      <h3>Edición rápida</h3>
+                      <div class="field-grid">
+                        <?= render_editable_fields($row, [
+                            ['name' => 'contenido', 'label' => 'Contenido', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+                            ['name' => 'documento_realizado', 'label' => 'Documento realizado', 'class' => 'span-2'],
+                            ['name' => 'documentos_recibidos', 'label' => 'Documento recibido', 'type' => 'select', 'options' => $diligenciaDocOptions, 'class' => 'span-2'],
+                            ['name' => 'oficio_id', 'label' => 'Oficio relacionado', 'type' => 'select', 'options' => $diligenciaOficioOptions, 'class' => 'span-2'],
+                        ], 'diligencia-' . (int) $row['id']) ?>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif;
+    return (string) ob_get_clean();
+};
+
 $personaSections = [
     'Identidad' => [
         'tipo_doc', 'num_doc', 'apellido_paterno', 'apellido_materno', 'nombres',
@@ -1281,6 +1777,48 @@ $abogadoSections = [
     'Contacto y dirección' => [
         'celular', 'email',
         ['key' => 'domicilio_procesal', 'class' => 'span-2'],
+    ],
+];
+
+$policialRecordEditFields = [
+    ['name' => 'grado_policial', 'label' => 'Grado policial', 'required' => true],
+    ['name' => 'cip', 'label' => 'CIP', 'required' => true],
+    ['name' => 'dependencia_policial', 'label' => 'Dependencia policial', 'required' => true, 'class' => 'span-2'],
+    ['name' => 'rol_funcion', 'label' => 'Rol / función'],
+    ['name' => 'observaciones', 'label' => 'Observaciones', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+];
+
+$propietarioNaturalEditFields = [
+    ['name' => 'observaciones', 'label' => 'Observaciones', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+];
+
+$propietarioJuridicaEditFields = [
+    ['name' => 'ruc', 'label' => 'RUC', 'required' => true, 'maxlength' => 11],
+    ['name' => 'rol_legal', 'label' => 'Rol legal'],
+    ['name' => 'razon_social', 'label' => 'Razón social', 'required' => true, 'class' => 'span-2'],
+    ['name' => 'domicilio_fiscal', 'label' => 'Domicilio fiscal', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+    ['name' => 'observaciones', 'label' => 'Observaciones', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+];
+
+$abogadoEditSections = [
+    'Datos del abogado' => [
+        ['name' => 'persona_id', 'label' => 'Representa a', 'type' => 'select', 'required' => true, 'options' => array_reduce(
+            $abogadoInlineContext['personas'] ?? [],
+            static function (array $carry, array $persona): array {
+                $carry[(string) ($persona['id'] ?? '')] = trim((string) (($persona['nombre'] ?? '') . (($persona['roles'] ?? '') !== '' ? ' - ' . $persona['roles'] : '')));
+                return $carry;
+            },
+            ['' => 'Selecciona']
+        )],
+        ['name' => 'colegiatura', 'label' => 'Colegiatura', 'required' => true],
+        ['name' => 'apellido_paterno', 'label' => 'Apellido paterno', 'required' => true],
+        ['name' => 'apellido_materno', 'label' => 'Apellido materno'],
+        ['name' => 'nombres', 'label' => 'Nombres', 'required' => true],
+        ['name' => 'registro', 'label' => 'Registro'],
+        ['name' => 'casilla_electronica', 'label' => 'Casilla electrónica'],
+        ['name' => 'celular', 'label' => 'Celular'],
+        ['name' => 'email', 'label' => 'Email', 'type' => 'email'],
+        ['name' => 'domicilio_procesal', 'label' => 'Domicilio procesal', 'class' => 'span-2'],
     ],
 ];
 
@@ -1551,6 +2089,21 @@ include __DIR__ . '/sidebar.php';
   .module-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .module-title-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .module-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+  .diligencia-main{display:grid;gap:6px;min-width:0}
+  .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+  .diligencia-side{display:grid;gap:6px;justify-items:end;align-content:start}
+  .diligencia-content-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .diligencia-content{flex:1 1 420px;margin:0;color:var(--muted);font-weight:800;font-size:11px;line-height:1.4}
+  .diligencia-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  .diligencia-status-select{min-width:130px;padding:6px 30px 6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:900;line-height:1.1;box-shadow:0 6px 16px rgba(17,24,39,.06)}
+  .diligencia-status-select.status-pendiente{border-color:#f0b8b8;background:#fff3f3;color:#b42318}
+  .diligencia-status-select.status-resuelto{border-color:#b9e2c5;background:#effcf3;color:#157347}
+  .diligencia-inline-fields{display:grid;gap:6px}
+  .diligencia-inline-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .diligencia-inline-box{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .diligencia-inline-box strong{display:block;margin:0 0 3px;color:#8b6a12;font-size:9px;line-height:1.15;text-transform:uppercase;letter-spacing:.05em}
+  .diligencia-inline-box div{font-size:12px;font-weight:800;color:var(--ink);line-height:1.35}
   .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:800;font-size:12px}
   .inner-tabs{display:flex;gap:5px;overflow:auto;padding-bottom:5px;margin:8px 0 6px}
   .inner-tabs .nav-link{border:1px solid var(--line);background:#f4f7fb;color:#47556d;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:800;line-height:1.05;white-space:nowrap}
@@ -1579,6 +2132,10 @@ include __DIR__ . '/sidebar.php';
     .line-grid{grid-template-columns:1fr}
     .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .general-grid{gap:5px}
+    .diligencia-card{grid-template-columns:1fr}
+    .diligencia-head{grid-template-columns:1fr}
+    .diligencia-side{justify-items:start}
+    .diligencia-inline-row{grid-template-columns:1fr}
   }
   @media (max-width:720px){
     .page{padding:0 8px 16px}
@@ -1601,6 +2158,9 @@ include __DIR__ . '/sidebar.php';
     .inner-tabs .nav-link{padding:5px 7px;font-size:10px}
     .inline-frame{height:460px}
     .data-card{min-height:auto}
+    .diligencia-content-row{flex-direction:column;align-items:stretch}
+    .diligencia-actions{justify-content:flex-start}
+    .diligencia-side{justify-items:start}
   }
   @media (prefers-reduced-motion: reduce){
     .tab-panel.driver-panel::before{animation:none}
@@ -1967,6 +2527,11 @@ include __DIR__ . '/sidebar.php';
         <?php
           $tabId = 'persona-' . (int) $persona['involucrado_id'];
           $isDriver = is_conductor($persona);
+          $comboVehiculos = [];
+          if ($isDriver && es_participacion_combinada($persona['veh_participacion'] ?? null) && !empty($persona['orden_participacion'])) {
+              $comboVehiculos = $comboVehiculosPorUnidad[trim((string) $persona['orden_participacion'])] ?? [];
+          }
+          $hasComboVehiculos = count($comboVehiculos) > 1;
           $extras = $personaExtras[(int) $persona['involucrado_id']] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[],'show_lc'=>false,'show_rml'=>false,'show_dos'=>false,'show_man'=>false,'show_occ'=>false];
           $wa = preg_replace('/\D+/', '', (string) ($persona['celular'] ?? ''));
           $whatsAppMsg = "Buen día le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigación por el accidente de tránsito " . join_con_y($modalidades) . ", suscitado el día " . fecha_simple($A['fecha_accidente'] ?? null) . " en " . ($A['lugar'] ?? 'el lugar del accidente') . ".";
@@ -1989,14 +2554,18 @@ include __DIR__ . '/sidebar.php';
                 <?php if (!empty($persona['rol_nombre'])): ?><span class="<?= h(role_chip_class((string) $persona['rol_nombre'])) ?>"><?= h((string) $persona['rol_nombre']) ?></span><?php endif; ?>
                 <?php if (!empty($persona['lesion'])): ?><span class="<?= h(lesion_chip_class((string) $persona['lesion'])) ?>"><?= h((string) $persona['lesion']) ?></span><?php endif; ?>
                 <span class="chip-simple"><?= !empty($persona['vehiculo_id']) ? 'Con vehículo' : 'Sin vehículo' ?></span>
-                <?php if (!empty($persona['veh_placa'])): ?><span class="chip-simple">Vehículo <?= h((string) $persona['veh_placa']) ?></span><?php endif; ?>
+                <?php if (!empty($persona['veh_chip_text'])): ?><span class="chip-simple">Vehículo <?= h((string) $persona['veh_chip_text']) ?></span><?php endif; ?>
               </div>
             </div>
 
             <div class="action-row">
               <a class="btn-shell" href="persona_leer.php?id=<?= (int) $persona['persona_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver persona</a>
               <a class="btn-shell" href="involucrados_personas_editar.php?id=<?= (int) $persona['involucrado_id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar participación</a>
-              <?php if ($isDriver && !empty($persona['veh_id'])): ?>
+              <?php if ($hasComboVehiculos): ?>
+                <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                  <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
+                <?php endforeach; ?>
+              <?php elseif ($isDriver && !empty($persona['veh_id'])): ?>
                 <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver vehículo</a>
               <?php endif; ?>
               <?php if ($wa): ?>
@@ -2011,7 +2580,7 @@ include __DIR__ . '/sidebar.php';
               </button>
               <?php if ($isDriver && !empty($persona['veh_id'])): ?>
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#<?= h($personPaneId) ?>-vehiculo" type="button" role="tab">
-                  Vehículo
+                  <?= $hasComboVehiculos ? 'Vehículos' : 'Vehículo' ?>
                   <span class="tab-mini">Solo conductor</span>
                 </button>
               <?php endif; ?>
@@ -2112,71 +2681,94 @@ include __DIR__ . '/sidebar.php';
                     <div class="editable-shell" data-edit-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">
                       <div class="editable-toolbar">
                         <div class="record-actions" style="margin-top:0">
-                          <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha completa</a>
+                          <?php if ($hasComboVehiculos): ?>
+                            <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                              <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
+                            <?php endforeach; ?>
+                          <?php else: ?>
+                            <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha completa</a>
+                          <?php endif; ?>
                         </div>
-                        <div class="editable-actions">
-                          <button type="button" class="btn-shell js-edit-start" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">Editar vehículo</button>
-                          <div class="editable-actions" data-edit-actions="vehiculo-<?= (int) $persona['involucrado_id'] ?>" hidden>
-                            <button type="button" class="btn-shell js-edit-cancel" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
-                            <button type="submit" class="btn-shell btn-primary" form="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>">Guardar</button>
+                        <?php if (!$hasComboVehiculos): ?>
+                          <div class="editable-actions">
+                            <button type="button" class="btn-shell js-edit-start" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">Editar vehículo</button>
+                            <div class="editable-actions" data-edit-actions="vehiculo-<?= (int) $persona['involucrado_id'] ?>" hidden>
+                              <button type="button" class="btn-shell js-edit-cancel" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
+                              <button type="submit" class="btn-shell btn-primary" form="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>">Guardar</button>
+                            </div>
                           </div>
-                        </div>
+                        <?php endif; ?>
                       </div>
 
                       <div class="inline-edit-error" id="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
 
                       <div class="editable-view" data-edit-view="vehiculo-<?= (int) $persona['involucrado_id'] ?>">
-                        <div class="section-block" style="margin-top:0">
-                          <h3>Vehículo vinculado al conductor</h3>
-                          <div class="field-grid"><?= render_field_cards($persona, $vehiculoFields) ?></div>
-                        </div>
+                        <?php if ($hasComboVehiculos): ?>
+                          <div class="section-block" style="margin-top:0">
+                            <h3>Unidad combinada vinculada al conductor</h3>
+                            <div class="field-grid"><?= render_field_cards($persona, ['orden_participacion', ['key' => 'veh_combo_placas', 'class' => 'span-2']]) ?></div>
+                          </div>
+                          <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                            <div class="section-block">
+                              <h3>Vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></h3>
+                              <div class="field-grid"><?= render_field_cards($comboVehiculo, $vehiculoFields) ?></div>
+                            </div>
+                          <?php endforeach; ?>
+                        <?php else: ?>
+                          <div class="section-block" style="margin-top:0">
+                            <h3>Vehículo vinculado al conductor</h3>
+                            <div class="field-grid"><?= render_field_cards($persona, $vehiculoFields) ?></div>
+                          </div>
+                        <?php endif; ?>
                       </div>
 
-                      <form class="editable-form js-inline-ajax-form js-veh-inline-form" id="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>" data-error="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
-                        <input type="hidden" name="action" value="save_vehiculo_inline">
-                        <input type="hidden" name="vehiculo_id" value="<?= (int) $persona['veh_id'] ?>">
+                      <?php if (!$hasComboVehiculos): ?>
+                        <form class="editable-form js-inline-ajax-form js-veh-inline-form" id="vehiculo-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>" data-error="vehiculo-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
+                          <input type="hidden" name="action" value="save_vehiculo_inline">
+                          <input type="hidden" name="vehiculo_id" value="<?= (int) $persona['veh_id'] ?>">
 
-                        <div class="section-block" style="margin-top:0">
-                          <h3>Vehículo vinculado al conductor</h3>
-                          <div class="field-grid">
-                            <?= render_editable_fields($persona, [
-                                ['name' => 'placa', 'value_key' => 'veh_placa', 'label' => 'Placa', 'required' => true, 'maxlength' => 12],
-                                ['name' => 'serie_vin', 'value_key' => 'veh_serie_vin', 'label' => 'Serie / VIN', 'class' => 'span-2'],
-                                ['name' => 'nro_motor', 'value_key' => 'veh_nro_motor', 'label' => 'Nro. motor', 'class' => 'span-2'],
-                                ['name' => 'anio', 'value_key' => 'veh_anio', 'label' => 'Año', 'maxlength' => 4, 'inputmode' => 'numeric'],
-                                ['name' => 'categoria_id', 'value_key' => 'veh_categoria_id', 'label' => 'Categoría', 'type' => 'select', 'required' => true, 'options' => $vehiculoCategoriasOptions],
-                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
-                            <div class="field-card edit-field">
-                              <label class="field-label" for="tipo_id_<?= (int) $persona['involucrado_id'] ?>">Tipo</label>
-                              <select class="edit-control js-veh-tipo" id="tipo_id_<?= (int) $persona['involucrado_id'] ?>" name="tipo_id" data-current="<?= h((string) ($persona['veh_tipo_id'] ?? '')) ?>">
-                                <option value="">(Selecciona una categoría primero)</option>
-                              </select>
+                          <div class="section-block" style="margin-top:0">
+                            <h3>Vehículo vinculado al conductor</h3>
+                            <div class="field-grid">
+                              <?= render_editable_fields($persona, [
+                                  ['name' => 'placa', 'value_key' => 'veh_placa', 'label' => 'Placa', 'required' => true, 'maxlength' => 12],
+                                  ['name' => 'serie_vin', 'value_key' => 'veh_serie_vin', 'label' => 'Serie / VIN', 'class' => 'span-2'],
+                                  ['name' => 'nro_motor', 'value_key' => 'veh_nro_motor', 'label' => 'Nro. motor', 'class' => 'span-2'],
+                                  ['name' => 'anio', 'value_key' => 'veh_anio', 'label' => 'Año', 'maxlength' => 4, 'inputmode' => 'numeric'],
+                                  ['name' => 'categoria_id', 'value_key' => 'veh_categoria_id', 'label' => 'Categoría', 'type' => 'select', 'required' => true, 'options' => $vehiculoCategoriasOptions],
+                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
+                              <div class="field-card edit-field">
+                                <label class="field-label" for="tipo_id_<?= (int) $persona['involucrado_id'] ?>">Tipo</label>
+                                <select class="edit-control js-veh-tipo" id="tipo_id_<?= (int) $persona['involucrado_id'] ?>" name="tipo_id" data-current="<?= h((string) ($persona['veh_tipo_id'] ?? '')) ?>">
+                                  <option value="">(Selecciona una categoría primero)</option>
+                                </select>
+                              </div>
+                              <div class="field-card edit-field">
+                                <label class="field-label" for="carroceria_id_<?= (int) $persona['involucrado_id'] ?>">Carrocería</label>
+                                <select class="edit-control js-veh-carroceria" id="carroceria_id_<?= (int) $persona['involucrado_id'] ?>" name="carroceria_id" data-current="<?= h((string) ($persona['veh_carroceria_id'] ?? '')) ?>">
+                                  <option value="">(Selecciona un tipo primero)</option>
+                                </select>
+                              </div>
+                              <?= render_editable_fields($persona, [
+                                  ['name' => 'marca_id', 'value_key' => 'veh_marca_id', 'label' => 'Marca', 'type' => 'select', 'required' => true, 'options' => $vehiculoMarcasOptions],
+                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
+                              <div class="field-card edit-field">
+                                <label class="field-label" for="modelo_id_<?= (int) $persona['involucrado_id'] ?>">Modelo</label>
+                                <select class="edit-control js-veh-modelo" id="modelo_id_<?= (int) $persona['involucrado_id'] ?>" name="modelo_id" data-current="<?= h((string) ($persona['veh_modelo_id'] ?? '')) ?>">
+                                  <option value="">(Selecciona una marca primero)</option>
+                                </select>
+                              </div>
+                              <?= render_editable_fields($persona, [
+                                  ['name' => 'color', 'value_key' => 'veh_color', 'label' => 'Color'],
+                                  ['name' => 'largo_mm', 'value_key' => 'veh_largo_mm', 'label' => 'Largo', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                  ['name' => 'ancho_mm', 'value_key' => 'veh_ancho_mm', 'label' => 'Ancho', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                  ['name' => 'alto_mm', 'value_key' => 'veh_alto_mm', 'label' => 'Alto', 'inputmode' => 'decimal', 'step' => '0.01'],
+                                  ['name' => 'notas', 'value_key' => 'veh_notas', 'label' => 'Notas', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
+                              ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
                             </div>
-                            <div class="field-card edit-field">
-                              <label class="field-label" for="carroceria_id_<?= (int) $persona['involucrado_id'] ?>">Carrocería</label>
-                              <select class="edit-control js-veh-carroceria" id="carroceria_id_<?= (int) $persona['involucrado_id'] ?>" name="carroceria_id" data-current="<?= h((string) ($persona['veh_carroceria_id'] ?? '')) ?>">
-                                <option value="">(Selecciona un tipo primero)</option>
-                              </select>
-                            </div>
-                            <?= render_editable_fields($persona, [
-                                ['name' => 'marca_id', 'value_key' => 'veh_marca_id', 'label' => 'Marca', 'type' => 'select', 'required' => true, 'options' => $vehiculoMarcasOptions],
-                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
-                            <div class="field-card edit-field">
-                              <label class="field-label" for="modelo_id_<?= (int) $persona['involucrado_id'] ?>">Modelo</label>
-                              <select class="edit-control js-veh-modelo" id="modelo_id_<?= (int) $persona['involucrado_id'] ?>" name="modelo_id" data-current="<?= h((string) ($persona['veh_modelo_id'] ?? '')) ?>">
-                                <option value="">(Selecciona una marca primero)</option>
-                              </select>
-                            </div>
-                            <?= render_editable_fields($persona, [
-                                ['name' => 'color', 'value_key' => 'veh_color', 'label' => 'Color'],
-                                ['name' => 'largo_mm', 'value_key' => 'veh_largo_mm', 'label' => 'Largo', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                ['name' => 'ancho_mm', 'value_key' => 'veh_ancho_mm', 'label' => 'Ancho', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                ['name' => 'alto_mm', 'value_key' => 'veh_alto_mm', 'label' => 'Alto', 'inputmode' => 'decimal', 'step' => '0.01'],
-                                ['name' => 'notas', 'value_key' => 'veh_notas', 'label' => 'Notas', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
-                            ], 'vehiculo-' . (int) $persona['involucrado_id']) ?>
                           </div>
-                        </div>
-                      </form>
+                        </form>
+                      <?php endif; ?>
                     </div>
                   </div>
                 </div>
@@ -2333,6 +2925,10 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="efectivo-policial" role="tabpanel">
         <div class="tab-panel">
+          <div class="module-actions" style="margin-bottom:8px;">
+            <a class="btn-shell" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo efectivo policial</a>
+            <a class="btn-shell" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+          </div>
           <?php if (!$policias): ?>
             <div class="empty-state">No hay efectivos policiales registrados para este accidente.</div>
           <?php else: ?>
@@ -2359,15 +2955,54 @@ include __DIR__ . '/sidebar.php';
                     <span class="chip-simple"><?= h((string) (($row['email'] ?? '') !== '' ? $row['email'] : 'Sin email')) ?></span>
                   </div>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
-                  <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
-                    <div class="section-block">
-                      <h3><?= h($sectionTitle) ?></h3>
-                      <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                  <div class="editable-shell" data-edit-shell="policia-<?= (int) $row['id'] ?>">
+                    <div class="editable-toolbar">
+                      <div class="record-actions" style="margin-top:0">
+                        <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                      </div>
+                      <div class="editable-actions">
+                        <button type="button" class="btn-shell js-edit-start" data-shell="policia-<?= (int) $row['id'] ?>">Editar</button>
+                        <div class="editable-actions" data-edit-actions="policia-<?= (int) $row['id'] ?>" hidden>
+                          <button type="button" class="btn-shell js-edit-cancel" data-shell="policia-<?= (int) $row['id'] ?>">Cancelar</button>
+                          <button type="submit" class="btn-shell btn-primary" form="policia-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                        </div>
+                      </div>
                     </div>
-                  <?php endforeach; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                    <a class="btn-shell" href="policial_interviniente_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
+
+                    <div class="inline-edit-error" id="policia-inline-error-<?= (int) $row['id'] ?>"></div>
+
+                    <div class="editable-view" data-edit-view="policia-<?= (int) $row['id'] ?>">
+                      <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                        <div class="section-block">
+                          <h3><?= h($sectionTitle) ?></h3>
+                          <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                        </div>
+                      <?php endforeach; ?>
+                      <div class="section-block">
+                        <h3>Registro policial</h3>
+                        <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
+                      </div>
+                    </div>
+
+                    <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="policia-inline-form-<?= (int) $row['id'] ?>" data-shell="policia-<?= (int) $row['id'] ?>" data-error="policia-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                      <input type="hidden" name="action" value="save_policial_inline">
+                      <input type="hidden" name="policial_id" value="<?= (int) $row['id'] ?>">
+                      <input type="hidden" name="persona_id" value="<?= (int) ($row['persona_id'] ?? 0) ?>">
+                      <input type="hidden" name="foto_path" value="<?= h((string) ($row['foto_path'] ?? '')) ?>">
+                      <input type="hidden" name="api_fuente" value="<?= h((string) ($row['api_fuente'] ?? '')) ?>">
+                      <input type="hidden" name="api_ref" value="<?= h((string) ($row['api_ref'] ?? '')) ?>">
+
+                      <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
+                        <div class="section-block">
+                          <h3><?= h($sectionTitle) ?></h3>
+                          <div class="field-grid"><?= render_editable_fields($row, $sectionFields, 'policia-' . (int) $row['id']) ?></div>
+                        </div>
+                      <?php endforeach; ?>
+                      <div class="section-block">
+                        <h3>Registro policial</h3>
+                        <div class="field-grid"><?= render_editable_fields($row, $policialRecordEditFields, 'policia-reg-' . (int) $row['id']) ?></div>
+                      </div>
+                    </form>
                   </div>
                 </article>
               <?php endforeach; ?>
@@ -2379,6 +3014,10 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="propietario-vehiculo" role="tabpanel">
         <div class="tab-panel">
+          <div class="module-actions" style="margin-bottom:8px;">
+            <a class="btn-shell" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo propietario</a>
+            <a class="btn-shell" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+          </div>
           <?php if (!$propietarios): ?>
             <div class="empty-state">No hay propietarios de vehículo registrados para este accidente.</div>
           <?php else: ?>
@@ -2415,25 +3054,78 @@ include __DIR__ . '/sidebar.php';
                   </div>
                   <?php if (!empty($row['domicilio_fiscal'])): ?><p style="margin-top:10px;">Domicilio fiscal: <?= nl2br(h((string) $row['domicilio_fiscal'])) ?></p><?php endif; ?>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
-                  <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL' && trim((string) ($ownerRecord['nombres'] ?? '')) !== ''): ?>
-                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
-                      <div class="section-block">
-                        <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
-                        <div class="field-grid"><?= render_field_cards($ownerRecord, $sectionFields) ?></div>
+                  <div class="editable-shell" data-edit-shell="propietario-<?= (int) $row['id'] ?>">
+                    <div class="editable-toolbar">
+                      <div class="record-actions" style="margin-top:0">
+                        <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                       </div>
-                    <?php endforeach; ?>
-                  <?php endif; ?>
-                  <?php if ($representante !== ''): ?>
-                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
-                      <div class="section-block">
-                        <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
-                        <div class="field-grid"><?= render_field_cards($repRecord, $sectionFields) ?></div>
+                      <div class="editable-actions">
+                        <button type="button" class="btn-shell js-edit-start" data-shell="propietario-<?= (int) $row['id'] ?>">Editar</button>
+                        <div class="editable-actions" data-edit-actions="propietario-<?= (int) $row['id'] ?>" hidden>
+                          <button type="button" class="btn-shell js-edit-cancel" data-shell="propietario-<?= (int) $row['id'] ?>">Cancelar</button>
+                          <button type="submit" class="btn-shell btn-primary" form="propietario-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                        </div>
                       </div>
-                    <?php endforeach; ?>
-                  <?php endif; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                    <a class="btn-shell" href="propietario_vehiculo_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
+                    </div>
+
+                    <div class="inline-edit-error" id="propietario-inline-error-<?= (int) $row['id'] ?>"></div>
+
+                    <div class="editable-view" data-edit-view="propietario-<?= (int) $row['id'] ?>">
+                      <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL' && trim((string) ($ownerRecord['nombres'] ?? '')) !== ''): ?>
+                        <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_field_cards($ownerRecord, $sectionFields) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      <?php endif; ?>
+                      <?php if ($representante !== ''): ?>
+                        <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_field_cards($repRecord, $sectionFields) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      <?php endif; ?>
+                      <div class="section-block">
+                        <h3>Registro propietario</h3>
+                        <div class="field-grid"><?= render_field_cards($row, ['tipo_propietario', 'rol_legal', ['key' => 'ruc', 'class' => 'span-2'], ['key' => 'razon_social', 'class' => 'span-2'], ['key' => 'domicilio_fiscal', 'class' => 'span-2'], ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
+                      </div>
+                    </div>
+
+                    <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="propietario-inline-form-<?= (int) $row['id'] ?>" data-shell="propietario-<?= (int) $row['id'] ?>" data-error="propietario-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                      <input type="hidden" name="action" value="save_propietario_inline">
+                      <input type="hidden" name="propietario_id" value="<?= (int) $row['id'] ?>">
+                      <?php if ((string) ($row['tipo_propietario'] ?? '') === 'JURIDICA'): ?>
+                        <input type="hidden" name="foto_path" value="<?= h((string) ($repRecord['foto_path'] ?? '')) ?>">
+                        <input type="hidden" name="api_fuente" value="<?= h((string) ($repRecord['api_fuente'] ?? '')) ?>">
+                        <input type="hidden" name="api_ref" value="<?= h((string) ($repRecord['api_ref'] ?? '')) ?>">
+                        <div class="section-block">
+                          <h3>Empresa</h3>
+                          <div class="field-grid"><?= render_editable_fields($row, $propietarioJuridicaEditFields, 'prop-jur-' . (int) $row['id']) ?></div>
+                        </div>
+                        <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_editable_fields($repRecord, $sectionFields, 'prop-rep-' . (int) $row['id']) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      <?php else: ?>
+                        <input type="hidden" name="foto_path" value="<?= h((string) ($ownerRecord['foto_path'] ?? '')) ?>">
+                        <input type="hidden" name="api_fuente" value="<?= h((string) ($ownerRecord['api_fuente'] ?? '')) ?>">
+                        <input type="hidden" name="api_ref" value="<?= h((string) ($ownerRecord['api_ref'] ?? '')) ?>">
+                        <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_editable_fields($ownerRecord, $sectionFields, 'prop-nat-' . (int) $row['id']) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                        <div class="section-block">
+                          <h3>Registro propietario</h3>
+                          <div class="field-grid"><?= render_editable_fields($row, $propietarioNaturalEditFields, 'prop-reg-' . (int) $row['id']) ?></div>
+                        </div>
+                      <?php endif; ?>
+                    </form>
                   </div>
                 </article>
               <?php endforeach; ?>
@@ -2445,6 +3137,10 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="familiar-fallecido" role="tabpanel">
         <div class="tab-panel">
+          <div class="module-actions" style="margin-bottom:8px;">
+            <a class="btn-shell" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo familiar</a>
+            <a class="btn-shell" href="familiar_fallecido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+          </div>
           <?php if (!$familiares): ?>
             <div class="empty-state">No hay familiares de fallecidos registrados para este accidente.</div>
           <?php else: ?>
@@ -2477,17 +3173,47 @@ include __DIR__ . '/sidebar.php';
                   </div>
                   <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
                   <?php if ($nombreFamiliar !== ''): ?>
-                    <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
-                      <div class="section-block">
-                        <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
-                        <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
+                    <div class="editable-shell" data-edit-shell="familiar-persona-<?= (int) $row['id'] ?>">
+                      <div class="editable-toolbar">
+                        <div class="record-actions" style="margin-top:0">
+                          <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                        </div>
+                        <div class="editable-actions">
+                          <button type="button" class="btn-shell js-edit-start" data-shell="familiar-persona-<?= (int) $row['id'] ?>">Editar</button>
+                          <div class="editable-actions" data-edit-actions="familiar-persona-<?= (int) $row['id'] ?>" hidden>
+                            <button type="button" class="btn-shell js-edit-cancel" data-shell="familiar-persona-<?= (int) $row['id'] ?>">Cancelar</button>
+                            <button type="submit" class="btn-shell btn-primary" form="familiar-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                          </div>
+                        </div>
                       </div>
-                    <?php endforeach; ?>
+
+                      <div class="inline-edit-error" id="familiar-inline-error-<?= (int) $row['id'] ?>"></div>
+
+                      <div class="editable-view" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
+                        <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+
+                      <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="familiar-inline-form-<?= (int) $row['id'] ?>" data-shell="familiar-persona-<?= (int) $row['id'] ?>" data-error="familiar-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                        <input type="hidden" name="action" value="save_persona_inline">
+                        <input type="hidden" name="persona_id" value="<?= (int) ($row['familiar_persona_id'] ?? 0) ?>">
+                        <input type="hidden" name="foto_path" value="<?= h((string) ($famRecord['foto_path'] ?? '')) ?>">
+                        <input type="hidden" name="api_fuente" value="<?= h((string) ($famRecord['api_fuente'] ?? '')) ?>">
+                        <input type="hidden" name="api_ref" value="<?= h((string) ($famRecord['api_ref'] ?? '')) ?>">
+
+                        <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
+                          <div class="section-block">
+                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+                            <div class="field-grid"><?= render_editable_fields($famRecord, $sectionFields, 'familiar-' . (int) $row['id']) ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      </form>
+                    </div>
                   <?php endif; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                    <a class="btn-shell" href="familiar_fallecido_editar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
-                  </div>
                 </article>
               <?php endforeach; ?>
             </div>
@@ -2535,16 +3261,42 @@ include __DIR__ . '/sidebar.php';
                   </div>
                   <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrónica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
                   <?php if (!empty($row['domicilio_procesal'])): ?><p style="margin-top:10px;">Domicilio procesal: <?= nl2br(h((string) $row['domicilio_procesal'])) ?></p><?php endif; ?>
-                  <?php foreach ($abogadoSections as $sectionTitle => $sectionFields): ?>
-                    <div class="section-block">
-                      <h3><?= h($sectionTitle) ?></h3>
-                      <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                  <div class="editable-shell" data-edit-shell="abogado-<?= (int) $row['id'] ?>">
+                    <div class="editable-toolbar">
+                      <div class="record-actions" style="margin-top:0">
+                        <a class="btn-shell" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                        <a class="btn-shell" href="abogado_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
+                      </div>
+                      <div class="editable-actions">
+                        <button type="button" class="btn-shell js-edit-start" data-shell="abogado-<?= (int) $row['id'] ?>">Editar</button>
+                        <div class="editable-actions" data-edit-actions="abogado-<?= (int) $row['id'] ?>" hidden>
+                          <button type="button" class="btn-shell js-edit-cancel" data-shell="abogado-<?= (int) $row['id'] ?>">Cancelar</button>
+                          <button type="submit" class="btn-shell btn-primary" form="abogado-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                        </div>
+                      </div>
                     </div>
-                  <?php endforeach; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                    <a class="btn-shell" href="abogado_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar</a>
-                    <a class="btn-shell" href="abogado_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
+
+                    <div class="inline-edit-error" id="abogado-inline-error-<?= (int) $row['id'] ?>"></div>
+
+                    <div class="editable-view" data-edit-view="abogado-<?= (int) $row['id'] ?>">
+                      <?php foreach ($abogadoSections as $sectionTitle => $sectionFields): ?>
+                        <div class="section-block">
+                          <h3><?= h($sectionTitle) ?></h3>
+                          <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
+                        </div>
+                      <?php endforeach; ?>
+                    </div>
+
+                    <form class="editable-form js-inline-ajax-form" id="abogado-inline-form-<?= (int) $row['id'] ?>" data-shell="abogado-<?= (int) $row['id'] ?>" data-error="abogado-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                      <input type="hidden" name="action" value="save_abogado_inline">
+                      <input type="hidden" name="abogado_id" value="<?= (int) $row['id'] ?>">
+                      <?php foreach ($abogadoEditSections as $sectionTitle => $sectionFields): ?>
+                        <div class="section-block">
+                          <h3><?= h($sectionTitle) ?></h3>
+                          <div class="field-grid"><?= render_editable_fields($row, $sectionFields, 'abogado-' . (int) $row['id']) ?></div>
+                        </div>
+                      <?php endforeach; ?>
+                    </form>
                   </div>
                 </article>
               <?php endforeach; ?>
@@ -2675,35 +3427,36 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="diligencias-pendientes" role="tabpanel">
         <div class="tab-panel">
-          <?php if (!$diligencias): ?>
-            <div class="empty-state">No hay diligencias pendientes registradas para este accidente.</div>
-          <?php else: ?>
-            <div class="module-grid">
-              <?php foreach ($diligencias as $row): ?>
-                <article class="module-card">
-                  <header>
-                    <div>
-                      <h4>Diligencia #<?= (int) $row['id'] ?></h4>
-                      <p><?= h((string) (($row['tipo_nombre'] ?? '') !== '' ? $row['tipo_nombre'] : (($row['tipo_diligencia'] ?? '') !== '' ? $row['tipo_diligencia'] : 'Sin tipo'))) ?></p>
-                    </div>
-                    <span class="chip-simple"><?= h((string) (($row['estado'] ?? '') !== '' ? $row['estado'] : 'Sin estado')) ?></span>
-                  </header>
-                  <div class="module-meta">
-                    <?php if (!empty($row['oficio_id'])): ?><span class="chip-simple">Oficio #<?= (int) $row['oficio_id'] ?></span><?php endif; ?>
-                    <?php if (!empty($row['citacion_id'])): ?><span class="chip-simple">Citación #<?= (int) $row['citacion_id'] ?></span><?php endif; ?>
-                    <?php if (!empty($row['creado_en'])): ?><span class="chip-simple">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></span><?php endif; ?>
-                  </div>
-                  <?php if (!empty($row['contenido'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['contenido'])) ?></p><?php endif; ?>
-                  <?php if (!empty($row['documento_realizado'])): ?><p style="margin-top:10px;">Documento realizado: <?= h((string) $row['documento_realizado']) ?></p><?php endif; ?>
-                  <?php if (!empty($row['documentos_recibidos'])): ?><p style="margin-top:10px;">Documentos recibidos: <?= nl2br(h((string) $row['documentos_recibidos'])) ?></p><?php endif; ?>
-                  <div class="module-actions">
-                    <a class="btn-shell" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>">Ver</a>
-                    <a class="btn-shell" href="diligenciapendiente_editar.php?id=<?= (int) $row['id'] ?>">Editar</a>
-                  </div>
-                </article>
-              <?php endforeach; ?>
+          <div class="module-actions" style="margin-bottom:8px;">
+            <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
+            <a class="btn-shell" href="diligenciapendiente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+          </div>
+          <div class="inner-tabs nav nav-tabs flex-nowrap" id="diligencias-tabs" role="tablist">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#diligencias-todos" type="button" role="tab">
+              Todos
+              <span class="tab-mini"><?= count($diligencias) ?> registro(s)</span>
+            </button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#diligencias-pendientes-lista" type="button" role="tab">
+              Pendientes
+              <span class="tab-mini"><?= count($diligenciasPendientesSolo) ?> registro(s)</span>
+            </button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#diligencias-realizados" type="button" role="tab">
+              Realizados
+              <span class="tab-mini"><?= count($diligenciasRealizadas) ?> registro(s)</span>
+            </button>
+          </div>
+
+          <div class="tab-content mt-2">
+            <div class="tab-pane fade show active" id="diligencias-todos" role="tabpanel">
+              <?= $renderDiligenciaCards($diligencias) ?>
             </div>
-          <?php endif; ?>
+            <div class="tab-pane fade" id="diligencias-pendientes-lista" role="tabpanel">
+              <?= $renderDiligenciaCards($diligenciasPendientesSolo) ?>
+            </div>
+            <div class="tab-pane fade" id="diligencias-realizados" role="tabpanel">
+              <?= $renderDiligenciaCards($diligenciasRealizadas) ?>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3387,6 +4140,66 @@ include __DIR__ . '/sidebar.php';
           select.value = previous;
           paintStatus();
           window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado del oficio.');
+        } finally {
+          select.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('.js-quick-diligencia-status').forEach((select) => {
+      const paintStatus = () => {
+        const value = String(select.value || '').toLowerCase();
+        select.classList.remove('status-pendiente', 'status-resuelto');
+        if (value === 'resuelto') {
+          select.classList.add('status-resuelto');
+        } else {
+          select.classList.add('status-pendiente');
+        }
+      };
+
+      paintStatus();
+
+      select.addEventListener('change', async () => {
+        const previous = String(select.dataset.prev || 'Pendiente');
+        const nextValue = String(select.value || 'Pendiente');
+        paintStatus();
+        select.disabled = true;
+
+        try {
+          const formData = new FormData();
+          formData.append('action', 'save_diligencia_estado_inline');
+          formData.append('diligencia_id', String(select.dataset.diligenciaId || '0'));
+          formData.append('estado', nextValue);
+
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = null;
+          }
+
+          if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.message) ? data.message : 'No se pudo actualizar el estado de la diligencia.');
+          }
+
+          select.dataset.prev = nextValue;
+          const shell = select.closest('.editable-shell');
+          const hiddenEstado = shell ? shell.querySelector('input[name="estado"]') : null;
+          if (hiddenEstado) {
+            hiddenEstado.value = nextValue === 'Resuelto' ? 'Realizado' : 'Pendiente';
+          }
+        } catch (error) {
+          select.value = previous;
+          paintStatus();
+          window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado de la diligencia.');
         } finally {
           select.disabled = false;
         }

@@ -9,6 +9,8 @@ use PDOException;
 
 final class VehiculoService
 {
+    private const SIN_PLACA_PREFIX = 'SPLACA';
+
     public function __construct(private VehiculoRepository $repository)
     {
     }
@@ -96,7 +98,7 @@ final class VehiculoService
     {
         $context = $this->contextoEliminacion($id);
         if ($context === null) {
-            throw new InvalidArgumentException('Veh�culo no encontrado.');
+            throw new InvalidArgumentException('Vehículo no encontrado.');
         }
 
         if (!$context['can_delete']) {
@@ -104,7 +106,7 @@ final class VehiculoService
             foreach ($context['references'] as $table => $count) {
                 $parts[] = $table . ': ' . $count;
             }
-            throw new InvalidArgumentException('No se puede eliminar porque el veh�culo todav�a tiene referencias en: ' . implode(', ', $parts) . '.');
+            throw new InvalidArgumentException('No se puede eliminar porque el vehículo todavía tiene referencias en: ' . implode(', ', $parts) . '.');
         }
 
         $this->repository->delete($id);
@@ -118,7 +120,7 @@ final class VehiculoService
             return $this->repository->create($payload);
         } catch (PDOException $e) {
             if ($e->getCode() === '23000' && stripos($e->getMessage(), 'placa') !== false) {
-                throw new InvalidArgumentException('Ya existe un veh�culo con esa placa.');
+                throw new InvalidArgumentException('Ya existe un vehículo con esa placa.');
             }
             throw $e;
         }
@@ -127,7 +129,7 @@ final class VehiculoService
     public function actualizar(int $id, array $input): void
     {
         if ($id <= 0 || $this->repository->find($id) === null) {
-            throw new InvalidArgumentException('Veh�culo no encontrado.');
+            throw new InvalidArgumentException('Vehículo no encontrado.');
         }
 
         [$payload] = $this->validatedPayload($input, $id);
@@ -136,7 +138,7 @@ final class VehiculoService
             $this->repository->update($id, $payload);
         } catch (PDOException $e) {
             if ($e->getCode() === '23000' && stripos($e->getMessage(), 'placa') !== false) {
-                throw new InvalidArgumentException('Ya existe un veh�culo con esa placa.');
+                throw new InvalidArgumentException('Ya existe un vehículo con esa placa.');
             }
             throw $e;
         }
@@ -156,6 +158,7 @@ final class VehiculoService
     {
         $base = [
             'placa' => '',
+            'sin_placa' => '',
             'serie_vin' => '',
             'nro_motor' => '',
             'categoria_id' => '',
@@ -191,8 +194,9 @@ final class VehiculoService
         $old = $this->oldInput($input);
         $errors = [];
 
-        $placa = $this->normalizePlate($old['placa']);
-        if ($placa === '') {
+        $sinPlaca = in_array(strtolower((string) $old['sin_placa']), ['1', 'on', 'true', 'si', 'sí'], true);
+        $placa = $sinPlaca ? $this->generateSinPlacaCode() : $this->normalizePlate($old['placa']);
+        if (!$sinPlaca && $placa === '') {
             $errors[] = 'La placa es requerida.';
         }
 
@@ -207,9 +211,9 @@ final class VehiculoService
         $alto = $this->nullableDecimal($old['alto_mm'], 'alto_mm', $errors);
 
         if ($categoriaId === null) {
-            $errors[] = 'Selecciona la categor�a.';
+            $errors[] = 'Selecciona la categoría.';
         } elseif (!$this->repository->categoriaExists($categoriaId)) {
-            $errors[] = 'La categor�a seleccionada no existe.';
+            $errors[] = 'La categoría seleccionada no existe.';
         }
 
         if ($marcaId === null) {
@@ -232,22 +236,22 @@ final class VehiculoService
             if ($tipoCategoriaId === null) {
                 $errors[] = 'El tipo seleccionado no existe.';
             } elseif ($categoriaId !== null && $tipoCategoriaId !== $categoriaId) {
-                $errors[] = 'El tipo no pertenece a la categor�a seleccionada.';
+                $errors[] = 'El tipo no pertenece a la categoría seleccionada.';
             }
         }
 
         if ($carroceriaId !== null) {
             $carroceriaTipoId = $this->repository->carroceriaTipoId($carroceriaId);
             if ($carroceriaTipoId === null) {
-                $errors[] = 'La carrocer�a seleccionada no existe.';
+                $errors[] = 'La carrocería seleccionada no existe.';
             } elseif ($tipoId !== null && $carroceriaTipoId !== $tipoId) {
-                $errors[] = 'La carrocer�a no pertenece al tipo seleccionado.';
+                $errors[] = 'La carrocería no pertenece al tipo seleccionado.';
             }
         }
 
         $existingId = $placa !== '' ? $this->repository->findIdByPlaca($placa, $currentId) : null;
         if ($existingId !== null) {
-            $errors[] = 'Ya existe un veh�culo con esa placa.';
+            $errors[] = 'Ya existe un vehículo con esa placa.';
         }
 
         if ($errors !== []) {
@@ -284,6 +288,15 @@ final class VehiculoService
         return mb_strtoupper($value, 'UTF-8');
     }
 
+    private function generateSinPlacaCode(): string
+    {
+        do {
+            $placa = self::SIN_PLACA_PREFIX . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+        } while ($this->repository->findIdByPlaca($placa) !== null);
+
+        return $placa;
+    }
+
     private function nullableString(mixed $value): ?string
     {
         $value = trim((string) ($value ?? ''));
@@ -307,13 +320,13 @@ final class VehiculoService
         }
 
         if (!ctype_digit($value)) {
-            $errors[] = 'A�o inv�lido.';
+            $errors[] = 'Año inválido.';
             return null;
         }
 
         $year = (int) $value;
         if ($year < 1900 || $year > 2100) {
-            $errors[] = 'A�o inv�lido.';
+            $errors[] = 'Año inválido.';
             return null;
         }
 
@@ -328,7 +341,7 @@ final class VehiculoService
 
         $normalized = str_replace(',', '.', $value);
         if (!is_numeric($normalized)) {
-            $errors[] = "Valor num�rico inv�lido en {$field}.";
+            $errors[] = "Valor numérico inválido en {$field}.";
             return null;
         }
 
