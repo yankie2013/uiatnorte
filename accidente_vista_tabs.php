@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
@@ -98,7 +98,7 @@ function person_heading_suffix(array $row): string
 function fecha_hora_corta_esp(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '�';
+        return '—';
     }
 
     $months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -110,7 +110,7 @@ function fecha_hora_corta_esp(?string $value): string
 function fecha_simple(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '�';
+        return '—';
     }
     return date('d/m/Y', strtotime($value));
 }
@@ -118,7 +118,7 @@ function fecha_simple(?string $value): string
 function fecha_hora_simple(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '�';
+        return '—';
     }
     return date('d/m/Y H:i', strtotime($value));
 }
@@ -129,7 +129,7 @@ function join_con_y(array $items): string
     $count = count($items);
 
     if ($count === 0) {
-        return '�';
+        return 'â';
     }
     if ($count === 1) {
         return h($items[0]);
@@ -423,7 +423,7 @@ function human_label(string $key): string
 function field_html(string $key, mixed $value): string
 {
     if ($value === null || $value === '') {
-        return '�';
+        return 'â';
     }
 
     if (str_ends_with($key, '_en') || str_starts_with($key, 'fecha_')) {
@@ -511,27 +511,37 @@ function oficio_status_class(?string $estado): string
     };
 }
 
-function oficio_icon(array $row): string
+function document_icon_from_text(?string $text): string
 {
-    $haystack = mb_strtolower(trim((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['asunto_detalle'] ?? ''))), 'UTF-8');
+    $haystack = mb_strtolower(trim((string) ($text ?? '')), 'UTF-8');
 
     if ($haystack === '') {
-        return 'ðŸ“„';
+        return '📁';
     }
     if (str_contains($haystack, 'protocolo')) {
-        return 'ðŸ’€';
+        return '💀';
     }
     if (str_contains($haystack, 'peritaje')) {
-        return 'ðŸš—';
+        return '🚗';
     }
     if (str_contains($haystack, 'camara') || str_contains($haystack, 'cámara')) {
-        return 'ðŸ“·';
+        return '📷';
     }
     if (str_contains($haystack, 'otros documentos') || str_contains($haystack, 'otro documento')) {
-        return 'ðŸ“';
+        return '📁';
     }
 
-    return 'ðŸ“„';
+    return '📁';
+}
+
+function oficio_icon(array $row): string
+{
+    return document_icon_from_text((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['asunto_detalle'] ?? '')));
+}
+
+function documento_recibido_icon(array $row): string
+{
+    return document_icon_from_text((string) (($row['tipo_documento'] ?? '') . ' ' . ($row['asunto'] ?? '') . ' ' . ($row['contenido'] ?? '')));
 }
 
 function render_editable_fields(array $record, array $fields, string $idPrefix = ''): string
@@ -1884,7 +1894,7 @@ $renderVehiculoSubtabs = static function (
             <div class="module-actions" style="margin-bottom:8px;">
               <?php if ($documentoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
-                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
+                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' Â· ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
               <?php elseif ($involucradoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
               <?php endif; ?>
@@ -1896,7 +1906,7 @@ $renderVehiculoSubtabs = static function (
                 <div class="field-grid"><?= render_field_cards($documentoVehiculo ?? [], $section['fields']) ?></div>
               </div>
             <?php elseif ($documentoVehiculoId > 0): ?>
-              <div class="empty-state">El documento existe, pero esta sección aún no tiene datos registrados.</div>
+              <div class="empty-state">El documento existe, pero esta secciÃ³n aÃºn no tiene datos registrados.</div>
             <?php else: ?>
               <div class="empty-state">No hay <?= h(mb_strtolower((string) $section['label'], 'UTF-8')) ?> registrada para este vehículo.</div>
             <?php endif; ?>
@@ -1970,7 +1980,7 @@ $abogadoSections = [
     'Registro profesional' => [
         'colegiatura', 'registro', 'casilla_electronica',
     ],
-    'Contacto y dirección' => [
+    'Contacto y direcciÃ³n' => [
         'celular', 'email',
         ['key' => 'domicilio_procesal', 'class' => 'span-2'],
     ],
@@ -1991,7 +2001,7 @@ $propietarioNaturalEditFields = [
 $propietarioJuridicaEditFields = [
     ['name' => 'ruc', 'label' => 'RUC', 'required' => true, 'maxlength' => 11],
     ['name' => 'rol_legal', 'label' => 'Rol legal'],
-    ['name' => 'razon_social', 'label' => 'Razón social', 'required' => true, 'class' => 'span-2'],
+    ['name' => 'razon_social', 'label' => 'RazÃ³n social', 'required' => true, 'class' => 'span-2'],
     ['name' => 'domicilio_fiscal', 'label' => 'Domicilio fiscal', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
     ['name' => 'observaciones', 'label' => 'Observaciones', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
 ];
@@ -2011,7 +2021,7 @@ $abogadoEditSections = [
         ['name' => 'apellido_materno', 'label' => 'Apellido materno'],
         ['name' => 'nombres', 'label' => 'Nombres', 'required' => true],
         ['name' => 'registro', 'label' => 'Registro'],
-        ['name' => 'casilla_electronica', 'label' => 'Casilla electrónica'],
+        ['name' => 'casilla_electronica', 'label' => 'Casilla electrÃ³nica'],
         ['name' => 'celular', 'label' => 'Celular'],
         ['name' => 'email', 'label' => 'Email', 'type' => 'email'],
         ['name' => 'domicilio_procesal', 'label' => 'Domicilio procesal', 'class' => 'span-2'],
@@ -2524,7 +2534,7 @@ include __DIR__ . '/sidebar.php';
         <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
 
         <div class="section-block" style="margin-top:0">
-          <h2 class="section-title">Clasificación del evento</h2>
+          <h2 class="section-title">ClasificaciÃ³n del evento</h2>
           <div class="general-edit-grid">
             <div class="general-edit-card g-6">
               <label>Modalidades</label>
@@ -3050,7 +3060,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['lc'] as $lc): ?>
                           <article class="record-card">
-                            <h5>Clase <?= h((string) ($lc['clase'] ?? '—')) ?><?php if (!empty($lc['categoria'])): ?> · Cat <?= h((string) $lc['categoria']) ?><?php endif; ?> · N° <?= h((string) ($lc['numero'] ?? '—')) ?></h5>
+                            <h5>Clase <?= h((string) ($lc['clase'] ?? 'â€”')) ?><?php if (!empty($lc['categoria'])): ?> Â· Cat <?= h((string) $lc['categoria']) ?><?php endif; ?> Â· NÂ° <?= h((string) ($lc['numero'] ?? 'â€”')) ?></h5>
                             <p>Vigente: <?= h(fecha_simple($lc['vigente_desde'] ?? null)) ?> a <?= h(fecha_simple($lc['vigente_hasta'] ?? null)) ?></p>
                             <?php if (!empty($lc['expedido_por'])): ?><p>Expedido por: <?= h((string) $lc['expedido_por']) ?></p><?php endif; ?>
                             <?php if (!empty($lc['restricciones'])): ?><p><?= nl2br(h((string) $lc['restricciones'])) ?></p><?php endif; ?>
@@ -3077,10 +3087,10 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['rml'] as $rml): ?>
                           <article class="record-card">
-                            <h5>N° <?= h((string) ($rml['numero'] ?? '—')) ?> · <?= h(fecha_simple($rml['fecha'] ?? null)) ?></h5>
+                            <h5>NÂ° <?= h((string) ($rml['numero'] ?? 'â€”')) ?> Â· <?= h(fecha_simple($rml['fecha'] ?? null)) ?></h5>
                             <div class="record-chipline">
-                              <span class="chip-simple">Incapacidad: <?= h((string) (($rml['incapacidad_medico'] ?? '') !== '' ? $rml['incapacidad_medico'] : '—')) ?></span>
-                              <span class="chip-simple">Atención: <?= h((string) (($rml['atencion_facultativo'] ?? '') !== '' ? $rml['atencion_facultativo'] : '—')) ?></span>
+                              <span class="chip-simple">Incapacidad: <?= h((string) (($rml['incapacidad_medico'] ?? '') !== '' ? $rml['incapacidad_medico'] : 'â€”')) ?></span>
+                              <span class="chip-simple">AtenciÃ³n: <?= h((string) (($rml['atencion_facultativo'] ?? '') !== '' ? $rml['atencion_facultativo'] : 'â€”')) ?></span>
                             </div>
                             <?php if (!empty($rml['observaciones'])): ?><p><?= nl2br(h((string) $rml['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
@@ -3098,7 +3108,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-dos" role="tabpanel">
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell js-inline-open" href="documento_dosaje_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etílico">+ Nuevo dosaje</a>
+                      <a class="btn-shell js-inline-open" href="documento_dosaje_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etÃ­lico">+ Nuevo dosaje</a>
                     </div>
                     <?php if (!$extras['dos']): ?>
                       <div class="empty-state">No hay dosajes registrados para esta persona.</div>
@@ -3106,7 +3116,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['dos'] as $dos): ?>
                           <article class="record-card">
-                            <h5>N° <?= h((string) ($dos['numero'] ?? '—')) ?> · Reg <?= h((string) ($dos['numero_registro'] ?? '—')) ?></h5>
+                            <h5>NÂ° <?= h((string) ($dos['numero'] ?? 'â€”')) ?> Â· Reg <?= h((string) ($dos['numero_registro'] ?? 'â€”')) ?></h5>
                             <div class="record-chipline">
                               <span class="chip-simple"><?= h(fecha_hora_simple($dos['fecha_extraccion'] ?? null)) ?></span>
                               <span class="chip-simple"><?= h((string) (($dos['resultado_cualitativo'] ?? '') !== '' ? $dos['resultado_cualitativo'] : 'Sin resultado')) ?></span>
@@ -3114,7 +3124,7 @@ include __DIR__ . '/sidebar.php';
                             </div>
                             <?php if (!empty($dos['observaciones'])): ?><p><?= nl2br(h((string) $dos['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
-                              <a class="btn-shell js-inline-open" href="documento_dosaje_editar.php?id=<?= (int) $dos['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etílico">Ver / Editar</a>
+                              <a class="btn-shell js-inline-open" href="documento_dosaje_editar.php?id=<?= (int) $dos['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etÃ­lico">Ver / Editar</a>
                             </div>
                           </article>
                         <?php endforeach; ?>
@@ -3128,7 +3138,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-man" role="tabpanel">
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">+ Nueva manifestación</a>
+                      <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="ManifestaciÃ³n">+ Nueva manifestaciÃ³n</a>
                     </div>
                     <?php if (!$extras['man']): ?>
                       <div class="empty-state">No hay manifestaciones registradas para esta persona en este accidente.</div>
@@ -3136,13 +3146,13 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['man'] as $man): ?>
                           <article class="record-card">
-                            <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> · <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
+                            <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> Â· <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
                             <div class="record-chipline">
-                              <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?>–<?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
+                              <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?>â€“<?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
                             </div>
                             <?php if (!empty($man['observaciones'])): ?><p><?= nl2br(h((string) $man['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
-                              <a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=<?= (int) $man['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">Ver / Editar</a>
+                              <a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=<?= (int) $man['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="ManifestaciÃ³n">Ver / Editar</a>
                             </div>
                           </article>
                         <?php endforeach; ?>
@@ -3167,7 +3177,7 @@ include __DIR__ . '/sidebar.php';
                             <h5><?= h((string) (($occ['lugar_levantamiento'] ?? '') !== '' ? $occ['lugar_levantamiento'] : 'Sin lugar')) ?></h5>
                             <div class="record-chipline">
                               <span class="chip-simple"><?= h(fecha_simple($occ['fecha_levantamiento'] ?? null)) ?> <?= h((string) (($occ['hora_levantamiento'] ?? '') !== '' ? substr((string) $occ['hora_levantamiento'], 0, 5) : '')) ?></span>
-                              <span class="chip-simple">Prot. <?= h((string) (($occ['numero_protocolo'] ?? '') !== '' ? $occ['numero_protocolo'] : '—')) ?></span>
+                              <span class="chip-simple">Prot. <?= h((string) (($occ['numero_protocolo'] ?? '') !== '' ? $occ['numero_protocolo'] : 'â€”')) ?></span>
                             </div>
                             <?php if (!empty($occ['observaciones_levantamiento'])): ?><p><?= nl2br(h((string) $occ['observaciones_levantamiento'])) ?></p><?php endif; ?>
                             <div class="record-actions">
@@ -3218,7 +3228,7 @@ include __DIR__ . '/sidebar.php';
                           </span>
                         </span>
                       </h4>
-                      <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' · CIP ' . ($row['cip'] ?? '-')))) ?></p>
+                      <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' Â· CIP ' . ($row['cip'] ?? '-')))) ?></p>
                     </div>
                     <div class="module-card-controls">
                       <span class="chip-simple">Registro #<?= (int) $row['id'] ?></span>
@@ -3226,9 +3236,9 @@ include __DIR__ . '/sidebar.php';
                     </div>
                   </header>
                   <div class="module-meta">
-                    <span class="chip-simple"><?= h((string) (($row['tipo_doc'] ?? 'DOC') . ' ' . ($row['num_doc'] ?? '—'))) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['tipo_doc'] ?? 'DOC') . ' ' . ($row['num_doc'] ?? 'â€”'))) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['dependencia_policial'] ?? '') !== '' ? $row['dependencia_policial'] : 'Sin dependencia')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / función')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / funciÃ³n')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['celular'] ?? '') !== '' ? $row['celular'] : 'Sin celular')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['email'] ?? '') !== '' ? $row['email'] : 'Sin email')) ?></span>
                   </div>
@@ -3299,7 +3309,7 @@ include __DIR__ . '/sidebar.php';
             <a class="btn-shell" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
           </div>
           <?php if (!$propietarios): ?>
-            <div class="empty-state">No hay propietarios de vehículo registrados para este accidente.</div>
+            <div class="empty-state">No hay propietarios de vehÃ­culo registrados para este accidente.</div>
           <?php else: ?>
             <div class="module-grid">
               <?php foreach ($propietarios as $row): ?>
@@ -3308,7 +3318,7 @@ include __DIR__ . '/sidebar.php';
                   $repRecord = project_prefixed_record($row, 'rep_');
                   $principal = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
                     ? trim((string) (($ownerRecord['nombres'] ?? '') . ' ' . ($ownerRecord['apellido_paterno'] ?? '') . ' ' . ($ownerRecord['apellido_materno'] ?? '')))
-                    : (string) ($row['razon_social'] ?? 'Sin razón social');
+                    : (string) ($row['razon_social'] ?? 'Sin razÃ³n social');
                   $principalDoc = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
                     ? trim((string) (((string) ($ownerRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($ownerRecord['tipo_doc'] ?? '')) . ' ' : '') . ($ownerRecord['num_doc'] ?? '')))
                     : trim((string) ('RUC ' . ($row['ruc'] ?? '')));
@@ -3374,7 +3384,7 @@ include __DIR__ . '/sidebar.php';
                       <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL' && trim((string) ($ownerRecord['nombres'] ?? '')) !== ''): ?>
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Propietario Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($ownerRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3382,7 +3392,7 @@ include __DIR__ . '/sidebar.php';
                       <?php if ($representante !== ''): ?>
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Representante Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($repRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3406,7 +3416,7 @@ include __DIR__ . '/sidebar.php';
                         </div>
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Representante Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($repRecord, $sectionFields, 'prop-rep-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3416,7 +3426,7 @@ include __DIR__ . '/sidebar.php';
                         <input type="hidden" name="api_ref" value="<?= h((string) ($ownerRecord['api_ref'] ?? '')) ?>">
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Propietario Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($ownerRecord, $sectionFields, 'prop-nat-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3506,7 +3516,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="editable-view" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Familiar Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3521,7 +3531,7 @@ include __DIR__ . '/sidebar.php';
 
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Familiar Â· ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($famRecord, $sectionFields, 'familiar-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -3555,7 +3565,7 @@ include __DIR__ . '/sidebar.php';
                   $abogadoWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
                   $contactoAbogado = trim((string) ($row['celular'] ?? ''));
                   if (($row['email'] ?? '') !== '') {
-                      $contactoAbogado .= $contactoAbogado !== '' ? ' · ' . $row['email'] : $row['email'];
+                      $contactoAbogado .= $contactoAbogado !== '' ? ' Â· ' . $row['email'] : $row['email'];
                   }
                 ?>
                 <article class="module-card" data-collapsible-card>
@@ -3582,7 +3592,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="module-meta">
                     <span class="chip-simple">Colegiatura: <?= h((string) (($row['colegiatura'] ?? '') !== '' ? $row['colegiatura'] : 'Sin colegiatura')) ?></span>
                     <span class="chip-simple">Registro: <?= h((string) (($row['registro'] ?? '') !== '' ? $row['registro'] : 'Sin registro')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condición')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condiciÃ³n')) ?></span>
                     <span class="chip-simple"><?= h($contactoAbogado !== '' ? $contactoAbogado : 'Sin contacto') ?></span>
                   </div>
                   <div class="editable-shell" data-edit-shell="abogado-<?= (int) $row['id'] ?>">
@@ -3601,7 +3611,7 @@ include __DIR__ . '/sidebar.php';
                     </div>
 
                     <div class="module-card-panel js-card-panel" hidden>
-                    <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrónica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
+                    <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrÃ³nica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
                     <?php if (!empty($row['domicilio_procesal'])): ?><p style="margin-top:10px;">Domicilio procesal: <?= nl2br(h((string) $row['domicilio_procesal'])) ?></p><?php endif; ?>
                     <div class="inline-edit-error" id="abogado-inline-error-<?= (int) $row['id'] ?>"></div>
 
@@ -3687,7 +3697,7 @@ include __DIR__ . '/sidebar.php';
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
-                          <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
+                          <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' Â· ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
                           <?php if (!empty(trim((string) ($row['persona_nombre'] ?? '')))): ?><span class="chip-simple"><?= h(trim((string) $row['persona_nombre'])) ?></span><?php endif; ?>
                         </div>
                         <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
@@ -3717,6 +3727,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="module-grid">
                     <?php foreach ($documentosRecibidos as $row): ?>
                       <?php
+                        $documentoIcon = documento_recibido_icon($row);
                         $docEstado = trim((string) ($row['estado'] ?? ''));
                         $docEstadoClass = mb_strtolower($docEstado, 'UTF-8') === 'revisado'
                           ? 'chip-status-ok'
@@ -3725,14 +3736,14 @@ include __DIR__ . '/sidebar.php';
                       <article class="module-card">
                         <header>
                           <div>
-                            <h4><?= h((string) (($row['asunto'] ?? '') !== '' ? $row['asunto'] : 'Documento recibido #' . (int) $row['id'])) ?></h4>
+                            <h4><?= h($documentoIcon) ?> <?= h((string) (($row['asunto'] ?? '') !== '' ? $row['asunto'] : 'Documento recibido #' . (int) $row['id'])) ?></h4>
                             <p><?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></p>
                           </div>
                           <span class="chip-simple <?= h($docEstadoClass) ?>"><?= h($docEstado !== '' ? $docEstado : 'Sin estado') ?></span>
                         </header>
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['tipo_documento'] ?? '') !== '' ? $row['tipo_documento'] : 'Sin tipo')) ?></span>
-                          <span class="chip-simple">N° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : '—')) ?></span>
+                          <span class="chip-simple">NÂ° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : 'â€”')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha'] ?? null)) ?></span>
                           <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>
                         </div>
@@ -3826,7 +3837,7 @@ include __DIR__ . '/sidebar.php';
         return;
       }
 
-      const shouldSave = window.confirm('Hay cambios sin guardar. ¿Desea guardar los cambios?');
+      const shouldSave = window.confirm('Hay cambios sin guardar. Â¿Desea guardar los cambios?');
       if (shouldSave) {
         try {
           if (typeof state.form.requestSubmit === 'function') {
@@ -3927,7 +3938,7 @@ include __DIR__ . '/sidebar.php';
       const brandId = String(brand.value || '');
 
       if (categoryId === '') {
-        clearSelect(type, '(Selecciona una categoría primero)');
+        clearSelect(type, '(Selecciona una categorÃ­a primero)');
         clearSelect(body, '(Selecciona un tipo primero)');
       } else {
         const types = VEH_CATALOGS.tipos.filter((item) => String(item.categoria_id) === categoryId);
@@ -4291,7 +4302,7 @@ include __DIR__ . '/sidebar.php';
         return;
       }
 
-      const shouldSave = window.confirm('Hay cambios sin guardar. ¿Desea guardar los cambios?');
+      const shouldSave = window.confirm('Hay cambios sin guardar. Â¿Desea guardar los cambios?');
       if (shouldSave) {
         const saveButton = document.querySelector('[form="' + state.form.id + '"][type="submit"]');
         if (saveButton) {
@@ -4589,7 +4600,7 @@ include __DIR__ . '/sidebar.php';
           }
 
           if (!response.ok || !data || !data.ok) {
-            showInlineError(form, (data && data.message) ? data.message : 'No se pudo guardar la información.');
+            showInlineError(form, (data && data.message) ? data.message : 'No se pudo guardar la informaciÃ³n.');
             return;
           }
 
@@ -4738,4 +4749,5 @@ include __DIR__ . '/sidebar.php';
 </script>
 </body>
 </html>
+
 
