@@ -114,6 +114,7 @@ include __DIR__ . '/sidebar.php';
             <td><?= h($contacto !== '' ? $contacto : 'Sin contacto') ?></td>
             <td>
               <div class="stack-actions">
+                <a class="btn" href="marcador_abogado.php?abogado_id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($returnTo) ?>">Notificacion</a>
                 <a class="btn" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($returnTo) ?>">Ver</a>
                 <a class="btn" href="abogado_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($returnTo) ?>">Editar</a>
                 <a class="btn danger" href="abogado_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a>

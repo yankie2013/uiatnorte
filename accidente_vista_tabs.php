@@ -3615,6 +3615,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="editable-shell" data-edit-shell="abogado-<?= (int) $row['id'] ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
+                        <a class="btn-shell" href="marcador_abogado.php?abogado_id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Notificaci&oacute;n</a>
                         <a class="btn-shell" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                         <a class="btn-shell" href="abogado_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
                       </div>
