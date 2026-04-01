@@ -84,6 +84,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1320px;margin:24px
     </div>
     <div class="actions">
       <?php if ($accidenteId > 0): ?><a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $accidenteId) ?>">Datos generales SIDPOL</a><?php endif; ?>
+      <?php if ($accidenteId > 0): ?><a class="btn" href="oficio_peritaje_express.php?accidente_id=<?= urlencode((string) $accidenteId) ?>&return_to=<?= urlencode($returnTo) ?>">Peritaje rápido</a><?php endif; ?>
       <a class="btn primary" href="oficios_nuevo.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : ($sidpol !== '' ? ('?sidpol=' . urlencode($sidpol)) : '') ?>">+ Nuevo oficio</a>
     </div>
   </div>
@@ -145,7 +146,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1320px;margin:24px
               <div class="tools">
                 <?php if ($isRemitir): ?><a class="tool" target="_blank" rel="noopener" href="oficio_remitir_diligencia.php?oficio_id=<?= h($row['id']) ?><?= !empty($row['accid']) ? '&accidente_id=' . h($row['accid']) : '' ?>">Remitir</a><?php endif; ?>
                 <?php if ($isDosaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_resultado_dosaje.php?oficio_id=<?= h($row['id']) ?>">Dosaje</a><?php endif; ?>
-                <?php if ($isPeritaje && !empty($row['veh_placa'])): ?><a class="tool" target="_blank" rel="noopener" href="oficio_peritaje.php?placa=<?= urlencode((string) $row['veh_placa']) ?>">Peritaje</a><?php endif; ?>
+                <?php if ($isPeritaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_peritaje.php?oficio_id=<?= h($row['id']) ?>">Peritaje</a><?php endif; ?>
               </div>
               <div class="actions">
                 <a class="btn" href="oficios_leer.php?id=<?= h($row['id']) ?>">Ver</a>

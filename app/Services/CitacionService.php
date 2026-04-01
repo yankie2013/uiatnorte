@@ -7,9 +7,12 @@ use InvalidArgumentException;
 
 final class CitacionService
 {
+    private const LUGAR_HECHOS = 'Lugar de los hechos';
+    private const LUGAR_UIAT = 'Carretera Panamericana Norte km. 42 (alt. garita control SUNAT) sede de la Unidad de Investigacion de Accidentes de Transito-Lima Norte';
+
     private const CALIDADES = [
-        'Efectivo policial', 'Familiar mas cercano', 'Investigado', 'Testigo', 'Abogado',
-        'Propietario del vehiculo', 'Conductor', 'Pasajero', 'Peaton', 'Relacionado'
+        'Efectivo policial', 'Familiar más cercano', 'Investigado', 'Testigo', 'Abogado',
+        'Propietario del vehículo', 'Conductor', 'Pasajero', 'Peatón', 'Relacionado'
     ];
 
     private const TIPOS = [
@@ -50,6 +53,57 @@ final class CitacionService
             'motivo' => $row['motivo'] ?? '',
             'orden_citacion' => $row['orden_citacion'] ?? 1,
             'oficio_id' => $row['oficio_id'] ?? '',
+        ];
+    }
+
+    public function quickContext(int $accidenteId, string $personaSelector): array
+    {
+        [$fuente, $fuenteId] = $this->parsePersonaSelector($personaSelector);
+        $accidente = $this->repository->accidenteResumen($accidenteId);
+        if ($accidente === null) {
+            throw new InvalidArgumentException('Accidente no encontrado.');
+        }
+
+        $persona = $this->repository->personaVinculada($accidenteId, $fuente, $fuenteId);
+        if ($persona === null) {
+            throw new InvalidArgumentException('La persona seleccionada no pertenece al accidente.');
+        }
+
+        $enCalidad = $this->defaultCalidad($fuente, (string) ($persona['relacion'] ?? ''));
+        $lugar = $this->defaultLugar($accidente);
+
+        return [
+            'accidente' => [
+                'id' => $accidenteId,
+                'label' => $this->accidenteLabel($accidente),
+                'fecha' => $this->formatDateTime($accidente['fecha_accidente'] ?? null),
+                'lugar' => trim((string) ($accidente['lugar'] ?? '')),
+                'referencia' => trim((string) ($accidente['referencia'] ?? '')),
+            ],
+            'persona' => [
+                'selector' => $fuente . ':' . $fuenteId,
+                'fuente' => $fuente,
+                'fuente_id' => $fuenteId,
+                'nombre' => $this->fullName($persona),
+                'doc' => trim((string) (($persona['tipo_doc'] ?? '') . ' ' . ($persona['num_doc'] ?? ''))),
+                'domicilio' => trim((string) ($persona['domicilio'] ?? '')),
+                'edad' => $this->calculateAge($persona['fecha_nacimiento'] ?? null),
+                'relacion' => trim((string) ($persona['relacion'] ?? '')),
+                'extra' => trim((string) ($persona['extra'] ?? '')),
+            ],
+            'calidades' => self::CALIDADES,
+            'tipos' => self::TIPOS,
+            'oficios' => $this->repository->oficiosByAccidente($accidenteId),
+            'defaults' => [
+                'en_calidad' => $enCalidad,
+                'tipo_diligencia' => 'Toma de declaracion',
+                'fecha' => date('Y-m-d'),
+                'hora' => '09:00',
+                'lugar' => $lugar,
+                'motivo' => '',
+                'orden_citacion' => 1,
+                'oficio_id' => '',
+            ],
         ];
     }
 
@@ -218,5 +272,112 @@ final class CitacionService
         }
 
         return $payload;
+    }
+
+    private function defaultCalidad(string $fuente, string $relacion): string
+    {
+        $relacion = mb_strtolower(trim($relacion), 'UTF-8');
+
+        return match ($fuente) {
+            'PNP' => 'Efectivo policial',
+            'PRO' => 'Propietario del vehículo',
+            'FAM' => 'Familiar más cercano',
+            default => $this->calidadFromRelacion($relacion),
+        };
+    }
+
+    private function calidadFromRelacion(string $relacion): string
+    {
+        if ($relacion === '') {
+            return 'Relacionado';
+        }
+        if (str_contains($relacion, 'conductor')) {
+            return 'Conductor';
+        }
+        if (str_contains($relacion, 'pasajero') || str_contains($relacion, 'ocupante')) {
+            return 'Pasajero';
+        }
+        if (str_contains($relacion, 'peat')) {
+            return 'Peatón';
+        }
+        if (str_contains($relacion, 'abogado')) {
+            return 'Abogado';
+        }
+        if (str_contains($relacion, 'investig')) {
+            return 'Investigado';
+        }
+        if (str_contains($relacion, 'testig')) {
+            return 'Testigo';
+        }
+
+        return 'Relacionado';
+    }
+
+    public function calidadLabel(string $value): string
+    {
+        return $value === 'Efectivo policial'
+            ? 'Efectivo policial interviniente'
+            : $value;
+    }
+
+    private function accidenteLabel(array $accidente): string
+    {
+        $parts = ['ACCID-' . (int) ($accidente['id'] ?? 0)];
+        if (!empty($accidente['registro_sidpol'])) {
+            $parts[] = 'SIDPOL ' . trim((string) $accidente['registro_sidpol']);
+        }
+        if (!empty($accidente['fecha_accidente'])) {
+            $parts[] = trim((string) $accidente['fecha_accidente']);
+        }
+        if (!empty($accidente['lugar'])) {
+            $parts[] = trim((string) $accidente['lugar']);
+        }
+
+        return implode(' · ', array_filter($parts, static fn (string $part): bool => $part !== ''));
+    }
+
+    private function fullName(array $persona): string
+    {
+        return trim((string) (($persona['nombres'] ?? '') . ' ' . ($persona['apellido_paterno'] ?? '') . ' ' . ($persona['apellido_materno'] ?? '')));
+    }
+
+    private function calculateAge(mixed $fechaNacimiento): ?int
+    {
+        $fechaNacimiento = trim((string) ($fechaNacimiento ?? ''));
+        if ($fechaNacimiento === '') {
+            return null;
+        }
+
+        try {
+            $birth = new \DateTimeImmutable($fechaNacimiento);
+            $today = new \DateTimeImmutable(date('Y-m-d'));
+            return max(0, (int) $today->diff($birth)->y);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function formatDateTime(mixed $value): string
+    {
+        $value = trim((string) ($value ?? ''));
+        if ($value === '') {
+            return '';
+        }
+
+        try {
+            return (new \DateTimeImmutable($value))->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    private function defaultLugar(array $accidente): string
+    {
+        $accidenteLugar = trim((string) ($accidente['lugar'] ?? ''));
+        if ($accidenteLugar !== '') {
+            return self::LUGAR_HECHOS;
+        }
+
+        return self::LUGAR_UIAT;
     }
 }

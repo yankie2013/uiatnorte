@@ -42,6 +42,22 @@ final class CitacionRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function accidenteResumen(int $accidenteId): ?array
+    {
+        $sql = "SELECT id,
+                       COALESCE(registro_sidpol, '') AS registro_sidpol,
+                       fecha_accidente,
+                       COALESCE(lugar, '') AS lugar,
+                       COALESCE(referencia, '') AS referencia
+                FROM accidentes
+                WHERE id = ?
+                LIMIT 1";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$accidenteId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function createFromView(int $accidenteId, string $fuente, int $fuenteId, array $payload): int
     {
         $sql = "INSERT INTO citacion (

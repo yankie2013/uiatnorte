@@ -172,6 +172,42 @@ final class OficioService
         return $this->repository->accidenteIdBySidpol(trim($sidpol));
     }
 
+    public function peritajeQuickContext(int $accidenteId): array
+    {
+        if ($accidenteId <= 0) {
+            throw new InvalidArgumentException('Debes indicar el accidente para generar el peritaje.');
+        }
+
+        $context = $this->formContext($accidenteId);
+        $preset = $this->resolvePeritajePreset();
+        $personas = $preset['entidad_id'] > 0 ? $this->repository->personasByEntidad($preset['entidad_id']) : [];
+        $gradoCargo = $this->repository->gradoCargo();
+        $asunto = $this->repository->asuntoInfo($preset['asunto_id']);
+
+        return [
+            'accidente_id' => $accidenteId,
+            'accidente_label' => $this->accidenteLabel($context['accidentes'], $accidenteId),
+            'vehiculos' => $this->repository->vehiculosByAccidente($accidenteId),
+            'anio_oficio' => (int) date('Y'),
+            'fecha_emision' => date('Y-m-d'),
+            'oficial_ano_id' => $context['oficial_ano_default'],
+            'oficial_ano_label' => $this->oficialAnoLabel($context['oficial_anos'], (string) $context['oficial_ano_default']),
+            'next_numero' => $this->repository->nextNumero((int) date('Y')),
+            'preset' => [
+                'entidad_id' => $preset['entidad_id'],
+                'entidad_label' => $this->entidadLabel($context['entidades'], $preset['entidad_id']),
+                'subentidad_id' => $preset['subentidad_id'],
+                'persona_id' => $preset['persona_id'],
+                'persona_label' => $this->personaLabel($personas, $preset['persona_id']),
+                'grado_cargo_id' => $preset['grado_cargo_id'],
+                'grado_cargo_label' => $this->gradoCargoLabel($gradoCargo, $preset['grado_cargo_id']),
+                'asunto_id' => $preset['asunto_id'],
+                'asunto_label' => (string) ($asunto['nombre'] ?? 'Peritaje de Constatación de daños'),
+                'motivo' => $this->peritajeMotivo($preset, $asunto),
+            ],
+        ];
+    }
+
     private function asuntoTipo(mixed $asuntoId): ?string
     {
         $id = (int) $asuntoId;
@@ -180,6 +216,130 @@ final class OficioService
         }
         $info = $this->repository->asuntoInfo($id);
         return $info['tipo'] ?? null;
+    }
+
+    private function resolvePeritajePreset(): array
+    {
+        $latest = $this->repository->latestPeritajePreset();
+        if ($latest !== null && (int) ($latest['entidad_id_destino'] ?? 0) > 0 && (int) ($latest['asunto_id'] ?? 0) > 0) {
+            return [
+                'entidad_id' => (int) $latest['entidad_id_destino'],
+                'subentidad_id' => ($latest['subentidad_destino_id'] ?? null) !== null ? (int) $latest['subentidad_destino_id'] : null,
+                'persona_id' => ($latest['persona_destino_id'] ?? null) !== null ? (int) $latest['persona_destino_id'] : null,
+                'grado_cargo_id' => ($latest['grado_cargo_id'] ?? null) !== null ? (int) $latest['grado_cargo_id'] : null,
+                'asunto_id' => (int) $latest['asunto_id'],
+                'motivo' => trim((string) ($latest['motivo'] ?? '')),
+            ];
+        }
+
+        $entidad = $this->repository->findEntidadByNameLike('Unidad de Peritajes');
+        if ($entidad === null) {
+            throw new InvalidArgumentException('No se encontró la entidad de destino para peritajes.');
+        }
+
+        $asunto = $this->repository->findAsuntoByEntidadAndNameLike((int) $entidad['id'], 'SOLICITAR', 'Peritaje');
+        if ($asunto === null) {
+            throw new InvalidArgumentException('No se encontró el asunto de peritaje configurado.');
+        }
+
+        $personas = $this->repository->personasByEntidad((int) $entidad['id']);
+
+        return [
+            'entidad_id' => (int) $entidad['id'],
+            'subentidad_id' => null,
+            'persona_id' => isset($personas[0]['id']) ? (int) $personas[0]['id'] : null,
+            'grado_cargo_id' => null,
+            'asunto_id' => (int) $asunto['id'],
+            'motivo' => trim((string) ($asunto['detalle'] ?? '')),
+        ];
+    }
+
+    private function accidenteLabel(array $accidentes, int $accidenteId): string
+    {
+        foreach ($accidentes as $accidente) {
+            if ((int) ($accidente['id'] ?? 0) === $accidenteId) {
+                return (string) ($accidente['label'] ?? ('ACCID-' . $accidenteId));
+            }
+        }
+
+        return 'ACCID-' . $accidenteId;
+    }
+
+    private function entidadLabel(array $entidades, int $entidadId): string
+    {
+        foreach ($entidades as $entidad) {
+            if ((int) ($entidad['id'] ?? 0) !== $entidadId) {
+                continue;
+            }
+
+            $nombre = trim((string) ($entidad['nombre'] ?? ''));
+            $siglas = trim((string) ($entidad['siglas'] ?? ''));
+            return $siglas !== '' ? ($nombre . ' (' . $siglas . ')') : $nombre;
+        }
+
+        return '';
+    }
+
+    private function personaLabel(array $personas, ?int $personaId): string
+    {
+        if (!$personaId) {
+            return '';
+        }
+
+        foreach ($personas as $persona) {
+            if ((int) ($persona['id'] ?? 0) === $personaId) {
+                return trim((string) ($persona['nombre'] ?? ''));
+            }
+        }
+
+        return '';
+    }
+
+    private function gradoCargoLabel(array $grados, ?int $gradoCargoId): string
+    {
+        if (!$gradoCargoId) {
+            return '';
+        }
+
+        foreach ($grados as $grado) {
+            if ((int) ($grado['id'] ?? 0) !== $gradoCargoId) {
+                continue;
+            }
+
+            $nombre = trim((string) ($grado['nombre'] ?? ''));
+            $tipo = trim((string) ($grado['tipo'] ?? ''));
+            return $tipo !== '' ? ($nombre . ' [' . $tipo . ']') : $nombre;
+        }
+
+        return '';
+    }
+
+    private function oficialAnoLabel(array $oficialAnos, string $oficialAnoId): string
+    {
+        foreach ($oficialAnos as $oficialAno) {
+            if ((string) ($oficialAno['id'] ?? '') !== $oficialAnoId) {
+                continue;
+            }
+
+            return trim((string) (($oficialAno['anio'] ?? '') . ' - ' . ($oficialAno['nombre'] ?? '')));
+        }
+
+        return '';
+    }
+
+    private function peritajeMotivo(array $preset, ?array $asunto): string
+    {
+        $motivo = trim((string) ($asunto['detalle'] ?? ''));
+        if ($motivo !== '') {
+            return $motivo;
+        }
+
+        $motivo = trim((string) ($preset['motivo'] ?? ''));
+        if ($motivo !== '') {
+            return $motivo;
+        }
+
+        return 'Solicita se realice peritaje de constatación de daños en vehículo, por motivo que se indica.';
     }
 
     private function payload(array $input, ?int $excludeId): array

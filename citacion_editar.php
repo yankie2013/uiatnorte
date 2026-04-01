@@ -169,7 +169,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
         <select name="en_calidad" required>
           <option value="">Selecciona</option>
           <?php foreach ($ctx['calidades'] as $calidad): ?>
-            <option value="<?= h($calidad) ?>" <?= $data['en_calidad'] === $calidad ? 'selected' : '' ?>><?= h($calidad) ?></option>
+            <option value="<?= h($calidad) ?>" <?= $data['en_calidad'] === $calidad ? 'selected' : '' ?>><?= h($service->calidadLabel((string) $calidad)) ?></option>
           <?php endforeach; ?>
         </select>
       </div>

@@ -34,6 +34,19 @@ final class OficioRepository
         return $this->pdo->query('SELECT id, nombre, COALESCE(siglas,\'\') AS siglas FROM oficio_entidad ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function findEntidadByNameLike(string $term): ?array
+    {
+        $term = trim($term);
+        if ($term === '') {
+            return null;
+        }
+
+        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(siglas, \'\') AS siglas FROM oficio_entidad WHERE nombre LIKE ? ORDER BY id ASC LIMIT 1');
+        $st->execute(['%' . $term . '%']);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function oficialAnos(): array
     {
         return $this->pdo->query('SELECT id, anio, nombre, COALESCE(vigente,0) AS vigente FROM oficio_oficial_ano ORDER BY anio DESC, id DESC')->fetchAll(PDO::FETCH_ASSOC);
@@ -87,6 +100,30 @@ final class OficioRepository
     {
         $st = $this->pdo->prepare('SELECT id, entidad_id, tipo, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE id = ? LIMIT 1');
         $st->execute([$id]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function findAsuntoByEntidadAndNameLike(int $entidadId, string $tipo, string $term): ?array
+    {
+        if ($entidadId <= 0) {
+            return null;
+        }
+
+        $term = trim($term);
+        if ($term === '') {
+            return null;
+        }
+
+        $sql = "SELECT id, entidad_id, tipo, nombre, COALESCE(detalle,'') AS detalle
+                FROM oficio_asunto
+                WHERE entidad_id = ? AND tipo = ? AND COALESCE(activo,1)=1
+                  AND (nombre LIKE ? OR COALESCE(detalle,'') LIKE ?)
+                ORDER BY COALESCE(orden,999999), id
+                LIMIT 1";
+        $like = '%' . $term . '%';
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$entidadId, $tipo, $like, $like]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
@@ -207,6 +244,24 @@ final class OficioRepository
         $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos WHERE id = ? AND accidente_id = ?');
         $st->execute([$involucradoVehiculoId, $accidenteId]);
         return (int) $st->fetchColumn() > 0;
+    }
+
+    public function latestPeritajePreset(): ?array
+    {
+        $sql = "SELECT o.entidad_id_destino,
+                       o.subentidad_destino_id,
+                       o.persona_destino_id,
+                       o.grado_cargo_id,
+                       o.asunto_id,
+                       COALESCE(o.motivo,'') AS motivo
+                FROM oficios o
+                LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
+                WHERE LOWER(COALESCE(oa.nombre,'')) LIKE '%peritaje%'
+                   OR LOWER(COALESCE(oa.detalle,'')) LIKE '%peritaje%'
+                ORDER BY o.id DESC
+                LIMIT 1";
+        $row = $this->pdo->query($sql)->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     public function fallecidosByAccidente(int $accidenteId): array

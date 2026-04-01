@@ -1892,6 +1892,9 @@ $renderVehiculoSubtabs = static function (
         <div class="tab-pane fade" id="<?= h($tabPrefix) ?>-<?= h($slug) ?>" role="tabpanel">
           <div class="inner-panel">
             <div class="module-actions" style="margin-bottom:8px;">
+              <?php if ($slug === 'peritaje' && $involucradoVehiculoId > 0): ?>
+                <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) ($vehiculoRecord['accidente_id'] ?? 0) ?>&invol_id=<?= $involucradoVehiculoId ?>&return_to=<?= $returnToEncoded ?>">Generar oficio peritaje</a>
+              <?php endif; ?>
               <?php if ($documentoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
                 <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' Â· ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
@@ -2123,6 +2126,10 @@ include __DIR__ . '/sidebar.php';
   .title-wrap p{margin:0;color:var(--muted);font-size:11px}
   .top-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
+  .btn-shell.btn-citacion{border-color:#60a5fa;background:linear-gradient(180deg,#f8fbff 0%,#edf5ff 100%);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 8px 18px rgba(59,130,246,.12);color:#1d4ed8}
+  .btn-shell.btn-citacion:hover{border-color:#3b82f6;background:#e0efff;color:#1e40af}
+  .btn-shell.btn-peritaje{border-color:#ff9f43;background:linear-gradient(180deg,#fffaf3 0%,#fff1df 100%);box-shadow:0 0 0 1px rgba(255,159,67,.24),0 0 14px rgba(255,140,0,.22),0 8px 18px rgba(255,140,0,.12);color:#c2410c}
+  .btn-shell.btn-peritaje:hover{border-color:#ff7a00;background:#ffedd5;color:#9a3412;box-shadow:0 0 0 1px rgba(255,122,0,.32),0 0 18px rgba(255,122,0,.28),0 10px 20px rgba(255,122,0,.16)}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
   .summary-stack{display:grid;gap:5px;margin-bottom:6px}
   .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:11px;padding:7px 10px;font-size:12px;font-weight:700;line-height:1.25}
@@ -2805,6 +2812,7 @@ include __DIR__ . '/sidebar.php';
             <div class="action-row">
               <a class="btn-shell" href="persona_leer.php?id=<?= (int) $persona['persona_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver persona</a>
               <a class="btn-shell" href="involucrados_personas_editar.php?id=<?= (int) $persona['involucrado_id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Editar participación</a>
+              <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('INV:' . (int) $persona['involucrado_id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
               <?php if ($hasComboVehiculos): ?>
                 <?php foreach ($comboVehiculos as $comboVehiculo): ?>
                   <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
@@ -2936,6 +2944,9 @@ include __DIR__ . '/sidebar.php';
                         <div class="editable-toolbar">
                           <div class="record-actions" style="margin-top:0">
                             <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
+                            <?php if (!empty($comboVehiculo['accidente_id']) && !empty($comboVehiculo['inv_vehiculo_id'])): ?>
+                              <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $comboVehiculo['accidente_id'] ?>&invol_id=<?= (int) $comboVehiculo['inv_vehiculo_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio peritaje</a>
+                            <?php endif; ?>
                           </div>
                         </div>
 
@@ -2961,16 +2972,19 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-vehiculo" role="tabpanel">
                   <div class="inner-panel">
                     <div class="editable-shell" data-edit-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">
-                      <div class="editable-toolbar">
-                        <div class="record-actions" style="margin-top:0">
-                          <?php if ($hasComboVehiculos): ?>
-                            <?php foreach ($comboVehiculos as $comboVehiculo): ?>
-                              <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
-                            <?php endforeach; ?>
-                          <?php else: ?>
-                            <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha completa</a>
-                          <?php endif; ?>
-                        </div>
+                        <div class="editable-toolbar">
+                          <div class="record-actions" style="margin-top:0">
+                            <?php if ($hasComboVehiculos): ?>
+                              <?php foreach ($comboVehiculos as $comboVehiculo): ?>
+                                <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) ($comboVehiculo['veh_id'] ?? 0) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha vehículo <?= h((string) ($comboVehiculo['veh_numero'] ?? '')) ?></a>
+                              <?php endforeach; ?>
+                            <?php else: ?>
+                              <a class="btn-shell" href="vehiculo_leer.php?id=<?= (int) $persona['veh_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver ficha completa</a>
+                              <?php if (!empty($persona['accidente_id']) && !empty($persona['inv_vehiculo_id'])): ?>
+                                <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $persona['accidente_id'] ?>&invol_id=<?= (int) $persona['inv_vehiculo_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio peritaje</a>
+                              <?php endif; ?>
+                            <?php endif; ?>
+                          </div>
                         <?php if (!$hasComboVehiculos): ?>
                           <div class="editable-actions">
                             <button type="button" class="btn-shell js-edit-start" data-shell="vehiculo-<?= (int) $persona['involucrado_id'] ?>">Editar vehículo</button>
@@ -3246,6 +3260,7 @@ include __DIR__ . '/sidebar.php';
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
                         <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PNP:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
                       </div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="policia-<?= (int) $row['id'] ?>">Editar</button>
@@ -3365,6 +3380,7 @@ include __DIR__ . '/sidebar.php';
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
                         <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PRO:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
                       </div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="propietario-<?= (int) $row['id'] ?>">Editar</button>
@@ -3499,6 +3515,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="editable-toolbar">
                         <div class="record-actions" style="margin-top:0">
                           <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                          <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('FAM:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
                         </div>
                         <div class="editable-actions">
                           <button type="button" class="btn-shell js-edit-start" data-shell="familiar-persona-<?= (int) $row['id'] ?>">Editar</button>
@@ -3670,6 +3687,7 @@ include __DIR__ . '/sidebar.php';
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo oficio">+ Nuevo oficio</a>
+                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
                   <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
                 </div>
 
@@ -3681,6 +3699,8 @@ include __DIR__ . '/sidebar.php';
                       <?php
                         $oficioIcon = oficio_icon($row);
                         $oficioEstadoClass = oficio_status_class((string) ($row['estado'] ?? ''));
+                        $oficioPeritajeText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '')), 'UTF-8');
+                        $oficioEsPeritaje = str_contains($oficioPeritajeText, 'peritaje de constat');
                       ?>
                       <article class="module-card">
                         <header>
@@ -3703,6 +3723,7 @@ include __DIR__ . '/sidebar.php';
                         <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
                         <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
                         <div class="module-actions">
+                          <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar peritaje</a><?php endif; ?>
                           <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
                           <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar oficio">Editar</a>
                           <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar oficio">Eliminar</a>

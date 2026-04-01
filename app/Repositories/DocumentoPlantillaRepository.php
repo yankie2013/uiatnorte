@@ -211,20 +211,20 @@ final class DocumentoPlantillaRepository
         }
 
         if ($this->hasTable('accidente_modalidad') && $this->hasTable('modalidad_accidente')) {
-            $sql = 'SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR \"||\")
+            $sql = "SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR '||')
                     FROM accidente_modalidad am
                     JOIN modalidad_accidente m ON m.id = am.modalidad_id
-                    WHERE am.accidente_id = ?';
+                    WHERE am.accidente_id = ?";
             $st = $this->pdo->prepare($sql);
             $st->execute([$accidenteId]);
             return trim((string) $st->fetchColumn());
         }
 
         if ($this->hasTable('accidente_modalidad') && $this->hasTable('modalidad')) {
-            $sql = 'SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR \"||\")
+            $sql = "SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR '||')
                     FROM accidente_modalidad am
                     JOIN modalidad m ON m.id = am.modalidad_id
-                    WHERE am.accidente_id = ?';
+                    WHERE am.accidente_id = ?";
             $st = $this->pdo->prepare($sql);
             $st->execute([$accidenteId]);
             return trim((string) $st->fetchColumn());

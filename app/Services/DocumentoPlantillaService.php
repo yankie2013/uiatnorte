@@ -95,7 +95,7 @@ final class DocumentoPlantillaService
                 'persona_edad' => (string) ($personaInfo['edad'] ?? $citacion['persona_edad'] ?? ''),
                 'persona_celular' => (string) ($personaInfo['celular'] ?? ''),
                 'persona_email' => (string) ($personaInfo['email'] ?? ''),
-                'cit_en_calidad' => (string) ($citacion['en_calidad'] ?? ''),
+                'cit_en_calidad' => $this->citacionCalidadLabel((string) ($citacion['en_calidad'] ?? '')),
                 'cit_tipo_diligencia' => (string) ($citacion['tipo_diligencia'] ?? ''),
                 'cit_fecha_larga' => $this->fechaLarga($citacion['fecha'] ?? null),
                 'cit_fecha' => $this->fechaAbrev($citacion['fecha'] ?? null),
@@ -266,5 +266,12 @@ final class DocumentoPlantillaService
             return $items[0] . ' y ' . $items[1];
         }
         return implode(', ', array_slice($items, 0, $count - 1)) . ' y ' . $items[$count - 1];
+    }
+
+    private function citacionCalidadLabel(string $value): string
+    {
+        return $value === 'Efectivo policial'
+            ? 'Efectivo policial interviniente'
+            : $value;
     }
 }
