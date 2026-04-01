@@ -171,6 +171,7 @@ body { padding-left:60px; transition:.35s; }
         <?php endif; ?>
     </div>
 
+    <?php if (false): ?>
     <!-- INVOLUCRADOS -->
     <div class="side-section">
         <div class="section-header" data-sec="inv">
@@ -287,6 +288,7 @@ body { padding-left:60px; transition:.35s; }
         </div>
     </div>
 
+    <?php endif; ?>
 </nav>
 </div>
 

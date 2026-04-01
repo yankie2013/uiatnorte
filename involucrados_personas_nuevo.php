@@ -12,6 +12,13 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function ipost($k,$d=null){ return isset($_POST[$k]) ? trim($_POST[$k]) : $d; }
 function iget($k,$d=null){ return isset($_GET[$k])  ? trim($_GET[$k])  : $d; }
 function okjson($a){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($a,JSON_UNESCAPED_UNICODE); exit; }
+function safe_return_to($value, $fallback){
+  $value = trim((string)$value);
+  if ($value === '') return $fallback;
+  if (preg_match('#^(https?:)?//#i', $value)) return $fallback;
+  if ($value[0] === '/') return $fallback;
+  return $value;
+}
 
 $repo = new InvolucradoPersonaRepository($pdo);
 $service = new InvolucradoPersonaService($repo);
@@ -40,6 +47,7 @@ if (iget('ajax')==='vehiculos_por_accidente' && isset($_GET['accidente_id'])) {
 $accidentes = $repo->accidentes();
 $accidente_id = (int)iget('accidente_id', ($accidentes[0]['id'] ?? 0));
 $accidente_fecha = $accidente_id ? $repo->accidenteFecha($accidente_id) : null;
+$return_to = safe_return_to(iget('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
 $roles = $repo->roles();
 $lesiones = ['Ileso','Leve','Moderada','Grave','Fallecido'];
 
@@ -57,13 +65,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
       'orden_persona' => strtoupper(trim(ipost('orden_persona',''))),
     ]);
 
-    if($result['next']===1) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id']);
-    else header('Location: involucrados_personas_listar.php?ok=1&accidente_id='.$result['accidente_id']);
+    $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
+    if($result['next']===1) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].'&return_to='.urlencode($postReturnTo));
+    else header('Location: '.$postReturnTo);
     exit;
   }catch(Throwable $e){
     $err='Error: '.$e->getMessage();
     $accidente_id = (int)ipost('accidente_id', $accidente_id);
     $accidente_fecha = $accidente_id ? $repo->accidenteFecha($accidente_id) : null;
+    $return_to = safe_return_to(ipost('return_to', $return_to), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
   }
 }
 
@@ -141,6 +151,7 @@ textarea{min-height:60px; resize:vertical}
   <form method="post" class="card" autocomplete="off" id="formIP">
     <input type="hidden" name="next" id="next" value="0">
     <input type="hidden" name="persona_id" id="persona_id" value="0">
+    <input type="hidden" name="return_to" value="<?=h($return_to)?>">
 
     <div class="grid-2">
       <div>
@@ -211,7 +222,7 @@ textarea{min-height:60px; resize:vertical}
     <textarea name="observaciones" rows="4" placeholder="Notas u observaciones…"></textarea>
 
     <div class="actions">
-      <a class="btn" href="involucrados_personas_listar.php?accidente_id=<?=h($accidente_id)?>">Cancelar</a>
+      <a class="btn" href="<?=h($return_to)?>">Cancelar</a>
       <button class="btn primary" type="submit" id="btnGuardar">Guardar</button>
       <button class="btn safe" type="submit" id="btnNext">Agregar siguiente</button>
     </div>

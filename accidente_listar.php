@@ -80,6 +80,7 @@ $persona   = trim($_GET['persona']  ?? '');
 $distrito  = trim($_GET['distrito'] ?? '');
 $vehiculo  = trim($_GET['vehiculo'] ?? '');
 $registro_sidpol = trim($_GET['registro_sidpol'] ?? ''); // <-- NUEVO
+$nro_informe_policial = trim($_GET['nro_informe_policial'] ?? '');
 
 /* ============================
    LISTA DE COMISARÍAS
@@ -90,7 +91,7 @@ $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC
    QUERY BASE
 ============================ */
 // ➜ Añadimos a.estado, a.folder y a.priority
-$sql = "SELECT a.id,a.registro_sidpol,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,c.nombre AS comisaria
+$sql = "SELECT a.id,a.registro_sidpol,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,c.nombre AS comisaria
         FROM accidentes a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
         WHERE 1=1";
@@ -104,6 +105,11 @@ if($q!==''){
 if($registro_sidpol !== ''){
   $sql .= " AND a.registro_sidpol LIKE ?";
   $params[] = "%$registro_sidpol%";
+}
+
+if($nro_informe_policial !== ''){
+  $sql .= " AND a.nro_informe_policial LIKE ?";
+  $params[] = "%$nro_informe_policial%";
 }
 
 
@@ -353,6 +359,11 @@ table.compact tbody tr{ height:42px; }
   <label>Registro SIDPOL</label>
   <input type="text" name="registro_sidpol" placeholder="Ej: 2025-ABC-123" value="<?=h($_GET['registro_sidpol']??'')?>">
 </div>    
+
+    <div class="col-3">
+      <label>N° informe policial</label>
+      <input type="text" name="nro_informe_policial" placeholder="Ej: 105-2025" value="<?=h($_GET['nro_informe_policial']??'')?>">
+    </div>
         
       <div class="col-3">
         <label>Persona</label>
@@ -391,6 +402,7 @@ table.compact tbody tr{ height:42px; }
     <th role="columnheader" data-sort="folder">Folder <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="estado">Estado <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="registro_sidpol">Registro SIDPOL <span class="sort-indicator"></span></th>
+    <th role="columnheader" data-sort="nro_informe_policial">N° informe policial <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="lugar">Lugar <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="fecha_accidente">Fecha <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="comisaria">Comisaría <span class="sort-indicator"></span></th>
@@ -399,7 +411,7 @@ table.compact tbody tr{ height:42px; }
 </thead>
         <tbody id="tbody-rows" role="rowgroup">
           <?php if (!$rows): ?>
-            <tr><td colspan="7" class="empty">Sin resultados</td></tr>
+            <tr><td colspan="8" class="empty">Sin resultados</td></tr>
           <?php else: foreach($rows as $i=>$r): 
               $estado = $r['estado'] ?: 'Pendiente';
               $cls = ($estado==='Resuelto') ? 'estado-resuelto'
@@ -438,24 +450,13 @@ table.compact tbody tr{ height:42px; }
 
   <!-- DEMÁS CAMPOS -->
   <td role="cell"><span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span></td>
+  <td role="cell"><?=h($r['nro_informe_policial'] ?? '-')?></td>
   <td role="cell"><?=h($r['lugar'])?></td>
   <td role="cell"><?=h($r['fecha_accidente'])?></td>
   <td role="cell"><?=h($r['comisaria']??'-')?></td>
   <td class="td-actions" role="cell">
     <a class="btn small" title="Ver detalles"
-       href="Dato_General_accidente.php?accidente_id=<?= $r['id'] ?>">👁 Detalles</a>
-
-    <a class="btn small" href="accidente_editar.php?id=<?= $r['id'] ?>">✏️ Editar</a>
-
-    <a class="btn small btn-oficios"
-       href="oficios_listar.php?sidpol=<?= urlencode($r['registro_sidpol']) ?>">
-      📝 Oficios
-    </a>
-
-    <!-- NUEVO: botón Recibidos (documentos recibidos relacionados al accidente) -->
-    <a class="btn small" href="documento_recibido_listar.php?accidente_id=<?= (int)$r['id'] ?>" title="Documentos recibidos">
-      📂 Recibidos
-    </a>
+       href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>">👁 Detalles</a>
 
     <form action="accidente_eliminar.php" method="post" style="display:inline"
           onsubmit="return confirm('¿Eliminar este accidente de forma permanente?');">

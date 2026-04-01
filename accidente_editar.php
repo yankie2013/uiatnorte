@@ -240,33 +240,15 @@ include __DIR__ . '/sidebar.php';
 
   <div class="card">
     <form class="grid" method="post" onsubmit="return validarForm();">
-      <!-- SIDPOL (readonly) + Registro SIDPOL + botones de participantes -->
+      <!-- SIDPOL (readonly) + Registro SIDPOL -->
       <div class="col-3">
         <label>SIDPOL</label>
         <input type="text" id="sidpol" value="<?=h($sidpol_url)?>" readonly>
       </div>
 
-      <div class="col-3">
+      <div class="col-6">
         <label>Registro SIDPOL</label>
         <input type="text" name="registro_sidpol" id="registro_sidpol" maxlength="50" value="<?=h($acc['registro_sidpol'])?>">
-      </div>
-
-      <div class="col-6">
-        <label style="visibility:hidden">.</label>
-        <div class="pills">
-          <a class="pillbtn"
-             href="#"
-             data-modal="modal-veh"
-             data-src="involucrados_vehiculos_nuevo.php?embed=1&accidente_id=<?=$accidente_id?>&sidpol=<?=urlencode($sidpol_url)?>">
-             🚗 Participantes Vehículos
-          </a>
-          <a class="pillbtn"
-             href="#"
-             data-modal="modal-per"
-             data-src="involucrados_personas_nuevo.php?embed=1&accidente_id=<?=$accidente_id?>&sidpol=<?=urlencode($sidpol_url)?>">
-             👥 Participantes Personas
-          </a>
-        </div>
       </div>
 
       <!-- ESTADO -->

@@ -1154,7 +1154,7 @@ if ($rowsCons === []) {
 $modalidades = array_column($rowsMods, 'nombre');
 $consecuencias = array_column($rowsCons, 'nombre');
 $modsConcat = join_con_y($modalidades);
-$consConcat = $consecuencias ? implode(' → ', array_map('h', $consecuencias)) : '—';
+$consConcat = join_con_y($consecuencias);
 
 $personas = safe_query_all(
     $pdo,
@@ -2703,8 +2703,8 @@ include __DIR__ . '/sidebar.php';
 
   <div class="tabs-shell">
     <div class="tabs-toolbar">
-      <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo persona involucrada</a>
-      <a class="btn-shell" href="involucrados_vehiculos_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo vehículo involucrado</a>
+      <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo persona involucrada</a>
+      <a class="btn-shell" href="involucrados_vehiculos_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo vehículo involucrado</a>
     </div>
     <div class="tabs-header nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php $tabIndex = 0; ?>

@@ -190,11 +190,18 @@ function summaryInput(kind){
   return (kind==='mod' ? document.getElementById('summary-mod')
                        : document.getElementById('summary-con'));
 }
+function formatSummaryList(items){
+  const values = (items || []).filter(Boolean);
+  if(values.length === 0) return '';
+  if(values.length === 1) return values[0];
+  if(values.length === 2) return values[0] + ' y ' + values[1];
+  return values.slice(0, -1).join(', ') + ' y ' + values[values.length - 1];
+}
 function updateSummary(kind){
   const arr = (kind==='mod' ? modOrder : conOrder);
   const input = summaryInput(kind);
   if(!input) return;
-  input.value = arr.join(', ');
+  input.value = formatSummaryList(arr);
   if(!arr.length){ input.value=''; input.placeholder='Selecciona opciones…'; }
 }
 function onOptionChange(ev){

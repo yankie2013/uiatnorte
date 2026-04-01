@@ -12,6 +12,13 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function ipost($k,$d=null){ return isset($_POST[$k]) ? trim($_POST[$k]) : $d; }
 function iget($k,$d=null){ return isset($_GET[$k])  ? trim($_GET[$k])  : $d; }
 function okjson($arr){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($arr,JSON_UNESCAPED_UNICODE); exit; }
+function safe_return_to($value, $fallback){
+  $value = trim((string)$value);
+  if ($value === '') return $fallback;
+  if (preg_match('#^(https?:)?//#i', $value)) return $fallback;
+  if ($value[0] === '/') return $fallback;
+  return $value;
+}
 
 $repo = new InvolucradoVehiculoRepository($pdo);
 $service = new InvolucradoVehiculoService($repo);
@@ -62,6 +69,7 @@ if (iget('ajax')==='crear_vehiculo' && $_SERVER['REQUEST_METHOD']==='POST') {
 
 $accidentes = $repo->accidentes();
 $accidente_id = (int)iget('accidente_id', ($accidentes[0]['id'] ?? 0));
+$return_to = safe_return_to(iget('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
 $categorias = $repo->categorias();
 $marcas     = $repo->marcas();
 $tipos = $carrocerias = $modelos = [];
@@ -82,11 +90,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
       'observaciones' => ipost('observaciones',''),
       'next' => (int)ipost('next',0),
     ]);
-    if($result['next']===1) header('Location: involucrados_vehiculos_nuevo.php?ok=1&accidente_id='.$result['accidente_id']);
-    else header('Location: involucrados_vehiculos_listar.php?ok=1&accidente_id='.$result['accidente_id']);
+    $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
+    if($result['next']===1) header('Location: involucrados_vehiculos_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].'&return_to='.urlencode($postReturnTo));
+    else header('Location: '.$postReturnTo);
     exit;
   }catch(Throwable $e){
     $err = 'Error al guardar: '.$e->getMessage();
+    $return_to = safe_return_to(ipost('return_to', $return_to), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
   }
 }
 ?><!doctype html>
@@ -478,6 +488,7 @@ body.modal-open{ overflow: hidden !important; }
   <?php if($err): ?><div class="err"><?=h($err)?></div><?php endif; ?>
 
   <form method="post" class="card" autocomplete="off" id="formIV">
+    <input type="hidden" name="return_to" value="<?=h($return_to)?>">
     <input type="hidden" name="next" id="next" value="0">
 
     <div class="row">
@@ -572,7 +583,7 @@ body.modal-open{ overflow: hidden !important; }
     <textarea name="observaciones" rows="3" placeholder="Notas breves…"></textarea>
 
     <div class="actions">
-      <a class="btn" href="involucrados_vehiculos_listar.php?accidente_id=<?=h($accidente_id)?>">Cancelar</a>
+      <a class="btn" href="<?=h($return_to)?>">Cancelar</a>
       <button class="btn primary" type="submit" id="btnGuardar">Guardar</button>
       <button class="btn safe" type="submit" id="btnNext">Agregar siguiente vehículo</button>
     </div>

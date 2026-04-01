@@ -248,8 +248,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         'estado' => $estado,
       ]);
 
-      $base = rtrim(dirname($_SERVER['PHP_SELF']),'/').'/';
-      header("Location: {$base}accidente_nuevo.php?id={$result['id']}&sidpol=".urlencode($result['sidpol']));
+      header("Location: accidente_vista_tabs.php?accidente_id=".(int)$result['id']);
       exit;
 
       $pdo->beginTransaction();
@@ -293,8 +292,7 @@ $upd->execute([$sidpol_gen, $newId]);
       // Calcular SIDPOL generado para el redirect (mismo formato del LPAD) // NUEVO
       $sidpol_gen = str_pad((string)$newId, 8, '0', STR_PAD_LEFT);
 
-      $base = rtrim(dirname($_SERVER['PHP_SELF']),'/').'/';
-      header("Location: {$base}accidente_nuevo.php?id={$newId}&sidpol=".urlencode($sidpol_gen));
+      header("Location: accidente_vista_tabs.php?accidente_id=".(int)$newId);
       exit;
     }catch(Exception $e){
       if($pdo->inTransaction()) $pdo->rollBack();
@@ -331,38 +329,15 @@ include __DIR__ . '/sidebar.php';
 
   <div class="card">
     <form class="grid" method="post" onsubmit="return validarForm();">
-      <!-- SIDPOL (autogenerado) + Registro SIDPOL + botones de participantes -->
+      <!-- SIDPOL (autogenerado) + Registro SIDPOL -->
       <div class="col-3">
         <label>SIDPOL</label>
         <input type="text" id="sidpol" value="<?=h($sidpol_url)?>" readonly placeholder="Se autogenera al guardar">
       </div>
 
-      <div class="col-3">
+      <div class="col-6">
         <label>Registro SIDPOL</label>
         <input type="text" name="registro_sidpol" id="registro_sidpol" maxlength="50" placeholder="Opcional">
-      </div>
-
-      <div class="col-6">
-        <label style="visibility:hidden">.</label>
-        <div class="pills">
-          <?php if ($accidente_id): ?>
-            <a class="pillbtn"
-               href="#"
-               data-modal="modal-veh"
-               data-src="involucrados_vehiculos_nuevo.php?embed=1&accidente_id=<?=$accidente_id?>&sidpol=<?=urlencode($sidpol_url)?>">
-               🚗 Participantes Vehículos
-            </a>
-            <a class="pillbtn"
-               href="#"
-               data-modal="modal-per"
-               data-src="involucrados_personas_nuevo.php?embed=1&accidente_id=<?=$accidente_id?>&sidpol=<?=urlencode($sidpol_url)?>">
-               👥 Participantes Personas
-            </a>
-          <?php else: ?>
-            <span class="pillbtn disabled">🚗 Participantes Vehículos</span>
-            <span class="pillbtn disabled">👥 Participantes Personas</span>
-          <?php endif; ?>
-        </div>
       </div>
 
       <!-- ESTADO -->
