@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
@@ -10,6 +10,7 @@ header('Content-Type: text/html; charset=utf-8');
 
 function h($s){ return htmlspecialchars((string)($s ?? ''), ENT_QUOTES, 'UTF-8'); }
 function g($k,$d=null){ return isset($_GET[$k]) ? trim((string)$_GET[$k]) : $d; }
+function p($k,$d=null){ return isset($_POST[$k]) ? trim((string)$_POST[$k]) : $d; }
 
 function render_docveh_error(string $message, int $status = 400): void {
     http_response_code($status);
@@ -23,6 +24,19 @@ $invol_id = (int) (g('invol_id', 0) ?: ($_POST['involucrado_vehiculo_id'] ?? 0))
 if ($invol_id <= 0) {
     render_docveh_error('Falta el parametro invol_id.');
 }
+
+$allowedSections = [
+    'propiedad' => 'Tarjeta de Propiedad',
+    'soat' => 'SOAT',
+    'revision' => 'Revision Tecnica',
+    'peritaje' => 'Peritaje',
+];
+$section = strtolower((string) (g('section', p('section', '')) ?? ''));
+if (!isset($allowedSections[$section])) {
+    $section = '';
+}
+$singleCardMode = $section !== '';
+$sectionTitle = $singleCardMode ? ' · ' . $allowedSections[$section] : '';
 
 $info = $service->contextoNuevo($invol_id);
 if (!$info) {
@@ -49,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Documento de Vehiculo - Nuevo</title>
+<title>Documento de Vehiculo - Nuevo<?= h($sectionTitle) ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
 <style>
@@ -69,6 +83,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   align-items:start;
 }
 .cards-2col > .card{ min-width:0; height:100%; }
+.cards-2col.single-card-mode{
+  grid-template-columns: 1fr !important;
+}
+.cards-2col.single-card-mode > .card{
+  display:none;
+}
+.cards-2col.single-card-mode > .card.is-active{
+  display:block;
+}
 @media (max-width: 640px){ .cards-2col{ grid-template-columns: 1fr !important; } }
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .col-span-2{ grid-column: 1 / -1; }
@@ -108,6 +131,9 @@ textarea{ min-height:96px; resize:vertical; }
 <div class="topbar">
   <div>
     <div class="title">Nuevo - Documento de Vehiculo</div>
+    <?php if ($singleCardMode): ?>
+      <div class="muted" style="margin-top:4px;"><?= h($allowedSections[$section]) ?></div>
+    <?php endif; ?>
     <div class="vehicle-chip">
       <?php if (!empty($info['placa'])): ?>
         <span>Placa: <b><?=h($info['placa'])?></b></span>
@@ -124,10 +150,11 @@ textarea{ min-height:96px; resize:vertical; }
 <form method="post" autocomplete="off" id="formDocVeh">
   <input type="hidden" name="involucrado_vehiculo_id" value="<?=h($invol_id)?>">
   <input type="hidden" name="vehiculo_id" value="<?= h($form['vehiculo_id']) ?>">
+  <input type="hidden" name="section" value="<?= h($section) ?>">
   <textarea name="danos_peritaje" id="danos_peritaje" hidden><?=h($form['danos_peritaje'])?></textarea>
 
-  <div class="cards-2col">
-    <div class="card">
+  <div class="cards-2col<?= $singleCardMode ? ' single-card-mode' : '' ?>">
+    <div class="card<?= $section === 'propiedad' ? ' is-active' : '' ?>" data-doc-section="propiedad">
       <div class="card-h">Tarjeta de Propiedad <small>(SUNARP)</small></div>
       <div class="card-b grid-2">
         <div>
@@ -149,7 +176,7 @@ textarea{ min-height:96px; resize:vertical; }
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'soat' ? ' is-active' : '' ?>" data-doc-section="soat">
       <div class="card-h">SOAT</div>
       <div class="card-b grid-2">
         <div>
@@ -171,7 +198,7 @@ textarea{ min-height:96px; resize:vertical; }
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'revision' ? ' is-active' : '' ?>" data-doc-section="revision">
       <div class="card-h">Revision Tecnica</div>
       <div class="card-b grid-2">
         <div>
@@ -193,7 +220,7 @@ textarea{ min-height:96px; resize:vertical; }
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'peritaje' ? ' is-active' : '' ?>" data-doc-section="peritaje">
       <div class="card-h">Peritaje</div>
       <div class="card-b">
         <div class="grid-2">
@@ -269,6 +296,7 @@ textarea{ min-height:96px; resize:vertical; }
     const row = rowTemplate(value);
     wrap.appendChild(row);
     if (!value) row.querySelector('input').focus();
+    return row;
   }
 
   function syncHidden() {
@@ -282,6 +310,19 @@ textarea{ min-height:96px; resize:vertical; }
   pre.forEach((v) => addRow(v));
 
   addBtn.addEventListener('click', () => addRow(''));
+  wrap.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab' || event.shiftKey) return;
+    if (!event.target || !event.target.classList.contains('danio-input')) return;
+
+    const inputs = Array.from(wrap.querySelectorAll('.danio-input'));
+    const lastInput = inputs[inputs.length - 1];
+    if (event.target !== lastInput) return;
+    if (!event.target.value.trim()) return;
+
+    event.preventDefault();
+    syncHidden();
+    addRow('');
+  });
   form.addEventListener('submit', syncHidden);
 })();
 </script>

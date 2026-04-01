@@ -372,6 +372,16 @@ document.getElementById('tAuto').onclick =()=>applyTheme('auto');
       }
 
       input.oninput = ()=>{ renderControls(container); };
+      input.onkeydown = (event) => {
+        if (event.key !== 'Tab' || event.shiftKey) return;
+        if (!isLast) return;
+        if (input.value.trim() === '') return;
+
+        event.preventDefault();
+        const rowsBox = container.querySelector('.rows');
+        rowsBox.appendChild(makeRow(''));
+        renderControls(container);
+      };
     });
   }
 

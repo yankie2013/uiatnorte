@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
@@ -18,6 +18,19 @@ if ($id <= 0) {
     http_response_code(400);
     exit('ID invalido');
 }
+
+$allowedSections = [
+    'propiedad' => 'Tarjeta de Propiedad',
+    'soat' => 'SOAT',
+    'revision' => 'Revision Tecnica',
+    'peritaje' => 'Peritaje',
+];
+$section = strtolower((string) (g('section', p('section', '')) ?? ''));
+if (!isset($allowedSections[$section])) {
+    $section = '';
+}
+$singleCardMode = $section !== '';
+$sectionTitle = $singleCardMode ? ' · ' . $allowedSections[$section] : '';
 
 $dv = $service->contextoEditar($id);
 if (!$dv) {
@@ -42,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Editar Documento de Vehiculo</title>
+<title>Editar Documento de Vehiculo<?= h($sectionTitle) ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
 <style>
@@ -50,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 .topbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
 .vehicle-chip{ display:inline-flex; gap:10px; padding:10px 14px; border-radius:999px; background:var(--bg-2,rgba(255,255,255,.06)); border:1px solid var(--line,#2a2f36); font-weight:800 }
 .cards-2col{ display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:12px; align-items:start }
+.cards-2col.single-card-mode{ grid-template-columns:1fr }
+.cards-2col.single-card-mode > .card{ display:none }
+.cards-2col.single-card-mode > .card.is-active{ display:block }
 @media(max-width:640px){ .cards-2col{ grid-template-columns:1fr } }
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
 .col-span-2{ grid-column:1 / -1 }
@@ -84,6 +100,9 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 <div class="topbar">
   <div>
     <div class="title">Editar - Documento de Vehiculo #<?=h($id)?></div>
+    <?php if ($singleCardMode): ?>
+      <div class="muted" style="margin-top:4px;"><?= h($allowedSections[$section]) ?></div>
+    <?php endif; ?>
     <div class="vehicle-chip">
       <?php if (!empty($dv['placa'])): ?>
         <span>Placa: <b><?=h($dv['placa'])?></b></span>
@@ -99,10 +118,11 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
   <input type="hidden" name="id" value="<?=h($id)?>">
   <input type="hidden" name="involucrado_vehiculo_id" value="<?=h($dv['invol_id'])?>">
   <input type="hidden" name="vehiculo_id" value="<?=h($dv['vehiculo_id'])?>">
+  <input type="hidden" name="section" value="<?= h($section) ?>">
   <textarea name="danos_peritaje" id="danos_peritaje" hidden><?=h($dv['danos_peritaje'])?></textarea>
 
-  <div class="cards-2col">
-    <div class="card">
+  <div class="cards-2col<?= $singleCardMode ? ' single-card-mode' : '' ?>">
+    <div class="card<?= $section === 'propiedad' ? ' is-active' : '' ?>" data-doc-section="propiedad">
       <div class="card-h">Tarjeta de Propiedad</div>
       <div class="card-b grid-2">
         <div><label>Numero</label><input type="text" name="numero_propiedad" value="<?=h($dv['numero_propiedad'])?>"></div>
@@ -112,7 +132,7 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'soat' ? ' is-active' : '' ?>" data-doc-section="soat">
       <div class="card-h">SOAT</div>
       <div class="card-b grid-2">
         <div><label>Numero</label><input type="text" name="numero_soat" value="<?=h($dv['numero_soat'])?>"></div>
@@ -122,7 +142,7 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'revision' ? ' is-active' : '' ?>" data-doc-section="revision">
       <div class="card-h">Revision Tecnica</div>
       <div class="card-b grid-2">
         <div><label>Numero</label><input type="text" name="numero_revision" value="<?=h($dv['numero_revision'])?>"></div>
@@ -132,7 +152,7 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
       </div>
     </div>
 
-    <div class="card">
+    <div class="card<?= $section === 'peritaje' ? ' is-active' : '' ?>" data-doc-section="peritaje">
       <div class="card-h">Peritaje</div>
       <div class="card-b">
         <div class="grid-2">
@@ -171,11 +191,24 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     inp.oninput = ()=>{ row.classList.toggle('filled', inp.value.trim().length > 0); syncHidden(); };
     row.appendChild(inp); row.appendChild(rm); return row;
   }
-  function addRow(v=''){ const r=rowTemplate(v); wrap.appendChild(r); if(!v) r.querySelector('input').focus(); }
+  function addRow(v=''){ const r=rowTemplate(v); wrap.appendChild(r); if(!v) r.querySelector('input').focus(); return r; }
   function syncHidden(){ hidden.value = Array.from(wrap.querySelectorAll('.danio-input')).map(i=>i.value.trim()).filter(Boolean).join('\n'); }
   const pre = hidden.value ? hidden.value.split(/\r?\n/) : [''];
   pre.forEach(v=>addRow(v));
   addBtn.onclick = ()=>addRow('');
+  wrap.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab' || event.shiftKey) return;
+    if (!event.target || !event.target.classList.contains('danio-input')) return;
+
+    const inputs = Array.from(wrap.querySelectorAll('.danio-input'));
+    const lastInput = inputs[inputs.length - 1];
+    if (event.target !== lastInput) return;
+    if (!event.target.value.trim()) return;
+
+    event.preventDefault();
+    syncHidden();
+    addRow('');
+  });
   form.addEventListener('submit', syncHidden);
 })();
 </script>

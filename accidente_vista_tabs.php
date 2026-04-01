@@ -98,7 +98,7 @@ function person_heading_suffix(array $row): string
 function fecha_hora_corta_esp(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '—';
+        return '�';
     }
 
     $months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -110,7 +110,7 @@ function fecha_hora_corta_esp(?string $value): string
 function fecha_simple(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '—';
+        return '�';
     }
     return date('d/m/Y', strtotime($value));
 }
@@ -118,7 +118,7 @@ function fecha_simple(?string $value): string
 function fecha_hora_simple(?string $value): string
 {
     if (!$value || !strtotime($value)) {
-        return '—';
+        return '�';
     }
     return date('d/m/Y H:i', strtotime($value));
 }
@@ -129,7 +129,7 @@ function join_con_y(array $items): string
     $count = count($items);
 
     if ($count === 0) {
-        return '—';
+        return '�';
     }
     if ($count === 1) {
         return h($items[0]);
@@ -423,7 +423,7 @@ function human_label(string $key): string
 function field_html(string $key, mixed $value): string
 {
     if ($value === null || $value === '') {
-        return '—';
+        return '�';
     }
 
     if (str_ends_with($key, '_en') || str_starts_with($key, 'fecha_')) {
@@ -516,22 +516,22 @@ function oficio_icon(array $row): string
     $haystack = mb_strtolower(trim((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['asunto_detalle'] ?? ''))), 'UTF-8');
 
     if ($haystack === '') {
-        return '📄';
+        return 'ðŸ“„';
     }
     if (str_contains($haystack, 'protocolo')) {
-        return '💀';
+        return 'ðŸ’€';
     }
     if (str_contains($haystack, 'peritaje')) {
-        return '🚗';
+        return 'ðŸš—';
     }
     if (str_contains($haystack, 'camara') || str_contains($haystack, 'cámara')) {
-        return '📷';
+        return 'ðŸ“·';
     }
     if (str_contains($haystack, 'otros documentos') || str_contains($haystack, 'otro documento')) {
-        return '📁';
+        return 'ðŸ“';
     }
 
-    return '📄';
+    return 'ðŸ“„';
 }
 
 function render_editable_fields(array $record, array $fields, string $idPrefix = ''): string
@@ -1883,10 +1883,10 @@ $renderVehiculoSubtabs = static function (
           <div class="inner-panel">
             <div class="module-actions" style="margin-bottom:8px;">
               <?php if ($documentoVehiculoId > 0): ?>
-                <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
                 <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
               <?php elseif ($involucradoVehiculoId > 0): ?>
-                <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
               <?php endif; ?>
             </div>
 
@@ -4662,7 +4662,7 @@ include __DIR__ . '/sidebar.php';
 
       card.querySelectorAll('.js-card-toggle').forEach((button) => {
         button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        button.textContent = expanded ? '−' : '+';
+        button.textContent = expanded ? '-' : '+';
         button.title = expanded ? 'Ocultar detalle' : 'Mostrar detalle';
         button.setAttribute('aria-label', expanded ? 'Ocultar detalle' : 'Mostrar detalle');
       });
@@ -4738,3 +4738,4 @@ include __DIR__ . '/sidebar.php';
 </script>
 </body>
 </html>
+
