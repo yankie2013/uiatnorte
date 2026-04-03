@@ -1,0 +1,11 @@
+deployment:
+  tasks:
+    - echo "Iniciando despliegue UIAT Norte..."
+
+    # Crear carpeta si no existe
+    - /bin/mkdir -p /home/korkayst/public_html
+
+    # Copiar archivos del repo al public_html, incluyendo ocultos y sin .git
+    - /usr/bin/find . -mindepth 1 -maxdepth 1 ! -name .git -exec /bin/cp -R {} /home/korkayst/public_html/ \;
+
+    - echo "Despliegue completado"

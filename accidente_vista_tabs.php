@@ -7,6 +7,7 @@ use App\Repositories\PersonaRepository;
 use App\Repositories\AbogadoRepository;
 use App\Repositories\AccidenteRepository;
 use App\Repositories\DiligenciaPendienteRepository;
+use App\Repositories\ItpRepository;
 use App\Repositories\OficioRepository;
 use App\Repositories\PolicialIntervinienteRepository;
 use App\Repositories\PropietarioVehiculoRepository;
@@ -14,6 +15,7 @@ use App\Repositories\VehiculoRepository;
 use App\Services\AbogadoService;
 use App\Services\AccidenteService;
 use App\Services\DiligenciaPendienteService;
+use App\Services\ItpService;
 use App\Services\OficioService;
 use App\Services\PersonaService;
 use App\Services\PolicialIntervinienteService;
@@ -411,6 +413,39 @@ function human_label(string $key): string
         'veh_notas' => 'Notas del vehículo',
         'veh_creado_en' => 'Vehículo creado en',
         'veh_actualizado_en' => 'Vehículo actualizado en',
+        'fecha_itp' => 'Fecha ITP',
+        'hora_itp' => 'Hora ITP',
+        'forma_via' => 'Forma de la vía',
+        'punto_referencia' => 'Punto de referencia',
+        'ubicacion_gps' => 'Ubicación GPS',
+        'localizacion_unidades' => 'Localización de unidades',
+        'ocurrencia_policial' => 'Ocurrencia policial',
+        'llegada_lugar' => 'Llegada al lugar',
+        'descripcion_via1' => 'Descripción',
+        'configuracion_via1' => 'Configuración',
+        'material_via1' => 'Material',
+        'senializacion_via1' => 'Señalización',
+        'ordenamiento_via1' => 'Ordenamiento',
+        'iluminacion_via1' => 'Iluminación',
+        'visibilidad_via1' => 'Visibilidad',
+        'intensidad_via1' => 'Intensidad',
+        'fluidez_via1' => 'Fluidez',
+        'medidas_via1' => 'Medidas',
+        'observaciones_via1' => 'Observaciones',
+        'descripcion_via2' => 'Descripción',
+        'configuracion_via2' => 'Configuración',
+        'material_via2' => 'Material',
+        'senializacion_via2' => 'Señalización',
+        'ordenamiento_via2' => 'Ordenamiento',
+        'iluminacion_via2' => 'Iluminación',
+        'visibilidad_via2' => 'Visibilidad',
+        'intensidad_via2' => 'Intensidad',
+        'fluidez_via2' => 'Fluidez',
+        'medidas_via2' => 'Medidas',
+        'observaciones_via2' => 'Observaciones',
+        'evidencia_biologica' => 'Evidencia biológica',
+        'evidencia_fisica' => 'Evidencia física',
+        'evidencia_material' => 'Evidencia material',
     ];
 
     if (isset($map[$key])) {
@@ -462,6 +497,22 @@ function render_field_cards(array $record, array $fields): string
         $html .= '<div class="field-value">' . field_html($key, $record[$key] ?? null) . '</div>';
         $html .= '</div>';
     }
+    return $html;
+}
+
+function render_csv_list_html(?string $value): string
+{
+    $items = array_values(array_filter(array_map('trim', explode(',', (string) $value)), static fn($item): bool => $item !== ''));
+    if ($items === []) {
+        return '—';
+    }
+
+    $html = '<ul class="itp-list">';
+    foreach ($items as $item) {
+        $html .= '<li>' . h($item) . '</li>';
+    }
+    $html .= '</ul>';
+
     return $html;
 }
 
@@ -943,6 +994,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             json_response(['ok' => true, 'message' => 'Abogado actualizado correctamente.']);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'save_itp_inline') {
+        try {
+            $itpId = (int) ($_POST['itp_id'] ?? 0);
+            if ($itpId <= 0) {
+                throw new InvalidArgumentException('ITP no encontrado.');
+            }
+
+            $itpService = new ItpService(new ItpRepository($pdo));
+            $registro = $itpService->detalle($itpId);
+            if ($registro === null) {
+                throw new InvalidArgumentException('ITP no encontrado.');
+            }
+
+            $via2Flag = (int) ($_POST['via2_flag'] ?? 0) === 1 ? 1 : 0;
+
+            $itpService->update($itpId, [
+                'accidente_id' => (int) ($registro['accidente_id'] ?? 0),
+                'fecha_itp' => $_POST['fecha_itp'] ?? '',
+                'hora_itp' => $_POST['hora_itp'] ?? '',
+                'ocurrencia_policial' => $_POST['ocurrencia_policial'] ?? '',
+                'llegada_lugar' => $_POST['llegada_lugar'] ?? '',
+                'localizacion_unidades' => $_POST['localizacion_unidades'] ?? '',
+                'forma_via' => $_POST['forma_via'] ?? '',
+                'punto_referencia' => $_POST['punto_referencia'] ?? '',
+                'ubicacion_gps' => $_POST['ubicacion_gps'] ?? '',
+                'descripcion_via1' => $_POST['descripcion_via1'] ?? '',
+                'configuracion_via1' => $_POST['configuracion_via1'] ?? '',
+                'material_via1' => $_POST['material_via1'] ?? '',
+                'senializacion_via1' => $_POST['senializacion_via1'] ?? '',
+                'ordenamiento_via1' => $_POST['ordenamiento_via1'] ?? '',
+                'iluminacion_via1' => $_POST['iluminacion_via1'] ?? '',
+                'visibilidad_via1' => $_POST['visibilidad_via1'] ?? '',
+                'intensidad_via1' => $_POST['intensidad_via1'] ?? '',
+                'fluidez_via1' => $_POST['fluidez_via1'] ?? '',
+                'medidas_via1' => $_POST['medidas_via1'] ?? '',
+                'observaciones_via1' => $_POST['observaciones_via1'] ?? '',
+                'via2_flag' => $via2Flag,
+                'descripcion_via2' => $_POST['descripcion_via2'] ?? '',
+                'configuracion_via2' => $_POST['configuracion_via2'] ?? '',
+                'material_via2' => $_POST['material_via2'] ?? '',
+                'senializacion_via2' => $_POST['senializacion_via2'] ?? '',
+                'ordenamiento_via2' => $_POST['ordenamiento_via2'] ?? '',
+                'iluminacion_via2' => $_POST['iluminacion_via2'] ?? '',
+                'visibilidad_via2' => $_POST['visibilidad_via2'] ?? '',
+                'intensidad_via2' => $_POST['intensidad_via2'] ?? '',
+                'fluidez_via2' => $_POST['fluidez_via2'] ?? '',
+                'medidas_via2' => $_POST['medidas_via2'] ?? '',
+                'observaciones_via2' => $_POST['observaciones_via2'] ?? '',
+                'evidencia_biologica' => $_POST['evidencia_biologica'] ?? '',
+                'evidencia_fisica' => $_POST['evidencia_fisica'] ?? '',
+                'evidencia_material' => $_POST['evidencia_material'] ?? '',
+            ]);
+
+            json_response(['ok' => true, 'message' => 'ITP actualizado correctamente.']);
         } catch (Throwable $e) {
             json_response(['ok' => false, 'message' => $e->getMessage()], 422);
         }
@@ -1635,6 +1745,21 @@ $documentosRecibidos = safe_query_all(
     [$accidente_id]
 );
 
+$itps = safe_query_all(
+    $pdo,
+    "SELECT i.*,
+            a.registro_sidpol,
+            a.fecha_accidente,
+            a.lugar
+       FROM itp i
+  LEFT JOIN accidentes a ON a.id = i.accidente_id
+      WHERE i.accidente_id = ?
+   ORDER BY COALESCE(i.fecha_itp, '9999-12-31') DESC,
+            COALESCE(i.hora_itp, '23:59:59') DESC,
+            i.id DESC",
+    [$accidente_id]
+);
+
 $diligencias = safe_query_all(
     $pdo,
     "SELECT dp.*,
@@ -2168,6 +2293,108 @@ include __DIR__ . '/sidebar.php';
   .tabs-header{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
   .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#3f4e68;border-radius:10px;padding:7px 9px;font-weight:800;font-size:12px;line-height:1.1;white-space:nowrap}
   .tabs-header .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
+  .main-tabs{gap:10px;padding:8px 6px 10px;margin-bottom:8px;border-bottom:1px solid rgba(188,198,216,.7)}
+  .main-tabs .nav-link{
+    position:relative;
+    overflow:hidden;
+    min-width:140px;
+    border-radius:18px;
+    padding:13px 18px 12px;
+    border:1px solid #d7dfec;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(241,245,252,.94) 100%);
+    color:#31425f;
+    box-shadow:
+      0 12px 28px rgba(17,24,39,.07),
+      inset 0 1px 0 rgba(255,255,255,.88);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+  }
+  .main-tabs .nav-link::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:5px;
+    border-radius:18px 0 0 18px;
+    background:linear-gradient(180deg,#7c93c6 0%,#516b9f 100%);
+    opacity:.72;
+  }
+  .main-tabs .nav-link::after{
+    content:"";
+    position:absolute;
+    inset:auto 16px 8px;
+    height:3px;
+    border-radius:999px;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.88) 50%,rgba(255,255,255,0) 100%);
+    opacity:0;
+    transform:scaleX(.55);
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .main-tabs .nav-link:hover{
+    transform:translateY(-2px);
+    border-color:#c5d2e5;
+    color:#22344f;
+    box-shadow:
+      0 16px 34px rgba(17,24,39,.11),
+      0 0 0 1px rgba(148,163,184,.08) inset;
+  }
+  .main-tabs .nav-link.active{
+    color:#17263c;
+    border-color:transparent;
+    background:
+      linear-gradient(135deg,rgba(255,255,255,.98) 0%,rgba(240,247,255,.96) 38%,rgba(230,241,255,.98) 100%);
+    box-shadow:
+      0 18px 38px rgba(37,99,235,.14),
+      0 0 0 1px rgba(255,255,255,.55) inset;
+  }
+  .main-tabs .nav-link.active::after{
+    opacity:1;
+    transform:scaleX(1);
+  }
+  .main-tabs .nav-link.tab-itp::before{background:linear-gradient(180deg,#0f766e 0%,#14b8a6 100%)}
+  .main-tabs .nav-link.tab-participantes::before{background:linear-gradient(180deg,#2563eb 0%,#60a5fa 100%)}
+  .main-tabs .nav-link.tab-documentos::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
+  .main-tabs .nav-link.tab-diligencias::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
+  .main-tabs .nav-link.tab-itp.active{
+    background:linear-gradient(135deg,#f2fffc 0%,#dbfaf3 48%,#c8f4ec 100%);
+    box-shadow:0 18px 38px rgba(20,184,166,.17), 0 0 0 1px rgba(255,255,255,.58) inset;
+  }
+  .main-tabs .nav-link.tab-participantes.active{
+    background:linear-gradient(135deg,#f5f9ff 0%,#e5f0ff 48%,#d8e8ff 100%);
+    box-shadow:0 18px 38px rgba(37,99,235,.16), 0 0 0 1px rgba(255,255,255,.58) inset;
+  }
+  .main-tabs .nav-link.tab-documentos.active{
+    background:linear-gradient(135deg,#fffaf0 0%,#ffefc1 52%,#ffe39c 100%);
+    box-shadow:0 18px 38px rgba(217,119,6,.18), 0 0 0 1px rgba(255,255,255,.52) inset;
+  }
+  .main-tabs .nav-link.tab-diligencias.active{
+    background:linear-gradient(135deg,#faf5ff 0%,#f0e8ff 50%,#e5d8ff 100%);
+    box-shadow:0 18px 38px rgba(124,58,237,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
+  }
+  .main-tabs .main-tab-title{
+    display:block;
+    margin-bottom:3px;
+    font-size:16px;
+    font-weight:900;
+    letter-spacing:-.02em;
+  }
+  .main-tabs .tab-sub{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.01em;
+    opacity:.78;
+  }
+  .main-tabs .tab-sub::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:999px;
+    background:currentColor;
+    opacity:.4;
+    flex:0 0 auto;
+  }
   .tabs-header .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
   .tabs-header .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
   .tabs-header .nav-link.tab-herido{border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
@@ -2175,6 +2402,16 @@ include __DIR__ . '/sidebar.php';
   .tabs-header .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
   .tabs-header .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
   .tabs-header .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
+  .participant-tabs{margin-bottom:6px}
+  .participant-tabs .nav-link{border:1px solid var(--line);background:#eef2f8;color:#3f4e68;border-radius:10px;padding:7px 9px;font-weight:800;font-size:12px;line-height:1.1;white-space:nowrap}
+  .participant-tabs .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
+  .participant-tabs .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
+  .participant-tabs .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
+  .participant-tabs .nav-link.tab-herido{border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
+  .participant-tabs .nav-link.tab-herido.active{background:linear-gradient(180deg,#fff1b8 0%,#ffe89a 100%);border-color:#e0ba36;color:#8a6500;box-shadow:0 0 0 1px rgba(224,186,54,.16) inset, 0 8px 18px rgba(224,186,54,.16)}
+  .participant-tabs .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
+  .participant-tabs .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
+  .participant-tabs .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
   .tab-panel{position:relative;overflow:hidden;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
   .tab-panel.driver-panel{
     border-color:#44f7b2;
@@ -2277,6 +2514,7 @@ include __DIR__ . '/sidebar.php';
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
   .field-card.span-2{grid-column:span 2}
+  .field-card.span-4{grid-column:span 4}
   .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
   .edit-label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin-bottom:3px}
   .field-value{font-size:12px;line-height:1.28;font-weight:800;word-break:break-word}
@@ -2348,6 +2586,15 @@ include __DIR__ . '/sidebar.php';
   .record-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.3;font-weight:700}
   .record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .record-chipline{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+  .itp-list{margin:0;padding-left:18px;color:var(--ink);font-size:12px;font-weight:800;line-height:1.35}
+  .itp-list li + li{margin-top:4px}
+  .itp-builder{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fbfcfe}
+  .itp-builder-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .itp-builder-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(148,163,184,.08)}
+  .itp-builder-item span{font-size:12px;font-weight:800;line-height:1.35}
+  .itp-builder-row{display:flex;gap:8px;flex-wrap:wrap}
+  .itp-builder-row .edit-control{flex:1}
+  .itp-builder-row .btn-shell{flex:0 0 auto}
   .inline-workbench{margin:0 0 8px;border:1px solid #d8e0ed;border-radius:13px;background:#f7f9fd;overflow:hidden}
   .inline-workbench[hidden]{display:none}
   .inline-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line);background:#eef3fb}
@@ -2387,6 +2634,12 @@ include __DIR__ . '/sidebar.php';
     .person-title h2{font-size:16px}
     .tabs-header .nav-link{padding:6px 8px;font-size:11px}
     .tabs-header .tab-sub{font-size:9px}
+    .main-tabs{gap:8px;padding:6px 2px 10px}
+    .main-tabs .nav-link{min-width:128px;padding:11px 14px 11px;border-radius:16px}
+    .main-tabs .main-tab-title{font-size:14px}
+    .main-tabs .tab-sub{font-size:10px}
+    .participant-tabs .nav-link{padding:6px 8px;font-size:11px}
+    .participant-tabs .tab-sub{font-size:9px}
     .inner-tabs .nav-link{padding:5px 7px;font-size:10px}
     .inline-frame{height:460px}
     .data-card{min-height:auto}
@@ -2724,41 +2977,327 @@ include __DIR__ . '/sidebar.php';
   </div>
 
   <div class="tabs-shell">
-    <div class="tabs-toolbar">
-      <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo persona involucrada</a>
-      <a class="btn-shell" href="involucrados_vehiculos_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo vehículo involucrado</a>
-    </div>
-    <div class="tabs-header nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
-      <?php $tabIndex = 0; ?>
-      <?php foreach ($personas as $persona): ?>
-        <?php $tabId = 'persona-' . (int) $persona['involucrado_id']; ?>
-        <button class="nav-link <?= h(person_tab_tone_class($persona)) ?> <?= $tabIndex === 0 ? 'active' : '' ?>" id="<?= h($tabId) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tabId) ?>" type="button" role="tab">
-          <?= h(tab_person_short_name($persona)) ?>
-          <span class="tab-sub"><?= h(tab_person_label($persona)) ?></span>
-        </button>
-        <?php $tabIndex++; ?>
-      <?php endforeach; ?>
+    <div class="tabs-header main-tabs nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php
-        $fixedTabs = [
-            ['id' => 'efectivo-policial', 'label' => 'Efectivo policial', 'count' => count($policias)],
-            ['id' => 'propietario-vehiculo', 'label' => 'Propietario vehículo', 'count' => count($propietarios)],
-            ['id' => 'familiar-fallecido', 'label' => 'Familiar fallecido', 'count' => count($familiares)],
-            ['id' => 'abogados', 'label' => 'Abogados', 'count' => count($abogados)],
+        $mainTabs = [
+            ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
+            ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
-            ['id' => 'diligencias-pendientes', 'label' => 'Diligencias pendientes', 'count' => count($diligencias)],
+            ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
         ];
       ?>
-      <?php foreach ($fixedTabs as $fixed): ?>
-        <button class="nav-link <?= $tabIndex === 0 ? 'active' : '' ?>" id="<?= h($fixed['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($fixed['id']) ?>" type="button" role="tab">
-          <?= h($fixed['label']) ?>
-          <span class="tab-sub"><?= h((string) $fixed['count']) ?> registro(s)</span>
+      <?php foreach ($mainTabs as $index => $tab): ?>
+        <button class="nav-link tab-<?= h((string) $tab['id']) ?> <?= $index === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
+          <span class="main-tab-title"><?= h($tab['label']) ?></span>
+          <span class="tab-sub"><?= h((string) $tab['count']) ?> registro(s)</span>
         </button>
-        <?php $tabIndex++; ?>
       <?php endforeach; ?>
     </div>
 
     <div class="tab-content mt-2">
-      <?php $paneIndex = 0; ?>
+      <div class="tab-pane fade show active" id="itp" role="tabpanel">
+        <div class="tab-panel">
+          <?php
+            $itpGeneralFields = ['fecha_itp', 'hora_itp', 'forma_via', ['key' => 'punto_referencia', 'class' => 'span-2'], ['key' => 'ubicacion_gps', 'class' => 'span-2']];
+            $itpViaSimpleFields = ['configuracion_via1', 'material_via1', 'senializacion_via1', 'ordenamiento_via1', 'iluminacion_via1', 'visibilidad_via1', 'intensidad_via1', 'fluidez_via1'];
+            $itpVia2SimpleFields = ['configuracion_via2', 'material_via2', 'senializacion_via2', 'ordenamiento_via2', 'iluminacion_via2', 'visibilidad_via2', 'intensidad_via2', 'fluidez_via2'];
+            $itpEditGeneralFields = [
+                ['name' => 'fecha_itp', 'type' => 'date'],
+                ['name' => 'hora_itp', 'type' => 'time'],
+                ['name' => 'forma_via'],
+                ['name' => 'punto_referencia', 'class' => 'span-2'],
+                ['name' => 'ubicacion_gps', 'class' => 'span-2'],
+            ];
+            $itpEditVia1Fields = [
+                ['name' => 'descripcion_via1', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+                ['name' => 'configuracion_via1'],
+                ['name' => 'material_via1'],
+                ['name' => 'senializacion_via1'],
+                ['name' => 'ordenamiento_via1'],
+                ['name' => 'iluminacion_via1'],
+                ['name' => 'visibilidad_via1'],
+                ['name' => 'intensidad_via1'],
+                ['name' => 'fluidez_via1'],
+            ];
+            $itpEditVia2Fields = [
+                ['name' => 'descripcion_via2', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+                ['name' => 'configuracion_via2'],
+                ['name' => 'material_via2'],
+                ['name' => 'senializacion_via2'],
+                ['name' => 'ordenamiento_via2'],
+                ['name' => 'iluminacion_via2'],
+                ['name' => 'visibilidad_via2'],
+                ['name' => 'intensidad_via2'],
+                ['name' => 'fluidez_via2'],
+            ];
+            $itpEditEvidenceFields = [
+                ['name' => 'evidencia_biologica', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+                ['name' => 'evidencia_fisica', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+                ['name' => 'evidencia_material', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
+            ];
+          ?>
+          <div class="module-actions" style="margin-bottom:8px;">
+            <a class="btn-shell" href="itp_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo ITP</a>
+            <a class="btn-shell" href="itp_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+            <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Datos generales SIDPOL</a>
+          </div>
+          <?php if (!$itps): ?>
+            <div class="empty-state">No hay registros ITP para este accidente.</div>
+          <?php else: ?>
+            <div class="module-grid">
+              <?php foreach ($itps as $row): ?>
+                <?php
+                  $hasVia2 = false;
+                  foreach ([
+                    'descripcion_via2', 'configuracion_via2', 'material_via2', 'senializacion_via2', 'ordenamiento_via2',
+                    'iluminacion_via2', 'visibilidad_via2', 'intensidad_via2', 'fluidez_via2', 'medidas_via2', 'observaciones_via2'
+                  ] as $field) {
+                    if (!empty($row[$field])) {
+                        $hasVia2 = true;
+                        break;
+                    }
+                  }
+                  $itpShell = 'itp-' . (int) $row['id'];
+                ?>
+                <article class="module-card">
+                  <header>
+                    <div>
+                      <h4>ITP #<?= (int) $row['id'] ?></h4>
+                      <p>
+                        <?= h((string) (($row['fecha_itp'] ?? '') !== '' ? fecha_simple((string) $row['fecha_itp']) : 'Sin fecha')) ?>
+                        <?php if (!empty($row['hora_itp'])): ?> · <?= h((string) $row['hora_itp']) ?><?php endif; ?>
+                      </p>
+                    </div>
+                    <span class="chip-simple">SIDPOL <?= h((string) (($row['registro_sidpol'] ?? '') !== '' ? $row['registro_sidpol'] : '—')) ?></span>
+                  </header>
+                  <div class="module-meta">
+                    <span class="chip-simple"><?= h((string) (($row['forma_via'] ?? '') !== '' ? $row['forma_via'] : 'Sin forma de vía')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['punto_referencia'] ?? '') !== '' ? $row['punto_referencia'] : 'Sin punto de referencia')) ?></span>
+                    <?php if (!empty($row['ubicacion_gps'])): ?><a class="chip-simple" href="https://www.google.com/maps?q=<?= urlencode((string) $row['ubicacion_gps']) ?>" target="_blank" rel="noopener">GPS</a><?php endif; ?>
+                  </div>
+                  <div class="editable-shell" data-edit-shell="<?= h($itpShell) ?>">
+                    <div class="editable-toolbar">
+                      <div class="record-actions" style="margin-top:0">
+                        <a class="btn-shell" href="itp_ver.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+                        <a class="btn-shell" href="itp_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
+                      </div>
+                      <div class="editable-actions">
+                        <button type="button" class="btn-shell js-edit-start" data-shell="<?= h($itpShell) ?>">Editar</button>
+                        <div class="editable-actions" data-edit-actions="<?= h($itpShell) ?>" hidden>
+                          <button type="button" class="btn-shell js-edit-cancel" data-shell="<?= h($itpShell) ?>">Cancelar</button>
+                          <button type="submit" class="btn-shell btn-primary" form="itp-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="inline-edit-error" id="itp-inline-error-<?= (int) $row['id'] ?>"></div>
+
+                    <div class="editable-view" data-edit-view="<?= h($itpShell) ?>">
+                      <div class="section-block">
+                        <h3>Datos generales</h3>
+                        <div class="field-grid"><?= render_field_cards($row, $itpGeneralFields) ?></div>
+                        <div class="field-grid" style="margin-top:6px;">
+                          <div class="field-card span-4">
+                            <div class="field-label">Ocurrencia policial</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['ocurrencia_policial'] ?? '') !== '' ? $row['ocurrencia_policial'] : '—'))) ?></div>
+                          </div>
+                          <div class="field-card span-2">
+                            <div class="field-label">Localización de unidades</div>
+                            <div class="field-value"><?= render_csv_list_html((string) ($row['localizacion_unidades'] ?? '')) ?></div>
+                          </div>
+                          <div class="field-card span-2">
+                            <div class="field-label">Llegada al lugar</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['llegada_lugar'] ?? '') !== '' ? $row['llegada_lugar'] : '—'))) ?></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="section-block">
+                        <h3>Vía 1</h3>
+                        <div class="field-grid">
+                          <div class="field-card span-2">
+                            <div class="field-label">Descripción</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['descripcion_via1'] ?? '') !== '' ? $row['descripcion_via1'] : '—'))) ?></div>
+                          </div>
+                          <?= render_field_cards($row, $itpViaSimpleFields) ?>
+                          <div class="field-card span-2">
+                            <div class="field-label">Medidas</div>
+                            <div class="field-value"><?= render_csv_list_html((string) ($row['medidas_via1'] ?? '')) ?></div>
+                          </div>
+                          <div class="field-card span-2">
+                            <div class="field-label">Observaciones</div>
+                            <div class="field-value"><?= render_csv_list_html((string) ($row['observaciones_via1'] ?? '')) ?></div>
+                          </div>
+                        </div>
+                      </div>
+                      <?php if ($hasVia2): ?>
+                        <div class="section-block">
+                          <h3>Vía 2</h3>
+                          <div class="field-grid">
+                            <div class="field-card span-2">
+                              <div class="field-label">Descripción</div>
+                              <div class="field-value"><?= nl2br(h((string) (($row['descripcion_via2'] ?? '') !== '' ? $row['descripcion_via2'] : '—'))) ?></div>
+                            </div>
+                            <?= render_field_cards($row, $itpVia2SimpleFields) ?>
+                            <div class="field-card span-2">
+                              <div class="field-label">Medidas</div>
+                              <div class="field-value"><?= render_csv_list_html((string) ($row['medidas_via2'] ?? '')) ?></div>
+                            </div>
+                            <div class="field-card span-2">
+                              <div class="field-label">Observaciones</div>
+                              <div class="field-value"><?= render_csv_list_html((string) ($row['observaciones_via2'] ?? '')) ?></div>
+                            </div>
+                          </div>
+                        </div>
+                      <?php endif; ?>
+                      <div class="section-block">
+                        <h3>Evidencias</h3>
+                        <div class="field-grid">
+                          <div class="field-card span-2">
+                            <div class="field-label">Evidencia biológica</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['evidencia_biologica'] ?? '') !== '' ? $row['evidencia_biologica'] : '—'))) ?></div>
+                          </div>
+                          <div class="field-card span-2">
+                            <div class="field-label">Evidencia física</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['evidencia_fisica'] ?? '') !== '' ? $row['evidencia_fisica'] : '—'))) ?></div>
+                          </div>
+                          <div class="field-card span-2">
+                            <div class="field-label">Evidencia material</div>
+                            <div class="field-value"><?= nl2br(h((string) (($row['evidencia_material'] ?? '') !== '' ? $row['evidencia_material'] : '—'))) ?></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <form class="editable-form js-inline-ajax-form" id="itp-inline-form-<?= (int) $row['id'] ?>" data-shell="<?= h($itpShell) ?>" data-error="itp-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
+                      <input type="hidden" name="action" value="save_itp_inline">
+                      <input type="hidden" name="itp_id" value="<?= (int) $row['id'] ?>">
+                      <div class="section-block">
+                        <h3>Datos generales</h3>
+                        <div class="field-grid"><?= render_editable_fields($row, $itpEditGeneralFields, 'itp-general-' . (int) $row['id']) ?></div>
+                        <div class="field-grid" style="margin-top:6px;">
+                          <div class="field-card edit-field span-4">
+                            <label class="edit-label" for="itp-general-ocurrencia-<?= (int) $row['id'] ?>">Ocurrencia policial</label>
+                            <textarea class="edit-control" id="itp-general-ocurrencia-<?= (int) $row['id'] ?>" name="ocurrencia_policial" rows="6"><?= h((string) ($row['ocurrencia_policial'] ?? '')) ?></textarea>
+                          </div>
+                          <div class="field-card edit-field span-2">
+                            <label class="edit-label" for="itp-general-localizacion-<?= (int) $row['id'] ?>">Localización de unidades</label>
+                            <textarea class="edit-control" id="itp-general-localizacion-<?= (int) $row['id'] ?>" name="localizacion_unidades" rows="5"><?= h((string) ($row['localizacion_unidades'] ?? '')) ?></textarea>
+                          </div>
+                          <div class="field-card edit-field span-2">
+                            <label class="edit-label" for="itp-general-llegada-<?= (int) $row['id'] ?>">Llegada al lugar</label>
+                            <textarea class="edit-control" id="itp-general-llegada-<?= (int) $row['id'] ?>" name="llegada_lugar" rows="5"><?= h((string) ($row['llegada_lugar'] ?? '')) ?></textarea>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="section-block">
+                        <h3>Vía 1</h3>
+                        <div class="field-grid"><?= render_editable_fields($row, $itpEditVia1Fields, 'itp-via1-' . (int) $row['id']) ?></div>
+                        <div class="section-block">
+                          <h3>Medidas</h3>
+                          <div class="itp-builder measurebox js-itp-measurebox" data-values="<?= h((string) ($row['medidas_via1'] ?? '')) ?>">
+                            <div class="itp-builder-row">
+                              <input class="edit-control m-name" type="text" placeholder="Que mides">
+                              <input class="edit-control m-value" type="text" placeholder="Valor">
+                              <button type="button" class="btn-shell m-add">Agregar</button>
+                            </div>
+                            <div class="itp-builder-list measure-list"></div>
+                            <input type="hidden" name="medidas_via1" value="<?= h((string) ($row['medidas_via1'] ?? '')) ?>">
+                          </div>
+                        </div>
+                        <div class="section-block">
+                          <h3>Observaciones</h3>
+                          <div class="itp-builder tagbox js-itp-tagbox" data-values="<?= h((string) ($row['observaciones_via1'] ?? '')) ?>">
+                            <div class="itp-builder-list tag-items"></div>
+                            <div class="itp-builder-row">
+                              <input class="edit-control" type="text" placeholder="Agregar observación">
+                              <button type="button" class="btn-shell">Agregar</button>
+                            </div>
+                            <input type="hidden" name="observaciones_via1" value="<?= h((string) ($row['observaciones_via1'] ?? '')) ?>">
+                          </div>
+                        </div>
+                      </div>
+                      <input type="hidden" name="via2_flag" value="<?= $hasVia2 ? '1' : '0' ?>" class="js-itp-via2-flag">
+                      <div class="record-actions" style="margin-top:0;margin-bottom:6px;">
+                        <button type="button" class="btn-shell js-itp-via2-add" <?= $hasVia2 ? 'hidden' : '' ?>>+ Añadir vía 2</button>
+                        <button type="button" class="btn-shell js-itp-via2-remove" <?= $hasVia2 ? '' : 'hidden' ?>>Quitar vía 2</button>
+                      </div>
+                      <div class="js-itp-via2-section" <?= $hasVia2 ? '' : 'hidden' ?>>
+                        <div class="section-block">
+                          <h3>Vía 2</h3>
+                          <div class="field-grid"><?= render_editable_fields($row, $itpEditVia2Fields, 'itp-via2-' . (int) $row['id']) ?></div>
+                          <div class="section-block">
+                            <h3>Medidas</h3>
+                            <div class="itp-builder measurebox js-itp-measurebox" data-values="<?= h((string) ($row['medidas_via2'] ?? '')) ?>">
+                              <div class="itp-builder-row">
+                                <input class="edit-control m-name" type="text" placeholder="Que mides">
+                                <input class="edit-control m-value" type="text" placeholder="Valor">
+                                <button type="button" class="btn-shell m-add">Agregar</button>
+                              </div>
+                              <div class="itp-builder-list measure-list"></div>
+                              <input type="hidden" name="medidas_via2" value="<?= h((string) ($row['medidas_via2'] ?? '')) ?>">
+                            </div>
+                          </div>
+                          <div class="section-block">
+                            <h3>Observaciones</h3>
+                            <div class="itp-builder tagbox js-itp-tagbox" data-values="<?= h((string) ($row['observaciones_via2'] ?? '')) ?>">
+                              <div class="itp-builder-list tag-items"></div>
+                              <div class="itp-builder-row">
+                                <input class="edit-control" type="text" placeholder="Agregar observación">
+                                <button type="button" class="btn-shell">Agregar</button>
+                              </div>
+                              <input type="hidden" name="observaciones_via2" value="<?= h((string) ($row['observaciones_via2'] ?? '')) ?>">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="section-block">
+                        <h3>Evidencias</h3>
+                        <div class="field-grid"><?= render_editable_fields($row, $itpEditEvidenceFields, 'itp-evid-' . (int) $row['id']) ?></div>
+                      </div>
+                    </form>
+                  </div>
+                </article>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="participantes" role="tabpanel">
+        <div class="tab-panel">
+          <div class="tabs-toolbar">
+            <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo persona involucrada</a>
+            <a class="btn-shell" href="involucrados_vehiculos_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo vehículo involucrado</a>
+          </div>
+          <?php
+            $participantFixedTabs = [
+                ['id' => 'efectivo-policial', 'label' => 'Efectivo policial', 'count' => count($policias)],
+                ['id' => 'propietario-vehiculo', 'label' => 'Propietario vehículo', 'count' => count($propietarios)],
+                ['id' => 'familiar-fallecido', 'label' => 'Familiar fallecido', 'count' => count($familiares)],
+                ['id' => 'abogados', 'label' => 'Abogados', 'count' => count($abogados)],
+            ];
+          ?>
+          <div class="tabs-header participant-tabs nav nav-tabs flex-nowrap" id="participantes-tabs" role="tablist">
+            <?php $participantTabIndex = 0; ?>
+            <?php foreach ($personas as $persona): ?>
+              <?php $tabId = 'persona-' . (int) $persona['involucrado_id']; ?>
+              <button class="nav-link <?= h(person_tab_tone_class($persona)) ?> <?= $participantTabIndex === 0 ? 'active' : '' ?>" id="<?= h($tabId) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tabId) ?>" type="button" role="tab">
+                <?= h(tab_person_short_name($persona)) ?>
+                <span class="tab-sub"><?= h(tab_person_label($persona)) ?></span>
+              </button>
+              <?php $participantTabIndex++; ?>
+            <?php endforeach; ?>
+            <?php foreach ($participantFixedTabs as $tab): ?>
+              <button class="nav-link <?= $participantTabIndex === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
+                <?= h($tab['label']) ?>
+                <span class="tab-sub"><?= h((string) $tab['count']) ?> registro(s)</span>
+              </button>
+              <?php $participantTabIndex++; ?>
+            <?php endforeach; ?>
+          </div>
+
+          <div class="tab-content mt-2">
+            <?php $participantPaneIndex = 0; ?>
       <?php foreach ($personas as $persona): ?>
         <?php
           $tabId = 'persona-' . (int) $persona['involucrado_id'];
@@ -2785,7 +3324,7 @@ include __DIR__ . '/sidebar.php';
           $personPaneId = 'person-pane-' . (int) $persona['involucrado_id'];
           $returnToTabs = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
         ?>
-        <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="<?= h($tabId) ?>" role="tabpanel">
+        <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="<?= h($tabId) ?>" role="tabpanel">
           <div class="tab-panel <?= h(person_panel_tone_class($persona)) ?>">
             <div class="person-hero">
               <div class="person-title">
@@ -3214,10 +3753,10 @@ include __DIR__ . '/sidebar.php';
             </div>
           </div>
         </div>
-        <?php $paneIndex++; ?>
+        <?php $participantPaneIndex++; ?>
       <?php endforeach; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="efectivo-policial" role="tabpanel">
+      <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="efectivo-policial" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo efectivo policial</a>
@@ -3321,9 +3860,9 @@ include __DIR__ . '/sidebar.php';
           <?php endif; ?>
         </div>
       </div>
-      <?php $paneIndex++; ?>
+      <?php $participantPaneIndex++; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="propietario-vehiculo" role="tabpanel">
+      <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="propietario-vehiculo" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo propietario</a>
@@ -3466,9 +4005,9 @@ include __DIR__ . '/sidebar.php';
           <?php endif; ?>
         </div>
       </div>
-      <?php $paneIndex++; ?>
+      <?php $participantPaneIndex++; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="familiar-fallecido" role="tabpanel">
+      <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="familiar-fallecido" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo familiar</a>
@@ -3568,9 +4107,9 @@ include __DIR__ . '/sidebar.php';
           <?php endif; ?>
         </div>
       </div>
-      <?php $paneIndex++; ?>
+      <?php $participantPaneIndex++; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="abogados" role="tabpanel">
+      <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="abogados" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="abogado_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo abogado</a>
@@ -3666,9 +4205,13 @@ include __DIR__ . '/sidebar.php';
           <?php endif; ?>
         </div>
       </div>
-      <?php $paneIndex++; ?>
+      <?php $participantPaneIndex++; ?>
 
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="documentos" role="tabpanel">
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="documentos" role="tabpanel">
         <div class="tab-panel">
           <div class="inline-workbench" id="documentos-workbench" hidden>
             <div class="inline-head">
@@ -3793,9 +4336,7 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
       </div>
-      <?php $paneIndex++; ?>
-
-      <div class="tab-pane fade <?= $paneIndex === 0 ? 'show active' : '' ?>" id="diligencias-pendientes" role="tabpanel">
+      <div class="tab-pane fade" id="diligencias-pendientes" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
@@ -4213,6 +4754,213 @@ include __DIR__ . '/sidebar.php';
       updateAge();
     }
 
+    function triggerHiddenSync(hidden) {
+      if (!hidden) return;
+      hidden.dispatchEvent(new Event('input', { bubbles: true }));
+      hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function initItpTagBox(root) {
+      if (!root || root.dataset.bound === '1') return;
+      root.dataset.bound = '1';
+
+      const items = root.querySelector('.tag-items');
+      const input = root.querySelector('input[type="text"]');
+      const button = root.querySelector('button');
+      const hidden = root.querySelector('input[type="hidden"]');
+      if (!items || !input || !button || !hidden) return;
+
+      function arr() {
+        return (hidden.value || '').split(',').map((item) => item.trim()).filter(Boolean);
+      }
+
+      function render() {
+        items.innerHTML = '';
+        arr().forEach((text, index) => {
+          const chip = document.createElement('div');
+          chip.className = 'itp-builder-item';
+          const label = document.createElement('span');
+          label.textContent = text;
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'btn-shell';
+          del.textContent = 'Quitar';
+          del.addEventListener('click', () => {
+            const next = arr();
+            next.splice(index, 1);
+            hidden.value = next.join(', ');
+            render();
+            triggerHiddenSync(hidden);
+          });
+          chip.appendChild(label);
+          chip.appendChild(del);
+          items.appendChild(chip);
+        });
+      }
+
+      function add() {
+        let value = (input.value || '').trim();
+        if (!value) return;
+        value = value.replace(/,/g, ' ');
+        const next = arr();
+        next.push(value);
+        hidden.value = next.join(', ');
+        input.value = '';
+        render();
+        triggerHiddenSync(hidden);
+      }
+
+      button.addEventListener('click', add);
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        add();
+      });
+
+      render();
+    }
+
+    function initItpMeasureBox(root) {
+      if (!root || root.dataset.bound === '1') return;
+      root.dataset.bound = '1';
+
+      const name = root.querySelector('.m-name');
+      const value = root.querySelector('.m-value');
+      const button = root.querySelector('.m-add');
+      const list = root.querySelector('.measure-list');
+      const hidden = root.querySelector('input[type="hidden"]');
+      if (!name || !value || !button || !list || !hidden) return;
+
+      function arr() {
+        return (hidden.value || '').split(',').map((item) => item.trim()).filter(Boolean);
+      }
+
+      function formatMeters(raw) {
+        const clean = String(raw || '').replace(',', '.').replace(/[^\d.]/g, '');
+        if (!clean) return '';
+        const num = parseFloat(clean);
+        if (Number.isNaN(num)) return '';
+        let parts = num.toFixed(2).split('.');
+        if (parts[0].length === 1) parts[0] = '0' + parts[0];
+        return parts[0] + '.' + parts[1] + ' m';
+      }
+
+      function render() {
+        list.innerHTML = '';
+        arr().forEach((text, index) => {
+          const row = document.createElement('div');
+          row.className = 'itp-builder-item';
+          const label = document.createElement('span');
+          label.textContent = text;
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'btn-shell';
+          del.textContent = 'Quitar';
+          del.addEventListener('click', () => {
+            const next = arr();
+            next.splice(index, 1);
+            hidden.value = next.join(', ');
+            render();
+            triggerHiddenSync(hidden);
+          });
+          row.appendChild(label);
+          row.appendChild(del);
+          list.appendChild(row);
+        });
+      }
+
+      function add() {
+        const left = (name.value || '').trim().replace(/,/g, ' ');
+        const right = formatMeters(value.value || '');
+        if (!left || !right) return;
+        const next = arr();
+        next.push('- ' + left + ' : ' + right);
+        hidden.value = next.join(', ');
+        name.value = '';
+        value.value = '';
+        render();
+        triggerHiddenSync(hidden);
+      }
+
+      button.addEventListener('click', add);
+      [name, value].forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          add();
+        });
+      });
+
+      render();
+    }
+
+    function initItpInlineForm(form) {
+      if (!form || form.dataset.itpBound === '1') return;
+      form.dataset.itpBound = '1';
+
+      form.querySelectorAll('.js-itp-tagbox').forEach((root) => initItpTagBox(root));
+      form.querySelectorAll('.js-itp-measurebox').forEach((root) => initItpMeasureBox(root));
+
+      const via2Section = form.querySelector('.js-itp-via2-section');
+      const via2Add = form.querySelector('.js-itp-via2-add');
+      const via2Remove = form.querySelector('.js-itp-via2-remove');
+      const via2Flag = form.querySelector('.js-itp-via2-flag');
+
+      function syncVia2(enabled) {
+        if (!via2Section || !via2Flag) return;
+        via2Section.hidden = !enabled;
+        via2Flag.value = enabled ? '1' : '0';
+        if (via2Add) via2Add.hidden = enabled;
+        if (via2Remove) via2Remove.hidden = !enabled;
+
+        const controls = Array.from(via2Section.querySelectorAll('input, textarea, select, button'));
+        controls.forEach((control) => {
+          if (control === via2Flag) return;
+          if (control.name === 'medidas_via2' || control.name === 'observaciones_via2') return;
+          if (control.type === 'hidden') return;
+          control.disabled = !enabled;
+        });
+
+        const hiddenMeasures = via2Section.querySelector('input[name="medidas_via2"]');
+        const hiddenObs = via2Section.querySelector('input[name="observaciones_via2"]');
+        if (hiddenMeasures) hiddenMeasures.disabled = !enabled;
+        if (hiddenObs) hiddenObs.disabled = !enabled;
+      }
+
+      function clearVia2() {
+        if (!via2Section) return;
+        via2Section.querySelectorAll('input, textarea, select').forEach((control) => {
+          if (control.classList.contains('m-name') || control.classList.contains('m-value')) {
+            control.value = '';
+            return;
+          }
+          if (control.type === 'hidden') {
+            if (control.name === 'medidas_via2' || control.name === 'observaciones_via2') {
+              control.value = '';
+            }
+            return;
+          }
+          control.value = '';
+        });
+        via2Section.querySelectorAll('.measure-list, .tag-items').forEach((node) => {
+          node.innerHTML = '';
+        });
+      }
+
+      via2Add?.addEventListener('click', () => {
+        syncVia2(true);
+        triggerHiddenSync(via2Flag);
+      });
+
+      via2Remove?.addEventListener('click', () => {
+        clearVia2();
+        syncVia2(false);
+        triggerHiddenSync(via2Flag);
+      });
+
+      syncVia2(String(via2Flag?.value || '0') === '1');
+    }
+
     function showInlineError(form, message) {
       const targetId = form.dataset.error;
       const node = targetId ? document.getElementById(targetId) : null;
@@ -4260,6 +5008,9 @@ include __DIR__ . '/sidebar.php';
       }
       if (form.classList.contains('js-persona-inline-form')) {
         initPersonaInlineForm(form);
+      }
+      if (form.id.startsWith('itp-inline-form-')) {
+        initItpInlineForm(form);
       }
 
       view.hidden = true;
@@ -4349,7 +5100,7 @@ include __DIR__ . '/sidebar.php';
       closeEditShellImmediate(shellName);
     }
 
-    document.querySelectorAll('#accTabs, .inner-tabs').forEach((nav) => {
+    document.querySelectorAll('#accTabs, .participant-tabs, .inner-tabs').forEach((nav) => {
       if (!nav.id) return;
       const storageKey = 'uiat_tab_' + accId + '_' + nav.id;
       nav.querySelectorAll('[data-bs-toggle="tab"]').forEach((button) => {
@@ -4791,5 +5542,3 @@ include __DIR__ . '/sidebar.php';
 </script>
 </body>
 </html>
-
-
