@@ -36,7 +36,7 @@ if (isset($_GET['ajax'])) {
                 echo json_encode(['ok' => true, 'items' => $service->personas((int) ($_GET['entidad_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
                 break;
             case 'asuntos':
-                echo json_encode(['ok' => true, 'items' => $service->asuntos((int) ($_GET['entidad_id'] ?? 0), (string) ($_GET['tipo'] ?? 'SOLICITAR'))], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => true, 'items' => $service->asuntosCatalogo((int) ($_GET['selected_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
                 break;
             case 'asunto_info':
                 echo json_encode(['ok' => true, 'item' => $service->asuntoInfo((int) ($_GET['id'] ?? 0))], JSON_UNESCAPED_UNICODE);
@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'subentidad_id' => $_POST['subentidad_id'] ?? '',
         'grado_cargo_id' => $_POST['grado_cargo_id'] ?? '',
         'persona_id' => $_POST['persona_id'] ?? '',
+        'persona_destino_manual' => $_POST['persona_destino_manual'] ?? '',
         'tipo' => $_POST['tipo'] ?? 'SOLICITAR',
         'asunto_id' => $_POST['asunto_id'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
@@ -114,10 +115,19 @@ $entidadActual = (int) ($data['entidad_id'] ?: 0);
 $tipoActual = (string) ($data['tipo'] ?: 'SOLICITAR');
 $subentidadesActuales = $entidadActual > 0 ? $service->subentidades($entidadActual) : [];
 $personasActuales = $entidadActual > 0 ? $service->personas($entidadActual) : [];
-$asuntosActuales = $entidadActual > 0 ? $service->asuntos($entidadActual, $tipoActual) : [];
+$asuntosActuales = $service->asuntosCatalogo((int) ($data['asunto_id'] ?? 0));
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
+$personaDestinoTexto = trim((string) ($data['persona_destino_manual'] ?? ''));
+if ($personaDestinoTexto === '' && !empty($data['persona_id'])) {
+    foreach ($personasActuales as $personaItem) {
+        if ((string) ($personaItem['id'] ?? '') === (string) $data['persona_id']) {
+            $personaDestinoTexto = trim((string) ($personaItem['nombre'] ?? ''));
+            break;
+        }
+    }
+}
 
 if (!$embed) {
     include __DIR__ . '/sidebar.php';
@@ -133,7 +143,7 @@ if (!$embed) {
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca;--ok:#bbf7d0}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px auto;padding:16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.mini{width:40px;height:40px;padding:0;font-size:20px;line-height:1}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text)}textarea{min-height:110px;resize:vertical}.field-row{display:flex;gap:8px;align-items:center}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.muted{color:var(--muted);font-size:.9rem}.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:rgba(148,163,184,.06)}.preview h4{margin:.1rem 0 .5rem}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}.modal iframe{width:100%;height:calc(100% - 52px);border:0}@media (max-width:900px){.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}}
+body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px auto;padding:16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.mini{width:40px;min-width:40px;min-height:48px;padding:0;font-size:20px;line-height:1}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);line-height:1.3}select{min-height:48px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}input{min-height:48px}textarea{min-height:130px;resize:vertical}.field-row{display:flex;gap:8px;align-items:stretch}.field-row > *:first-child{flex:1 1 auto}.combo-wrap{display:grid;gap:6px}.combo-hint{color:var(--muted);font-size:.88rem}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.muted{color:var(--muted);font-size:.9rem}.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:rgba(148,163,184,.06)}.preview h4{margin:.1rem 0 .5rem}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}.modal iframe{width:100%;height:calc(100% - 52px);border:0}@media (max-width:900px){.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}}
 </style>
 </head>
 <body>
@@ -240,12 +250,17 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
       <div class="c6">
         <label>Persona destino</label>
         <div class="field-row">
-          <select name="persona_id" id="persona_id">
-            <option value="">Ninguna</option>
-            <?php foreach ($personasActuales as $persona): ?>
-              <option value="<?= h($persona['id']) ?>" <?= (string) $data['persona_id'] === (string) $persona['id'] ? 'selected' : '' ?>><?= h(trim($persona['nombre'])) ?></option>
-            <?php endforeach; ?>
-          </select>
+          <div class="combo-wrap">
+            <input type="hidden" name="persona_id" id="persona_id" value="<?= h((string) $data['persona_id']) ?>">
+            <input type="hidden" name="persona_destino_manual" id="persona_destino_manual" value="<?= h((string) ($data['persona_destino_manual'] ?? '')) ?>">
+            <input type="text" id="persona_id_text" list="persona_id_options" value="<?= h($personaDestinoTexto) ?>" placeholder="Selecciona o escribe manualmente">
+            <datalist id="persona_id_options">
+              <?php foreach ($personasActuales as $persona): ?>
+                <option value="<?= h(trim((string) $persona['nombre'])) ?>" data-id="<?= h((string) $persona['id']) ?>"></option>
+              <?php endforeach; ?>
+            </datalist>
+            <div class="combo-hint">Puedes elegir una persona registrada o escribirla manualmente. Si escribes aqui, solo se guardara en este oficio.</div>
+          </div>
           <button class="btn mini" type="button" onclick="openCreate('persona')">+</button>
         </div>
       </div>
@@ -270,7 +285,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
           </select>
           <button class="btn mini" type="button" onclick="openCreate('asunto')">+</button>
         </div>
-        <div class="muted">Si existen varias plantillas con el mismo nombre, podrás elegir la variante.</div>
+        <div class="muted">Este selector siempre muestra todos los asuntos guardados. Si existen varias plantillas con el mismo nombre, podrás elegir la variante.</div>
       </div>
 
       <div class="c12">
@@ -341,6 +356,8 @@ const accSel = document.getElementById('accidente_id');
 const entidadSel = document.getElementById('entidad_id');
 const subSel = document.getElementById('subentidad_id');
 const personaSel = document.getElementById('persona_id');
+const personaTextInp = document.getElementById('persona_id_text');
+const personaManualInp = document.getElementById('persona_destino_manual');
 const tipoSel = document.getElementById('tipo');
 const asuntoSel = document.getElementById('asunto_id');
 const motivoTxt = document.getElementById('motivo');
@@ -349,6 +366,7 @@ const anioInp = document.getElementById('anio_oficio');
 const numInp = document.getElementById('numero_oficio');
 const linkListado = document.getElementById('linkListado');
 let lastModal = null;
+let personaItemsCache = <?= json_encode($personasActuales, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
 async function fetchJSON(url) {
   const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -370,6 +388,39 @@ function fillSelect(select, items, selectedValue, placeholder, labelKey = 'nombr
   });
 }
 
+function fillDatalist(listId, items) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.innerHTML = '';
+  items.forEach((item) => {
+    const option = document.createElement('option');
+    option.value = String(item.nombre || '').trim();
+    option.dataset.id = String(item.id || '');
+    list.appendChild(option);
+  });
+}
+
+function syncPersonaDestinoManual() {
+  if (!personaTextInp || !personaSel || !personaManualInp) return;
+  const typed = personaTextInp.value.trim();
+  if (typed === '') {
+    personaSel.value = '';
+    personaManualInp.value = '';
+    return;
+  }
+
+  const matched = personaItemsCache.find((item) => String(item.nombre || '').trim().toLowerCase() === typed.toLowerCase());
+  if (matched) {
+    personaSel.value = String(matched.id || '');
+    personaManualInp.value = '';
+    personaTextInp.value = String(matched.nombre || '').trim();
+    return;
+  }
+
+  personaSel.value = '';
+  personaManualInp.value = typed;
+}
+
 async function loadSubentidades(entidadId, selected = '') {
   if (!entidadId) {
     fillSelect(subSel, [], '', 'Ninguna');
@@ -381,19 +432,25 @@ async function loadSubentidades(entidadId, selected = '') {
 
 async function loadPersonas(entidadId, selected = '') {
   if (!entidadId) {
-    fillSelect(personaSel, [], '', 'Ninguna');
+    personaItemsCache = [];
+    fillDatalist('persona_id_options', []);
+    if (personaSel) personaSel.value = '';
     return;
   }
   const data = await fetchJSON('?ajax=personas&entidad_id=' + encodeURIComponent(entidadId));
-  fillSelect(personaSel, data.items || [], selected, 'Ninguna');
+  personaItemsCache = data.items || [];
+  fillDatalist('persona_id_options', personaItemsCache);
+  if (selected) {
+    const matched = personaItemsCache.find((item) => String(item.id) === String(selected));
+    if (matched && personaTextInp) {
+      personaTextInp.value = String(matched.nombre || '').trim();
+    }
+  }
+  syncPersonaDestinoManual();
 }
 
 async function loadAsuntos(entidadId, tipo, selected = '') {
-  if (!entidadId) {
-    fillSelect(asuntoSel, [], '', 'Selecciona el asunto');
-    return;
-  }
-  const data = await fetchJSON('?ajax=asuntos&entidad_id=' + encodeURIComponent(entidadId) + '&tipo=' + encodeURIComponent(tipo));
+  const data = await fetchJSON('?ajax=asuntos&selected_id=' + encodeURIComponent(selected || ''));
   fillSelect(asuntoSel, data.items || [], selected, 'Selecciona el asunto');
 }
 
@@ -418,6 +475,15 @@ async function refreshAsuntoPreview() {
   if (!info.item) {
     box.style.display = 'none';
     return;
+  }
+  if (tipoSel && info.item.tipo && tipoSel.value !== info.item.tipo) {
+    tipoSel.value = info.item.tipo;
+  }
+  const asuntoEntidadId = String(info.item.entidad_id || '');
+  if (entidadSel && asuntoEntidadId !== '' && entidadSel.value !== asuntoEntidadId) {
+    entidadSel.value = asuntoEntidadId;
+    await loadSubentidades(asuntoEntidadId);
+    await loadPersonas(asuntoEntidadId, personaSel ? personaSel.value : '');
   }
   n.textContent = info.item.nombre || '';
   detail.textContent = (info.item.detalle || '').trim() || '—';
@@ -517,7 +583,7 @@ function closeModal() {
   const tipo = tipoSel.value || 'SOLICITAR';
   if (lastModal === 'subentidad' && entidadId) loadSubentidades(entidadId, subSel.value);
   else if (lastModal === 'persona' && entidadId) loadPersonas(entidadId, personaSel.value);
-  else if (lastModal === 'asunto' && entidadId) loadAsuntos(entidadId, tipo, asuntoSel.value).then(refreshAsuntoPreview).then(toggleBoxesPorAsunto);
+  else if (lastModal === 'asunto') loadAsuntos('', '', asuntoSel.value).then(refreshAsuntoPreview).then(toggleBoxesPorAsunto);
   else if (lastModal === 'cargo') loadGradoCargo(document.getElementById('grado_cargo_id').value);
   else if (lastModal === 'entidad' || lastModal === 'ano') location.reload();
   lastModal = null;
@@ -547,22 +613,29 @@ entidadSel.addEventListener('change', async () => {
   const entidadId = entidadSel.value || '';
   await loadSubentidades(entidadId);
   await loadPersonas(entidadId);
-  await loadAsuntos(entidadId, tipoSel.value || 'SOLICITAR');
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
 tipoSel.addEventListener('change', async () => {
-  await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR');
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
+if (personaTextInp) {
+  personaTextInp.addEventListener('input', syncPersonaDestinoManual);
+  personaTextInp.addEventListener('change', syncPersonaDestinoManual);
+}
 asuntoSel.addEventListener('change', async () => {
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
+document.getElementById('frmOficio').addEventListener('submit', () => {
+  syncPersonaDestinoManual();
+});
 
 document.addEventListener('DOMContentLoaded', async () => {
   syncListadoHref();
+  syncPersonaDestinoManual();
+  await loadAsuntos('', '', asuntoSel.value || '');
   if (!numInp.value) await recalcularNumero();
   await refreshAsuntoPreview().catch(() => {});
   await toggleBoxesPorAsunto();

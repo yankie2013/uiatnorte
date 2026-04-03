@@ -72,6 +72,7 @@ try{
 }catch(Throwable $e){}
 $hasInvPer     = isset($cols['involucrado_persona_id']);
 $hasOficialAno = isset($cols['oficial_ano_id']);
+$hasPersonaManual = isset($cols['persona_destino_manual']);
 
 // -------------------- Consultar oficio + joins
 $sql = "
@@ -85,7 +86,8 @@ SELECT
   c.nombre AS comisaria_nombre, f.nombre AS fiscalia_nombre,
   gc.nombre AS grado_cargo_nombre, gc.abreviatura AS grado_cargo_abrev, gc.tipo AS grado_cargo_tipo,
   se.nombre  AS subentidad_nombre, se.tipo AS subentidad_tipo,
-  pe.nombres AS per_dest_nombres, pe.apellido_paterno AS per_dest_apep, COALESCE(pe.apellido_materno,'') AS per_dest_apem
+  pe.nombres AS per_dest_nombres, pe.apellido_paterno AS per_dest_apep, COALESCE(pe.apellido_materno,'') AS per_dest_apem,
+  ".($hasPersonaManual?"COALESCE(o.persona_destino_manual,'')":"''")." AS persona_destino_manual
 FROM oficios o
 LEFT JOIN oficio_entidad  e  ON e.id=o.entidad_id_destino
 LEFT JOIN oficio_asunto   s  ON s.id=o.asunto_id
@@ -230,6 +232,9 @@ $destNombre = trim(
   ($of['per_dest_apep'] ?? '')    . ' ' .
   ($of['per_dest_apem'] ?? '')
 );
+if ($destNombre === '') {
+  $destNombre = trim((string) ($of['persona_destino_manual'] ?? ''));
+}
 $tpl->setValue('oficio_persona_destino', h($destNombre));
 
 // Línea compuesta útil si la usas en el encabezado

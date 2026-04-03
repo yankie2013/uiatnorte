@@ -108,6 +108,7 @@ final class OficioService
             'subentidad_id' => $row['subentidad_destino_id'] ?? '',
             'grado_cargo_id' => $row['grado_cargo_id'] ?? '',
             'persona_id' => $row['persona_destino_id'] ?? '',
+            'persona_destino_manual' => $row['persona_destino_manual'] ?? '',
             'tipo' => $this->asuntoTipo($row['asunto_id'] ?? null) ?: 'SOLICITAR',
             'asunto_id' => $row['asunto_id'] ?? '',
             'motivo' => $row['motivo'] ?? '',
@@ -140,6 +141,11 @@ final class OficioService
             $tipo = 'SOLICITAR';
         }
         return $this->repository->asuntosByEntidadTipo($entidadId, $tipo);
+    }
+
+    public function asuntosCatalogo(?int $preferredId = null): array
+    {
+        return $this->repository->allAsuntos($preferredId);
     }
 
     public function asuntoInfo(int $id): ?array
@@ -208,6 +214,42 @@ final class OficioService
         ];
     }
 
+    public function necropsiaQuickContext(int $accidenteId): array
+    {
+        if ($accidenteId <= 0) {
+            throw new InvalidArgumentException('Debes indicar el accidente para generar el protocolo de necropsia.');
+        }
+
+        $context = $this->formContext($accidenteId);
+        $preset = $this->resolveNecropsiaPreset();
+        $personas = $preset['entidad_id'] > 0 ? $this->repository->personasByEntidad($preset['entidad_id']) : [];
+        $gradoCargo = $this->repository->gradoCargo();
+        $asunto = $this->repository->asuntoInfo($preset['asunto_id']);
+
+        return [
+            'accidente_id' => $accidenteId,
+            'accidente_label' => $this->accidenteLabel($context['accidentes'], $accidenteId),
+            'fallecidos' => $this->repository->fallecidosByAccidente($accidenteId),
+            'anio_oficio' => (int) date('Y'),
+            'fecha_emision' => date('Y-m-d'),
+            'oficial_ano_id' => $context['oficial_ano_default'],
+            'oficial_ano_label' => $this->oficialAnoLabel($context['oficial_anos'], (string) $context['oficial_ano_default']),
+            'next_numero' => $this->repository->nextNumero((int) date('Y')),
+            'preset' => [
+                'entidad_id' => $preset['entidad_id'],
+                'entidad_label' => $this->entidadLabel($context['entidades'], $preset['entidad_id']),
+                'subentidad_id' => $preset['subentidad_id'],
+                'persona_id' => $preset['persona_id'],
+                'persona_label' => $this->personaLabel($personas, $preset['persona_id']),
+                'grado_cargo_id' => $preset['grado_cargo_id'],
+                'grado_cargo_label' => $this->gradoCargoLabel($gradoCargo, $preset['grado_cargo_id']),
+                'asunto_id' => $preset['asunto_id'],
+                'asunto_label' => (string) ($asunto['nombre'] ?? 'Protocolo de Necropsia'),
+                'motivo' => $this->necropsiaMotivo($preset, $asunto),
+            ],
+        ];
+    }
+
     private function asuntoTipo(mixed $asuntoId): ?string
     {
         $id = (int) $asuntoId;
@@ -246,6 +288,42 @@ final class OficioService
 
         return [
             'entidad_id' => (int) $entidad['id'],
+            'subentidad_id' => null,
+            'persona_id' => isset($personas[0]['id']) ? (int) $personas[0]['id'] : null,
+            'grado_cargo_id' => null,
+            'asunto_id' => (int) $asunto['id'],
+            'motivo' => trim((string) ($asunto['detalle'] ?? '')),
+        ];
+    }
+
+    private function resolveNecropsiaPreset(): array
+    {
+        $latest = $this->repository->latestNecropsiaPreset();
+        if ($latest !== null && (int) ($latest['entidad_id_destino'] ?? 0) > 0 && (int) ($latest['asunto_id'] ?? 0) > 0) {
+            return [
+                'entidad_id' => (int) $latest['entidad_id_destino'],
+                'subentidad_id' => ($latest['subentidad_destino_id'] ?? null) !== null ? (int) $latest['subentidad_destino_id'] : null,
+                'persona_id' => ($latest['persona_destino_id'] ?? null) !== null ? (int) $latest['persona_destino_id'] : null,
+                'grado_cargo_id' => ($latest['grado_cargo_id'] ?? null) !== null ? (int) $latest['grado_cargo_id'] : null,
+                'asunto_id' => (int) $latest['asunto_id'],
+                'motivo' => trim((string) ($latest['motivo'] ?? '')),
+            ];
+        }
+
+        $asunto = $this->repository->findAsuntoByNameLike('SOLICITAR', 'Necropsia');
+        if ($asunto === null) {
+            throw new InvalidArgumentException('No se encontro el asunto de necropsia configurado.');
+        }
+
+        $entidadId = (int) ($asunto['entidad_id'] ?? 0);
+        if ($entidadId <= 0) {
+            throw new InvalidArgumentException('No se encontro la entidad de destino para necropsia.');
+        }
+
+        $personas = $this->repository->personasByEntidad($entidadId);
+
+        return [
+            'entidad_id' => $entidadId,
             'subentidad_id' => null,
             'persona_id' => isset($personas[0]['id']) ? (int) $personas[0]['id'] : null,
             'grado_cargo_id' => null,
@@ -342,6 +420,21 @@ final class OficioService
         return 'Solicita se realice peritaje de constatación de daños en vehículo, por motivo que se indica.';
     }
 
+    private function necropsiaMotivo(array $preset, ?array $asunto): string
+    {
+        $motivo = trim((string) ($asunto['detalle'] ?? ''));
+        if ($motivo !== '') {
+            return $motivo;
+        }
+
+        $motivo = trim((string) ($preset['motivo'] ?? ''));
+        if ($motivo !== '') {
+            return $motivo;
+        }
+
+        return 'Solicita protocolo de necropsia integral y fluidos; por motivo que se indica.';
+    }
+
     private function payload(array $input, ?int $excludeId): array
     {
         $fecha = trim((string) ($input['fecha_emision'] ?? ''));
@@ -356,6 +449,7 @@ final class OficioService
         $asuntoId = (int) ($input['asunto_id'] ?? 0);
         $motivo = trim((string) ($input['motivo'] ?? ''));
         $referencia = trim((string) ($input['referencia_texto'] ?? ''));
+        $personaDestinoManual = trim((string) ($input['persona_destino_manual'] ?? ''));
         $oficialAnoId = (int) ($input['oficial_ano_id'] ?? 0);
         $vehiculoId = ($input['involucrado_vehiculo_id'] ?? '') !== '' ? (int) $input['involucrado_vehiculo_id'] : null;
         $personaInvId = ($input['involucrado_persona_id'] ?? '') !== '' ? (int) $input['involucrado_persona_id'] : null;
@@ -392,6 +486,9 @@ final class OficioService
         if ($vehiculoId !== null && !$this->repository->vehiculoBelongsAccidente($accidenteId, $vehiculoId)) {
             throw new InvalidArgumentException('El vehículo involucrado no pertenece al accidente seleccionado.');
         }
+        if ($personaInvId !== null && !$this->repository->fallecidoBelongsAccidente($accidenteId, $personaInvId)) {
+            throw new InvalidArgumentException('La persona fallecida no pertenece al accidente seleccionado.');
+        }
         if ($anio <= 0) {
             $anio = (int) date('Y', strtotime($fecha));
         }
@@ -415,6 +512,7 @@ final class OficioService
             'entidad_id_destino' => $entidadId,
             'subentidad_destino_id' => $subentidadId,
             'persona_destino_id' => $personaId,
+            'persona_destino_manual' => ($personaId === null && $personaDestinoManual !== '') ? $personaDestinoManual : null,
             'grado_cargo_id' => $gradoCargoId,
             'asunto_id' => $asuntoId,
             'motivo' => $motivo,

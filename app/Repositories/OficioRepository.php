@@ -96,6 +96,42 @@ final class OficioRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function allAsuntos(?int $preferredId = null): array
+    {
+        $sql = "SELECT id, nombre
+                FROM oficio_asunto
+                WHERE COALESCE(activo,1)=1
+                ORDER BY id ASC";
+        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $groups = [];
+        foreach ($rows as $row) {
+            $key = $this->asuntoCatalogKey((string) ($row['nombre'] ?? ''));
+            if (!isset($groups[$key])) {
+                $groups[$key] = $row;
+                continue;
+            }
+
+            if ($preferredId > 0 && (int) $row['id'] === $preferredId) {
+                $groups[$key] = $row;
+            }
+        }
+
+        $items = [];
+        foreach ($groups as $row) {
+            $items[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'nombre' => $this->asuntoCatalogLabel((string) ($row['nombre'] ?? '')),
+            ];
+        }
+
+        usort($items, static function (array $a, array $b): int {
+            return strcasecmp((string) ($a['nombre'] ?? ''), (string) ($b['nombre'] ?? ''));
+        });
+
+        return $items;
+    }
+
     public function asuntoInfo(int $id): ?array
     {
         $st = $this->pdo->prepare('SELECT id, entidad_id, tipo, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE id = ? LIMIT 1');
@@ -124,6 +160,26 @@ final class OficioRepository
         $like = '%' . $term . '%';
         $st = $this->pdo->prepare($sql);
         $st->execute([$entidadId, $tipo, $like, $like]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function findAsuntoByNameLike(string $tipo, string $term): ?array
+    {
+        $term = trim($term);
+        if ($term === '') {
+            return null;
+        }
+
+        $sql = "SELECT id, entidad_id, tipo, nombre, COALESCE(detalle,'') AS detalle
+                FROM oficio_asunto
+                WHERE tipo = ? AND COALESCE(activo,1)=1
+                  AND (nombre LIKE ? OR COALESCE(detalle,'') LIKE ?)
+                ORDER BY COALESCE(orden,999999), id
+                LIMIT 1";
+        $like = '%' . $term . '%';
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$tipo, $like, $like]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
@@ -264,6 +320,26 @@ final class OficioRepository
         return $row ?: null;
     }
 
+    public function latestNecropsiaPreset(): ?array
+    {
+        $sql = "SELECT o.entidad_id_destino,
+                       o.subentidad_destino_id,
+                       o.persona_destino_id,
+                       o.grado_cargo_id,
+                       o.asunto_id,
+                       COALESCE(o.motivo,'') AS motivo
+                FROM oficios o
+                LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
+                WHERE LOWER(COALESCE(oa.nombre,'')) LIKE '%necrops%'
+                   OR LOWER(COALESCE(oa.detalle,'')) LIKE '%necrops%'
+                   OR LOWER(COALESCE(oa.nombre,'')) LIKE '%autops%'
+                   OR LOWER(COALESCE(oa.detalle,'')) LIKE '%autops%'
+                ORDER BY o.id DESC
+                LIMIT 1";
+        $row = $this->pdo->query($sql)->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function fallecidosByAccidente(int $accidenteId): array
     {
         if ($accidenteId <= 0) {
@@ -293,6 +369,36 @@ final class OficioRepository
         $st = $this->pdo->prepare($sql);
         $st->execute([$accidenteId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function fallecidoBelongsAccidente(int $accidenteId, int $involucradoPersonaId): bool
+    {
+        if ($accidenteId <= 0 || $involucradoPersonaId <= 0) {
+            return false;
+        }
+
+        $candidates = ['estado_lesion', 'lesion', 'condicion_lesion', 'condicion', 'calidad_lesion'];
+        $filters = [];
+        foreach ($candidates as $column) {
+            if ($this->columnExists('involucrados_personas', $column)) {
+                $filters[] = "ip.`{$column}` = 'FALLECIDO'";
+                $filters[] = "ip.`{$column}` = 'Fallecido'";
+            }
+        }
+        if ($filters === [] && $this->columnExists('involucrados_personas', 'rol')) {
+            $filters[] = "ip.`rol` = 'FALLECIDO'";
+            $filters[] = "ip.`rol` = 'Fallecido'";
+        }
+        if ($filters === []) {
+            return false;
+        }
+
+        $sql = "SELECT COUNT(*)
+                FROM involucrados_personas ip
+                WHERE ip.id = ? AND ip.accidente_id = ? AND (" . implode(' OR ', $filters) . ')';
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$involucradoPersonaId, $accidenteId]);
+        return (int) $st->fetchColumn() > 0;
     }
 
     public function search(array $filters): array
@@ -385,6 +491,10 @@ final class OficioRepository
             $columns[] = 'involucrado_persona_id';
             $values[] = $payload['involucrado_persona_id'];
         }
+        if ($this->columnExists('oficios', 'persona_destino_manual')) {
+            $columns[] = 'persona_destino_manual';
+            $values[] = $payload['persona_destino_manual'];
+        }
         $placeholders = implode(',', array_fill(0, count($columns), '?'));
         $sql = 'INSERT INTO oficios (' . implode(',', $columns) . ') VALUES (' . $placeholders . ')';
         $st = $this->pdo->prepare($sql);
@@ -418,6 +528,10 @@ final class OficioRepository
         if ($this->columnExists('oficios', 'involucrado_persona_id')) {
             $sets[] = 'involucrado_persona_id = ?';
             $values[] = $payload['involucrado_persona_id'];
+        }
+        if ($this->columnExists('oficios', 'persona_destino_manual')) {
+            $sets[] = 'persona_destino_manual = ?';
+            $values[] = $payload['persona_destino_manual'];
         }
         $values[] = $id;
         $sql = 'UPDATE oficios SET ' . implode(', ', $sets) . ' WHERE id = ? LIMIT 1';
@@ -462,6 +576,11 @@ final class OficioRepository
             'oa.nombre AS asunto_nombre',
             'oa.tipo AS asunto_tipo'
         ];
+        if ($this->columnExists('oficios', 'persona_destino_manual')) {
+            $select[] = 'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual';
+        } else {
+            $select[] = '\'\' AS persona_destino_manual';
+        }
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             'LEFT JOIN oficio_subentidad se ON se.id = o.subentidad_destino_id',
@@ -495,5 +614,48 @@ final class OficioRepository
         $st = $this->pdo->prepare('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
         $st->execute([$table]);
         return $this->columnCache[$table] = $st->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+    }
+
+    private function asuntoCatalogKey(string $name): string
+    {
+        $normalized = $this->normalizeCatalogText($name);
+
+        if (str_contains($normalized, 'camara') && str_contains($normalized, 'video')) {
+            return 'camaras-video-vigilancia';
+        }
+
+        if (str_contains($normalized, 'remitir') && str_contains($normalized, 'diligenc')) {
+            return 'remitir-diligencias';
+        }
+
+        return $normalized;
+    }
+
+    private function asuntoCatalogLabel(string $name): string
+    {
+        $normalized = $this->normalizeCatalogText($name);
+
+        if (str_contains($normalized, 'camara') && str_contains($normalized, 'video')) {
+            return 'Camaras de video vigilancia';
+        }
+
+        if (str_contains($normalized, 'remitir') && str_contains($normalized, 'diligenc')) {
+            return 'Remitir diligencias';
+        }
+
+        return trim($name);
+    }
+
+    private function normalizeCatalogText(string $text): string
+    {
+        $text = mb_strtolower(trim($text), 'UTF-8');
+        $text = strtr($text, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+            'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
+            'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o', 'ü' => 'u',
+            'ñ' => 'n',
+        ]);
+        $text = preg_replace('/[^a-z0-9]+/', ' ', $text) ?? $text;
+        return trim(preg_replace('/\s+/', ' ', $text) ?? $text);
     }
 }

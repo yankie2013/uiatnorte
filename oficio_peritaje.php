@@ -293,6 +293,9 @@ if (!empty($oficio['persona_destino_id']) && table_exists($pdo,'oficio_persona_e
   $q->execute([(int)$oficio['persona_destino_id']]); $ope = $q->fetch(PDO::FETCH_ASSOC);
   if ($ope) $dest_persona = trim(($ope['nombres']??'').' '.($ope['apellido_paterno']??'').' '.($ope['apellido_materno']??''));
 }
+if ($dest_persona === '' && !empty($oficio['persona_destino_manual'])) {
+  $dest_persona = trim((string) $oficio['persona_destino_manual']);
+}
 
 if (!empty($oficio['grado_cargo_id']) && table_exists($pdo,'grado_cargo')) {
   $dest_grado_cargo = $__getGradoCargo($pdo, (int)$oficio['grado_cargo_id']);

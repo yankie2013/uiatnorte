@@ -129,7 +129,7 @@ function join_con_y(array $items): string
     $count = count($items);
 
     if ($count === 0) {
-        return 'â';
+        return '—';
     }
     if ($count === 1) {
         return h($items[0]);
@@ -423,7 +423,7 @@ function human_label(string $key): string
 function field_html(string $key, mixed $value): string
 {
     if ($value === null || $value === '') {
-        return 'â';
+        return '—';
     }
 
     if (str_ends_with($key, '_en') || str_starts_with($key, 'fecha_')) {
@@ -1609,6 +1609,7 @@ $oficios = safe_query_all(
             COALESCE(a2.detalle, '') AS asunto_detalle,
             COALESCE(iv.orden_participacion, '') AS veh_ut,
             COALESCE(v.placa, '') AS veh_placa,
+            o.involucrado_persona_id AS inv_per_id,
             TRIM(CONCAT(COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, ''), ' ', COALESCE(p.nombres, ''))) AS persona_nombre
        FROM oficios o
   LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
@@ -2126,10 +2127,14 @@ include __DIR__ . '/sidebar.php';
   .title-wrap p{margin:0;color:var(--muted);font-size:11px}
   .top-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
+  .btn-shell.btn-nuevo{border-color:#0b9f98;background:linear-gradient(180deg,#0b8f8b 0%,#08a7a0 42%,#08cfc6 100%);box-shadow:0 0 0 1px rgba(11,159,152,.28),0 0 16px rgba(8,167,160,.24),0 8px 18px rgba(6,95,92,.18);color:#fff;font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;font-size:11.5px;letter-spacing:.02em;text-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn-shell.btn-nuevo:hover{border-color:#087f79;background:linear-gradient(180deg,#087f79 0%,#09938d 42%,#06bbb3 100%);color:#fff;box-shadow:0 0 0 1px rgba(8,127,121,.34),0 0 18px rgba(8,167,160,.28),0 10px 20px rgba(6,95,92,.22)}
   .btn-shell.btn-citacion{border-color:#60a5fa;background:linear-gradient(180deg,#f8fbff 0%,#edf5ff 100%);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 8px 18px rgba(59,130,246,.12);color:#1d4ed8}
   .btn-shell.btn-citacion:hover{border-color:#3b82f6;background:#e0efff;color:#1e40af}
   .btn-shell.btn-peritaje{border-color:#ff9f43;background:linear-gradient(180deg,#fffaf3 0%,#fff1df 100%);box-shadow:0 0 0 1px rgba(255,159,67,.24),0 0 14px rgba(255,140,0,.22),0 8px 18px rgba(255,140,0,.12);color:#c2410c}
   .btn-shell.btn-peritaje:hover{border-color:#ff7a00;background:#ffedd5;color:#9a3412;box-shadow:0 0 0 1px rgba(255,122,0,.32),0 0 18px rgba(255,122,0,.28),0 10px 20px rgba(255,122,0,.16)}
+  .btn-shell.btn-necropsia{border-color:#14b8a6;background:linear-gradient(180deg,#f1fffd 0%,#dcfdf7 100%);box-shadow:0 0 0 1px rgba(20,184,166,.22),0 0 14px rgba(13,148,136,.18),0 8px 18px rgba(15,118,110,.12);color:#0f766e}
+  .btn-shell.btn-necropsia:hover{border-color:#0d9488;background:#ccfbf1;color:#115e59;box-shadow:0 0 0 1px rgba(13,148,136,.3),0 0 18px rgba(13,148,136,.22),0 10px 20px rgba(15,118,110,.15)}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
   .summary-stack{display:grid;gap:5px;margin-bottom:6px}
   .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:11px;padding:7px 10px;font-size:12px;font-weight:700;line-height:1.25}
@@ -3181,6 +3186,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
                       <a class="btn-shell js-inline-open" href="documento_occiso_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&personaId=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&accidenteId=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Documento de occiso">+ Nuevo documento de occiso</a>
+                      <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&invol_id=<?= (int) $persona['involucrado_id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio necropsia</a>
                     </div>
                     <?php if (!$extras['occ']): ?>
                       <div class="empty-state">No hay documentos de occiso para esta persona en este accidente.</div>
@@ -3242,7 +3248,7 @@ include __DIR__ . '/sidebar.php';
                           </span>
                         </span>
                       </h4>
-                      <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' Â· CIP ' . ($row['cip'] ?? '-')))) ?></p>
+                      <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' · CIP ' . ($row['cip'] ?? '-')))) ?></p>
                     </div>
                     <div class="module-card-controls">
                       <span class="chip-simple">Registro #<?= (int) $row['id'] ?></span>
@@ -3252,7 +3258,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="module-meta">
                     <span class="chip-simple"><?= h((string) (($row['tipo_doc'] ?? 'DOC') . ' ' . ($row['num_doc'] ?? 'â€”'))) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['dependencia_policial'] ?? '') !== '' ? $row['dependencia_policial'] : 'Sin dependencia')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / funciÃ³n')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / función')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['celular'] ?? '') !== '' ? $row['celular'] : 'Sin celular')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['email'] ?? '') !== '' ? $row['email'] : 'Sin email')) ?></span>
                   </div>
@@ -3582,7 +3588,7 @@ include __DIR__ . '/sidebar.php';
                   $abogadoWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
                   $contactoAbogado = trim((string) ($row['celular'] ?? ''));
                   if (($row['email'] ?? '') !== '') {
-                      $contactoAbogado .= $contactoAbogado !== '' ? ' Â· ' . $row['email'] : $row['email'];
+                      $contactoAbogado .= $contactoAbogado !== '' ? ' · ' . $row['email'] : $row['email'];
                   }
                 ?>
                 <article class="module-card" data-collapsible-card>
@@ -3609,13 +3615,13 @@ include __DIR__ . '/sidebar.php';
                   <div class="module-meta">
                     <span class="chip-simple">Colegiatura: <?= h((string) (($row['colegiatura'] ?? '') !== '' ? $row['colegiatura'] : 'Sin colegiatura')) ?></span>
                     <span class="chip-simple">Registro: <?= h((string) (($row['registro'] ?? '') !== '' ? $row['registro'] : 'Sin registro')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condiciÃ³n')) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condición')) ?></span>
                     <span class="chip-simple"><?= h($contactoAbogado !== '' ? $contactoAbogado : 'Sin contacto') ?></span>
                   </div>
                   <div class="editable-shell" data-edit-shell="abogado-<?= (int) $row['id'] ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
-                        <a class="btn-shell" href="marcador_abogado.php?abogado_id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Notificaci&oacute;n</a>
+                        <a class="btn-shell btn-citacion" href="marcador_abogado.php?abogado_id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Notificaci&oacute;n</a>
                         <a class="btn-shell" href="abogado_ver.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                         <a class="btn-shell" href="abogado_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
                       </div>
@@ -3629,7 +3635,7 @@ include __DIR__ . '/sidebar.php';
                     </div>
 
                     <div class="module-card-panel js-card-panel" hidden>
-                    <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrÃ³nica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
+                    <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrónica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
                     <?php if (!empty($row['domicilio_procesal'])): ?><p style="margin-top:10px;">Domicilio procesal: <?= nl2br(h((string) $row['domicilio_procesal'])) ?></p><?php endif; ?>
                     <div class="inline-edit-error" id="abogado-inline-error-<?= (int) $row['id'] ?>"></div>
 
@@ -3689,6 +3695,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo oficio">+ Nuevo oficio</a>
                   <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
+                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
                   <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
                 </div>
 
@@ -3702,6 +3709,7 @@ include __DIR__ . '/sidebar.php';
                         $oficioEstadoClass = oficio_status_class((string) ($row['estado'] ?? ''));
                         $oficioPeritajeText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '')), 'UTF-8');
                         $oficioEsPeritaje = str_contains($oficioPeritajeText, 'peritaje de constat');
+                        $oficioEsNecropsia = str_contains($oficioPeritajeText, 'protocolo de necropsia') || str_contains($oficioPeritajeText, 'necropsia') || str_contains($oficioPeritajeText, 'autopsia');
                       ?>
                       <article class="module-card">
                         <header>
@@ -3725,6 +3733,7 @@ include __DIR__ . '/sidebar.php';
                         <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
                         <div class="module-actions">
                           <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar peritaje</a><?php endif; ?>
+                          <?php if ($oficioEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Descargar necropsia</a><?php endif; ?>
                           <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
                           <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar oficio">Editar</a>
                           <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar oficio">Eliminar</a>
@@ -4701,6 +4710,15 @@ include __DIR__ . '/sidebar.php';
       });
     }
 
+    function applyNuevoButtonStyles(scope) {
+      (scope || document).querySelectorAll('a.btn-shell, button.btn-shell').forEach((button) => {
+        const text = (button.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (text.startsWith('nuevo ') || text.startsWith('+ nuevo ') || text.startsWith('nueva ') || text.startsWith('+ nueva ')) {
+          button.classList.add('btn-nuevo');
+        }
+      });
+    }
+
     function resetCollapsibleCards(scope) {
       (scope || document).querySelectorAll('[data-collapsible-card]').forEach((card) => {
         setCollapsibleCardState(card, false);
@@ -4716,6 +4734,8 @@ include __DIR__ . '/sidebar.php';
         setCollapsibleCardState(card, !expanded);
       });
     });
+
+    applyNuevoButtonStyles(document);
 
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;

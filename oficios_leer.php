@@ -24,6 +24,9 @@ if ($id <= 0 || $detail === null) {
 }
 
 $persona = trim((string) (($detail['per_nombres'] ?? '') . ' ' . ($detail['per_ap'] ?? '') . ' ' . ($detail['per_am'] ?? '')));
+if ($persona === '') {
+    $persona = trim((string) ($detail['persona_destino_manual'] ?? ''));
+}
 $personaFallecida = trim((string) (($detail['fall_nombres'] ?? '') . ' ' . ($detail['fall_ap'] ?? '') . ' ' . ($detail['fall_am'] ?? '')));
 $vehiculoVinculado = trim((string) (($detail['veh_ut'] ?? '') !== '' ? ($detail['veh_ut'] . ' - ') : '') . ($detail['veh_placa'] ?? ''));
 $listarHref = 'oficios_listar.php' . (!empty($detail['accidente_id']) ? ('?accidente_id=' . urlencode((string) $detail['accidente_id'])) : '');
