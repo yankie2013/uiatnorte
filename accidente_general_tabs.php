@@ -15,13 +15,25 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function fmt($s){ return $s!==null && $s!=='' ? h($s) : '—'; }
 
 function join_con_y(array $items){
+  $items = array_values(array_filter(array_map(static fn($item) => preg_replace('/\s+/u', ' ', trim((string)$item)) ?? trim((string)$item), $items)));
   $n=count($items);
   if($n===0) return '—';
-  $esc=array_map('h',$items);
+  $esc=[];
+  foreach($items as $index => $item){
+    $esc[] = h(list_item_case($item, $index === 0));
+  }
   if($n===1) return $esc[0];
   if($n===2) return $esc[0].' y '.$esc[1];
   return implode(', ', array_slice($esc,0,$n-1)).' y '.$esc[$n-1];
 }
+function list_item_case(string $item, bool $capitalize = false){
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if(!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($item, 1, null, 'UTF-8');
+}
+
 function fechaHoraCortaEsp($fechaRaw){
   if(!$fechaRaw || !strtotime($fechaRaw)) return '—';
   $t=strtotime($fechaRaw);
@@ -108,8 +120,10 @@ $rowsCons = fetchListSafe(
 $cons = array_column($rowsCons,'nombre');
 
 $mods_concat = join_con_y($mods);
+$cons_concat = join_con_y($cons);
 $cons_concat = $cons ? implode(' → ', array_map('h',$cons)) : '—';
 
+$cons_concat = join_con_y($cons);
 /* WhatsApp vars que usa el panel */
 $modalidad_txt = $mods_concat ?: '—';
 $lugar_acc     = $A['lugar'] ?? '—';

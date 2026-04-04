@@ -48,7 +48,8 @@ body{font-family:Inter,system-ui;padding:20px;background:#f6f7fb;color:#111}
 <div class="row"><div class="lbl">Entidad / Persona</div><div class="val"><?= h($row['entidad_persona']) ?: '-' ?></div></div>
 <div class="row"><div class="lbl">Tipo de documento</div><div class="val"><?= h($row['tipo_documento']) ?: '-' ?></div></div>
 <div class="row"><div class="lbl">Numero de documento</div><div class="val"><?= h($row['numero_documento']) ?: '-' ?></div></div>
-<div class="row"><div class="lbl">Fecha</div><div class="val"><?= h($row['fecha']) ?: '-' ?></div></div>
+<div class="row"><div class="lbl">Fecha de recepcion</div><div class="val"><?= h($row['fecha_recepcion_resuelta'] ?? $row['fecha_recepcion'] ?? $row['fecha'] ?? '') ?: '-' ?></div></div>
+<div class="row"><div class="lbl">Fecha del documento</div><div class="val"><?= h($row['fecha_documento_resuelta'] ?? $row['fecha_documento'] ?? $row['fecha'] ?? '') ?: '-' ?></div></div>
 <div class="row"><div class="lbl">Accidente</div><div class="val"><?= !empty($row['accidente_id']) ? ('#' . (int)$row['accidente_id']) : '-' ?></div></div>
 <div class="row"><div class="lbl">Referencia a oficio</div><div class="val"><?= !empty($row['referencia_oficio_id']) ? ('#' . (int)$row['referencia_oficio_id']) : '-' ?></div></div>
 <div class="row"><div class="lbl">Estado</div><div class="val"><?= h($row['estado']) ?: '-' ?></div></div>

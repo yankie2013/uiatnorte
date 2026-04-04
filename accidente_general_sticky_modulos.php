@@ -18,12 +18,24 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function fmt($s){ return $s!==null && $s!=='' ? h($s) : '—'; }
 
 function join_con_y(array $items){
+  $items = array_values(array_filter(array_map(static fn($item) => preg_replace('/\s+/u', ' ', trim((string)$item)) ?? trim((string)$item), $items)));
   $n = count($items);
   if ($n===0) return '—';
-  $esc = array_map('h', $items);
+  $esc = [];
+  foreach($items as $index => $item){
+    $esc[] = h(list_item_case($item, $index === 0));
+  }
   if ($n===1) return $esc[0];
   if ($n===2) return $esc[0].' y '.$esc[1];
   return implode(', ', array_slice($esc, 0, $n-1)).' y '.$esc[$n-1];
+}
+
+function list_item_case(string $item, bool $capitalize = false){
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if(!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($item, 1, null, 'UTF-8');
 }
 
 function fechaCortaEsp($fechaRaw){
@@ -143,6 +155,7 @@ $cons = array_column($rowsCons,'nombre');
 $mods_concat = join_con_y($mods);
 $cons_concat = $cons ? implode(' → ', array_map('h',$cons)) : '—';
 
+$cons_concat = join_con_y($cons);
 /* ===== Datos para mensaje WhatsApp ===== */
 $modalidad_txt = $mods_concat ?: '—';
 $lugar_acc     = $A['lugar'] ?? '—';
@@ -703,8 +716,11 @@ include __DIR__ . '/sidebar.php';
     <div class="sec">
       <p class="st">Comunicación</p>
       <div class="grid">
-        <div class="f s6"><div class="l">Comunicante</div><div class="v"><?=fmt($A['comunicante_nombre'])?></div></div>
-        <div class="f s6"><div class="l">Tel. comunicante</div><div class="v"><?=fmt($A['comunicante_telefono'])?></div></div>
+        <div class="f s4"><div class="l">Comunicante</div><div class="v"><?=fmt($A['comunicante_nombre'])?></div></div>
+        <div class="f s4"><div class="l">Tel. comunicante</div><div class="v"><?=fmt($A['comunicante_telefono'])?></div></div>
+        <div class="f s4"><div class="l">Decreto</div><div class="v"><?=fmt($A['comunicacion_decreto'] ?? '')?></div></div>
+        <div class="f s6"><div class="l">Oficio</div><div class="v"><?=fmt($A['comunicacion_oficio'] ?? '')?></div></div>
+        <div class="f s6"><div class="l">Carpeta N°</div><div class="v"><?=fmt($A['comunicacion_carpeta_nro'] ?? '')?></div></div>
       </div>
     </div>
 

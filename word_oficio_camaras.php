@@ -42,6 +42,44 @@ function fecha_abrev($f){
   $t = strtotime($f);
   return $t ? strtoupper(date('d',$t).$meses[(int)date('n',$t)-1].date('Y',$t)) : '';
 }
+function lista_item_case(string $item, bool $capitalize = false){
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if(!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($item, 1, null, 'UTF-8');
+}
+function lista_espanol($items){
+  $items = array_values(array_filter(array_map(static fn($item) => trim((string)$item), (array)$items), static fn($item) => $item !== ''));
+  $count = count($items);
+  if($count === 0) return '';
+  if($count === 1) return lista_item_case($items[0], true);
+
+  $items = array_map(
+    static fn($item, $index) => lista_item_case((string)$item, $index === 0),
+    $items,
+    array_keys($items)
+  );
+
+  if($count === 2) return $items[0].' y '.$items[1];
+  return implode(', ', array_slice($items, 0, $count - 1)).' y '.$items[$count - 1];
+}
+function extraer_rango_camaras($motivo){
+  $text = trim((string)$motivo);
+  if ($text === '') {
+    return ['texto' => '', 'desde' => '', 'hasta' => ''];
+  }
+
+  if (preg_match('/Rango solicitado:\s*entre las\s*([0-2]\d:\d{2})\s*hasta las\s*([0-2]\d:\d{2})/i', $text, $m)) {
+    return [
+      'texto' => 'entre las '.$m[1].' hasta las '.$m[2],
+      'desde' => $m[1],
+      'hasta' => $m[2],
+    ];
+  }
+
+  return ['texto' => '', 'desde' => '', 'hasta' => ''];
+}
 
 /* -------------------- Parámetros -------------------- */
 $oficio_id = isset($_GET['oficio_id']) ? (int)$_GET['oficio_id'] : 0;
@@ -80,7 +118,7 @@ SELECT
 
   /* === MODALIDAD desde tabla puente === */
   (
-    SELECT GROUP_CONCAT(DISTINCT ma.nombre ORDER BY ma.id SEPARATOR ', ')
+    SELECT GROUP_CONCAT(DISTINCT ma.nombre ORDER BY ma.id SEPARATOR '||')
     FROM accidente_modalidad am
     JOIN modalidad_accidente ma ON ma.id = am.modalidad_id
     WHERE am.accidente_id = a.id
@@ -88,7 +126,7 @@ SELECT
 
   /* === CONSECUENCIA desde tabla puente === */
   (
-    SELECT GROUP_CONCAT(DISTINCT ca.nombre ORDER BY ca.id SEPARATOR ', ')
+    SELECT GROUP_CONCAT(DISTINCT ca.nombre ORDER BY ca.id SEPARATOR '||')
     FROM accidente_consecuencia ac
     JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id
     WHERE ac.accidente_id = a.id
@@ -130,12 +168,19 @@ if(!file_exists($plantilla)){
 $tpl = new TemplateProcessor($plantilla);
 
 /* -------------------- Set valores (marcadores) -------------------- */
+$rangoCamara = extraer_rango_camaras($of['motivo'] ?? '');
+$modalidadNombre = lista_espanol(explode('||', (string) ($of['modalidad_nombre'] ?? '')));
+$consecuenciaNombre = lista_espanol(explode('||', (string) ($of['consecuencia_nombre'] ?? '')));
+
 /* Oficio */
 $tpl->setValue('oficio_numero',        h($of['numero']));
 $tpl->setValue('oficio_anio',          h($of['anio']));
 $tpl->setValue('oficio_fecha',         fecha_larga($of['fecha_emision']));
 $tpl->setValue('oficio_fecha_abrev',   fecha_abrev($of['fecha_emision']));
 $tpl->setValue('oficio_motivo',        h($of['motivo']));
+$tpl->setValue('oficio_rango_camaras', h($rangoCamara['texto']));
+$tpl->setValue('oficio_rango_desde',   h($rangoCamara['desde']));
+$tpl->setValue('oficio_rango_hasta',   h($rangoCamara['hasta']));
 $tpl->setValue('oficio_referencia',    h($of['referencia_texto']));
 $tpl->setValue('nombre_oficial_ano',   h($nombreOficialAno));
 
@@ -190,8 +235,8 @@ if (!empty($of['fecha_accidente'])) {
   if ($t) $horaHecho = date('H:i', $t);
 }
 $tpl->setValue('accidente_hora',         h($horaHecho));
-$tpl->setValue('accidente_modalidad',    h($of['modalidad_nombre'] ?? ''));
-$tpl->setValue('accidente_consecuencia', h($of['consecuencia_nombre'] ?? ''));
+$tpl->setValue('accidente_modalidad',    h($modalidadNombre));
+$tpl->setValue('accidente_consecuencia', h($consecuenciaNombre));
 
 $tpl->setValue('comisaria_nombre',       h($of['comisaria_nombre']));
 $tpl->setValue('fiscalia_nombre',        h($of['fiscalia_nombre']));

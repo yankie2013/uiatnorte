@@ -125,22 +125,40 @@ function fecha_hora_simple(?string $value): string
     return date('d/m/Y H:i', strtotime($value));
 }
 
+function format_list_item_case(string $item, bool $capitalize = false): string
+{
+    $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+    if ($item === '') {
+        return '';
+    }
+
+    $item = mb_strtolower($item, 'UTF-8');
+    if (!$capitalize) {
+        return $item;
+    }
+
+    return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($item, 1, null, 'UTF-8');
+}
+
 function join_con_y(array $items): string
 {
-    $items = array_values(array_filter(array_map(static fn($item) => trim((string) $item), $items)));
+    $items = array_values(array_filter(array_map(static fn($item) => preg_replace('/\s+/u', ' ', trim((string) $item)) ?? trim((string) $item), $items)));
     $count = count($items);
 
     if ($count === 0) {
         return '—';
     }
     if ($count === 1) {
-        return h($items[0]);
+        return h(format_list_item_case($items[0], true));
     }
     if ($count === 2) {
-        return h($items[0]) . ' y ' . h($items[1]);
+        return h(format_list_item_case($items[0], true)) . ' y ' . h(format_list_item_case($items[1]));
     }
 
-    $escaped = array_map('h', $items);
+    $escaped = [];
+    foreach ($items as $index => $item) {
+        $escaped[] = h(format_list_item_case($item, $index === 0));
+    }
     return implode(', ', array_slice($escaped, 0, -1)) . ' y ' . end($escaped);
 }
 
@@ -164,6 +182,17 @@ function safe_query_one(PDO $pdo, string $sql, array $params = []): ?array
         return $row ?: null;
     } catch (Throwable $e) {
         return null;
+    }
+}
+
+function safe_column_exists(PDO $pdo, string $table, string $column): bool
+{
+    try {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $st->execute([$table, $column]);
+        return (int) $st->fetchColumn() > 0;
+    } catch (Throwable $e) {
+        return false;
     }
 }
 
@@ -697,6 +726,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'fecha_intervencion' => $acc['fecha_intervencion'] ?? '',
                 'comunicante_nombre' => $acc['comunicante_nombre'] ?? '',
                 'comunicante_telefono' => $acc['comunicante_telefono'] ?? '',
+                'comunicacion_decreto' => $acc['comunicacion_decreto'] ?? '',
+                'comunicacion_oficio' => $acc['comunicacion_oficio'] ?? '',
+                'comunicacion_carpeta_nro' => $acc['comunicacion_carpeta_nro'] ?? '',
                 'fiscalia_id' => $acc['fiscalia_id'] ?? '',
                 'fiscal_id' => $acc['fiscal_id'] ?? '',
                 'nro_informe_policial' => $acc['nro_informe_policial'] ?? '',
@@ -733,6 +765,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'fecha_intervencion' => $_POST['fecha_intervencion'] ?? '',
                 'comunicante_nombre' => $_POST['comunicante_nombre'] ?? '',
                 'comunicante_telefono' => $_POST['comunicante_telefono'] ?? '',
+                'comunicacion_decreto' => $_POST['comunicacion_decreto'] ?? '',
+                'comunicacion_oficio' => $_POST['comunicacion_oficio'] ?? '',
+                'comunicacion_carpeta_nro' => $_POST['comunicacion_carpeta_nro'] ?? '',
                 'fiscalia_id' => $_POST['fiscalia_id'] ?? '',
                 'fiscal_id' => $_POST['fiscal_id'] ?? '',
                 'nro_informe_policial' => $_POST['nro_informe_policial'] ?? '',
@@ -1733,15 +1768,24 @@ $oficios = safe_query_all(
             [$accidente_id]
 );
 
+$documentoFechaRecepcionExpr = safe_column_exists($pdo, 'documentos_recibidos', 'fecha_recepcion')
+    ? 'dr.fecha_recepcion'
+    : 'dr.fecha';
+$documentoFechaDocumentoExpr = safe_column_exists($pdo, 'documentos_recibidos', 'fecha_documento')
+    ? 'dr.fecha_documento'
+    : 'dr.fecha';
+
 $documentosRecibidos = safe_query_all(
     $pdo,
     "SELECT dr.*,
+            {$documentoFechaRecepcionExpr} AS fecha_recepcion_resuelta,
+            {$documentoFechaDocumentoExpr} AS fecha_documento_resuelta,
             COALESCE(o.numero, '') AS oficio_numero,
             COALESCE(o.anio, '') AS oficio_anio
        FROM documentos_recibidos dr
   LEFT JOIN oficios o ON o.id = dr.referencia_oficio_id
       WHERE dr.accidente_id = ?
-   ORDER BY COALESCE(dr.fecha, '9999-12-31') DESC, dr.id DESC",
+   ORDER BY COALESCE({$documentoFechaRecepcionExpr}, '9999-12-31') DESC, dr.id DESC",
     [$accidente_id]
 );
 
@@ -2768,13 +2812,25 @@ include __DIR__ . '/sidebar.php';
         <div class="section-block">
           <h2 class="section-title">Comunicación</h2>
           <div class="general-grid">
-            <div class="data-card g-6">
+            <div class="data-card g-4">
               <div class="label">Comunicante</div>
               <div class="value"><?= fmt($A['comunicante_nombre'] ?? '') ?></div>
             </div>
-            <div class="data-card g-6">
+            <div class="data-card g-4">
               <div class="label">Tel. comunicante</div>
               <div class="value"><?= fmt($A['comunicante_telefono'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-4">
+              <div class="label">Decreto</div>
+              <div class="value"><?= fmt($A['comunicacion_decreto'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-6">
+              <div class="label">Oficio</div>
+              <div class="value"><?= fmt($A['comunicacion_oficio'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-6">
+              <div class="label">Carpeta N°</div>
+              <div class="value"><?= fmt($A['comunicacion_carpeta_nro'] ?? '') ?></div>
             </div>
           </div>
         </div>
@@ -2948,13 +3004,25 @@ include __DIR__ . '/sidebar.php';
         <div class="section-block">
           <h2 class="section-title">Comunicación</h2>
           <div class="general-edit-grid">
-            <div class="general-edit-card g-6">
+            <div class="general-edit-card g-4">
               <label for="acc-comunicante">Comunicante</label>
               <input class="edit-control" id="acc-comunicante" type="text" name="comunicante_nombre" maxlength="120" value="<?= h((string) ($accidenteBase['comunicante_nombre'] ?? '')) ?>">
             </div>
-            <div class="general-edit-card g-6">
+            <div class="general-edit-card g-4">
               <label for="acc-comunicante-tel">Tel. comunicante</label>
               <input class="edit-control" id="acc-comunicante-tel" type="text" name="comunicante_telefono" maxlength="20" value="<?= h((string) ($accidenteBase['comunicante_telefono'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-comunicacion-decreto">Decreto</label>
+              <input class="edit-control" id="acc-comunicacion-decreto" type="text" name="comunicacion_decreto" maxlength="120" value="<?= h((string) ($accidenteBase['comunicacion_decreto'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-6">
+              <label for="acc-comunicacion-oficio">Oficio</label>
+              <input class="edit-control" id="acc-comunicacion-oficio" type="text" name="comunicacion_oficio" maxlength="120" value="<?= h((string) ($accidenteBase['comunicacion_oficio'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-6">
+              <label for="acc-comunicacion-carpeta">Carpeta N°</label>
+              <input class="edit-control" id="acc-comunicacion-carpeta" type="text" name="comunicacion_carpeta_nro" maxlength="120" value="<?= h((string) ($accidenteBase['comunicacion_carpeta_nro'] ?? '')) ?>">
             </div>
           </div>
         </div>
@@ -4318,7 +4386,8 @@ include __DIR__ . '/sidebar.php';
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['tipo_documento'] ?? '') !== '' ? $row['tipo_documento'] : 'Sin tipo')) ?></span>
                           <span class="chip-simple">NÂ° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : 'â€”')) ?></span>
-                          <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha'] ?? null)) ?></span>
+                          <span class="chip-simple">Recepcion: <?= h(fecha_simple($row['fecha_recepcion_resuelta'] ?? $row['fecha_recepcion'] ?? $row['fecha'] ?? null)) ?></span>
+                          <span class="chip-simple">Documento: <?= h(fecha_simple($row['fecha_documento_resuelta'] ?? $row['fecha_documento'] ?? $row['fecha'] ?? null)) ?></span>
                           <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>
                         </div>
                         <?php if (!empty($row['contenido'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['contenido'])) ?></p><?php endif; ?>

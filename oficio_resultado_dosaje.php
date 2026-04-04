@@ -49,6 +49,28 @@ function has_table(PDO $pdo, string $table): bool {
     $st->execute([$table]);
     return (bool)$st->fetchColumn();
 }
+function list_item_case(string $item, bool $capitalize = false): string {
+    $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+    if ($item === '') return '';
+    $item = mb_strtolower($item, 'UTF-8');
+    if (!$capitalize) return $item;
+    return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($item, 1, null, 'UTF-8');
+}
+function join_es(array $items): string {
+    $items = array_values(array_filter(array_map(static fn($item) => trim((string)$item), $items), static fn($item) => $item !== ''));
+    $count = count($items);
+    if ($count === 0) return '';
+    if ($count === 1) return list_item_case($items[0], true);
+
+    $items = array_map(
+        static fn($item, $index) => list_item_case((string)$item, $index === 0),
+        $items,
+        array_keys($items)
+    );
+
+    if ($count === 2) return $items[0] . ' y ' . $items[1];
+    return implode(', ', array_slice($items, 0, $count - 1)) . ' y ' . $items[$count - 1];
+}
 
 /* -------------------- Parámetro requerido -------------------- */
 $oficio_id = isset($_GET['oficio_id']) ? (int)$_GET['oficio_id'] : 0;
@@ -116,7 +138,7 @@ if (!empty($O['accidente_id'])) {
         $q = $pdo->prepare("SELECT GROUP_CONCAT(DISTINCT m.nombre SEPARATOR '||') FROM accidente_modalidad am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?");
         $q->execute([(int)$O['accidente_id']]);
         $r = trim((string)$q->fetchColumn());
-        if ($r !== '') $modalidad = str_replace('||', ', ', $r);
+        if ($r !== '') $modalidad = join_es(explode('||', $r));
     } elseif (has_col($pdo,'accidentes','modalidad')) {
         $q = $pdo->prepare("SELECT modalidad FROM accidentes WHERE id=? LIMIT 1");
         $q->execute([(int)$O['accidente_id']]);

@@ -119,6 +119,22 @@ $asuntosActuales = $service->asuntosCatalogo((int) ($data['asunto_id'] ?? 0));
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
+$entidadesAutocomplete = [];
+$entidadDestinoTexto = '';
+foreach ($ctx['entidades'] as $entidadItem) {
+    $nombreEntidad = trim((string) ($entidadItem['nombre'] ?? ''));
+    $siglasEntidad = trim((string) ($entidadItem['siglas'] ?? ''));
+    $labelEntidad = $nombreEntidad . ($siglasEntidad !== '' ? ' (' . $siglasEntidad . ')' : '');
+    $entidadesAutocomplete[] = [
+        'id' => $entidadItem['id'] ?? '',
+        'nombre' => $nombreEntidad,
+        'siglas' => $siglasEntidad,
+        'label' => $labelEntidad,
+    ];
+    if ($entidadDestinoTexto === '' && (string) ($data['entidad_id'] ?? '') === (string) ($entidadItem['id'] ?? '')) {
+        $entidadDestinoTexto = $labelEntidad;
+    }
+}
 $personaDestinoTexto = trim((string) ($data['persona_destino_manual'] ?? ''));
 if ($personaDestinoTexto === '' && !empty($data['persona_id'])) {
     foreach ($personasActuales as $personaItem) {
@@ -143,7 +159,7 @@ if (!$embed) {
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca;--ok:#bbf7d0}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px auto;padding:16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.mini{width:40px;min-width:40px;min-height:48px;padding:0;font-size:20px;line-height:1}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);line-height:1.3}select{min-height:48px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}input{min-height:48px}textarea{min-height:130px;resize:vertical}.field-row{display:flex;gap:8px;align-items:stretch}.field-row > *:first-child{flex:1 1 auto}.combo-wrap{display:grid;gap:6px}.combo-hint{color:var(--muted);font-size:.88rem}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.muted{color:var(--muted);font-size:.9rem}.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:rgba(148,163,184,.06)}.preview h4{margin:.1rem 0 .5rem}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}.modal iframe{width:100%;height:calc(100% - 52px);border:0}@media (max-width:900px){.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}}
+body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px auto;padding:16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.mini{width:40px;min-width:40px;min-height:48px;padding:0;font-size:20px;line-height:1}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);line-height:1.3}select{min-height:48px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}input{min-height:48px}textarea{min-height:130px;resize:vertical}.field-row{display:flex;gap:8px;align-items:stretch}.field-row > *:first-child{flex:1 1 auto}.combo-wrap{display:grid;gap:6px}.combo-hint{color:var(--muted);font-size:.88rem}.combo-menu{position:relative}.combo-suggestions{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(760px,calc(100vw - 80px));max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 14px 28px rgba(15,23,42,.14);display:none;z-index:40}.combo-suggestions.open{display:block}.combo-suggestion{padding:9px 12px;font-size:.84rem;line-height:1.25;cursor:pointer;white-space:normal;word-break:break-word}.combo-suggestion:hover,.combo-suggestion.active{background:rgba(29,78,216,.10)}.combo-empty{padding:9px 12px;font-size:.82rem;color:var(--muted)}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.muted{color:var(--muted);font-size:.9rem}.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:rgba(148,163,184,.06)}.preview h4{margin:.1rem 0 .5rem}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}.modal iframe{width:100%;height:calc(100% - 52px);border:0}@media (max-width:900px){.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.combo-suggestions{max-width:calc(100vw - 48px)}}
 </style>
 </head>
 <body>
@@ -209,13 +225,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
       <div class="c6">
         <label>Entidad destino*</label>
         <div class="field-row">
-          <select name="entidad_id" id="entidad_id" required>
-            <option value="">Selecciona</option>
-            <?php foreach ($ctx['entidades'] as $entidad): ?>
-              <?php $label = $entidad['nombre'] . ($entidad['siglas'] !== '' ? ' (' . $entidad['siglas'] . ')' : ''); ?>
-              <option value="<?= h($entidad['id']) ?>" <?= (string) $data['entidad_id'] === (string) $entidad['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
-            <?php endforeach; ?>
-          </select>
+          <div class="combo-wrap combo-menu">
+            <input type="hidden" name="entidad_id" id="entidad_id" value="<?= h((string) $data['entidad_id']) ?>">
+            <input type="text" id="entidad_id_text" value="<?= h($entidadDestinoTexto) ?>" placeholder="Escribe para buscar la entidad" autocomplete="off" required>
+            <div id="entidad_id_options" class="combo-suggestions" role="listbox" aria-label="Sugerencias de entidad"></div>
+            <div class="combo-hint">Escribe el nombre o las siglas y selecciona una entidad de la lista.</div>
+          </div>
           <button class="btn mini" type="button" onclick="openCreate('entidad')">+</button>
         </div>
       </div>
@@ -299,6 +314,24 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
         </div>
       </div>
 
+      <div class="c12" id="camaraRangoBox" style="display:none;">
+        <div class="preview">
+          <h4>Camara de video vigilancia</h4>
+          <div class="field-row" style="margin-bottom:10px; flex-wrap:wrap;">
+            <div style="flex:1 1 220px;">
+              <label for="camara_rango_desde">Entre las</label>
+              <input type="time" id="camara_rango_desde">
+            </div>
+            <div style="flex:1 1 220px;">
+              <label for="camara_rango_hasta">Hasta las</label>
+              <input type="time" id="camara_rango_hasta">
+            </div>
+          </div>
+          <div class="muted">Al completar ambos campos se agregara al motivo una linea como: "Rango solicitado: entre las 08:00 hasta las 10:00".</div>
+          <div class="muted" style="margin-top:6px;">Marcadores disponibles en la plantilla Word: <strong>${oficio_rango_camaras}</strong>, <strong>${oficio_rango_desde}</strong> y <strong>${oficio_rango_hasta}</strong>.</div>
+        </div>
+      </div>
+
       <div class="c12">
         <label>Motivo / contexto*</label>
         <textarea name="motivo" id="motivo" required><?= h($data['motivo']) ?></textarea>
@@ -354,6 +387,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
 <script>
 const accSel = document.getElementById('accidente_id');
 const entidadSel = document.getElementById('entidad_id');
+const entidadTextInp = document.getElementById('entidad_id_text');
 const subSel = document.getElementById('subentidad_id');
 const personaSel = document.getElementById('persona_id');
 const personaTextInp = document.getElementById('persona_id_text');
@@ -361,12 +395,61 @@ const personaManualInp = document.getElementById('persona_destino_manual');
 const tipoSel = document.getElementById('tipo');
 const asuntoSel = document.getElementById('asunto_id');
 const motivoTxt = document.getElementById('motivo');
+const camaraRangoBox = document.getElementById('camaraRangoBox');
+const camaraRangoDesdeInp = document.getElementById('camara_rango_desde');
+const camaraRangoHastaInp = document.getElementById('camara_rango_hasta');
 const fechaInp = document.getElementById('fecha_emision');
 const anioInp = document.getElementById('anio_oficio');
 const numInp = document.getElementById('numero_oficio');
 const linkListado = document.getElementById('linkListado');
+const entidadOptionsBox = document.getElementById('entidad_id_options');
 let lastModal = null;
+let entidadItemsCache = <?= json_encode($entidadesAutocomplete, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 let personaItemsCache = <?= json_encode($personasActuales, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+let lastEntidadLoaded = String(entidadSel ? (entidadSel.value || '') : '');
+let entidadSuggestions = [];
+
+function normalizeText(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function stripCamaraRangeLine(text) {
+  return String(text || '')
+    .split(/\r?\n/)
+    .filter((line) => !normalizeText(line).startsWith('rango solicitado:'))
+    .join('\n')
+    .trim();
+}
+
+function extractCamaraRange(text) {
+  const match = String(text || '').match(/Rango solicitado:\s*entre las\s*([0-2]\d:\d{2})\s*hasta las\s*([0-2]\d:\d{2})/i);
+  return {
+    desde: match ? match[1] : '',
+    hasta: match ? match[2] : ''
+  };
+}
+
+function camaraRangeLine() {
+  if (!camaraRangoDesdeInp || !camaraRangoHastaInp) return '';
+  const desde = String(camaraRangoDesdeInp.value || '').trim();
+  const hasta = String(camaraRangoHastaInp.value || '').trim();
+  if (!desde || !hasta) return '';
+  return 'Rango solicitado: entre las ' + desde + ' hasta las ' + hasta + '.';
+}
+
+function syncCamaraRangeIntoMotivo() {
+  if (!motivoTxt) return;
+  const base = stripCamaraRangeLine(motivoTxt.value);
+  const line = camaraRangeLine();
+  motivoTxt.value = line ? (base ? (base + '\n' + line) : line) : base;
+}
+
+function hydrateCamaraRangeFromMotivo() {
+  if (!camaraRangoDesdeInp || !camaraRangoHastaInp || !motivoTxt) return;
+  const parsed = extractCamaraRange(motivoTxt.value);
+  camaraRangoDesdeInp.value = parsed.desde;
+  camaraRangoHastaInp.value = parsed.hasta;
+}
 
 async function fetchJSON(url) {
   const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -388,16 +471,118 @@ function fillSelect(select, items, selectedValue, placeholder, labelKey = 'nombr
   });
 }
 
-function fillDatalist(listId, items) {
+function fillDatalist(listId, items, labelKey = 'nombre') {
   const list = document.getElementById(listId);
   if (!list) return;
   list.innerHTML = '';
   items.forEach((item) => {
     const option = document.createElement('option');
-    option.value = String(item.nombre || '').trim();
+    option.value = String(item[labelKey] || '').trim();
     option.dataset.id = String(item.id || '');
     list.appendChild(option);
   });
+}
+
+function closeEntidadSuggestions() {
+  if (entidadOptionsBox) entidadOptionsBox.classList.remove('open');
+}
+
+function openEntidadSuggestions() {
+  if (entidadOptionsBox && entidadOptionsBox.innerHTML.trim() !== '') entidadOptionsBox.classList.add('open');
+}
+
+function renderEntidadSuggestions(filterValue = '') {
+  if (!entidadOptionsBox) return;
+  const normalizedFilter = normalizeText(filterValue).trim();
+  entidadSuggestions = entidadItemsCache.filter((item) => {
+    if (normalizedFilter === '') return true;
+    return normalizeText(item.label || '').includes(normalizedFilter)
+      || normalizeText(item.nombre || '').includes(normalizedFilter)
+      || normalizeText(item.siglas || '').includes(normalizedFilter);
+  }).slice(0, 20);
+
+  entidadOptionsBox.innerHTML = '';
+  if (entidadSuggestions.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'combo-empty';
+    empty.textContent = 'No hay coincidencias.';
+    entidadOptionsBox.appendChild(empty);
+    openEntidadSuggestions();
+    return;
+  }
+
+  entidadSuggestions.forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'combo-suggestion';
+    row.textContent = String(item.label || '').trim();
+    row.dataset.id = String(item.id || '');
+    row.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      selectEntidadSuggestion(item);
+    });
+    entidadOptionsBox.appendChild(row);
+  });
+  openEntidadSuggestions();
+}
+
+async function selectEntidadSuggestion(item) {
+  if (!item || !entidadSel || !entidadTextInp) return;
+  entidadSel.value = String(item.id || '');
+  entidadTextInp.value = String(item.label || '').trim();
+  entidadTextInp.setCustomValidity('');
+  closeEntidadSuggestions();
+  await handleEntidadSelectionChange();
+}
+
+function setEntidadTextById(entidadId) {
+  if (!entidadTextInp) return;
+  const matched = entidadItemsCache.find((item) => String(item.id || '') === String(entidadId || ''));
+  entidadTextInp.value = matched ? String(matched.label || '').trim() : '';
+}
+
+function clearEntidadDependents() {
+  fillSelect(subSel, [], '', 'Ninguna');
+  personaItemsCache = [];
+  fillDatalist('persona_id_options', []);
+  if (personaSel) personaSel.value = '';
+  if (personaTextInp) personaTextInp.value = '';
+  if (personaManualInp) personaManualInp.value = '';
+  fillSelect(asuntoSel, [], '', 'Selecciona el asunto');
+  const asuntoPreview = document.getElementById('asuntoPreview');
+  const asuntoVarBox = document.getElementById('asuntoVarBox');
+  const asuntoVarSelect = document.getElementById('asuntoVarSelect');
+  if (asuntoPreview) asuntoPreview.style.display = 'none';
+  if (asuntoVarBox) asuntoVarBox.style.display = 'none';
+  if (asuntoVarSelect) asuntoVarSelect.innerHTML = '';
+}
+
+function syncEntidadDestino() {
+  if (!entidadTextInp || !entidadSel) return { changed: false, matched: false, value: '' };
+  entidadTextInp.setCustomValidity('');
+  const typed = entidadTextInp.value.trim();
+  const currentValue = String(entidadSel.value || '');
+
+  if (typed === '') {
+    entidadSel.value = '';
+    return { changed: currentValue !== '', matched: false, value: '' };
+  }
+
+  const typedNormalized = normalizeText(typed);
+  const matched = entidadItemsCache.find((item) => {
+    const label = normalizeText(item.label || '');
+    const nombre = normalizeText(item.nombre || '');
+    const siglas = normalizeText(item.siglas || '');
+    return typedNormalized === label || typedNormalized === nombre || (siglas !== '' && typedNormalized === siglas);
+  });
+
+  if (!matched) {
+    entidadSel.value = '';
+    return { changed: currentValue !== '', matched: false, value: '' };
+  }
+
+  entidadSel.value = String(matched.id || '');
+  entidadTextInp.value = String(matched.label || '').trim();
+  return { changed: currentValue !== entidadSel.value, matched: true, value: entidadSel.value };
 }
 
 function syncPersonaDestinoManual() {
@@ -482,6 +667,8 @@ async function refreshAsuntoPreview() {
   const asuntoEntidadId = String(info.item.entidad_id || '');
   if (entidadSel && asuntoEntidadId !== '' && entidadSel.value !== asuntoEntidadId) {
     entidadSel.value = asuntoEntidadId;
+    setEntidadTextById(asuntoEntidadId);
+    lastEntidadLoaded = asuntoEntidadId;
     await loadSubentidades(asuntoEntidadId);
     await loadPersonas(asuntoEntidadId, personaSel ? personaSel.value : '');
   }
@@ -527,6 +714,10 @@ function asuntoEsNecropsia() {
   const text = asuntoTexto();
   return text.includes('protocolo de necropsia') || text.includes('protocolo de autopsia') || text.includes('necropsia');
 }
+function asuntoEsCamaraVideo() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('camara') && text.includes('video');
+}
 async function loadVehiculosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_vehiculo_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
@@ -556,12 +747,38 @@ async function toggleBoxesPorAsunto() {
     fallBox.style.display = 'none';
     document.getElementById('involucrado_persona_id').value = '';
   }
+  if (camaraRangoBox) {
+    const isCamara = asuntoEsCamaraVideo();
+    camaraRangoBox.style.display = isCamara ? 'block' : 'none';
+    if (isCamara) {
+      hydrateCamaraRangeFromMotivo();
+      syncCamaraRangeIntoMotivo();
+    } else if (motivoTxt) {
+      motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
+    }
+  }
 }
 async function recalcularNumero() {
   const year = parseInt(anioInp.value || '', 10);
   if (!year) return;
   const data = await fetchJSON('?ajax=nextnum&anio=' + encodeURIComponent(year));
   numInp.value = data.next;
+}
+
+async function handleEntidadSelectionChange() {
+  const entidadId = entidadSel ? String(entidadSel.value || '') : '';
+  if (entidadId === lastEntidadLoaded) return;
+  lastEntidadLoaded = entidadId;
+  if (!entidadId) {
+    clearEntidadDependents();
+    await toggleBoxesPorAsunto();
+    return;
+  }
+  await loadSubentidades(entidadId);
+  await loadPersonas(entidadId);
+  await loadAsuntos(entidadId, tipoSel.value || 'SOLICITAR');
+  await refreshAsuntoPreview();
+  await toggleBoxesPorAsunto();
 }
 function syncListadoHref() {
   if (!linkListado) return;
@@ -609,14 +826,24 @@ fechaInp.addEventListener('change', () => {
   }
 });
 accSel.addEventListener('change', () => { syncListadoHref(); toggleBoxesPorAsunto().catch(console.error); });
-entidadSel.addEventListener('change', async () => {
-  const entidadId = entidadSel.value || '';
-  await loadSubentidades(entidadId);
-  await loadPersonas(entidadId);
-  await refreshAsuntoPreview();
-  await toggleBoxesPorAsunto();
-});
+if (entidadTextInp) {
+  const syncEntidadAndReload = async () => {
+    syncEntidadDestino();
+    renderEntidadSuggestions(entidadTextInp.value || '');
+    await handleEntidadSelectionChange();
+  };
+  entidadTextInp.addEventListener('input', () => {
+    syncEntidadAndReload().catch(console.error);
+  });
+  entidadTextInp.addEventListener('change', () => {
+    syncEntidadAndReload().catch(console.error);
+  });
+  entidadTextInp.addEventListener('focus', () => {
+    renderEntidadSuggestions(entidadTextInp.value || '');
+  });
+}
 tipoSel.addEventListener('change', async () => {
+  await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR', asuntoSel.value || '');
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
@@ -624,21 +851,47 @@ if (personaTextInp) {
   personaTextInp.addEventListener('input', syncPersonaDestinoManual);
   personaTextInp.addEventListener('change', syncPersonaDestinoManual);
 }
+if (camaraRangoDesdeInp) {
+  camaraRangoDesdeInp.addEventListener('input', syncCamaraRangeIntoMotivo);
+  camaraRangoHastaInp.addEventListener('input', syncCamaraRangeIntoMotivo);
+}
 asuntoSel.addEventListener('change', async () => {
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
-document.getElementById('frmOficio').addEventListener('submit', () => {
+document.getElementById('frmOficio').addEventListener('submit', (event) => {
+  syncEntidadDestino();
+  if (!entidadSel.value) {
+    if (entidadTextInp) {
+      entidadTextInp.setCustomValidity('Selecciona una entidad de la lista.');
+      entidadTextInp.reportValidity();
+    }
+    event.preventDefault();
+    return;
+  }
   syncPersonaDestinoManual();
+  if (asuntoEsCamaraVideo()) syncCamaraRangeIntoMotivo();
+  else if (motivoTxt) motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
   syncListadoHref();
+  syncEntidadDestino();
   syncPersonaDestinoManual();
-  await loadAsuntos('', '', asuntoSel.value || '');
+  hydrateCamaraRangeFromMotivo();
+  renderEntidadSuggestions(entidadTextInp ? entidadTextInp.value : '');
+  closeEntidadSuggestions();
+  await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR', asuntoSel.value || '');
   if (!numInp.value) await recalcularNumero();
   await refreshAsuntoPreview().catch(() => {});
   await toggleBoxesPorAsunto();
+});
+
+document.addEventListener('click', (event) => {
+  if (!entidadTextInp || !entidadOptionsBox) return;
+  const combo = entidadTextInp.closest('.combo-menu');
+  if (combo && combo.contains(event.target)) return;
+  closeEntidadSuggestions();
 });
 </script>
 </body>

@@ -92,8 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </select>
     </div>
     <div>
-      <label for="fecha">Fecha</label>
-      <input id="fecha" type="date" name="fecha" value="<?= h($data['fecha']) ?>">
+      <label for="fecha_recepcion">Fecha de recepcion</label>
+      <input id="fecha_recepcion" type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>" readonly>
+      <div class="help">Se registra automaticamente con la fecha de hoy.</div>
+    </div>
+    <div>
+      <label for="fecha_documento">Fecha del documento</label>
+      <input id="fecha_documento" type="date" name="fecha_documento" value="<?= h($data['fecha_documento']) ?>">
     </div>
     <div class="full">
       <label for="asunto">Asunto</label>

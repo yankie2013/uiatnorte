@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* ===========================================================
    INFORME ATROPELLO - UIAT NORTE (DOCX con PhpWord)
    Requiere: composer require phpoffice/phpword
@@ -51,18 +51,40 @@ if (!class_exists(TemplateProcessor::class)) {
 $accidente_id = (int)($_GET['accidente_id'] ?? $_GET['id'] ?? 0);
 if ($accidente_id <= 0) { http_response_code(400); echo "Falta ?accidente_id"; exit; }
 /* ---------- Helpers ---------- */
-function v($s){ return ($s!==null && $s!=='') ? $s : '—'; }
+function v($s){ return ($s!==null && $s!=='') ? $s : 'â€”'; }
 function mes3($ts){
   return strtoupper(strtr(date('M',$ts),[
     'Jan'=>'ENE','Feb'=>'FEB','Mar'=>'MAR','Apr'=>'ABR','May'=>'MAY','Jun'=>'JUN',
     'Jul'=>'JUL','Aug'=>'AGO','Sep'=>'SEP','Oct'=>'OCT','Nov'=>'NOV','Dec'=>'DIC'
   ]));
 }
-function ymd_pe($dt){ if(!$dt) return '—'; $ts=strtotime($dt); if(!$ts) return '—'; return date('d',$ts).mes3($ts).date('Y',$ts); }
-function hora_pe($dt){ if(!$dt) return '—'; $ts=strtotime($dt); if(!$ts) return '—'; return date('H:i',$ts); }
-function fecha_corta($dt){ if(!$dt) return '—'; $ts=strtotime($dt); if(!$ts) return '—'; return date('d/m/Y',$ts); }
-function edad_from($fecha){ if(!$fecha) return '—'; $ts=strtotime($fecha); if(!$ts) return '—'; $hoy=new DateTime('today'); $n=DateTime::createFromFormat('Y-m-d',date('Y-m-d',$ts)); if(!$n) return '—'; return $n->diff($hoy)->y; }
+function ymd_pe($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) return 'â€”'; return date('d',$ts).mes3($ts).date('Y',$ts); }
+function hora_pe($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) return 'â€”'; return date('H:i',$ts); }
+function fecha_corta($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) return 'â€”'; return date('d/m/Y',$ts); }
+function edad_from($fecha){ if(!$fecha) return 'â€”'; $ts=strtotime($fecha); if(!$ts) return 'â€”'; $hoy=new DateTime('today'); $n=DateTime::createFromFormat('Y-m-d',date('Y-m-d',$ts)); if(!$n) return 'â€”'; return $n->diff($hoy)->y; }
 function nombre_completo($n='',$apep='',$apem=''){ return trim(($apep?:'').' '.($apem?:'').' '.($n?:'')); }
+function list_item_case(string $item, bool $capitalize = false): string {
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if ($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if (!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($item, 1, null, 'UTF-8');
+}
+function join_es(array $items): string {
+  $items = array_values(array_filter(array_map(static fn($item) => trim((string)$item), $items), static fn($item) => $item !== ''));
+  $count = count($items);
+  if ($count === 0) return 'â€”';
+  if ($count === 1) return list_item_case($items[0], true);
+
+  $items = array_map(
+    static fn($item, $index) => list_item_case((string)$item, $index === 0),
+    $items,
+    array_keys($items)
+  );
+
+  if ($count === 2) return $items[0].' y '.$items[1];
+  return implode(', ', array_slice($items, 0, $count - 1)).' y '.$items[$count - 1];
+}
 
 /* Helpers documentos por persona */
 function get_dosaje(PDO $pdo, $persona_id){
@@ -89,7 +111,7 @@ function get_abogado(PDO $pdo, $accidente_id, $persona_id){
   $q->execute([':a'=>$accidente_id, ':p'=>$persona_id]);
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if($row) return $row;
-  // Segundo: último abogado de la persona (sin filtrar por accidente)
+  // Segundo: Ãºltimo abogado de la persona (sin filtrar por accidente)
   $q2 = $pdo->prepare("SELECT * FROM abogados WHERE persona_id=:p ORDER BY id DESC LIMIT 1");
   $q2->execute([':p'=>$persona_id]);
   return $q2->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -128,10 +150,11 @@ $q = $pdo->prepare("
    ORDER BY m.nombre
 ");
 $q->execute([':id'=>$accidente_id]);
-$MODS = implode(', ', $q->fetchAll(PDO::FETCH_COLUMN)) ?: '—';
+$MODS = implode(', ', $q->fetchAll(PDO::FETCH_COLUMN)) ?: 'â€”';
+$MODS = join_es($MODS === 'â€”' ? [] : array_map('trim', explode(', ', $MODS)));
 
 /* Consecuencias (si existe tabla relacional, sino usa campo del accidente) */
-$CONS = '—';
+$CONS = 'â€”';
 try{
   $qc=$pdo->prepare("
     SELECT c.nombre
@@ -141,19 +164,21 @@ try{
      ORDER BY c.nombre
   ");
   $qc->execute([':id'=>$accidente_id]);
-  $CONS = implode(', ', $qc->fetchAll(PDO::FETCH_COLUMN)) ?: v($ACC['consecuencia'] ?? $ACC['consecuencia_nombre'] ?? '—');
+  $CONS = implode(', ', $qc->fetchAll(PDO::FETCH_COLUMN)) ?: v($ACC['consecuencia'] ?? $ACC['consecuencia_nombre'] ?? 'â€”');
+  $CONS = join_es($CONS === 'â€”' ? [] : array_map('trim', explode(', ', $CONS)));
+  if ($CONS === '—') $CONS = v($ACC['consecuencia'] ?? $ACC['consecuencia_nombre'] ?? 'â€”');
 }catch(Throwable $e){
-  $CONS = v($ACC['consecuencia'] ?? $ACC['consecuencia_nombre'] ?? '—');
+  $CONS = v($ACC['consecuencia'] ?? $ACC['consecuencia_nombre'] ?? 'â€”');
 }
 
 /* ===========================================================
-   2) CONDUCTOR + VEHÍCULO (con marca/modelo/carrocería/categoría)
+   2) CONDUCTOR + VEHÃCULO (con marca/modelo/carrocerÃ­a/categorÃ­a)
 =========================================================== */
 /* ===========================================================
-   2) CONDUCTOR + VEHÍCULO (con fallback)
+   2) CONDUCTOR + VEHÃCULO (con fallback)
 =========================================================== */
 try {
-  // Consulta completa (usa marca/modelo/carrocería/categoría)
+  // Consulta completa (usa marca/modelo/carrocerÃ­a/categorÃ­a)
 $sqlConductor = "
   SELECT
       ip.id AS inv_id, ip.*, pr.Nombre AS rol_nombre,
@@ -162,7 +187,7 @@ $sqlConductor = "
       v.id AS vehiculo_id, v.placa, v.color, v.anio,
       v.largo_mm, v.ancho_mm, v.alto_mm,
 
-      -- Catálogos de vehículo
+      -- CatÃ¡logos de vehÃ­culo
       tv.codigo  AS tipo_codigo,
       tv.nombre  AS tipo_nombre,
       cat.codigo AS categoria_codigo,
@@ -175,7 +200,7 @@ $sqlConductor = "
   JOIN personas               p    ON p.id = ip.persona_id
   LEFT JOIN vehiculos         v    ON v.id = ip.vehiculo_id
 
-  -- JOINS de catálogos según tu estructura
+  -- JOINS de catÃ¡logos segÃºn tu estructura
   LEFT JOIN tipos_vehiculo        tv   ON tv.id   = v.tipo_id
   LEFT JOIN categoria_vehiculos   cat  ON cat.id  = v.categoria_id OR cat.id = tv.categoria_id
   LEFT JOIN carroceria_vehiculo   car  ON car.id  = v.carroceria_id
@@ -193,7 +218,7 @@ $st = $pdo->prepare($sqlConductor);
 $st->execute([':id'=>$accidente_id]);
 $COND = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 } catch (Throwable $e) {
-  // Si falla por nombre de tabla/columna, caemos a la versión “simple”
+  // Si falla por nombre de tabla/columna, caemos a la versiÃ³n â€œsimpleâ€
   if ($DEBUG) { dbg("[sqlConductor full] ".$e->getMessage()); }
   $sqlConductorSimple = "
     SELECT ip.id AS inv_id, ip.*, pr.Nombre AS rol_nombre,
@@ -222,7 +247,7 @@ $COND = $st->fetch(PDO::FETCH_ASSOC) ?: [];
   $COND['carroceria_nombre']     = $COND['carroceria_nombre']     ?? '';
 }
 
-/* Propietario del vehículo (más reciente por accidente) */
+/* Propietario del vehÃ­culo (mÃ¡s reciente por accidente) */
 $PROP = [];
 try{
   $qp = $pdo->prepare("
@@ -239,7 +264,7 @@ try{
   $PROP = $qp->fetch(PDO::FETCH_ASSOC) ?: [];
 }catch(Throwable $e){ /* sin propietario no rompe */ }
 
-/* Documento del vehículo (intenta por vehiculo_id y, si no hay, por involucrado_vehiculo_id) */
+/* Documento del vehÃ­culo (intenta por vehiculo_id y, si no hay, por involucrado_vehiculo_id) */
 $DOCV = [];
 
 /* 1) Por vehiculo_id (camino directo) */
@@ -251,7 +276,7 @@ if (!empty($COND['vehiculo_id'])) {
 
 /* 2) Fallback: por involucrado_vehiculo_id (cuando documento_vehiculo no guarda vehiculo_id) */
 if (!$DOCV && !empty($COND['vehiculo_id'])) {
-    // buscamos el 'involucrado_vehiculos.id' del vehículo de este accidente
+    // buscamos el 'involucrado_vehiculos.id' del vehÃ­culo de este accidente
     $qiv = $pdo->prepare("
         SELECT iv.id
         FROM involucrados_vehiculos iv
@@ -275,7 +300,7 @@ if (!$DOCV && !empty($COND['vehiculo_id'])) {
 }
 
 /* ===========================================================
-   3) PEATÓN FALLECIDO + FAMILIAR
+   3) PEATÃ“N FALLECIDO + FAMILIAR
 =========================================================== */
 $sqlPeaton = "
   SELECT ip.id AS inv_id, ip.*, pr.Nombre AS rol_nombre,
@@ -307,7 +332,7 @@ if (!empty($PEA['inv_id'])) {
   $FAM=$sf->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-/* Documento OCCISO (peatón fallecido) */
+/* Documento OCCISO (peatÃ³n fallecido) */
 $DOC_OCCISO = get_doc_occiso($pdo, $PEA['persona_id'] ?? null, $accidente_id);
 
 /* ===========================================================
@@ -352,8 +377,8 @@ $DOC_DOSAJE_OCU  = get_dosaje($pdo, $OCU['persona_id'] ?? null);
 $DOC_RML_OCU     = get_rml($pdo, $OCU['persona_id'] ?? null, $accidente_id);
 
 /* ===========================================================
-   ITP (Inspección Técnica de la Vía) — tabla `itp`
-   Se extrae la fila más reciente por accidente_id (si existe)
+   ITP (InspecciÃ³n TÃ©cnica de la VÃ­a) â€” tabla `itp`
+   Se extrae la fila mÃ¡s reciente por accidente_id (si existe)
 =========================================================== */
 $ITP = [];
 try {
@@ -366,8 +391,8 @@ try {
 }
 /* helper corto para ITP */
 function v_itp($arr, $k){
-  if (!is_array($arr)) return '—';
-  if (!isset($arr[$k]) || $arr[$k] === null || $arr[$k] === '') return '—';
+  if (!is_array($arr)) return 'â€”';
+  if (!isset($arr[$k]) || $arr[$k] === null || $arr[$k] === '') return 'â€”';
   return $arr[$k];
 }
 
@@ -442,7 +467,7 @@ $T->setValue('lc_vigente_desde',   ymd_pe($DOC_LC['vigente_desde'] ?? ''));
 $T->setValue('lc_vigente_hasta',   ymd_pe($DOC_LC['vigente_hasta'] ?? ''));
 $T->setValue('lc_restricciones',   v($DOC_LC['restricciones'] ?? ''));
 
-/* Dosaje/RML (Conductor) – también nombres genéricos por compatibilidad */
+/* Dosaje/RML (Conductor) â€“ tambiÃ©n nombres genÃ©ricos por compatibilidad */
 $T->setValue('dosaje_cond_numero',          v($DOC_DOSAJE_COND['numero'] ?? ''));
 $T->setValue('dosaje_cond_registro',        v($DOC_DOSAJE_COND['numero_registro'] ?? ''));
 $T->setValue('dosaje_cond_fecha',           ymd_pe($DOC_DOSAJE_COND['fecha_extraccion'] ?? ''));
@@ -467,7 +492,7 @@ $T->setValue('rml_incapacidad',  v($DOC_RML_COND['incapacidad_medico'] ?? ''));
 $T->setValue('rml_atencion',     v($DOC_RML_COND['atencion_facultativo'] ?? ''));
 $T->setValue('rml_observ',       v($DOC_RML_COND['observaciones'] ?? ''));
 
-/* ====== VEHÍCULO DEL CONDUCTOR ====== */
+/* ====== VEHÃCULO DEL CONDUCTOR ====== */
 $T->setValue('veh_placa',           v($COND['placa'] ?? ''));
 $T->setValue('veh_marca',           v($COND['veh_marca_nombre'] ?? ''));
 $T->setValue('veh_modelo',          v($COND['veh_modelo_nombre'] ?? ''));
@@ -481,14 +506,14 @@ $T->setValue('veh_largo',           v($COND['largo_mm'] ?? ''));
 $T->setValue('veh_ancho',           v($COND['ancho_mm'] ?? ''));
 $T->setValue('veh_alto',            v($COND['alto_mm'] ?? ''));
 
-/* ====== PROPIETARIO DEL VEHÍCULO ====== */
+/* ====== PROPIETARIO DEL VEHÃCULO ====== */
 $T->setValue('prop_tipo',      v($PROP['tipo_propietario'] ?? ''));
 $T->setValue('prop_doc_tipo',  v($PROP['tipo_doc'] ?? ''));
 $T->setValue('prop_doc_num',   v($PROP['num_doc'] ?? ($PROP['ruc'] ?? '')));
 $T->setValue('prop_nombre',    v(($PROP['razon_social'] ?? '') ?: nombre_completo($PROP['nombres'] ?? '', $PROP['apellido_paterno'] ?? '', $PROP['apellido_materno'] ?? '')));
 $T->setValue('prop_domicilio', v($PROP['domicilio_fiscal'] ?? ''));
 
-/* ====== DOCUMENTOS DEL VEHÍCULO (Tarjeta, SOAT, Revisión) ====== */
+/* ====== DOCUMENTOS DEL VEHÃCULO (Tarjeta, SOAT, RevisiÃ³n) ====== */
 /* Tarjeta de Propiedad */
 $T->setValue('doc_num_propiedad',        v($DOCV['numero_propiedad'] ?? ''));
 $T->setValue('doc_partida_propiedad',    v($DOCV['partida_propiedad'] ?? ''));
@@ -499,11 +524,11 @@ $T->setValue('doc_sede_propiedad',       v($DOCV['sede_propiedad'] ?? ''));
 /* SOAT */
 $T->setValue('doc_num_soat',             v($DOCV['numero_soat'] ?? ''));
 $T->setValue('doc_aseguradora_soat',     v($DOCV['aseguradora_soat'] ?? ''));
-/* Si prefieres fecha tipo “ddMESyyyy”, usa ymd_pe(...) en las dos de abajo */
+/* Si prefieres fecha tipo â€œddMESyyyyâ€, usa ymd_pe(...) en las dos de abajo */
 $T->setValue('doc_vigente_soat',         v($DOCV['vigente_soat'] ?? ''));
 $T->setValue('doc_vencimiento_soat',     ymd_pe($DOCV['vencimiento_soat'] ?? ''));
 
-/* Revisión Técnica */
+/* RevisiÃ³n TÃ©cnica */
 $T->setValue('doc_num_revision',         v($DOCV['numero_revision'] ?? ''));
 $T->setValue('doc_certificado_revision', v(trim(($DOCV['certificado_revision'] ?? '') !== '' 
                                               ? $DOCV['certificado_revision'] 
@@ -511,13 +536,13 @@ $T->setValue('doc_certificado_revision', v(trim(($DOCV['certificado_revision'] ?
 $T->setValue('doc_vigente_revision',     v($DOCV['vigente_revision'] ?? ''));      // o ymd_pe(...)
 $T->setValue('doc_vencimiento_revision', ymd_pe($DOCV['vencimiento_revision'] ?? ''));
 
-/* ====== PERITAJE TÉCNICO DEL VEHÍCULO ====== */
+/* ====== PERITAJE TÃ‰CNICO DEL VEHÃCULO ====== */
 $T->setValue('doc_num_peritaje',     v($DOCV['numero_peritaje'] ?? ''));
 $T->setValue('doc_fecha_peritaje',   ymd_pe($DOCV['fecha_peritaje'] ?? ''));
 $T->setValue('doc_perito_peritaje',  v($DOCV['perito_peritaje'] ?? ''));
 $T->setValue('doc_danos_peritaje',   v($DOCV['danos_peritaje'] ?? ''));
 
-/* Igual que el SOAT: puedes usar ymd_pe(...) si quieres formato “ddMESyyyy” */
+/* Igual que el SOAT: puedes usar ymd_pe(...) si quieres formato â€œddMESyyyyâ€ */
 $T->setValue('doc_vigente_revision',     v($DOCV['vigente_revision'] ?? ''));
 $T->setValue('doc_vencimiento_revision', ymd_pe($DOCV['vencimiento_revision'] ?? ''));
 
@@ -532,7 +557,7 @@ $T->setValue('prop_abog_domproc', v($ABOG_PROP['domicilio_procesal'] ?? ''));
 $T->setValue('prop_abog_cel',     v($ABOG_PROP['celular'] ?? ''));
 $T->setValue('prop_abog_email',   v($ABOG_PROP['email'] ?? ''));
 
-/* ====== PEATÓN FALLECIDO ====== */
+/* ====== PEATÃ“N FALLECIDO ====== */
 $T->setValue('peaton_doc_tipo',     v($PEA['tipo_doc'] ?? ''));
 $T->setValue('peaton_doc_num',      v($PEA['num_doc'] ?? ''));
 $T->setValue('peaton_apep',         v($PEA['apellido_paterno'] ?? ''));
@@ -548,7 +573,7 @@ $T->setValue('peaton_nacionalidad', v($PEA['nacionalidad'] ?? ''));
 $T->setValue('peaton_domicilio',    v($PEA['domicilio'] ?? ''));
 $T->setValue('peaton_observ',       v($PEA['observaciones'] ?? ''));
 
-/* Abogado del peatón */
+/* Abogado del peatÃ³n */
 $T->setValue('peaton_abog_nombre',  v(nombre_completo($ABOG_PEA['nombres'] ?? '', $ABOG_PEA['apellido_paterno'] ?? '', $ABOG_PEA['apellido_materno'] ?? '')));
 $T->setValue('peaton_abog_cond',    v($ABOG_PEA['condicion'] ?? ''));
 $T->setValue('peaton_abog_coleg',   v($ABOG_PEA['colegiatura'] ?? ''));
@@ -558,7 +583,7 @@ $T->setValue('peaton_abog_domproc', v($ABOG_PEA['domicilio_procesal'] ?? ''));
 $T->setValue('peaton_abog_cel',     v($ABOG_PEA['celular'] ?? ''));
 $T->setValue('peaton_abog_email',   v($ABOG_PEA['email'] ?? ''));
 
-/* ====== DOCUMENTO OCCISO (PEATÓN FALLECIDO) ====== */
+/* ====== DOCUMENTO OCCISO (PEATÃ“N FALLECIDO) ====== */
 $T->setValue('occiso_fecha_lev',        ymd_pe($DOC_OCCISO['fecha_levantamiento'] ?? ''));
 $T->setValue('occiso_hora_lev',         hora_pe($DOC_OCCISO['hora_levantamiento'] ?? ''));
 $T->setValue('occiso_lugar_lev',        v($DOC_OCCISO['lugar_levantamiento'] ?? ''));
@@ -609,7 +634,7 @@ $T->setValue('fam_abog_domproc', v($ABOG_FAM['domicilio_procesal'] ?? ''));
 $T->setValue('fam_abog_cel',     v($ABOG_FAM['celular'] ?? ''));
 $T->setValue('fam_abog_email',   v($ABOG_FAM['email'] ?? ''));
 
-/* ====== DOCUMENTOS – PEATÓN/OCUPANTE ====== */
+/* ====== DOCUMENTOS â€“ PEATÃ“N/OCUPANTE ====== */
 $T->setValue('dosaje_peat_numero',          v($DOC_DOSAJE_PEA['numero'] ?? ''));
 $T->setValue('dosaje_peat_registro',        v($DOC_DOSAJE_PEA['numero_registro'] ?? ''));
 $T->setValue('dosaje_peat_fecha',           ymd_pe($DOC_DOSAJE_PEA['fecha_extraccion'] ?? ''));
@@ -641,9 +666,9 @@ $T->setValue('rml_ocu_incapacidad',  v($DOC_RML_OCU['incapacidad_medico'] ?? '')
 $T->setValue('rml_ocu_atencion',     v($DOC_RML_OCU['atencion_facultativo'] ?? ''));
 $T->setValue('rml_ocu_observ',       v($DOC_RML_OCU['observaciones'] ?? ''));
 
-/* ====== ITP — campos de la tabla `itp` ====== */
-$T->setValue('itp_fecha_itp',          ($ITP['fecha_itp'] ?? '') ? ymd_pe($ITP['fecha_itp']) : '—');
-$T->setValue('itp_hora_itp',           ($ITP['hora_itp'] ?? '') ? hora_pe($ITP['hora_itp']) : '—');
+/* ====== ITP â€” campos de la tabla `itp` ====== */
+$T->setValue('itp_fecha_itp',          ($ITP['fecha_itp'] ?? '') ? ymd_pe($ITP['fecha_itp']) : 'â€”');
+$T->setValue('itp_hora_itp',           ($ITP['hora_itp'] ?? '') ? hora_pe($ITP['hora_itp']) : 'â€”');
 $T->setValue('itp_ocurrencia_policial', v_itp($ITP,'ocurrencia_policial'));
 $T->setValue('itp_llegada_lugar',      v_itp($ITP,'llegada_lugar'));
 $T->setValue('itp_localizacion_unidades', v_itp($ITP,'localizacion_unidades'));
@@ -651,11 +676,11 @@ $T->setValue('itp_forma_via',          v_itp($ITP,'forma_via'));
 $T->setValue('itp_punto_referencia',   v_itp($ITP,'punto_referencia'));
 $T->setValue('itp_ubicacion_gps',      v_itp($ITP,'ubicacion_gps'));
 
-/* vía 1 */
+/* vÃ­a 1 */
 $T->setValue('itp_descripcion_via1',   v_itp($ITP,'descripcion_via1'));
 $T->setValue('itp_configuracion_via1', v_itp($ITP,'configuracion_via1'));
 $T->setValue('itp_material_via1',      v_itp($ITP,'material_via1'));
-$T->setValue('itp_señalizacion_via1',  v_itp($ITP,'señalizacion_via1'));
+$T->setValue('itp_seÃ±alizacion_via1',  v_itp($ITP,'seÃ±alizacion_via1'));
 $T->setValue('itp_ordenamiento_via1',  v_itp($ITP,'ordenamiento_via1'));
 $T->setValue('itp_iluminacion_via1',   v_itp($ITP,'iluminacion_via1'));
 $T->setValue('itp_visibilidad_via1',   v_itp($ITP,'visibilidad_via1'));
@@ -664,11 +689,11 @@ $T->setValue('itp_fluidez_via1',       v_itp($ITP,'fluidez_via1'));
 $T->setValue('itp_medidas_via1',       v_itp($ITP,'medidas_via1'));
 $T->setValue('itp_observaciones_via1', v_itp($ITP,'observaciones_via1'));
 
-/* vía 2 */
+/* vÃ­a 2 */
 $T->setValue('itp_descripcion_via2',   v_itp($ITP,'descripcion_via2'));
 $T->setValue('itp_configuracion_via2', v_itp($ITP,'configuracion_via2'));
 $T->setValue('itp_material_via2',      v_itp($ITP,'material_via2'));
-$T->setValue('itp_señalizacion_via2',  v_itp($ITP,'señalizacion_via2'));
+$T->setValue('itp_seÃ±alizacion_via2',  v_itp($ITP,'seÃ±alizacion_via2'));
 $T->setValue('itp_ordenamiento_via2',  v_itp($ITP,'ordenamiento_via2'));
 $T->setValue('itp_iluminacion_via2',   v_itp($ITP,'iluminacion_via2'));
 $T->setValue('itp_visibilidad_via2',   v_itp($ITP,'visibilidad_via2'));
@@ -683,9 +708,9 @@ $T->setValue('itp_evidencia_fisica',    v_itp($ITP,'evidencia_fisica'));
 $T->setValue('itp_evidencia_material',  v_itp($ITP,'evidencia_material'));
 
 /* ====== DILIGENCIAS (si tienes tabla, reemplaza) ====== */
-$T->setValue('diligencias', '—');
+$T->setValue('diligencias', 'â€”');
 
-/* ---------- Depuración opcional ---------- */
+/* ---------- DepuraciÃ³n opcional ---------- */
 if ($DEBUG) {
   header('Content-Type:text/plain; charset=utf-8');
   echo "=== VEHICULO ===\n";
@@ -735,3 +760,5 @@ header('Content-Length: '.filesize($tmp));
 readfile($tmp);
 @unlink($tmp);
 exit;
+
+

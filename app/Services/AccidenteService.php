@@ -26,7 +26,7 @@ final class AccidenteService
         $dist = substr((string) ($input['cod_dist'] ?? ''), 0, 2);
 
         if ($nombre === '') {
-            throw new InvalidArgumentException('Nombre de comisarÌa requerido');
+            throw new InvalidArgumentException('Nombre de comisar√≠a requerido');
         }
 
         $id = $this->repository->findComisariaIdByNombre($nombre);
@@ -53,7 +53,7 @@ final class AccidenteService
         $telefono = trim((string) ($input['telefono'] ?? '')) ?: null;
 
         if ($fiscaliaId <= 0 || $nombres === '') {
-            throw new InvalidArgumentException('FiscalÌa y nombres son requeridos');
+            throw new InvalidArgumentException('Fiscal√≠a y nombres son requeridos');
         }
 
         $id = $this->repository->createFiscal($fiscaliaId, $nombres, $apellidoPaterno, $apellidoMaterno, $cargo, $telefono);
@@ -144,6 +144,9 @@ final class AccidenteService
             'fecha_intervencion' => trim((string) ($input['fecha_intervencion'] ?? '')) ?: null,
             'comunicante_nombre' => trim((string) ($input['comunicante_nombre'] ?? '')) ?: null,
             'comunicante_telefono' => trim((string) ($input['comunicante_telefono'] ?? '')) ?: null,
+            'comunicacion_decreto' => trim((string) ($input['comunicacion_decreto'] ?? '')) ?: null,
+            'comunicacion_oficio' => trim((string) ($input['comunicacion_oficio'] ?? '')) ?: null,
+            'comunicacion_carpeta_nro' => trim((string) ($input['comunicacion_carpeta_nro'] ?? '')) ?: null,
             'fiscalia_id' => ($input['fiscalia_id'] ?? '') !== '' ? (int) $input['fiscalia_id'] : null,
             'fiscal_id' => ($input['fiscal_id'] ?? '') !== '' ? (int) $input['fiscal_id'] : null,
             'nro_informe_policial' => trim((string) ($input['nro_informe_policial'] ?? '')) ?: null,
@@ -168,23 +171,23 @@ final class AccidenteService
         if (!(ctype_digit($payload['cod_dep']) && strlen($payload['cod_dep']) === 2)
             || !(ctype_digit($payload['cod_prov']) && strlen($payload['cod_prov']) === 2)
             || !(ctype_digit($payload['cod_dist']) && strlen($payload['cod_dist']) === 2)) {
-            throw new InvalidArgumentException('Selecciona un Distrito v·lido.');
+            throw new InvalidArgumentException('Selecciona un Distrito v√°lido.');
         }
 
         if (!$this->repository->distritoExists($payload['cod_dep'], $payload['cod_prov'], $payload['cod_dist'])) {
-            throw new InvalidArgumentException('Selecciona un Distrito v·lido.');
+            throw new InvalidArgumentException('Selecciona un Distrito v√°lido.');
         }
 
         if (!$payload['comisaria_id'] || $payload['comisaria_id'] <= 0) {
-            throw new InvalidArgumentException('Selecciona una ComisarÌa.');
+            throw new InvalidArgumentException('Selecciona una Comisar√≠a.');
         }
 
         if (!$this->repository->comisariaMappedToDistrito($payload['comisaria_id'], $payload['cod_dep'], $payload['cod_prov'], $payload['cod_dist'])) {
-            throw new InvalidArgumentException('La comisarÌa no pertenece al distrito seleccionado.');
+            throw new InvalidArgumentException('La comisar√≠a no pertenece al distrito seleccionado.');
         }
 
         if ($payload['fiscal_id'] && !$this->repository->fiscalBelongsToFiscalia($payload['fiscal_id'], $payload['fiscalia_id'])) {
-            throw new InvalidArgumentException('El fiscal seleccionado no pertenece a la fiscalÌa elegida.');
+            throw new InvalidArgumentException('El fiscal seleccionado no pertenece a la fiscal√≠a elegida.');
         }
     }
 }

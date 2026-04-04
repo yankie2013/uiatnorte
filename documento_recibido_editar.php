@@ -57,7 +57,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php if($errores): ?><div class="error"><?php foreach($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div><?php endif; ?>
 <form method="post"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 <div><label>Accidente</label><select name="accidente_id"><option value="">(ninguno)</option><?php foreach($ctx['accidentes'] as $a): ?><option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id']===(string)$a['id'])?'selected':'' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty($a['lugar']) ? (' - '.h($a['lugar'])) : '' ?></option><?php endforeach; ?></select></div>
-<div><label>Fecha</label><input type="date" name="fecha" value="<?= h($data['fecha']) ?>"></div>
+<div><label>Fecha de recepcion</label><input type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>" readonly></div>
+<div><label>Fecha del documento</label><input type="date" name="fecha_documento" value="<?= h($data['fecha_documento']) ?>"></div>
 <div class="full"><label>Asunto</label><input type="text" name="asunto" value="<?= h($data['asunto']) ?>"></div>
 <div><label>Entidad / Persona</label><input type="text" name="entidad_persona" value="<?= h($data['entidad_persona']) ?>"></div>
 <div><label>Tipo de documento</label><input type="text" name="tipo_documento" value="<?= h($data['tipo_documento']) ?>"></div>

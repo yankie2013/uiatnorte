@@ -49,14 +49,17 @@ final class DocumentoRecibidoService
 
     public function crear(array $input): int
     {
+        $input['fecha_recepcion'] = date('Y-m-d');
         return $this->repository->create($this->payload($input));
     }
 
     public function actualizar(int $id, array $input): void
     {
-        if ($this->repository->find($id) === null) {
+        $actual = $this->repository->find($id);
+        if ($actual === null) {
             throw new InvalidArgumentException('Documento recibido no encontrado.');
         }
+        $input['fecha_recepcion'] = (string) ($actual['fecha_recepcion'] ?? $actual['fecha_recepcion_resuelta'] ?? $actual['fecha'] ?? date('Y-m-d'));
         $this->repository->update($id, $this->payload($input));
     }
 
@@ -91,13 +94,19 @@ final class DocumentoRecibidoService
 
     public function defaultData(?array $row = null): array
     {
+        $today = date('Y-m-d');
+        $fechaRecepcion = $row['fecha_recepcion'] ?? $row['fecha_recepcion_resuelta'] ?? null;
+        $fechaDocumento = $row['fecha_documento'] ?? $row['fecha_documento_resuelta'] ?? null;
+        $fechaLegacy = $row['fecha'] ?? null;
+
         return [
             'accidente_id' => $row['accidente_id'] ?? '',
             'asunto' => $row['asunto'] ?? '',
             'entidad_persona' => $row['entidad_persona'] ?? '',
             'tipo_documento' => $row['tipo_documento'] ?? '',
             'numero_documento' => $row['numero_documento'] ?? '',
-            'fecha' => $row['fecha'] ?? '',
+            'fecha_recepcion' => $fechaRecepcion ?? ($row === null ? $today : ($fechaLegacy ?? $today)),
+            'fecha_documento' => $fechaDocumento ?? ($fechaLegacy ?? ''),
             'contenido' => $row['contenido'] ?? '',
             'referencia_oficio_id' => $row['referencia_oficio_id'] ?? '',
             'estado' => $row['estado'] ?? '',
@@ -107,20 +116,25 @@ final class DocumentoRecibidoService
     private function payload(array $input): array
     {
         $estado = trim((string) ($input['estado'] ?? ''));
+        $fechaRecepcion = $this->nullable($input['fecha_recepcion'] ?? date('Y-m-d')) ?? date('Y-m-d');
+        $fechaDocumento = $this->nullable($input['fecha_documento'] ?? null);
+
         if ($estado !== '' && !in_array($estado, self::ESTADOS, true)) {
-            throw new InvalidArgumentException('Estado inválido.');
+            throw new InvalidArgumentException('Estado invalido.');
         }
 
         return [
-            ($input['accidente_id'] ?? '') !== '' ? (int) $input['accidente_id'] : null,
-            $this->nullable($input['asunto'] ?? null),
-            $this->nullable($input['entidad_persona'] ?? null),
-            $this->nullable($input['tipo_documento'] ?? null),
-            $this->nullable($input['numero_documento'] ?? null),
-            $this->nullable($input['fecha'] ?? null),
-            $this->nullable($input['contenido'] ?? null),
-            ($input['referencia_oficio_id'] ?? '') !== '' ? (int) $input['referencia_oficio_id'] : null,
-            $estado !== '' ? $estado : null,
+            'accidente_id' => ($input['accidente_id'] ?? '') !== '' ? (int) $input['accidente_id'] : null,
+            'asunto' => $this->nullable($input['asunto'] ?? null),
+            'entidad_persona' => $this->nullable($input['entidad_persona'] ?? null),
+            'tipo_documento' => $this->nullable($input['tipo_documento'] ?? null),
+            'numero_documento' => $this->nullable($input['numero_documento'] ?? null),
+            'fecha_recepcion' => $fechaRecepcion,
+            'fecha_documento' => $fechaDocumento,
+            'fecha' => $fechaDocumento ?? $fechaRecepcion,
+            'contenido' => $this->nullable($input['contenido'] ?? null),
+            'referencia_oficio_id' => ($input['referencia_oficio_id'] ?? '') !== '' ? (int) $input['referencia_oficio_id'] : null,
+            'estado' => $estado !== '' ? $estado : null,
         ];
     }
 

@@ -85,6 +85,26 @@ function clean_for_phpword($value) {
   $value = preg_replace('/\s+/', ' ', $value);
   return trim($value);
 }
+function list_item_case(string $item, bool $capitalize = false): string{
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if(!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($item, 1, null, 'UTF-8');
+}
+function join_es(array $items): string{
+  $items = array_values(array_filter(array_map(static fn($item) => preg_replace('/\s+/u', ' ', trim((string)$item)) ?? trim((string)$item), $items)));
+  $count = count($items);
+  if($count === 0) return '';
+  $items = array_map(
+    static fn($item, $index) => list_item_case((string)$item, $index === 0),
+    $items,
+    array_keys($items)
+  );
+  if($count === 1) return $items[0];
+  if($count === 2) return $items[0].' y '.$items[1];
+  return implode(', ', array_slice($items, 0, $count - 1)).' y '.$items[$count - 1];
+}
 function persona_por_rol(PDO $pdo,$accidente_id,$vehiculo_id,$rol_id){
   $sql="SELECT p.id, p.tipo_doc, p.num_doc,
                CONCAT(TRIM(p.nombres),' ',TRIM(p.apellido_paterno),' ',TRIM(p.apellido_materno)) AS nombre
@@ -268,8 +288,7 @@ try{
     $modNombres = $st->fetchAll(PDO::FETCH_COLUMN);
   }
   if ($modNombres) {
-    if (count($modNombres) === 1) $modalidades_txt = $modNombres[0];
-    else { $u = array_pop($modNombres); $modalidades_txt = implode(', ', $modNombres).' y '.$u; }
+    $modalidades_txt = join_es($modNombres);
   }
 }catch(Throwable $e){
   if ($__DEBUG) { header('Content-Type: text/plain; charset=utf-8'); echo "[Modalidad ERROR] ".$e->getMessage(); exit; }

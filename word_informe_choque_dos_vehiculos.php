@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* ===========================================================
    WORD: INFORME CHOQUE DOS VEHICULOS (DOCX con PhpWord)
    Proyecto: UIAT NORTE
@@ -40,7 +40,7 @@ if ($accidente_id<=0) { http_response_code(400); echo "Falta ?accidente_id"; exi
 /* ===========================================================
    HELPERS
 =========================================================== */
-function v($s){ return ($s!==null && $s!=='') ? $s : '—'; }
+function v($s){ return ($s!==null && $s!=='') ? $s : 'â€”'; }
 function vblank($s){ return ($s!==null && $s!=='') ? $s : ''; }
 function mes3($ts){
   return strtoupper(strtr(date('M',$ts),[
@@ -53,6 +53,28 @@ function fecha_corta($dt){ if(!$dt) return ''; $ts=strtotime($dt); if(!$ts) retu
 function hora_pe($dt){ if(!$dt) return ''; $ts=strtotime($dt); if(!$ts) return ''; return date('H:i',$ts); }
 function edad_from($fecha){ if(!$fecha) return ''; $ts=strtotime($fecha); if(!$ts) return ''; $hoy=new DateTime('today'); $n=DateTime::createFromFormat('Y-m-d',date('Y-m-d',$ts)); if(!$n) return ''; return (string)$n->diff($hoy)->y; }
 function nombre_completo($n='',$apep='',$apem=''){ return trim(($apep?:'').' '.($apem?:'').' '.($n?:'')); }
+function list_item_case(string $item, bool $capitalize = false): string {
+  $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+  if ($item === '') return '';
+  $item = mb_strtolower($item, 'UTF-8');
+  if (!$capitalize) return $item;
+  return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($item, 1, null, 'UTF-8');
+}
+function join_es(array $items): string {
+  $items = array_values(array_filter(array_map(static fn($item) => trim((string)$item), $items), static fn($item) => $item !== ''));
+  $count = count($items);
+  if ($count === 0) return '';
+  if ($count === 1) return list_item_case($items[0], true);
+
+  $items = array_map(
+    static fn($item, $index) => list_item_case((string)$item, $index === 0),
+    $items,
+    array_keys($items)
+  );
+
+  if ($count === 2) return $items[0].' y '.$items[1];
+  return implode(', ', array_slice($items, 0, $count - 1)).' y '.$items[$count - 1];
+}
 
 /* ===========================================================
    ACCIDENTE
@@ -83,21 +105,21 @@ if(!$ACC){ http_response_code(404); echo "Accidente no encontrado"; exit; }
 $MODS=''; 
 try{
   $q=$pdo->prepare("SELECT m.nombre FROM accidente_modalidad am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=:a ORDER BY m.nombre");
-  $q->execute([':a'=>$accidente_id]); $MODS=implode(', ',$q->fetchAll(PDO::FETCH_COLUMN));
+  $q->execute([':a'=>$accidente_id]); $MODS=join_es($q->fetchAll(PDO::FETCH_COLUMN));
 }catch(Throwable $e){ $MODS=''; }
 
 /* Consecuencia (si existe relacional) */
 $CONS='';
 try{
   $q=$pdo->prepare("SELECT c.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id WHERE ac.accidente_id=:a");
-  $q->execute([':a'=>$accidente_id]); $CONS=implode(', ',$q->fetchAll(PDO::FETCH_COLUMN));
+  $q->execute([':a'=>$accidente_id]); $CONS=join_es($q->fetchAll(PDO::FETCH_COLUMN));
 }catch(Throwable $e){ $CONS=vblank($ACC['consecuencia'] ?? ''); }
 
 /* ===========================================================
-   FUNCIONES DE OBTENCIÓN POR UNIDAD (UT-1 / UT-2)
+   FUNCIONES DE OBTENCIÃ“N POR UNIDAD (UT-1 / UT-2)
 =========================================================== */
 
-/* UT vehículo por orden_participacion (involucrados_vehiculos) */
+/* UT vehÃ­culo por orden_participacion (involucrados_vehiculos) */
 function get_unidad(PDO $pdo, $accidente_id, $ordenUT){
   $sql="
     SELECT iv.*, v.*,
@@ -155,7 +177,7 @@ function get_propietario_por_unidad(PDO $pdo, $accidente_id, $vehiculo_inv_id){
   return $q->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-/* Documento del vehículo (por vehiculo_id o involucrado_vehiculo_id) */
+/* Documento del vehÃ­culo (por vehiculo_id o involucrado_vehiculo_id) */
 function get_documento_vehiculo(PDO $pdo, $vehiculo_id, $accidente_id, $iv_id=null){
   // 1) por vehiculo_id
   if ($vehiculo_id) {
@@ -190,7 +212,7 @@ function get_rml(PDO $pdo, $persona_id, $accidente_id){
   $q->execute([':p'=>$persona_id, ':a'=>$accidente_id]); return $q->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-/* Documento OCCISO (peatón/conductor fallecido) */
+/* Documento OCCISO (peatÃ³n/conductor fallecido) */
 function get_doc_occiso(PDO $pdo, $persona_id, $accidente_id){
   if (!$persona_id || !$accidente_id) return [];
   $q=$pdo->prepare("SELECT * FROM documento_occiso WHERE persona_id=:p AND accidente_id=:a ORDER BY id DESC LIMIT 1");
@@ -274,7 +296,7 @@ $DOS2 = get_dosaje($pdo, $COND2['persona_id'] ?? null);
 $RML1 = get_rml($pdo, $COND1['persona_id'] ?? null, $accidente_id);
 $RML2 = get_rml($pdo, $COND2['persona_id'] ?? null, $accidente_id);
 
-/* Occiso por unidad (si el conductor falleció) */
+/* Occiso por unidad (si el conductor falleciÃ³) */
 $OCC1 = [];
 if (!empty($COND1['lesion']) && stripos($COND1['lesion'],'falle')!==false){
   $OCC1 = [
@@ -333,7 +355,7 @@ $T->setValue('com_hora',  hora_pe($ACC['fecha_comunicacion']));
 $T->setValue('int_fecha', ymd_pe($ACC['fecha_intervencion']));
 $T->setValue('int_hora',  hora_pe($ACC['fecha_intervencion']));
 
-/* ---------- UT-1: Vehículo ---------- */
+/* ---------- UT-1: VehÃ­culo ---------- */
 $T->setValue('ut1_veh_placa',           v($UT1['placa'] ?? ''));
 $T->setValue('ut1_veh_marca',           v($UT1['veh_marca_nombre'] ?? ''));
 $T->setValue('ut1_veh_modelo',          v($UT1['veh_modelo_nombre'] ?? ''));
@@ -360,7 +382,7 @@ $T->setValue('ut1_prop_abog_domproc', v($ABOG_PROP1['domicilio_procesal'] ?? '')
 $T->setValue('ut1_prop_abog_cel',     v($ABOG_PROP1['celular'] ?? ''));
 $T->setValue('ut1_prop_abog_email',   v($ABOG_PROP1['email'] ?? ''));
 
-/* Documentos vehículo UT-1 */
+/* Documentos vehÃ­culo UT-1 */
 $T->setValue('ut1_doc_num_propiedad',      v($DOCV1['numero_propiedad'] ?? ''));
 $T->setValue('ut1_doc_partida_propiedad',  v($DOCV1['partida_propiedad'] ?? ''));
 $T->setValue('ut1_doc_titulo_propiedad',   v($DOCV1['titulo_propiedad'] ?? ''));
@@ -497,7 +519,7 @@ $T->setValue('ut2_prop_abog_domproc', v($ABOG_PROP2['domicilio_procesal'] ?? '')
 $T->setValue('ut2_prop_abog_cel',     v($ABOG_PROP2['celular'] ?? ''));
 $T->setValue('ut2_prop_abog_email',   v($ABOG_PROP2['email'] ?? ''));
 
-/* Documentos vehículo UT-2 */
+/* Documentos vehÃ­culo UT-2 */
 $T->setValue('ut2_doc_num_propiedad',      v($DOCV2['numero_propiedad'] ?? ''));
 $T->setValue('ut2_doc_partida_propiedad',  v($DOCV2['partida_propiedad'] ?? ''));
 $T->setValue('ut2_doc_titulo_propiedad',   v($DOCV2['titulo_propiedad'] ?? ''));
@@ -608,7 +630,7 @@ $T->setValue('ut2_fam_celular',     v($FAM2['celular'] ?? ''));
 $T->setValue('ut2_fam_email',       v($FAM2['email'] ?? ''));
 
 /* ===========================================================
-   EFECTIVO POLICIAL (ÚNICO)  ->  ***COLOCADO DESPUÉS DE CREAR $T***
+   EFECTIVO POLICIAL (ÃšNICO)  ->  ***COLOCADO DESPUÃ‰S DE CREAR $T***
 =========================================================== */
 $EFEC=[];
 try{
@@ -654,7 +676,7 @@ if(!empty($EFEC)){
 /* ===========================================================
    DILIGENCIAS (placeholder)
 =========================================================== */
-$T->setValue('diligencias', '—');
+$T->setValue('diligencias', 'â€”');
 
 /* ---------- Salida ---------- */
 $tmpDir = __DIR__ . '/tmp';
@@ -682,3 +704,4 @@ header('Content-Length: '.filesize($tmp));
 readfile($tmp);
 @unlink($tmp);
 exit;
+

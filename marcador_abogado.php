@@ -99,6 +99,19 @@ function join_modalidades(string $value): string
     if ($count === 0) {
         return '';
     }
+    $items = array_map(
+        static function (string $item, int $index): string {
+            $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
+            $item = mb_strtolower($item, 'UTF-8');
+            if ($index === 0 && $item !== '') {
+                return mb_strtoupper(mb_substr($item, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($item, 1, null, 'UTF-8');
+            }
+            return $item;
+        },
+        $items,
+        array_keys($items)
+    );
+
     if ($count === 1) {
         return $items[0];
     }

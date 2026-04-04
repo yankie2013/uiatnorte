@@ -7,6 +7,8 @@ use PDO;
 
 final class DocumentoRecibidoRepository
 {
+    private array $columnExistsCache = [];
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -64,17 +66,25 @@ final class DocumentoRecibidoRepository
 
     public function distinctTipos(): array
     {
-        return $this->pdo->query("SELECT DISTINCT tipo_documento FROM documentos_recibidos ORDER BY tipo_documento")->fetchAll(PDO::FETCH_COLUMN);
+        return $this->pdo->query('SELECT DISTINCT tipo_documento FROM documentos_recibidos ORDER BY tipo_documento')->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function search(array $filters): array
     {
-        $sql = "SELECT dr.*, a.lugar AS accidente_lugar, o.numero AS oficio_numero, o.anio AS oficio_anio";
+        $fechaRecepcionExpr = $this->resolvedDateExpression('dr', 'fecha_recepcion', 'fecha');
+        $fechaDocumentoExpr = $this->resolvedDateExpression('dr', 'fecha_documento', 'fecha');
+
+        $sql = "SELECT dr.*,
+                       {$fechaRecepcionExpr} AS fecha_recepcion_resuelta,
+                       {$fechaDocumentoExpr} AS fecha_documento_resuelta,
+                       a.lugar AS accidente_lugar,
+                       o.numero AS oficio_numero,
+                       o.anio AS oficio_anio";
         $sidpolColumn = $this->columnExists('accidentes', 'registro_sidpol') ? 'registro_sidpol' : ($this->columnExists('accidentes', 'sidpol') ? 'sidpol' : null);
         if ($sidpolColumn) {
             $sql .= ", a.`{$sidpolColumn}` AS accidente_sidpol";
         } else {
-            $sql .= ", NULL AS accidente_sidpol";
+            $sql .= ', NULL AS accidente_sidpol';
         }
         $sql .= " FROM documentos_recibidos dr
                   LEFT JOIN accidentes a ON a.id = dr.accidente_id
@@ -102,7 +112,8 @@ final class DocumentoRecibidoRepository
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-        $sql .= ' ORDER BY dr.fecha DESC, dr.id DESC';
+        $sql .= " ORDER BY COALESCE({$fechaRecepcionExpr}, '9999-12-31') DESC, dr.id DESC";
+
         $st = $this->pdo->prepare($sql);
         $st->execute($params);
         return $st->fetchAll(PDO::FETCH_ASSOC);
@@ -110,7 +121,15 @@ final class DocumentoRecibidoRepository
 
     public function find(int $id): ?array
     {
-        $sql = "SELECT * FROM documentos_recibidos WHERE id = ? LIMIT 1";
+        $fechaRecepcionExpr = $this->resolvedDateExpression('dr', 'fecha_recepcion', 'fecha');
+        $fechaDocumentoExpr = $this->resolvedDateExpression('dr', 'fecha_documento', 'fecha');
+
+        $sql = "SELECT dr.*,
+                       {$fechaRecepcionExpr} AS fecha_recepcion_resuelta,
+                       {$fechaDocumentoExpr} AS fecha_documento_resuelta
+                  FROM documentos_recibidos dr
+                 WHERE dr.id = ?
+                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -119,21 +138,26 @@ final class DocumentoRecibidoRepository
 
     public function create(array $payload): int
     {
-        $sql = "INSERT INTO documentos_recibidos
-            (accidente_id, asunto, entidad_persona, tipo_documento, numero_documento, fecha, contenido, referencia_oficio_id, estado)
-            VALUES (?,?,?,?,?,?,?,?,?)";
+        $data = $this->persistenceData($payload);
+        $columns = array_keys($data);
+        $placeholders = implode(',', array_fill(0, count($columns), '?'));
+        $sql = 'INSERT INTO documentos_recibidos (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')';
         $st = $this->pdo->prepare($sql);
-        $st->execute($payload);
+        $st->execute(array_values($data));
         return (int) $this->pdo->lastInsertId();
     }
 
     public function update(int $id, array $payload): void
     {
-        $sql = "UPDATE documentos_recibidos
-                   SET accidente_id=?, asunto=?, entidad_persona=?, tipo_documento=?, numero_documento=?, fecha=?, contenido=?, referencia_oficio_id=?, estado=?
-                 WHERE id=? LIMIT 1";
+        $data = $this->persistenceData($payload);
+        $sets = [];
+        foreach (array_keys($data) as $column) {
+            $sets[] = $column . '=?';
+        }
+
+        $sql = 'UPDATE documentos_recibidos SET ' . implode(', ', $sets) . ' WHERE id=? LIMIT 1';
         $st = $this->pdo->prepare($sql);
-        $st->execute([...$payload, $id]);
+        $st->execute([...array_values($data), $id]);
     }
 
     public function delete(int $id): void
@@ -142,10 +166,55 @@ final class DocumentoRecibidoRepository
         $st->execute([$id]);
     }
 
+    private function persistenceData(array $payload): array
+    {
+        $data = [
+            'accidente_id' => $payload['accidente_id'] ?? null,
+            'asunto' => $payload['asunto'] ?? null,
+            'entidad_persona' => $payload['entidad_persona'] ?? null,
+            'tipo_documento' => $payload['tipo_documento'] ?? null,
+            'numero_documento' => $payload['numero_documento'] ?? null,
+        ];
+
+        if ($this->columnExists('documentos_recibidos', 'fecha_recepcion')) {
+            $data['fecha_recepcion'] = $payload['fecha_recepcion'] ?? null;
+        }
+        if ($this->columnExists('documentos_recibidos', 'fecha_documento')) {
+            $data['fecha_documento'] = $payload['fecha_documento'] ?? null;
+        }
+        if ($this->columnExists('documentos_recibidos', 'fecha')) {
+            $data['fecha'] = $payload['fecha'] ?? null;
+        }
+
+        $data['contenido'] = $payload['contenido'] ?? null;
+        $data['referencia_oficio_id'] = $payload['referencia_oficio_id'] ?? null;
+        $data['estado'] = $payload['estado'] ?? null;
+
+        return $data;
+    }
+
+    private function resolvedDateExpression(string $alias, string $preferredColumn, string $fallbackColumn): string
+    {
+        if ($this->columnExists('documentos_recibidos', $preferredColumn)) {
+            return "{$alias}.{$preferredColumn}";
+        }
+        if ($this->columnExists('documentos_recibidos', $fallbackColumn)) {
+            return "{$alias}.{$fallbackColumn}";
+        }
+        return 'NULL';
+    }
+
     private function columnExists(string $table, string $column): bool
     {
+        $cacheKey = $table . '.' . $column;
+        if (array_key_exists($cacheKey, $this->columnExistsCache)) {
+            return $this->columnExistsCache[$cacheKey];
+        }
+
         $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
         $st->execute([$table, $column]);
-        return (int) $st->fetchColumn() > 0;
+        $this->columnExistsCache[$cacheKey] = (int) $st->fetchColumn() > 0;
+
+        return $this->columnExistsCache[$cacheKey];
     }
 }

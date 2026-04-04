@@ -75,12 +75,12 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.95rem}thead 
   <div class="small">Mostrando <strong><?= count($rows) ?></strong> registro(s).</div>
   <?php if($msg === 'eliminado'): ?><div class="ok">Documento eliminado correctamente.</div><?php endif; ?>
   <table>
-    <thead><tr><th>Fecha</th><th>Asunto / Entidad</th><th>Tipo / Numero</th><th>Accidente</th><th>Oficio</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Recepcion / Documento</th><th>Asunto / Entidad</th><th>Tipo / Numero</th><th>Accidente</th><th>Oficio</th><th>Estado</th><th></th></tr></thead>
     <tbody>
       <?php if (!$rows): ?><tr><td colspan="7" class="small">No se encontraron documentos.</td></tr><?php endif; ?>
       <?php foreach($rows as $r): ?>
         <tr>
-          <td><div><?= h($r['fecha'] ?: '') ?></div><div class="small">ID <?= h($r['id']) ?></div></td>
+          <td><div><strong>Recepcion:</strong> <?= h($r['fecha_recepcion_resuelta'] ?? $r['fecha_recepcion'] ?? $r['fecha'] ?? '') ?></div><div class="small">Documento: <?= h($r['fecha_documento_resuelta'] ?? $r['fecha_documento'] ?? $r['fecha'] ?? '-') ?></div><div class="small">ID <?= h($r['id']) ?></div></td>
           <td><div><?= h($r['asunto']) ?></div><div class="small"><?= h($r['entidad_persona']) ?></div><?php if(!empty($r['contenido'])): ?><div class="small" style="margin-top:6px;"><?= h(mb_strimwidth((string)$r['contenido'],0,160,'...')) ?></div><?php endif; ?></td>
           <td><div><?= h($r['tipo_documento']) ?></div><div class="small">Nro. <?= h($r['numero_documento']) ?></div></td>
           <td><?php if($r['accidente_id']): ?><div class="small">#<?= h($r['accidente_id']) ?> - <?= h($r['accidente_sidpol'] ?: '-') ?></div><div class="small"><?= h((string)($r['accidente_lugar'] ?? '')) ?></div><?php else: ?><div class="small">Sin accidente</div><?php endif; ?></td>

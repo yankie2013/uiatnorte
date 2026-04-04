@@ -28,6 +28,7 @@ final class AccidenteRepository
                        cod_dep, cod_prov, cod_dist, comisaria_id,
                        fecha_accidente, estado, fecha_comunicacion, fecha_intervencion,
                        comunicante_nombre, comunicante_telefono,
+                       comunicacion_decreto, comunicacion_oficio, comunicacion_carpeta_nro,
                        fiscalia_id, fiscal_id, nro_informe_policial,
                        sentido, secuencia
                   FROM accidentes
@@ -193,9 +194,9 @@ final class AccidenteRepository
         $sql = 'INSERT INTO accidentes
             (registro_sidpol,lugar,referencia,cod_dep,cod_prov,cod_dist,comisaria_id,
              fecha_accidente,estado,fecha_comunicacion,fecha_intervencion,
-             comunicante_nombre,comunicante_telefono,fiscalia_id,fiscal_id,nro_informe_policial,
-             sentido,secuencia)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+             comunicante_nombre,comunicante_telefono,comunicacion_decreto,comunicacion_oficio,comunicacion_carpeta_nro,
+             fiscalia_id,fiscal_id,nro_informe_policial,sentido,secuencia)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
         $st = $this->pdo->prepare($sql);
         $st->execute([
@@ -212,6 +213,9 @@ final class AccidenteRepository
             $payload['fecha_intervencion'],
             $payload['comunicante_nombre'],
             $payload['comunicante_telefono'],
+            $payload['comunicacion_decreto'],
+            $payload['comunicacion_oficio'],
+            $payload['comunicacion_carpeta_nro'],
             $payload['fiscalia_id'],
             $payload['fiscal_id'],
             $payload['nro_informe_policial'],
@@ -228,7 +232,7 @@ final class AccidenteRepository
                   registro_sidpol=?,
                   lugar=?, referencia=?, cod_dep=?, cod_prov=?, cod_dist=?, comisaria_id=?,
                   fecha_accidente=?, estado=?, fecha_comunicacion=?, fecha_intervencion=?,
-                  comunicante_nombre=?, comunicante_telefono=?,
+                  comunicante_nombre=?, comunicante_telefono=?, comunicacion_decreto=?, comunicacion_oficio=?, comunicacion_carpeta_nro=?,
                   fiscalia_id=?, fiscal_id=?, nro_informe_policial=?,
                   sentido=?, secuencia=?
                 WHERE id=?';
@@ -247,6 +251,9 @@ final class AccidenteRepository
             $payload['fecha_intervencion'],
             $payload['comunicante_nombre'],
             $payload['comunicante_telefono'],
+            $payload['comunicacion_decreto'],
+            $payload['comunicacion_oficio'],
+            $payload['comunicacion_carpeta_nro'],
             $payload['fiscalia_id'],
             $payload['fiscal_id'],
             $payload['nro_informe_policial'],
