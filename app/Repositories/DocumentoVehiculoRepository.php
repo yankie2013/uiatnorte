@@ -59,6 +59,7 @@ final class DocumentoVehiculoRepository
 
     public function update(int $id, array $payload): void
     {
+        unset($payload[':involucrado_vehiculo_id']);
         $payload[':id'] = $id;
         $sql = "UPDATE documento_vehiculo SET
                   vehiculo_id = :vehiculo_id,
