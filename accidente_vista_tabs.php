@@ -38,7 +38,21 @@ $oficioEstados = $oficioService->formContext()['estados'] ?? ['BORRADOR', 'FIRMA
 
 function h($value): string
 {
-    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    return htmlspecialchars(normalize_mojibake((string) $value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function normalize_mojibake(string $value): string
+{
+    if ($value === '' || !preg_match('/[ÃÂâ]/u', $value)) {
+        return $value;
+    }
+
+    $converted = @mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+    if (is_string($converted) && $converted !== '' && mb_check_encoding($converted, 'UTF-8')) {
+        return $converted;
+    }
+
+    return $value;
 }
 
 function fmt($value): string
@@ -2067,7 +2081,7 @@ $renderVehiculoSubtabs = static function (
               <?php endif; ?>
               <?php if ($documentoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
-                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' Â· ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
+                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
               <?php elseif ($involucradoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
               <?php endif; ?>
@@ -2079,7 +2093,7 @@ $renderVehiculoSubtabs = static function (
                 <div class="field-grid"><?= render_field_cards($documentoVehiculo ?? [], $section['fields']) ?></div>
               </div>
             <?php elseif ($documentoVehiculoId > 0): ?>
-              <div class="empty-state">El documento existe, pero esta secciÃ³n aÃºn no tiene datos registrados.</div>
+              <div class="empty-state">El documento existe, pero esta sección aún no tiene datos registrados.</div>
             <?php else: ?>
               <div class="empty-state">No hay <?= h(mb_strtolower((string) $section['label'], 'UTF-8')) ?> registrada para este vehículo.</div>
             <?php endif; ?>
@@ -2153,7 +2167,7 @@ $abogadoSections = [
     'Registro profesional' => [
         'colegiatura', 'registro', 'casilla_electronica',
     ],
-    'Contacto y direcciÃ³n' => [
+    'Contacto y dirección' => [
         'celular', 'email',
         ['key' => 'domicilio_procesal', 'class' => 'span-2'],
     ],
@@ -2174,7 +2188,7 @@ $propietarioNaturalEditFields = [
 $propietarioJuridicaEditFields = [
     ['name' => 'ruc', 'label' => 'RUC', 'required' => true, 'maxlength' => 11],
     ['name' => 'rol_legal', 'label' => 'Rol legal'],
-    ['name' => 'razon_social', 'label' => 'RazÃ³n social', 'required' => true, 'class' => 'span-2'],
+    ['name' => 'razon_social', 'label' => 'Razón social', 'required' => true, 'class' => 'span-2'],
     ['name' => 'domicilio_fiscal', 'label' => 'Domicilio fiscal', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
     ['name' => 'observaciones', 'label' => 'Observaciones', 'type' => 'textarea', 'rows' => 3, 'class' => 'span-2'],
 ];
@@ -2194,7 +2208,7 @@ $abogadoEditSections = [
         ['name' => 'apellido_materno', 'label' => 'Apellido materno'],
         ['name' => 'nombres', 'label' => 'Nombres', 'required' => true],
         ['name' => 'registro', 'label' => 'Registro'],
-        ['name' => 'casilla_electronica', 'label' => 'Casilla electrÃ³nica'],
+        ['name' => 'casilla_electronica', 'label' => 'Casilla electrónica'],
         ['name' => 'celular', 'label' => 'Celular'],
         ['name' => 'email', 'label' => 'Email', 'type' => 'email'],
         ['name' => 'domicilio_procesal', 'label' => 'Domicilio procesal', 'class' => 'span-2'],
@@ -2280,10 +2294,10 @@ include __DIR__ . '/sidebar.php';
     --page:#f5f7fb;
     --card:#ffffff;
     --line:#d9e1ee;
-    --muted:#66758c;
-    --ink:#162033;
-    --title-blue:#2f5f96;
-    --title-blue-soft:#5a79a3;
+    --muted:#6f7b8e;
+    --ink:#243246;
+    --title-blue:#3a628f;
+    --title-blue-soft:#617792;
     --gold:#9a7a1b;
     --gold-soft:#fff8e2;
     --blue:#3257a8;
@@ -2309,7 +2323,7 @@ include __DIR__ . '/sidebar.php';
   body{background:linear-gradient(180deg,var(--page-grad-start) 0%,var(--page-grad-end) 100%);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
   .page{max-width:1380px;margin:10px auto;padding:0 10px 14px}
   .topbar{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
-  .title-wrap h1{margin:0;font-size:18px;font-weight:900;letter-spacing:-.02em;color:var(--title-blue)}
+  .title-wrap h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--title-blue)}
   .title-wrap p{margin:0;color:var(--muted);font-size:11px}
   .top-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
@@ -2323,9 +2337,9 @@ include __DIR__ . '/sidebar.php';
   .btn-shell.btn-necropsia:hover{border-color:#0d9488;background:#ccfbf1;color:#115e59;box-shadow:0 0 0 1px rgba(13,148,136,.3),0 0 18px rgba(13,148,136,.22),0 10px 20px rgba(15,118,110,.15)}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
   .summary-stack{display:grid;gap:5px;margin-bottom:6px}
-  .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:11px;padding:7px 10px;font-size:12px;font-weight:700;line-height:1.25}
+  .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:11px;padding:7px 10px;font-size:12px;font-weight:600;line-height:1.25;color:#425166}
   .summary-pill strong{color:#8b6a12;display:inline-block;min-width:150px}
-  .section-title{margin:0 0 5px;color:var(--title-blue);font-weight:900;font-size:13px;letter-spacing:.01em}
+  .section-title{margin:0 0 5px;color:var(--title-blue);font-weight:800;font-size:13px;letter-spacing:.01em}
   .general-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
   .ident-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
   .g-3{grid-column:span 3}.g-4{grid-column:span 4}.g-6{grid-column:span 6}.g-12{grid-column:span 12}
@@ -2333,13 +2347,13 @@ include __DIR__ . '/sidebar.php';
   .data-card.highlight{border-color:#dfb94d;background:linear-gradient(180deg,#fffdf7 0%,#fff7df 100%)}
   .data-card.centered{text-align:center;display:flex;flex-direction:column;justify-content:center}
   .data-card .label{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:2px}
-  .data-card .value{font-size:12px;line-height:1.18;font-weight:800;word-break:break-word}
+  .data-card .value{font-size:12px;line-height:1.18;font-weight:700;word-break:break-word;color:#2d3c52}
   .data-card .value.status-pendiente{color:#c81e1e}
   .data-card .value.status-resuelto{color:#19734d}
   .data-card .value.status-diligencias{color:#9a6a00}
-  .quick-status-select{width:100%;max-width:170px;margin:0 auto;border:1px solid #d5ddeb;border-radius:10px;background:#fff;padding:5px 9px;font-size:12px;font-weight:900;color:var(--ink);text-align:center;text-align-last:center}
+  .quick-status-select{width:100%;max-width:170px;margin:0 auto;border:1px solid #d5ddeb;border-radius:10px;background:#fff;padding:5px 9px;font-size:12px;font-weight:700;color:#314157;text-align:center;text-align-last:center}
   .quick-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
-  .module-status-select{border:1px solid #d5ddeb;border-radius:999px;background:#fff;padding:5px 10px;font-size:11px;font-weight:900;line-height:1.1;color:var(--ink);min-width:126px;text-align:center;text-align-last:center}
+  .module-status-select{border:1px solid #d5ddeb;border-radius:999px;background:#fff;padding:5px 10px;font-size:11px;font-weight:700;line-height:1.1;color:#314157;min-width:126px;text-align:center;text-align-last:center}
   .module-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.14)}
   .module-status-select.status-borrador{border-color:#cbd5e1;background:#f8fafc;color:#475569}
   .module-status-select.status-firmado{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}
@@ -2347,12 +2361,12 @@ include __DIR__ . '/sidebar.php';
   .module-status-select.status-anulado{border-color:#fca5a5;background:#fff1f2;color:#b91c1c}
   .module-status-select.status-archivado{border-color:#d8b4fe;background:#faf5ff;color:#7c3aed}
   .line-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:11px;padding:6px 9px;font-size:12px;font-weight:800;line-height:1.2}
+  .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:11px;padding:6px 9px;font-size:12px;font-weight:700;line-height:1.2;color:#314157}
   .line-card strong{color:#8b6a12}
   .tabs-shell{margin-top:10px}
   .tabs-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
   .tabs-header{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
-  .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#3f4e68;border-radius:10px;padding:7px 9px;font-weight:800;font-size:12px;line-height:1.1;white-space:nowrap}
+  .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#4a5870;border-radius:10px;padding:7px 9px;font-weight:700;font-size:12px;line-height:1.1;white-space:nowrap}
   .tabs-header .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
   .main-tabs{gap:10px;padding:8px 6px 10px;margin-bottom:8px;border-bottom:1px solid rgba(188,198,216,.7)}
   .main-tabs .nav-link{
@@ -2364,7 +2378,7 @@ include __DIR__ . '/sidebar.php';
     border:1px solid #d7dfec;
     background:
       linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(241,245,252,.94) 100%);
-    color:#31425f;
+    color:#44546d;
     box-shadow:
       0 12px 28px rgba(17,24,39,.07),
       inset 0 1px 0 rgba(255,255,255,.88);
@@ -2399,7 +2413,7 @@ include __DIR__ . '/sidebar.php';
       0 0 0 1px rgba(148,163,184,.08) inset;
   }
   .main-tabs .nav-link.active{
-    color:#17263c;
+    color:#2c3b51;
     border-color:transparent;
     background:
       linear-gradient(135deg,rgba(255,255,255,.98) 0%,rgba(240,247,255,.96) 38%,rgba(230,241,255,.98) 100%);
@@ -2435,7 +2449,7 @@ include __DIR__ . '/sidebar.php';
     display:block;
     margin-bottom:3px;
     font-size:16px;
-    font-weight:900;
+    font-weight:800;
     letter-spacing:-.02em;
   }
   .main-tabs .tab-sub{
@@ -2443,9 +2457,9 @@ include __DIR__ . '/sidebar.php';
     align-items:center;
     gap:6px;
     font-size:11px;
-    font-weight:800;
+    font-weight:700;
     letter-spacing:.01em;
-    opacity:.78;
+    opacity:.72;
   }
   .main-tabs .tab-sub::before{
     content:"";
@@ -2464,7 +2478,7 @@ include __DIR__ . '/sidebar.php';
   .tabs-header .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
   .tabs-header .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
   .participant-tabs{margin-bottom:6px}
-  .participant-tabs .nav-link{border:1px solid var(--line);background:#eef2f8;color:#3f4e68;border-radius:10px;padding:7px 9px;font-weight:800;font-size:12px;line-height:1.1;white-space:nowrap}
+  .participant-tabs .nav-link{border:1px solid var(--line);background:#eef2f8;color:#4a5870;border-radius:10px;padding:7px 9px;font-weight:700;font-size:12px;line-height:1.1;white-space:nowrap}
   .participant-tabs .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
   .participant-tabs .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
   .participant-tabs .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
@@ -2546,21 +2560,21 @@ include __DIR__ . '/sidebar.php';
     50%{transform:translateX(138%) rotate(18deg);opacity:.82}
   }
   .person-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .person-title h2{margin:0;font-size:17px;font-weight:900;line-height:1.15;color:var(--title-blue);letter-spacing:-.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .person-title p{margin:3px 0 0;color:var(--muted);font-weight:700;font-size:12px}
+  .person-title h2{margin:0;font-size:17px;font-weight:800;line-height:1.15;color:var(--title-blue);letter-spacing:-.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .person-title p{margin:3px 0 0;color:var(--muted);font-weight:600;font-size:12px}
   .person-name-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .person-quick-actions{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#40506d;font-size:12px;font-weight:900;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+  .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
-  .quick-pill-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#40506d;font-size:12px;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+  .quick-pill-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;text-decoration:none;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .quick-pill-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .quick-pill-btn.whatsapp{border-color:#9fe0b7;background:#f0fff5;color:#178248}
   .quick-pill-btn.whatsapp:hover{background:#25d366;color:#fff;border-color:#25d366}
   .quick-pill-btn.download{border-color:#d7c07b;background:#fff8df;color:#7f5a00}
   .quick-pill-btn.download:hover{background:#f0c654;color:#4d3600;border-color:#f0c654}
   .chip-row{display:flex;flex-wrap:wrap;gap:6px}
-  .chip-role,.chip-status,.chip-simple{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid var(--line);font-size:10px;font-weight:900;background:#fff;line-height:1.1}
+  .chip-role,.chip-status,.chip-simple{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid var(--line);font-size:10px;font-weight:700;background:#fff;line-height:1.1}
   .chip-conductor{background:#e8fbef;border-color:#b7e6c3;color:#19734d}
   .chip-peaton{background:#e8f1ff;border-color:#bed3ff;color:#2157c5}
   .chip-pasajero{background:#f2f3f7;border-color:#d7dce5;color:#374151}
@@ -2571,14 +2585,14 @@ include __DIR__ . '/sidebar.php';
   .chip-status-danger{background:#ffe8e8;border-color:#ffb6b6;color:#c81e1e}
   .action-row{display:flex;gap:8px;flex-wrap:wrap}
   .section-block{margin-top:8px}
-  .section-block h3{margin:0 0 5px;font-size:12px;font-weight:900;color:var(--title-blue);letter-spacing:.01em}
+  .section-block h3{margin:0 0 5px;font-size:12px;font-weight:800;color:var(--title-blue);letter-spacing:.01em}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
   .field-card.span-2{grid-column:span 2}
   .field-card.span-4{grid-column:span 4}
   .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
   .edit-label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin-bottom:3px}
-  .field-value{font-size:12px;line-height:1.28;font-weight:800;word-break:break-word}
+  .field-value{font-size:12px;line-height:1.28;font-weight:700;word-break:break-word;color:#2b3950}
   .editable-shell{display:grid;gap:8px}
   .editable-toolbar{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
   .editable-actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -2595,26 +2609,26 @@ include __DIR__ . '/sidebar.php';
   .general-edit-card label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin:0 0 4px}
   .general-edit-card .edit-control{font-size:12px}
   .general-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-  .general-checkbox{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:800;line-height:1.25}
+  .general-checkbox{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:700;line-height:1.25;color:#36455b}
   .general-checkbox input{margin-top:2px}
   .general-help{font-size:10px;color:var(--muted);font-weight:700}
   .general-inline-note{font-size:10px;color:var(--muted);font-weight:700}
   .inline-edit-error{display:none;padding:8px 10px;border:1px solid #f1b3b3;background:#fff1f1;color:#aa2222;border-radius:10px;font-size:11px;font-weight:800}
   .inline-edit-error.is-visible{display:block}
   .edit-field{padding:6px 8px}
-  .edit-control{width:100%;border:1px solid #d5ddeb;border-radius:9px;background:#fff;padding:7px 9px;font-size:12px;font-weight:700;color:var(--ink);line-height:1.25}
+  .edit-control{width:100%;border:1px solid #d5ddeb;border-radius:9px;background:#fff;padding:7px 9px;font-size:12px;font-weight:600;color:#314157;line-height:1.25}
   .edit-control:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
   textarea.edit-control{min-height:76px;resize:vertical}
   .editable-form[hidden],.editable-view[hidden]{display:none}
   .module-grid{display:grid;gap:6px}
   .module-card{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:9px 11px}
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
-  .module-card h4{margin:0;font-size:14px;font-weight:900;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .module-card p{margin:0;color:var(--muted);font-weight:700;font-size:11px;line-height:1.25}
+  .module-card h4{margin:0;font-size:14px;font-weight:800;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .module-card p{margin:0;color:var(--muted);font-weight:600;font-size:11px;line-height:1.25}
   .module-card-controls{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .module-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .module-title-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .module-toggle-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid #d7dfec;background:#fff;color:#8b6a12;font-size:18px;font-weight:900;line-height:1;box-shadow:0 6px 14px rgba(17,24,39,.05);transition:.18s ease}
+  .module-toggle-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid #d7dfec;background:#fff;color:#8b6a12;font-size:18px;font-weight:700;line-height:1;box-shadow:0 6px 14px rgba(17,24,39,.05);transition:.18s ease}
   .module-toggle-btn:hover{border-color:#d6b44c;background:#fff8e7}
   .module-toggle-btn[aria-expanded="true"]{background:#d6b44c;border-color:#d6b44c;color:#fff}
   .module-card-panel{margin-top:8px}
@@ -2625,34 +2639,34 @@ include __DIR__ . '/sidebar.php';
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-side{display:grid;gap:6px;justify-items:end;align-content:start}
   .diligencia-content-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-  .diligencia-content{flex:1 1 420px;margin:0;color:var(--muted);font-weight:800;font-size:11px;line-height:1.4}
+  .diligencia-content{flex:1 1 420px;margin:0;color:#5f6d82;font-weight:600;font-size:11px;line-height:1.4}
   .diligencia-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-  .diligencia-status-select{min-width:130px;padding:6px 30px 6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:900;line-height:1.1;box-shadow:0 6px 16px rgba(17,24,39,.06)}
+  .diligencia-status-select{min-width:130px;padding:6px 30px 6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#314157;font-size:12px;font-weight:700;line-height:1.1;box-shadow:0 6px 16px rgba(17,24,39,.06)}
   .diligencia-status-select.status-pendiente{border-color:#f0b8b8;background:#fff3f3;color:#b42318}
   .diligencia-status-select.status-resuelto{border-color:#b9e2c5;background:#effcf3;color:#157347}
   .diligencia-inline-fields{display:grid;gap:6px}
   .diligencia-inline-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   .diligencia-inline-box{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:#fff}
   .diligencia-inline-box strong{display:block;margin:0 0 3px;color:#8b6a12;font-size:9px;line-height:1.15;text-transform:uppercase;letter-spacing:.05em}
-  .diligencia-inline-box div{font-size:12px;font-weight:800;color:var(--ink);line-height:1.35}
-  .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:800;font-size:12px}
+  .diligencia-inline-box div{font-size:12px;font-weight:700;color:#2d3c52;line-height:1.35}
+  .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:700;font-size:12px}
   .inner-tabs{display:flex;gap:5px;overflow:auto;padding-bottom:5px;margin:8px 0 6px}
-  .inner-tabs .nav-link{border:1px solid var(--line);background:#f4f7fb;color:#47556d;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:800;line-height:1.05;white-space:nowrap}
+  .inner-tabs .nav-link{border:1px solid var(--line);background:#f4f7fb;color:#506078;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;line-height:1.05;white-space:nowrap}
   .inner-tabs .nav-link.active{background:#fff7de;border-color:#e7c75c;color:#755811}
   .inner-tabs .tab-mini{display:block;font-size:9px;font-weight:700;opacity:.72;margin-top:1px}
   .inner-panel{border:1px solid var(--line);border-radius:13px;background:#fbfcfe;padding:8px}
   .record-stack{display:grid;gap:6px}
   .record-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:8px 9px}
-  .record-card h5{margin:0 0 4px;font-size:12px;font-weight:900;line-height:1.2;color:#8b6a12}
-  .record-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.3;font-weight:700}
+  .record-card h5{margin:0 0 4px;font-size:12px;font-weight:800;line-height:1.2;color:#8b6a12}
+  .record-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.3;font-weight:600}
   .record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .record-chipline{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-  .itp-list{margin:0;padding-left:18px;color:var(--ink);font-size:12px;font-weight:800;line-height:1.35}
+  .itp-list{margin:0;padding-left:18px;color:#2d3b50;font-size:12px;font-weight:700;line-height:1.35}
   .itp-list li + li{margin-top:4px}
   .itp-builder{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fbfcfe}
   .itp-builder-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
   .itp-builder-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(148,163,184,.08)}
-  .itp-builder-item span{font-size:12px;font-weight:800;line-height:1.35}
+  .itp-builder-item span{font-size:12px;font-weight:700;line-height:1.35;color:#334257}
   .itp-builder-row{display:flex;gap:8px;flex-wrap:wrap}
   .itp-builder-row .edit-control{flex:1}
   .itp-builder-row .btn-shell{flex:0 0 auto}
@@ -2831,6 +2845,13 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .itp-builder-item span{
     color:#d6e0ee;
     font-weight:700;
+  }
+  html[data-theme-resolved="dark"] #itp .field-value,
+  html[data-theme-resolved="dark"] #itp .itp-list,
+  html[data-theme-resolved="dark"] #itp .itp-builder-item span{
+    color:#b8c4d3;
+    font-weight:600;
+    line-height:1.42;
   }
   html[data-theme-resolved="dark"] .line-card,
   html[data-theme-resolved="dark"] .person-title p,
@@ -3132,7 +3153,7 @@ include __DIR__ . '/sidebar.php';
         <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
 
         <div class="section-block" style="margin-top:0">
-          <h2 class="section-title">ClasificaciÃ³n del evento</h2>
+          <h2 class="section-title">Clasificación del evento</h2>
           <div class="general-edit-grid">
             <div class="general-edit-card g-6">
               <label>Modalidades</label>
@@ -3963,7 +3984,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['lc'] as $lc): ?>
                           <article class="record-card">
-                            <h5>Clase <?= h((string) ($lc['clase'] ?? 'â€”')) ?><?php if (!empty($lc['categoria'])): ?> Â· Cat <?= h((string) $lc['categoria']) ?><?php endif; ?> Â· NÂ° <?= h((string) ($lc['numero'] ?? 'â€”')) ?></h5>
+                            <h5>Clase <?= h((string) ($lc['clase'] ?? '—')) ?><?php if (!empty($lc['categoria'])): ?> · Cat <?= h((string) $lc['categoria']) ?><?php endif; ?> · N° <?= h((string) ($lc['numero'] ?? '—')) ?></h5>
                             <p>Vigente: <?= h(fecha_simple($lc['vigente_desde'] ?? null)) ?> a <?= h(fecha_simple($lc['vigente_hasta'] ?? null)) ?></p>
                             <?php if (!empty($lc['expedido_por'])): ?><p>Expedido por: <?= h((string) $lc['expedido_por']) ?></p><?php endif; ?>
                             <?php if (!empty($lc['restricciones'])): ?><p><?= nl2br(h((string) $lc['restricciones'])) ?></p><?php endif; ?>
@@ -3990,10 +4011,10 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['rml'] as $rml): ?>
                           <article class="record-card">
-                            <h5>NÂ° <?= h((string) ($rml['numero'] ?? 'â€”')) ?> Â· <?= h(fecha_simple($rml['fecha'] ?? null)) ?></h5>
+                            <h5>N° <?= h((string) ($rml['numero'] ?? '—')) ?> · <?= h(fecha_simple($rml['fecha'] ?? null)) ?></h5>
                             <div class="record-chipline">
-                              <span class="chip-simple">Incapacidad: <?= h((string) (($rml['incapacidad_medico'] ?? '') !== '' ? $rml['incapacidad_medico'] : 'â€”')) ?></span>
-                              <span class="chip-simple">AtenciÃ³n: <?= h((string) (($rml['atencion_facultativo'] ?? '') !== '' ? $rml['atencion_facultativo'] : 'â€”')) ?></span>
+                              <span class="chip-simple">Incapacidad: <?= h((string) (($rml['incapacidad_medico'] ?? '') !== '' ? $rml['incapacidad_medico'] : '—')) ?></span>
+                              <span class="chip-simple">Atención: <?= h((string) (($rml['atencion_facultativo'] ?? '') !== '' ? $rml['atencion_facultativo'] : '—')) ?></span>
                             </div>
                             <?php if (!empty($rml['observaciones'])): ?><p><?= nl2br(h((string) $rml['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
@@ -4011,7 +4032,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-dos" role="tabpanel">
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell js-inline-open" href="documento_dosaje_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etÃ­lico">+ Nuevo dosaje</a>
+                      <a class="btn-shell js-inline-open" href="documento_dosaje_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etílico">+ Nuevo dosaje</a>
                     </div>
                     <?php if (!$extras['dos']): ?>
                       <div class="empty-state">No hay dosajes registrados para esta persona.</div>
@@ -4019,7 +4040,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['dos'] as $dos): ?>
                           <article class="record-card">
-                            <h5>NÂ° <?= h((string) ($dos['numero'] ?? 'â€”')) ?> Â· Reg <?= h((string) ($dos['numero_registro'] ?? 'â€”')) ?></h5>
+                            <h5>N° <?= h((string) ($dos['numero'] ?? '—')) ?> · Reg <?= h((string) ($dos['numero_registro'] ?? '—')) ?></h5>
                             <div class="record-chipline">
                               <span class="chip-simple"><?= h(fecha_hora_simple($dos['fecha_extraccion'] ?? null)) ?></span>
                               <span class="chip-simple"><?= h((string) (($dos['resultado_cualitativo'] ?? '') !== '' ? $dos['resultado_cualitativo'] : 'Sin resultado')) ?></span>
@@ -4027,7 +4048,7 @@ include __DIR__ . '/sidebar.php';
                             </div>
                             <?php if (!empty($dos['observaciones'])): ?><p><?= nl2br(h((string) $dos['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
-                              <a class="btn-shell js-inline-open" href="documento_dosaje_editar.php?id=<?= (int) $dos['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etÃ­lico">Ver / Editar</a>
+                              <a class="btn-shell js-inline-open" href="documento_dosaje_editar.php?id=<?= (int) $dos['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etílico">Ver / Editar</a>
                             </div>
                           </article>
                         <?php endforeach; ?>
@@ -4041,7 +4062,7 @@ include __DIR__ . '/sidebar.php';
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-man" role="tabpanel">
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="ManifestaciÃ³n">+ Nueva manifestaciÃ³n</a>
+                      <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">+ Nueva manifestación</a>
                     </div>
                     <?php if (!$extras['man']): ?>
                       <div class="empty-state">No hay manifestaciones registradas para esta persona en este accidente.</div>
@@ -4049,13 +4070,13 @@ include __DIR__ . '/sidebar.php';
                       <div class="record-stack">
                         <?php foreach ($extras['man'] as $man): ?>
                           <article class="record-card">
-                            <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> Â· <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
+                            <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> · <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
                             <div class="record-chipline">
                               <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?>â€“<?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
                             </div>
                             <?php if (!empty($man['observaciones'])): ?><p><?= nl2br(h((string) $man['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
-                              <a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=<?= (int) $man['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="ManifestaciÃ³n">Ver / Editar</a>
+                              <a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=<?= (int) $man['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">Ver / Editar</a>
                             </div>
                           </article>
                         <?php endforeach; ?>
@@ -4081,7 +4102,7 @@ include __DIR__ . '/sidebar.php';
                             <h5><?= h((string) (($occ['lugar_levantamiento'] ?? '') !== '' ? $occ['lugar_levantamiento'] : 'Sin lugar')) ?></h5>
                             <div class="record-chipline">
                               <span class="chip-simple"><?= h(fecha_simple($occ['fecha_levantamiento'] ?? null)) ?> <?= h((string) (($occ['hora_levantamiento'] ?? '') !== '' ? substr((string) $occ['hora_levantamiento'], 0, 5) : '')) ?></span>
-                              <span class="chip-simple">Prot. <?= h((string) (($occ['numero_protocolo'] ?? '') !== '' ? $occ['numero_protocolo'] : 'â€”')) ?></span>
+                              <span class="chip-simple">Prot. <?= h((string) (($occ['numero_protocolo'] ?? '') !== '' ? $occ['numero_protocolo'] : '—')) ?></span>
                             </div>
                             <?php if (!empty($occ['observaciones_levantamiento'])): ?><p><?= nl2br(h((string) $occ['observaciones_levantamiento'])) ?></p><?php endif; ?>
                             <div class="record-actions">
@@ -4140,7 +4161,7 @@ include __DIR__ . '/sidebar.php';
                     </div>
                   </header>
                   <div class="module-meta">
-                    <span class="chip-simple"><?= h((string) (($row['tipo_doc'] ?? 'DOC') . ' ' . ($row['num_doc'] ?? 'â€”'))) ?></span>
+                    <span class="chip-simple"><?= h((string) (($row['tipo_doc'] ?? 'DOC') . ' ' . ($row['num_doc'] ?? '—'))) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['dependencia_policial'] ?? '') !== '' ? $row['dependencia_policial'] : 'Sin dependencia')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / función')) ?></span>
                     <span class="chip-simple"><?= h((string) (($row['celular'] ?? '') !== '' ? $row['celular'] : 'Sin celular')) ?></span>
@@ -4214,7 +4235,7 @@ include __DIR__ . '/sidebar.php';
             <a class="btn-shell" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
           </div>
           <?php if (!$propietarios): ?>
-            <div class="empty-state">No hay propietarios de vehÃ­culo registrados para este accidente.</div>
+            <div class="empty-state">No hay propietarios de vehículo registrados para este accidente.</div>
           <?php else: ?>
             <div class="module-grid">
               <?php foreach ($propietarios as $row): ?>
@@ -4223,7 +4244,7 @@ include __DIR__ . '/sidebar.php';
                   $repRecord = project_prefixed_record($row, 'rep_');
                   $principal = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
                     ? trim((string) (($ownerRecord['nombres'] ?? '') . ' ' . ($ownerRecord['apellido_paterno'] ?? '') . ' ' . ($ownerRecord['apellido_materno'] ?? '')))
-                    : (string) ($row['razon_social'] ?? 'Sin razÃ³n social');
+                    : (string) ($row['razon_social'] ?? 'Sin razón social');
                   $principalDoc = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
                     ? trim((string) (((string) ($ownerRecord['tipo_doc'] ?? '') !== '' ? person_doc_label((string) ($ownerRecord['tipo_doc'] ?? '')) . ' ' : '') . ($ownerRecord['num_doc'] ?? '')))
                     : trim((string) ('RUC ' . ($row['ruc'] ?? '')));
@@ -4290,7 +4311,7 @@ include __DIR__ . '/sidebar.php';
                       <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL' && trim((string) ($ownerRecord['nombres'] ?? '')) !== ''): ?>
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Propietario Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($ownerRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4298,7 +4319,7 @@ include __DIR__ . '/sidebar.php';
                       <?php if ($representante !== ''): ?>
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Representante Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($repRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4322,7 +4343,7 @@ include __DIR__ . '/sidebar.php';
                         </div>
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Representante Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Representante · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($repRecord, $sectionFields, 'prop-rep-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4332,7 +4353,7 @@ include __DIR__ . '/sidebar.php';
                         <input type="hidden" name="api_ref" value="<?= h((string) ($ownerRecord['api_ref'] ?? '')) ?>">
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Propietario Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Propietario · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($ownerRecord, $sectionFields, 'prop-nat-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4423,7 +4444,7 @@ include __DIR__ . '/sidebar.php';
                       <div class="editable-view" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
                         <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Familiar Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4438,7 +4459,7 @@ include __DIR__ . '/sidebar.php';
 
                         <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                           <div class="section-block">
-                            <h3><?= h('Familiar Â· ' . $sectionTitle) ?></h3>
+                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
                             <div class="field-grid"><?= render_editable_fields($famRecord, $sectionFields, 'familiar-' . (int) $row['id']) ?></div>
                           </div>
                         <?php endforeach; ?>
@@ -4614,7 +4635,7 @@ include __DIR__ . '/sidebar.php';
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
-                          <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' Â· ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
+                          <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
                           <?php if (!empty(trim((string) ($row['persona_nombre'] ?? '')))): ?><span class="chip-simple"><?= h(trim((string) $row['persona_nombre'])) ?></span><?php endif; ?>
                         </div>
                         <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
@@ -4662,7 +4683,7 @@ include __DIR__ . '/sidebar.php';
                         </header>
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['tipo_documento'] ?? '') !== '' ? $row['tipo_documento'] : 'Sin tipo')) ?></span>
-                          <span class="chip-simple">NÂ° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : 'â€”')) ?></span>
+                          <span class="chip-simple">N° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : '—')) ?></span>
                           <span class="chip-simple">Recepcion: <?= h(fecha_simple($row['fecha_recepcion_resuelta'] ?? $row['fecha_recepcion'] ?? $row['fecha'] ?? null)) ?></span>
                           <span class="chip-simple">Documento: <?= h(fecha_simple($row['fecha_documento_resuelta'] ?? $row['fecha_documento'] ?? $row['fecha'] ?? null)) ?></span>
                           <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>
@@ -4755,7 +4776,7 @@ include __DIR__ . '/sidebar.php';
         return;
       }
 
-      const shouldSave = window.confirm('Hay cambios sin guardar. Â¿Desea guardar los cambios?');
+      const shouldSave = window.confirm('Hay cambios sin guardar. ¿Desea guardar los cambios?');
       if (shouldSave) {
         try {
           if (typeof state.form.requestSubmit === 'function') {
@@ -4856,7 +4877,7 @@ include __DIR__ . '/sidebar.php';
       const brandId = String(brand.value || '');
 
       if (categoryId === '') {
-        clearSelect(type, '(Selecciona una categorÃ­a primero)');
+        clearSelect(type, '(Selecciona una categoría primero)');
         clearSelect(body, '(Selecciona un tipo primero)');
       } else {
         const types = VEH_CATALOGS.tipos.filter((item) => String(item.categoria_id) === categoryId);
@@ -5430,7 +5451,7 @@ include __DIR__ . '/sidebar.php';
         return;
       }
 
-      const shouldSave = window.confirm('Hay cambios sin guardar. Â¿Desea guardar los cambios?');
+      const shouldSave = window.confirm('Hay cambios sin guardar. ¿Desea guardar los cambios?');
       if (shouldSave) {
         const saveButton = document.querySelector('[form="' + state.form.id + '"][type="submit"]');
         if (saveButton) {
@@ -5728,7 +5749,7 @@ include __DIR__ . '/sidebar.php';
           }
 
           if (!response.ok || !data || !data.ok) {
-            showInlineError(form, (data && data.message) ? data.message : 'No se pudo guardar la informaciÃ³n.');
+            showInlineError(form, (data && data.message) ? data.message : 'No se pudo guardar la información.');
             return;
           }
 
