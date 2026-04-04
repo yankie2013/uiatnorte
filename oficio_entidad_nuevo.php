@@ -19,14 +19,19 @@ $service = new CatalogoOficioService(new CatalogoOficioRepository($pdo));
 $error = '';
 $success = '';
 $data = $service->entidadDefault();
+$tiposEntidad = $service->tiposEntidad();
+$categoriasEntidad = $service->categoriasEntidad();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'tipo' => $_POST['tipo'] ?? 'PUBLICA',
+        'categoria' => $_POST['categoria'] ?? '',
         'nombre' => $_POST['nombre'] ?? '',
         'siglas' => $_POST['siglas'] ?? '',
         'direccion' => $_POST['direccion'] ?? '',
         'telefono' => $_POST['telefono'] ?? '',
+        'telefono_fijo' => $_POST['telefono_fijo'] ?? '',
+        'telefono_movil' => $_POST['telefono_movil'] ?? '',
         'correo' => $_POST['correo'] ?? '',
         'pagina_web' => $_POST['pagina_web'] ?? '',
     ];
@@ -59,16 +64,19 @@ function closeModalMaybe(){ if(window.parent && typeof window.parent.closeModal=
 <div class="wrap">
   <div class="toolbar">
     <h1 style="margin:0;">Nueva entidad</h1>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="button" onclick="closeModalMaybe()">Cerrar</button><button class="btn primary" type="submit" form="frmEntidad">Guardar</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="oficio_entidades_listar.php">Prontuario</a><button class="btn" type="button" onclick="closeModalMaybe()">Cerrar</button><button class="btn primary" type="submit" form="frmEntidad">Guardar</button></div>
   </div>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?></div><?php endif; ?>
   <form method="post" class="card" id="frmEntidad">
     <div class="grid">
-      <div class="c6 field"><label class="label">Tipo</label><select name="tipo"><?php foreach (['PUBLICA','PRIVADA','PERSONA_NATURAL','OTRA'] as $item): ?><option value="<?= $item ?>" <?= (string) $data['tipo'] === $item ? 'selected' : '' ?>><?= $item ?></option><?php endforeach; ?></select></div>
+      <div class="c6 field"><label class="label">Naturaleza</label><select name="tipo"><?php foreach ($tiposEntidad as $item): ?><option value="<?= h($item) ?>" <?= (string) $data['tipo'] === (string) $item ? 'selected' : '' ?>><?= h($item) ?></option><?php endforeach; ?></select></div>
+      <div class="c6 field"><label class="label">Categoria</label><select name="categoria"><option value="">Selecciona una categoria</option><?php foreach ($categoriasEntidad as $item): ?><option value="<?= h($item) ?>" <?= (string) ($data['categoria'] ?? '') === (string) $item ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $item)) ?></option><?php endforeach; ?></select></div>
       <div class="c6 field"><label class="label">Nombre*</label><input type="text" name="nombre" value="<?= h((string) $data['nombre']) ?>" required></div>
       <div class="c6 field"><label class="label">Siglas</label><input type="text" name="siglas" value="<?= h((string) $data['siglas']) ?>"></div>
-      <div class="c6 field"><label class="label">Telefono</label><input type="text" name="telefono" value="<?= h((string) $data['telefono']) ?>"></div>
+      <div class="c6 field"><label class="label">Telefono fijo</label><input type="text" name="telefono_fijo" value="<?= h((string) ($data['telefono_fijo'] ?? '')) ?>"></div>
+      <div class="c6 field"><label class="label">Telefono movil</label><input type="text" name="telefono_movil" value="<?= h((string) ($data['telefono_movil'] ?? '')) ?>"></div>
+      <div class="c6 field"><label class="label">Telefono principal (compatibilidad)</label><input type="text" name="telefono" value="<?= h((string) $data['telefono']) ?>"></div>
       <div class="c12 field"><label class="label">Direccion</label><input type="text" name="direccion" value="<?= h((string) $data['direccion']) ?>"></div>
       <div class="c6 field"><label class="label">Correo</label><input type="email" name="correo" value="<?= h((string) $data['correo']) ?>"></div>
       <div class="c6 field"><label class="label">Pagina web</label><input type="text" name="pagina_web" value="<?= h((string) $data['pagina_web']) ?>"></div>

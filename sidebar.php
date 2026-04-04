@@ -153,6 +153,15 @@ body { padding-left:60px; transition:.35s; }
         <span>Ir a panel</span>
     </a>
 
+        <a class="btn" href="oficio_entidades_listar.php">
+            <span class="section-icon">&#128214;</span>
+            <span>Prontuario entidades</span>
+        </a>
+
+        <a class="btn" href="enlaces_interes_listar.php">
+            <span class="section-icon">&#128279;</span>
+            <span>Enlaces de interes</span>
+        </a>
 
         <a class="btn" href="accidente_listar.php">
             <span class="section-icon">⬅️</span>

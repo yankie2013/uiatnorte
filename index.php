@@ -323,6 +323,28 @@ html,body{height:100%;margin:0;background:
             </div>
             <div class="txt"><div class="h">Comisarías</div><div class="p">Administración</div></div>
           </a>
+
+          <a class="tile tile-red" href="oficio_entidades_listar.php" role="listitem" aria-label="Prontuario de entidades">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs><linearGradient id="g_red3" x1="0" x2="1"><stop offset="0" stop-color="#f8b7b7"/><stop offset="1" stop-color="#a12424"/></linearGradient></defs>
+                <path d="M6 4h9l3 3v13H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="url(#g_red3)" class="duo-fill"/>
+                <path d="M9 8h3M9 12h6M9 16h6" stroke="#3d1313" stroke-width="1.1" class="duo-accent"/>
+              </svg>
+            </div>
+            <div class="txt"><div class="h">Prontuario Entidades</div><div class="p">Directorio y contactos</div></div>
+          </a>
+
+          <a class="tile tile-red" href="enlaces_interes_listar.php" role="listitem" aria-label="Enlaces de interes">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs><linearGradient id="g_red4" x1="0" x2="1"><stop offset="0" stop-color="#f8b7b7"/><stop offset="1" stop-color="#a12424"/></linearGradient></defs>
+                <path d="M9.5 8.5l-2 2a3 3 0 1 0 4.243 4.243l1.414-1.414" stroke="url(#g_red4)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M14.5 15.5l2-2A3 3 0 1 0 12.257 9.257l-1.414 1.414" stroke="#3d1313" stroke-width="2" stroke-linecap="round" class="duo-accent"/>
+              </svg>
+            </div>
+            <div class="txt"><div class="h">Enlaces de Interes</div><div class="p">Accesos y consultas</div></div>
+          </a>
         </div>
       </div>
 

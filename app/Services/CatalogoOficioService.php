@@ -17,19 +17,77 @@ final class CatalogoOficioService
         return $this->repository->entidades();
     }
 
+    public function listadoEntidades(array $filters = []): array
+    {
+        return $this->repository->searchEntidades($filters);
+    }
+
+    public function tiposEntidad(): array
+    {
+        return $this->repository->tiposEntidad();
+    }
+
+    public function categoriasEntidad(): array
+    {
+        return $this->repository->categoriasEntidad();
+    }
+
     public function entidadDetalle(int $id): ?array
     {
         return $this->repository->findEntidad($id);
+    }
+
+    public function enlaceInteresCategorias(): array
+    {
+        return $this->repository->enlaceInteresCategorias();
+    }
+
+    public function listadoEnlacesInteres(array $filters = []): array
+    {
+        return $this->repository->searchEnlacesInteres($filters);
+    }
+
+    public function enlaceInteresDetalle(int $id): ?array
+    {
+        return $this->repository->findEnlaceInteres($id);
+    }
+
+    public function enlaceInteresDefault(?array $row = null): array
+    {
+        return [
+            'categoria' => $row['categoria'] ?? 'OTROS',
+            'nombre' => $row['nombre'] ?? '',
+            'url' => $row['url'] ?? '',
+            'descripcion' => $row['descripcion'] ?? '',
+            'orden' => isset($row['orden']) ? (int) $row['orden'] : 0,
+            'activo' => isset($row['activo']) ? (int) $row['activo'] : 1,
+        ];
+    }
+
+    public function saveEnlaceInteres(array $input, ?int $id = null): int
+    {
+        $payload = $this->payloadEnlaceInteres($input);
+        if ($id === null) {
+            return $this->repository->createEnlaceInteres($payload);
+        }
+        if ($this->repository->findEnlaceInteres($id) === null) {
+            throw new InvalidArgumentException('Enlace no encontrado.');
+        }
+        $this->repository->updateEnlaceInteres($id, $payload);
+        return $id;
     }
 
     public function entidadDefault(?array $row = null): array
     {
         return [
             'tipo' => $row['tipo'] ?? 'PUBLICA',
+            'categoria' => $row['categoria'] ?? '',
             'nombre' => $row['nombre'] ?? '',
             'siglas' => $row['siglas'] ?? '',
             'direccion' => $row['direccion'] ?? '',
             'telefono' => $row['telefono'] ?? '',
+            'telefono_fijo' => $row['telefono_fijo'] ?? ($row['telefono'] ?? ''),
+            'telefono_movil' => $row['telefono_movil'] ?? '',
             'correo' => $row['correo'] ?? '',
             'pagina_web' => $row['pagina_web'] ?? '',
         ];
@@ -152,9 +210,15 @@ final class CatalogoOficioService
     private function payloadEntidad(array $input): array
     {
         $tipo = strtoupper(trim((string) ($input['tipo'] ?? 'PUBLICA')));
-        $validTypes = ['PUBLICA', 'PRIVADA', 'PERSONA_NATURAL', 'OTRA'];
+        $validTypes = $this->repository->tiposEntidad();
         if (!in_array($tipo, $validTypes, true)) {
             $tipo = 'PUBLICA';
+        }
+
+        $categoria = strtoupper(trim((string) ($input['categoria'] ?? '')));
+        $validCategories = $this->repository->categoriasEntidad();
+        if ($categoria !== '' && !in_array($categoria, $validCategories, true)) {
+            $categoria = 'OTRA';
         }
 
         $nombre = trim((string) ($input['nombre'] ?? ''));
@@ -167,14 +231,55 @@ final class CatalogoOficioService
             throw new InvalidArgumentException('El correo no tiene un formato valido.');
         }
 
+        $telefonoFijo = $this->nullableTrim($input['telefono_fijo'] ?? null);
+        $telefonoMovil = $this->nullableTrim($input['telefono_movil'] ?? null);
+        $telefonoLegacy = $this->nullableTrim($input['telefono'] ?? null);
+        $telefonoPrincipal = $telefonoFijo ?? $telefonoMovil ?? $telefonoLegacy;
+
         return [
             'tipo' => $tipo,
+            'categoria' => $categoria !== '' ? $categoria : null,
             'nombre' => $nombre,
             'siglas' => $this->nullableTrim($input['siglas'] ?? null),
             'direccion' => $this->nullableTrim($input['direccion'] ?? null),
-            'telefono' => $this->nullableTrim($input['telefono'] ?? null),
+            'telefono' => $telefonoPrincipal,
+            'telefono_fijo' => $telefonoFijo,
+            'telefono_movil' => $telefonoMovil,
             'correo' => $correo !== '' ? $correo : null,
             'pagina_web' => $this->nullableTrim($input['pagina_web'] ?? null),
+        ];
+    }
+
+    private function payloadEnlaceInteres(array $input): array
+    {
+        $categoria = strtoupper(trim((string) ($input['categoria'] ?? 'OTROS')));
+        if (!in_array($categoria, $this->repository->enlaceInteresCategorias(), true)) {
+            $categoria = 'OTROS';
+        }
+
+        $nombre = trim((string) ($input['nombre'] ?? ''));
+        if ($nombre === '') {
+            throw new InvalidArgumentException('El nombre es obligatorio.');
+        }
+
+        $url = trim((string) ($input['url'] ?? ''));
+        if ($url === '') {
+            throw new InvalidArgumentException('La URL es obligatoria.');
+        }
+        if (!preg_match('~^[a-z][a-z0-9+.-]*://~i', $url)) {
+            $url = 'https://' . ltrim($url, '/');
+        }
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            throw new InvalidArgumentException('La URL no tiene un formato valido.');
+        }
+
+        return [
+            'categoria' => $categoria,
+            'nombre' => $nombre,
+            'url' => $url,
+            'descripcion' => $this->nullableTrim($input['descripcion'] ?? null),
+            'orden' => max(0, (int) ($input['orden'] ?? 0)),
+            'activo' => ((int) ($input['activo'] ?? 1)) === 1 ? 1 : 0,
         ];
     }
 
