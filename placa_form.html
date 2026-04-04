@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Consulta Vehiculo</title>
+<meta name="theme-color" content="#0d1526">
+<meta name="application-name" content="UIAT Norte">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="shortcut icon" href="./assets/pwa/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/pwa/icon-192.png">
+<link rel="apple-touch-icon" href="./assets/pwa/apple-touch-icon.png">
 <style>
 body{font-family:Arial;margin:30px}
 input,button,textarea{padding:10px;font-size:16px}
@@ -13,6 +19,83 @@ button{cursor:pointer}
 .k{color:#666}
 textarea{width:100%;height:170px;margin-top:10px}
 small{color:#666}
+.uiat-pwa-banner{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  z-index:1000;
+  display:none;
+  align-items:center;
+  gap:10px;
+  max-width:min(92vw, 360px);
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(13,21,38,.94);
+  color:#f8fafc;
+  box-shadow:0 18px 45px rgba(2,6,23,.35);
+}
+.uiat-pwa-banner.is-visible{display:flex}
+.uiat-pwa-banner__copy{min-width:0}
+.uiat-pwa-banner__title{margin:0 0 2px;font:700 14px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-banner__text{margin:0;color:rgba(248,250,252,.82);font:400 12px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-banner__actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.uiat-pwa-banner__button,.uiat-pwa-banner__dismiss{appearance:none;border:0;border-radius:999px;cursor:pointer;font:700 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-banner__button{padding:10px 14px;background:#d4af37;color:#0f172a}
+.uiat-pwa-banner__dismiss{width:32px;height:32px;background:rgba(255,255,255,.1);color:#fff}
+.uiat-pwa-status{
+  position:fixed;
+  top:16px;
+  right:16px;
+  z-index:1000;
+  display:none;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(13,21,38,.94);
+  color:#f8fafc;
+  box-shadow:0 16px 40px rgba(2,6,23,.28);
+  font:700 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif
+}
+.uiat-pwa-status.is-visible{display:inline-flex}
+.uiat-pwa-status::before{
+  content:"";
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:#f59e0b;
+  box-shadow:0 0 0 4px rgba(245,158,11,.14)
+}
+.uiat-pwa-status[data-state="online"]::before{
+  background:#22c55e;
+  box-shadow:0 0 0 4px rgba(34,197,94,.14)
+}
+.uiat-pwa-update{
+  position:fixed;
+  left:16px;
+  bottom:86px;
+  z-index:1000;
+  display:none;
+  align-items:center;
+  gap:10px;
+  max-width:min(92vw,380px);
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(6,14,29,.96);
+  color:#f8fafc;
+  box-shadow:0 18px 45px rgba(2,6,23,.35)
+}
+.uiat-pwa-update.is-visible{display:flex}
+.uiat-pwa-update__copy{min-width:0}
+.uiat-pwa-update__title{margin:0 0 4px;font:700 14px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-update__text{margin:0;color:rgba(248,250,252,.82);font:400 12px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-update__actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.uiat-pwa-update__button,.uiat-pwa-update__dismiss{appearance:none;border:0;border-radius:999px;cursor:pointer;font:700 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif}
+.uiat-pwa-update__button{padding:10px 14px;background:#38bdf8;color:#082f49}
+.uiat-pwa-update__dismiss{width:32px;height:32px;background:rgba(255,255,255,.1);color:#fff}
 </style>
 </head>
 <body>
@@ -30,6 +113,30 @@ small{color:#666}
 </div>
 
 <div id="resultado" class="card"></div>
+
+<div class="uiat-pwa-banner" id="uiat-pwa-banner" hidden>
+  <div class="uiat-pwa-banner__copy">
+    <p class="uiat-pwa-banner__title">Instala UIAT Norte</p>
+    <p class="uiat-pwa-banner__text" id="uiat-pwa-text">Accede m&aacute;s r&aacute;pido desde tu escritorio o pantalla de inicio.</p>
+  </div>
+  <div class="uiat-pwa-banner__actions">
+    <button type="button" class="uiat-pwa-banner__button" id="uiat-pwa-install">Instalar</button>
+    <button type="button" class="uiat-pwa-banner__dismiss" id="uiat-pwa-dismiss" aria-label="Cerrar aviso">&times;</button>
+  </div>
+</div>
+<div class="uiat-pwa-status" id="uiat-pwa-status" data-state="offline" hidden>
+  <span id="uiat-pwa-status-text">Sin conexión</span>
+</div>
+<div class="uiat-pwa-update" id="uiat-pwa-update" hidden>
+  <div class="uiat-pwa-update__copy">
+    <p class="uiat-pwa-update__title">Nueva versión disponible</p>
+    <p class="uiat-pwa-update__text">Recarga para aplicar mejoras recientes del sistema.</p>
+  </div>
+  <div class="uiat-pwa-update__actions">
+    <button type="button" class="uiat-pwa-update__button" id="uiat-pwa-refresh">Actualizar</button>
+    <button type="button" class="uiat-pwa-update__dismiss" id="uiat-pwa-update-dismiss" aria-label="Cerrar aviso">&times;</button>
+  </div>
+</div>
 
 <script>
 let ultimoResultado = null;
@@ -135,6 +242,8 @@ async function procesarPegado(){
   }
 }
 </script>
+
+<script src="./assets/pwa/pwa-register.js" data-pwa-scope="./"></script>
 
 </body>
 </html>

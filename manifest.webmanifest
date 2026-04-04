@@ -1,0 +1,112 @@
+{
+  "id": "./index.php?source=pwa",
+  "name": "UIAT Norte",
+  "short_name": "UIAT",
+  "description": "Sistema de gestión de accidentes, oficios, personas y vehículos para UIAT Norte.",
+  "start_url": "./index.php?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#07111f",
+  "theme_color": "#0d1526",
+  "lang": "es-PE",
+  "dir": "ltr",
+  "orientation": "any",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "./assets/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./assets/pwa/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Panel principal de UIAT Norte"
+    },
+    {
+      "src": "./assets/pwa/screenshot-mobile.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "label": "Vista móvil de UIAT Norte"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Panel",
+      "short_name": "Panel",
+      "description": "Abre el panel principal",
+      "url": "./index.php?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "./assets/pwa/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Accidentes",
+      "short_name": "Accidentes",
+      "description": "Ir al listado de accidentes",
+      "url": "./accidente_listar.php?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "./assets/pwa/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Personas",
+      "short_name": "Personas",
+      "description": "Ir al registro de personas",
+      "url": "./persona_listar.php?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "./assets/pwa/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Vehículos",
+      "short_name": "Vehículos",
+      "description": "Ir al registro de vehículos",
+      "url": "./vehiculo_listar.php?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "./assets/pwa/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Oficios",
+      "short_name": "Oficios",
+      "description": "Ir al listado de oficios",
+      "url": "./oficios_listar.php?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "./assets/pwa/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
