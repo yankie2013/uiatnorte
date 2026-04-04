@@ -440,6 +440,30 @@ function human_label(string $key): string
         'fecha_peritaje' => 'Fecha',
         'perito_peritaje' => 'Perito',
         'danos_peritaje' => 'Daños observados',
+        'fecha_levantamiento' => 'Fecha',
+        'hora_levantamiento' => 'Hora',
+        'lugar_levantamiento' => 'Lugar',
+        'posicion_cuerpo_levantamiento' => 'Posición del cuerpo',
+        'lesiones_levantamiento' => 'Lesiones',
+        'presuntivo_levantamiento' => 'Diagnóstico presuntivo',
+        'legista_levantamiento' => 'Médico legista',
+        'cmp_legista' => 'CMP legista',
+        'observaciones_levantamiento' => 'Observaciones',
+        'numero_pericial' => 'Número pericial',
+        'fecha_pericial' => 'Fecha pericial',
+        'hora_pericial' => 'Hora pericial',
+        'observaciones_pericial' => 'Observaciones periciales',
+        'numero_protocolo' => 'Número de protocolo',
+        'fecha_protocolo' => 'Fecha de protocolo',
+        'hora_protocolo' => 'Hora de protocolo',
+        'lesiones_protocolo' => 'Lesiones del protocolo',
+        'presuntivo_protocolo' => 'Presuntivo del protocolo',
+        'dosaje_protocolo' => 'Dosaje',
+        'toxicologico_protocolo' => 'Toxicológico',
+        'nosocomio_epicrisis' => 'Nosocomio',
+        'numero_historia_epicrisis' => 'Nro. historia clínica',
+        'tratamiento_epicrisis' => 'Tratamiento',
+        'hora_alta_epicrisis' => 'Hora de alta',
         'veh_placa' => 'Placa',
         'veh_serie_vin' => 'Serie VIN',
         'veh_nro_motor' => 'Nro. motor',
@@ -2266,7 +2290,14 @@ foreach ($personas as $persona) {
         ) : [],
         'occ' => $personaId > 0 ? safe_query_all(
             $pdo,
-            "SELECT id, fecha_levantamiento, hora_levantamiento, lugar_levantamiento, numero_protocolo, observaciones_levantamiento
+            "SELECT id,
+                    fecha_levantamiento, hora_levantamiento, lugar_levantamiento,
+                    posicion_cuerpo_levantamiento, lesiones_levantamiento, presuntivo_levantamiento,
+                    legista_levantamiento, cmp_legista, observaciones_levantamiento,
+                    numero_pericial, fecha_pericial, hora_pericial, observaciones_pericial,
+                    numero_protocolo, fecha_protocolo, hora_protocolo, lesiones_protocolo,
+                    presuntivo_protocolo, dosaje_protocolo, toxicologico_protocolo,
+                    nosocomio_epicrisis, numero_historia_epicrisis, tratamiento_epicrisis, hora_alta_epicrisis
                FROM documento_occiso
               WHERE persona_id = ? AND accidente_id = ?
            ORDER BY COALESCE(fecha_levantamiento, '9999-12-31') DESC, id DESC",
@@ -3642,6 +3673,26 @@ include __DIR__ . '/sidebar.php';
                 ['id' => 'familiar-fallecido', 'label' => 'Familiar fallecido', 'count' => count($familiares)],
                 ['id' => 'abogados', 'label' => 'Abogados', 'count' => count($abogados)],
             ];
+            $occLevantamientoFields = [
+                'fecha_levantamiento', 'hora_levantamiento', ['key' => 'lugar_levantamiento', 'class' => 'span-2'],
+                'posicion_cuerpo_levantamiento', ['key' => 'lesiones_levantamiento', 'class' => 'span-2'],
+                'presuntivo_levantamiento', 'legista_levantamiento', 'cmp_legista',
+                ['key' => 'observaciones_levantamiento', 'class' => 'span-4'],
+            ];
+            $occPericialFields = [
+                'numero_pericial', 'fecha_pericial', 'hora_pericial',
+                ['key' => 'observaciones_pericial', 'class' => 'span-4'],
+            ];
+            $occProtocoloFields = [
+                'numero_protocolo', 'fecha_protocolo', 'hora_protocolo',
+                ['key' => 'lesiones_protocolo', 'class' => 'span-2'],
+                'presuntivo_protocolo', 'dosaje_protocolo', 'toxicologico_protocolo',
+            ];
+            $occEpicrisisFields = [
+                ['key' => 'nosocomio_epicrisis', 'class' => 'span-2'],
+                'numero_historia_epicrisis', 'hora_alta_epicrisis',
+                ['key' => 'tratamiento_epicrisis', 'class' => 'span-4'],
+            ];
           ?>
           <div class="tabs-header participant-tabs nav nav-tabs flex-nowrap" id="participantes-tabs" role="tablist">
             <?php $participantTabIndex = 0; ?>
@@ -4104,7 +4155,28 @@ include __DIR__ . '/sidebar.php';
                               <span class="chip-simple"><?= h(fecha_simple($occ['fecha_levantamiento'] ?? null)) ?> <?= h((string) (($occ['hora_levantamiento'] ?? '') !== '' ? substr((string) $occ['hora_levantamiento'], 0, 5) : '')) ?></span>
                               <span class="chip-simple">Prot. <?= h((string) (($occ['numero_protocolo'] ?? '') !== '' ? $occ['numero_protocolo'] : '—')) ?></span>
                             </div>
-                            <?php if (!empty($occ['observaciones_levantamiento'])): ?><p><?= nl2br(h((string) $occ['observaciones_levantamiento'])) ?></p><?php endif; ?>
+                            <div class="section-block">
+                              <h3>Levantamiento</h3>
+                              <div class="field-grid"><?= render_field_cards($occ, $occLevantamientoFields) ?></div>
+                            </div>
+                            <?php if (record_has_any_content($occ, $occPericialFields)): ?>
+                              <div class="section-block">
+                                <h3>Pericia</h3>
+                                <div class="field-grid"><?= render_field_cards($occ, $occPericialFields) ?></div>
+                              </div>
+                            <?php endif; ?>
+                            <?php if (record_has_any_content($occ, $occProtocoloFields)): ?>
+                              <div class="section-block">
+                                <h3>Protocolo</h3>
+                                <div class="field-grid"><?= render_field_cards($occ, $occProtocoloFields) ?></div>
+                              </div>
+                            <?php endif; ?>
+                            <?php if (record_has_any_content($occ, $occEpicrisisFields)): ?>
+                              <div class="section-block">
+                                <h3>Epicrisis</h3>
+                                <div class="field-grid"><?= render_field_cards($occ, $occEpicrisisFields) ?></div>
+                              </div>
+                            <?php endif; ?>
                             <div class="record-actions">
                               <a class="btn-shell" href="documento_occiso_ver.php?id=<?= (int) $occ['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                               <a class="btn-shell js-inline-open" href="documento_occiso_editar.php?id=<?= (int) $occ['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Documento de occiso">Editar</a>
