@@ -8,6 +8,7 @@ final class PwaSupport
     private const THEME_COLOR = '#0d1526';
     private const APP_NAME = 'UIAT Norte';
     private const SHORT_NAME = 'UIAT';
+    private const ICON_VERSION = '20260404-logo';
 
     public static function boot(): void
     {
@@ -147,9 +148,9 @@ final class PwaSupport
         $appName = \htmlspecialchars(self::APP_NAME, ENT_QUOTES, 'UTF-8');
         $shortName = \htmlspecialchars(self::SHORT_NAME, ENT_QUOTES, 'UTF-8');
         $manifest = self::assetUrl($basePath, 'manifest.webmanifest');
-        $icon192 = self::assetUrl($basePath, 'assets/pwa/icon-192.png');
-        $icon512 = self::assetUrl($basePath, 'assets/pwa/icon-512.png');
-        $appleIcon = self::assetUrl($basePath, 'assets/pwa/apple-touch-icon.png');
+        $icon192 = self::assetUrl($basePath, 'assets/pwa/icon-192.png?v=' . self::ICON_VERSION);
+        $icon512 = self::assetUrl($basePath, 'assets/pwa/icon-512.png?v=' . self::ICON_VERSION);
+        $appleIcon = self::assetUrl($basePath, 'assets/pwa/apple-touch-icon.png?v=' . self::ICON_VERSION);
 
         return <<<HTML
 <meta name="theme-color" content="{$themeColor}">
