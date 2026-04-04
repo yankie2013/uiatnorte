@@ -36,15 +36,16 @@ $cntDil  = $cntDil  ?? sc($pdo_conn,"SELECT COUNT(*) FROM diligencias_pendientes
 .sidebar{
     width:60px;
     height:100%;
-    background:#0d1526;
-    color:white;
+    background:var(--uiat-sidebar-bg, #0d1526);
+    color:var(--uiat-sidebar-text, #e8eefc);
     padding:14px 0;
     overflow:visible;
     display:flex;
     flex-direction:column;
     gap:6px;
     transition:width .35s cubic-bezier(.22,.61,.36,1);
-    box-shadow:3px 0 18px rgba(0,0,0,.35);
+    box-shadow:3px 0 18px rgba(0,0,0,.20);
+    border-right:1px solid var(--uiat-sidebar-border, #24344a);
 }
 .sidebar.expanded{ width:240px; }
 
@@ -58,7 +59,7 @@ body { padding-left:60px; transition:.35s; }
 .section-header{
     display:flex; align-items:center; gap:10px;
     padding:10px 14px;
-    background:#162339;
+    background:var(--uiat-sidebar-elevated, #162339);
     border-radius:8px;
     font-size:14px;
     cursor:pointer;
@@ -66,7 +67,7 @@ body { padding-left:60px; transition:.35s; }
     overflow:hidden;
     transition:.2s;
 }
-.section-header:hover{ background:#1d2d4b; }
+.section-header:hover{ background:var(--uiat-sidebar-hover, #243657); }
 
 .section-body{
     overflow:hidden;
@@ -77,17 +78,18 @@ body { padding-left:60px; transition:.35s; }
 .side-item{
     display:flex; align-items:center; gap:10px;
     padding:10px 22px;
-    background:#1a283f;
+    background:var(--uiat-sidebar-surface, #1a283f);
     border-radius:8px;
     text-decoration:none;
-    color:white;
+    color:inherit;
     margin-top:4px;
     font-size:13px;
     white-space:nowrap;
     transition:.2s;
+    border:1px solid transparent;
 }
 .side-item:hover{
-    background:#243657;
+    background:var(--uiat-sidebar-hover, #243657);
     transform:translateX(6px);
 }
 
@@ -104,13 +106,14 @@ body { padding-left:60px; transition:.35s; }
     gap:10px;
     padding:10px 14px;
     border-radius:8px;
-    background:#103056;
-    color:white;
+    background:var(--uiat-sidebar-elevated, #103056);
+    color:inherit;
     text-decoration:none;
     white-space:nowrap;
+    border:1px solid var(--uiat-sidebar-border, #24344a);
 }
 .top-actions .btn:hover{
-    background:#13426f;
+    background:var(--uiat-sidebar-hover, #13426f);
 }
 
 /* Ocultar texto cuando colapsado */
@@ -133,7 +136,7 @@ body { padding-left:60px; transition:.35s; }
 .led{
     width:9px; height:9px; margin-left:auto;
     border-radius:50%;
-    background:#4b5563;
+    background:var(--uiat-sidebar-muted, #4b5563);
 }
 .led.on{
     background:#34d399;

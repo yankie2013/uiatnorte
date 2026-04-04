@@ -183,27 +183,22 @@ $rows=$st->fetchAll(PDO::FETCH_ASSOC);
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Accidentes | UIAT Norte</title>
 <style>
-/* ===== Tema auto (oscuro/claro) ===== */
-:root{
-  --bg:#0b0f19; --fg:#e6e8ef; --muted:156,163,175;
-  --panel-bg:#141a29aa; --panel-bd:#ffffff22;
-  --field-bg:#ffffff0d; --field-bd:#ffffff30;
-  --pill-bg:#ffffff14; --overlay:#0008;
-  --tbl-head-bg:#0f1628; --tbl-head-bd:#ffffff1f;
-  --tbl-row-bg:#0f1422; --tbl-row-alt:#11192b;
-  --tbl-row-hover:#1b2236; --tbl-bd:#ffffff1f;
-  --badge-bg:#ffffff12; --badge-bd:#ffffff30;
-  --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+/* ===== Variables de esta vista, atadas al tema global ===== */
+html{
+  --tbl-head-bg:#eef2ff;
+  --tbl-head-bd:#00000014;
+  --tbl-row-bg:#ffffff;
+  --tbl-row-alt:#fafafa;
+  --tbl-row-hover:#f3f4f6;
+  --tbl-bd:#00000014;
 }
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#f6f7fb; --fg:#0b0f19; --panel-bg:#ffffffcc; --panel-bd:#00000014;
-    --field-bg:#ffffff; --field-bd:#00000022; --pill-bg:#f2f4ff; --overlay:#0006;
-    --tbl-head-bg:#eef2ff; --tbl-head-bd:#00000014;
-    --tbl-row-bg:#ffffff; --tbl-row-alt:#fafafa;
-    --tbl-row-hover:#f3f4f6; --tbl-bd:#00000014;
-    --badge-bg:#eef2ff; --badge-bd:#dbeafe;
-  }
+html[data-theme-resolved="dark"]{
+  --tbl-head-bg:#0f1628;
+  --tbl-head-bd:#ffffff1f;
+  --tbl-row-bg:#0f1422;
+  --tbl-row-alt:#11192b;
+  --tbl-row-hover:#1b2236;
+  --tbl-bd:#ffffff1f;
 }
 
 /* ===== Layout base ===== */
@@ -246,7 +241,7 @@ tbody tr:hover{background:var(--tbl-row-hover)}
 th:first-child, td:first-child{padding-left:14px}
 th:last-child, td:last-child{padding-right:14px}
 .td-actions{white-space:nowrap}
-.empty{padding:18px;text-align:center;color:rgba(var(--muted),1)}
+.empty{padding:18px;text-align:center;color:rgba(var(--muted-rgb),1)}
 .badge.sidpol-reg { background:transparent; border-color:#d4af37; color:#facc15; font-weight:800; font-size:12px; }
 
 /* Compactar aún más la tabla */
@@ -267,7 +262,7 @@ table.compact tbody tr{ height:42px; }
 .btn-oficios{
   background:#eef6ff; border:1px solid #cfe3ff;
 }
-@media (prefers-color-scheme: dark){
+html[data-theme-resolved="dark"]{
   .btn-oficios{ background:#172036; border-color:#263a66; }
 }
 
@@ -281,7 +276,7 @@ table.compact tbody tr{ height:42px; }
 .estado-resuelto{  background:#d1e7dd; color:#0f5132; }   /* verde */
 .estado-dilig{     background:#fff3cd; color:#664d03; }   /* naranja/ámbar */
 
-@media (prefers-color-scheme: dark){
+html[data-theme-resolved="dark"]{
   div.estado-popup{ background:#1e293b; border-color:#334155; color:#f8fafc; }
 }
 
@@ -317,20 +312,20 @@ table.compact tbody tr{ height:42px; }
 
 .star { font-size:16px; line-height:1; display:inline-block; }
 .star-on { color:#ffd54f; text-shadow:0 1px 0 rgba(0,0,0,.25); }
-.star-off { color:rgba(255,255,255,0.45); }
+.star-off { color:rgba(15,23,42,0.35); }
 
 .select-folder{
   padding:6px 10px;
   border-radius:12px;
   font-weight:800;
   font-size:13px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.75));
   border:1.5px solid #d4af37;
   color:var(--fg);
   min-width:68px;
   text-align:center;
 }
-@media (prefers-color-scheme: dark){
+html[data-theme-resolved="dark"]{
   .select-folder {
     background: rgba(212,175,55,0.12);
     color: #f6f6f6;

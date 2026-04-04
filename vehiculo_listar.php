@@ -39,11 +39,11 @@ $returnTo = $_SERVER['REQUEST_URI'] ?? 'vehiculo_listar.php';
   .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
   .pager .page{padding:6px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.08);text-decoration:none;color:inherit;background:rgba(255,255,255,.75)}
-  .pager .page.active{font-weight:800;box-shadow:0 0 0 3px rgba(var(--brand1),.20) inset;border-color:rgba(var(--brand1),.50)}
+  .pager .page.active{font-weight:800;box-shadow:0 0 0 3px rgba(var(--g-brand1),.20) inset;border-color:rgba(var(--g-brand1),.50)}
   @media (prefers-color-scheme: dark){
     .pager .page{background:rgba(17,24,39,.65);border-color:rgba(255,255,255,.12)}
   }
-  .muted{color:rgba(var(--muted),1);font-size:12px}
+  .muted{color:rgba(var(--g-muted),1);font-size:12px}
 </style>
 </head>
 <body>

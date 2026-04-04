@@ -151,6 +151,7 @@ final class PwaSupport
         $icon192 = self::assetUrl($basePath, 'assets/pwa/icon-192.png?v=' . self::ICON_VERSION);
         $icon512 = self::assetUrl($basePath, 'assets/pwa/icon-512.png?v=' . self::ICON_VERSION);
         $appleIcon = self::assetUrl($basePath, 'assets/pwa/apple-touch-icon.png?v=' . self::ICON_VERSION);
+        $themeCss = self::assetUrl($basePath, 'assets/theme/theme.css?v=20260404-theme');
 
         return <<<HTML
 <meta name="theme-color" content="{$themeColor}">
@@ -164,6 +165,27 @@ final class PwaSupport
 <link rel="icon" type="image/png" sizes="192x192" href="{$icon192}">
 <link rel="icon" type="image/png" sizes="512x512" href="{$icon512}">
 <link rel="apple-touch-icon" href="{$appleIcon}">
+<script>
+(() => {
+  const key = 'uiat-theme';
+  const doc = document.documentElement;
+  let theme = 'system';
+
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      theme = stored;
+    }
+  } catch (_) {}
+
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const resolved = theme === 'system' ? (prefersDark ? 'dark' : 'light') : theme;
+
+  doc.dataset.theme = theme;
+  doc.dataset.themeResolved = resolved;
+})();
+</script>
+<link rel="stylesheet" href="{$themeCss}">
 <style>
 .uiat-pwa-banner{
   position:fixed;
@@ -328,10 +350,16 @@ HTML;
     private static function bodyMarkup(string $basePath): string
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
+        $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260404-theme');
         $scope = self::assetUrl($basePath, '');
         $escapedAppName = \htmlspecialchars(self::APP_NAME, ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
+<div class="uiat-theme-switcher" id="uiat-theme-switcher" aria-label="Selector de tema">
+  <button type="button" class="uiat-theme-switcher__button" data-theme-choice="light" aria-pressed="false">Claro</button>
+  <button type="button" class="uiat-theme-switcher__button" data-theme-choice="dark" aria-pressed="false">Oscuro</button>
+  <button type="button" class="uiat-theme-switcher__button" data-theme-choice="system" aria-pressed="false">Auto</button>
+</div>
 <div class="uiat-pwa-banner" id="uiat-pwa-banner" hidden>
   <div class="uiat-pwa-banner__copy">
     <p class="uiat-pwa-banner__title">Instala {$escapedAppName}</p>
@@ -355,6 +383,7 @@ HTML;
     <button type="button" class="uiat-pwa-update__dismiss" id="uiat-pwa-update-dismiss" aria-label="Cerrar aviso">&times;</button>
   </div>
 </div>
+<script src="{$themeScript}"></script>
 <script src="{$registerScript}" data-pwa-scope="{$scope}"></script>
 HTML;
     }

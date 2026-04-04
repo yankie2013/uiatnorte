@@ -152,10 +152,10 @@ if (window.parent && window.parent !== window) {
 
   /* Modal base */
   .modal-mask{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1000; }
-  .modal{ width:100%; max-width:560px; background: rgba(var(--card),0.98); border-radius:16px; padding:16px; box-shadow:0 20px 50px rgba(0,0,0,.30); border:1px solid rgba(0,0,0,.08); }
+  .modal{ width:100%; max-width:560px; background: rgba(var(--g-card),0.98); border-radius:16px; padding:16px; box-shadow:0 20px 50px rgba(0,0,0,.30); border:1px solid rgba(0,0,0,.08); }
   .modal h3{ margin:0 0 10px 0; font-size:18px; }
   .modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-  .modal .help{ font-size:12px; color: rgba(var(--muted),1) }
+  .modal .help{ font-size:12px; color: rgba(var(--g-muted),1) }
   .hidden{ display:none }
 </style>
 </head>

@@ -76,7 +76,7 @@ $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
     --danger: #991b1b;
     --danger-bg: #fef2f2;
 }
-@media (prefers-color-scheme: dark) {
+html[data-theme-resolved="dark"] {
     :root {
         --bg: #0b1220;
         --card: #111827;
@@ -98,6 +98,13 @@ h1 { margin: 0 0 6px; font-size: 1.6rem; }
 .sub { color: var(--muted); margin-bottom: 18px; }
 label { display: block; margin: 14px 0 6px; font-weight: 600; }
 .input, textarea, select { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; background: transparent; color: var(--text); }
+select { color-scheme: light; }
+select option, select optgroup { background: var(--card); color: var(--text); }
+select option:checked { background: rgba(29,78,216,.18); color: var(--text); }
+html[data-theme-resolved="dark"] select { color-scheme: dark; }
+html[data-theme-resolved="dark"] select option,
+html[data-theme-resolved="dark"] select optgroup { background: #0f172a; color: #e5e7eb; }
+html[data-theme-resolved="dark"] select option:checked { background: #1d4ed8; color: #eff6ff; }
 textarea { min-height: 120px; resize: vertical; }
 select[multiple] { min-height: 130px; }
 .row { display: flex; gap: 10px; align-items: center; }

@@ -91,7 +91,7 @@ input,select,textarea{
 }
 .plus{
   width:34px;height:36px;border-radius:10px;
-  border:1px dashed rgba(var(--muted),.45);
+  border:1px dashed rgba(var(--muted-rgb),.45);
   background:var(--option-bg);cursor:pointer
 }
 .badge{
@@ -106,7 +106,7 @@ input,select,textarea{
 
 /* Grupo Modalidad/Consecuencia */
 .groupbox{border:1px solid var(--dash-bd);border-radius:16px;padding:14px;background:var(--group-bg)}
-.groupbox>legend{padding:0 8px;color:rgba(var(--muted),1);font-weight:700}
+.groupbox>legend{padding:0 8px;color:rgba(var(--muted-rgb),1);font-weight:700}
 .groupbox-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
 .group{display:flex;flex-direction:column;gap:8px}
 .group-title{font-weight:700}
@@ -116,7 +116,7 @@ input,select,textarea{
   border-radius:10px;border:1px solid var(--field-bd);
   background:var(--field-bg);color:var(--fg)
 }
-.tool{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:rgba(var(--muted),1)}
+.tool{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:rgba(var(--muted-rgb),1)}
 .option-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
   gap:10px;max-height:220px;overflow:auto;padding:4px;
@@ -132,7 +132,7 @@ input,select,textarea{
 .option-card input{display:none}
 .option-card .check{
   width:18px;height:18px;border-radius:6px;
-  border:2px solid rgba(var(--muted),.5);display:inline-block;position:relative;flex:0 0 18px
+  border:2px solid rgba(var(--muted-rgb),.5);display:inline-block;position:relative;flex:0 0 18px
 }
 .option-card input:checked + .check{border-color:#22d3ee;background:linear-gradient(135deg,#4f46e5,#06b6d4)}
 .option-card input:checked + .check::after{content:"";position:absolute;inset:3px;border-radius:3px;background:white}
