@@ -2579,6 +2579,121 @@ foreach ($personas as $persona) {
     ];
 }
 
+$analysisVehiclesByInvId = [];
+foreach ($personas as $persona) {
+    $invVehiculoId = (int) ($persona['inv_vehiculo_id'] ?? 0);
+    if ($invVehiculoId <= 0 || isset($analysisVehiclesByInvId[$invVehiculoId])) {
+        continue;
+    }
+
+    $analysisVehiclesByInvId[$invVehiculoId] = [
+        'involucrado_vehiculo_id' => $invVehiculoId,
+        'veh_id' => (int) ($persona['veh_id'] ?? 0),
+        'orden_participacion' => trim((string) ($persona['orden_participacion'] ?? '')),
+        'veh_participacion' => trim((string) ($persona['veh_participacion'] ?? '')),
+        'veh_placa' => vehiculo_placa_visible((string) ($persona['veh_placa'] ?? '')),
+        'veh_marca' => trim((string) ($persona['veh_marca'] ?? '')),
+        'veh_modelo' => trim((string) ($persona['veh_modelo'] ?? '')),
+        'veh_color' => trim((string) ($persona['veh_color'] ?? '')),
+    ];
+}
+foreach ($comboVehiculosRows as $comboVehiculo) {
+    $invVehiculoId = (int) ($comboVehiculo['inv_vehiculo_id'] ?? 0);
+    if ($invVehiculoId <= 0 || isset($analysisVehiclesByInvId[$invVehiculoId])) {
+        continue;
+    }
+
+    $analysisVehiclesByInvId[$invVehiculoId] = [
+        'involucrado_vehiculo_id' => $invVehiculoId,
+        'veh_id' => (int) ($comboVehiculo['veh_id'] ?? 0),
+        'orden_participacion' => trim((string) ($comboVehiculo['orden_participacion'] ?? '')),
+        'veh_participacion' => trim((string) ($comboVehiculo['veh_participacion'] ?? '')),
+        'veh_placa' => vehiculo_placa_visible((string) ($comboVehiculo['veh_placa'] ?? '')),
+        'veh_marca' => trim((string) ($comboVehiculo['veh_marca'] ?? '')),
+        'veh_modelo' => trim((string) ($comboVehiculo['veh_modelo'] ?? '')),
+        'veh_color' => trim((string) ($comboVehiculo['veh_color'] ?? '')),
+    ];
+}
+$analysisDamageByInvId = [];
+foreach ($analysisVehiclesByInvId as $invVehiculoId => $vehicle) {
+    $documents = $docVehiculoTodosPorInvolucrado[$invVehiculoId] ?? [];
+    $damageDocument = null;
+    foreach ($documents as $document) {
+        if (trim((string) ($document['danos_peritaje'] ?? '')) !== '') {
+            $damageDocument = $document;
+            break;
+        }
+    }
+
+    if ($damageDocument === null) {
+        continue;
+    }
+
+    $analysisDamageByInvId[$invVehiculoId] = [
+        'veh_id' => (int) ($vehicle['veh_id'] ?? 0),
+        'orden_participacion' => (string) ($vehicle['orden_participacion'] ?? ''),
+        'veh_participacion' => (string) ($vehicle['veh_participacion'] ?? ''),
+        'veh_placa' => (string) ($vehicle['veh_placa'] ?? ''),
+        'veh_marca' => (string) ($vehicle['veh_marca'] ?? ''),
+        'veh_modelo' => (string) ($vehicle['veh_modelo'] ?? ''),
+        'veh_color' => (string) ($vehicle['veh_color'] ?? ''),
+        'numero_peritaje' => trim((string) ($damageDocument['numero_peritaje'] ?? '')),
+        'fecha_peritaje' => $damageDocument['fecha_peritaje'] ?? null,
+        'danos_peritaje' => trim((string) ($damageDocument['danos_peritaje'] ?? '')),
+    ];
+}
+
+$analysisDriverRows = [];
+foreach ($personas as $persona) {
+    if (!is_conductor($persona)) {
+        continue;
+    }
+
+    $invVehiculoId = (int) ($persona['inv_vehiculo_id'] ?? 0);
+    $damageRow = $analysisDamageByInvId[$invVehiculoId] ?? null;
+    $vehiculoLabel = trim((string) ($persona['veh_chip_text'] ?? ''));
+    if ($vehiculoLabel === '') {
+        $vehiculoLabel = vehiculo_placa_visible((string) ($persona['veh_placa'] ?? ''));
+    }
+    if ($vehiculoLabel === '') {
+        $vehiculoLabel = 'Sin vehículo registrado';
+    }
+
+    $analysisDriverRows[] = [
+        'nombre' => person_label($persona),
+        'vehiculo' => $vehiculoLabel,
+        'danos' => trim((string) ($damageRow['danos_peritaje'] ?? '')),
+    ];
+}
+
+$analysisFallecidoRows = [];
+foreach ($personas as $persona) {
+    if (!needs_occ($persona)) {
+        continue;
+    }
+
+    $extras = $personaExtras[(int) ($persona['involucrado_id'] ?? 0)] ?? ['occ' => []];
+    $lesiones = [];
+    foreach (($extras['occ'] ?? []) as $occ) {
+        $lesionProtocolo = trim((string) ($occ['lesiones_protocolo'] ?? ''));
+        $lesionLevantamiento = trim((string) ($occ['lesiones_levantamiento'] ?? ''));
+        if ($lesionProtocolo !== '') {
+            $lesiones[] = $lesionProtocolo;
+        }
+        if ($lesionLevantamiento !== '') {
+            $lesiones[] = $lesionLevantamiento;
+        }
+    }
+    $lesiones = array_values(array_unique(array_filter($lesiones)));
+
+    $analysisFallecidoRows[] = [
+        'nombre' => person_label($persona),
+        'lesiones' => $lesiones !== [] ? implode(' | ', $lesiones) : trim((string) ($persona['lesion'] ?? '')),
+    ];
+}
+
+$analysisTabCount = count($analysisDriverRows) + count($analysisFallecidoRows);
+
 $summaryAccidentSections = [
     'Identificación' => ['registro_sidpol', 'nro_informe_policial', 'estado', 'folder', ['key' => 'comisaria_nombre', 'class' => 'span-2']],
     'Fechas' => ['fecha_accidente', 'fecha_comunicacion', 'fecha_intervencion'],
@@ -2885,6 +3000,7 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-participantes::before{background:linear-gradient(180deg,#2563eb 0%,#60a5fa 100%)}
   .main-tabs .nav-link.tab-documentos::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
   .main-tabs .nav-link.tab-diligencias::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
+  .main-tabs .nav-link.tab-analisis::before{background:linear-gradient(180deg,#0f766e 0%,#22c55e 100%)}
   .main-tabs .nav-link.tab-itp.active{
     background:linear-gradient(135deg,#f2fffc 0%,#dbfaf3 48%,#c8f4ec 100%);
     box-shadow:0 18px 38px rgba(20,184,166,.17), 0 0 0 1px rgba(255,255,255,.58) inset;
@@ -2900,6 +3016,10 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-diligencias.active{
     background:linear-gradient(135deg,#faf5ff 0%,#f0e8ff 50%,#e5d8ff 100%);
     box-shadow:0 18px 38px rgba(124,58,237,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
+  }
+  .main-tabs .nav-link.tab-analisis.active{
+    background:linear-gradient(135deg,#f3fff7 0%,#e0fbe8 50%,#cbf7d8 100%);
+    box-shadow:0 18px 38px rgba(34,197,94,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
   }
   .main-tabs .main-tab-title{
     display:block;
@@ -3139,6 +3259,8 @@ include __DIR__ . '/sidebar.php';
   .summary-person-card{display:grid;gap:8px}
   .summary-doc-stack{display:grid;gap:8px}
   .summary-empty{padding:12px;border:1px dashed var(--line);border-radius:12px;background:rgba(148,163,184,.06);color:var(--muted);font-size:12px;font-weight:600}
+  .analysis-two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .analysis-two-cols .module-card{height:100%}
   .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-main{display:grid;gap:6px;min-width:0}
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -3316,6 +3438,11 @@ include __DIR__ . '/sidebar.php';
     color:#f5eeff;
     box-shadow:0 18px 38px rgba(124,58,237,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-analisis.active{
+    background:linear-gradient(135deg,#123b2d 0%,#18553f 52%,#22875e 100%);
+    color:#edfff4;
+    box-shadow:0 18px 38px rgba(34,197,94,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
   html[data-theme-resolved="dark"] .tab-panel.driver-panel{
     background:linear-gradient(180deg,rgba(10,44,37,.95) 0%,rgba(15,23,42,.96) 52%,rgba(11,35,31,.96) 100%);
   }
@@ -3403,6 +3530,9 @@ include __DIR__ . '/sidebar.php';
   }
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias.active{
     color:#e8dcf9;
+  }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-analisis.active{
+    color:#ddfce7;
   }
   html[data-theme-resolved="dark"] .tabs-header .nav-link,
   html[data-theme-resolved="dark"] .participant-tabs .nav-link,
@@ -3504,6 +3634,7 @@ include __DIR__ . '/sidebar.php';
     .ident-grid{grid-template-columns:1fr}
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9,.general-edit-card.g-12{grid-column:span 12}
     .field-grid{grid-template-columns:1fr}
+    .analysis-two-cols{grid-template-columns:1fr}
     .general-checkbox-grid{grid-template-columns:1fr}
     .field-card.span-2{grid-column:span 1}
     .editable-toolbar{align-items:flex-start}
@@ -3885,6 +4016,7 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
             ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
+            ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
         ];
       ?>
       <?php foreach ($mainTabs as $index => $tab): ?>
@@ -5624,6 +5756,82 @@ include __DIR__ . '/sidebar.php';
             </div>
             <div class="tab-pane fade" id="diligencias-realizados" role="tabpanel">
               <?= $renderDiligenciaCards($diligenciasRealizadas) ?>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="analisis" role="tabpanel">
+        <div class="tab-panel">
+          <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#analisis-danos-lesiones" type="button" role="tab">
+              analisis de daños y lesiones
+              <span class="tab-mini"><?= $analysisTabCount ?> registro(s)</span>
+            </button>
+          </div>
+
+          <div class="tab-content mt-2">
+            <div class="tab-pane fade show active" id="analisis-danos-lesiones" role="tabpanel">
+              <div class="analysis-two-cols">
+                <article class="module-card">
+                  <header>
+                    <div>
+                      <h4>Conductores</h4>
+                      <p>Nombre del conductor, vehículo involucrado y daños que presenta.</p>
+                    </div>
+                  </header>
+                  <?php if (!$analysisDriverRows): ?>
+                    <div class="summary-empty">No hay conductores registrados para este accidente.</div>
+                  <?php else: ?>
+                    <div class="summary-doc-stack">
+                      <?php foreach ($analysisDriverRows as $driver): ?>
+                        <article class="record-card">
+                          <h5><?= h((string) ($driver['nombre'] ?? 'Sin nombre')) ?></h5>
+                          <div class="section-block">
+                            <div class="field-grid">
+                              <div class="field-card span-2">
+                                <div class="field-label">Vehículo involucrado</div>
+                                <div class="field-value"><?= h((string) ($driver['vehiculo'] ?? 'Sin vehículo registrado')) ?></div>
+                              </div>
+                              <div class="field-card span-2">
+                                <div class="field-label">Daños</div>
+                                <div class="field-value"><?= nl2br(h((string) (($driver['danos'] ?? '') !== '' ? $driver['danos'] : 'Sin daños registrados'))) ?></div>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </article>
+
+                <article class="module-card">
+                  <header>
+                    <div>
+                      <h4>Fallecidos</h4>
+                      <p>Nombres y lesiones registradas del participante fallecido.</p>
+                    </div>
+                  </header>
+                  <?php if (!$analysisFallecidoRows): ?>
+                    <div class="summary-empty">No hay personas fallecidas registradas para este accidente.</div>
+                  <?php else: ?>
+                    <div class="summary-doc-stack">
+                      <?php foreach ($analysisFallecidoRows as $fallecido): ?>
+                        <article class="record-card">
+                          <h5><?= h((string) ($fallecido['nombre'] ?? 'Sin nombre')) ?></h5>
+                          <div class="section-block">
+                            <div class="field-grid">
+                              <div class="field-card span-4">
+                                <div class="field-label">Lesiones</div>
+                                <div class="field-value"><?= nl2br(h((string) (($fallecido['lesiones'] ?? '') !== '' ? $fallecido['lesiones'] : 'Sin lesiones registradas'))) ?></div>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </article>
+              </div>
             </div>
           </div>
         </div>
