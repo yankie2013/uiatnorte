@@ -382,11 +382,95 @@ function vehiculo_placa_visible(?string $placa): string
     return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
 }
 
+function ut_sort_index(?string $value): int
+{
+    $value = trim((string) ($value ?? ''));
+    if (preg_match('/^UT-(\d+)$/i', $value, $matches)) {
+        return (int) $matches[1];
+    }
+
+    return 999;
+}
+
+function summary_letter(int $index): string
+{
+    $index = max(0, $index);
+    $label = '';
+
+    do {
+        $label = chr(65 + ($index % 26)) . $label;
+        $index = intdiv($index, 26) - 1;
+    } while ($index >= 0);
+
+    return $label;
+}
+
+function person_summary_priority(array $row): int
+{
+    if (needs_occ($row)) {
+        return 0;
+    }
+    if (is_conductor($row)) {
+        return 1;
+    }
+
+    $role = role_key($row);
+    if (str_contains($role, 'pasaj')) {
+        return 2;
+    }
+    if (str_contains($role, 'ocup')) {
+        return 3;
+    }
+    if (str_contains($role, 'peat')) {
+        return 4;
+    }
+
+    return 5;
+}
+
+function vehicle_summary_record(array $row): array
+{
+    return [
+        'inv_vehiculo_id' => $row['inv_vehiculo_id'] ?? null,
+        'accidente_id' => $row['accidente_id'] ?? null,
+        'veh_numero' => $row['veh_numero'] ?? '',
+        'veh_participacion' => $row['veh_participacion'] ?? '',
+        'orden_participacion' => $row['orden_participacion'] ?? '',
+        'veh_id' => $row['veh_id'] ?? null,
+        'veh_categoria_id' => $row['veh_categoria_id'] ?? null,
+        'veh_tipo_id' => $row['veh_tipo_id'] ?? null,
+        'veh_carroceria_id' => $row['veh_carroceria_id'] ?? null,
+        'veh_marca_id' => $row['veh_marca_id'] ?? null,
+        'veh_modelo_id' => $row['veh_modelo_id'] ?? null,
+        'veh_placa' => vehiculo_placa_visible((string) ($row['veh_placa'] ?? '')),
+        'veh_serie_vin' => $row['veh_serie_vin'] ?? null,
+        'veh_nro_motor' => $row['veh_nro_motor'] ?? null,
+        'veh_categoria' => $row['veh_categoria'] ?? null,
+        'veh_tipo' => $row['veh_tipo'] ?? null,
+        'veh_carroceria' => $row['veh_carroceria'] ?? null,
+        'veh_marca' => $row['veh_marca'] ?? null,
+        'veh_modelo' => $row['veh_modelo'] ?? null,
+        'veh_anio' => $row['veh_anio'] ?? null,
+        'veh_color' => $row['veh_color'] ?? null,
+        'veh_largo_mm' => $row['veh_largo_mm'] ?? null,
+        'veh_ancho_mm' => $row['veh_ancho_mm'] ?? null,
+        'veh_alto_mm' => $row['veh_alto_mm'] ?? null,
+        'veh_notas' => $row['veh_notas'] ?? null,
+        'veh_creado_en' => $row['veh_creado_en'] ?? null,
+        'veh_actualizado_en' => $row['veh_actualizado_en'] ?? null,
+    ];
+}
+
 function human_label(string $key): string
 {
     static $map = [
         'tipo_doc' => 'Tipo de documento',
         'num_doc' => 'Número de documento',
+        'rol_nombre' => 'Rol',
+        'lesion' => 'Lesión',
+        'orden_participacion' => 'UT',
+        'veh_participacion' => 'Tipo de unidad',
+        'involucrado_observaciones' => 'Observaciones de participación',
         'apellido_paterno' => 'Apellido paterno',
         'apellido_materno' => 'Apellido materno',
         'nombres' => 'Nombres',
@@ -436,6 +520,34 @@ function human_label(string $key): string
         'certificadora_revision' => 'Certificadora',
         'vigente_revision' => 'Vigente desde',
         'vencimiento_revision' => 'Vence',
+        'expedido_por' => 'Expedido por',
+        'vigente_hasta' => 'Vigente hasta',
+        'resultado_cualitativo' => 'Resultado cualitativo',
+        'resultado_cuantitativo' => 'Resultado cuantitativo',
+        'fecha_extraccion' => 'Fecha de extracción',
+        'numero_registro' => 'Número de registro',
+        'horario_inicio' => 'Hora de inicio',
+        'hora_termino' => 'Hora de término',
+        'parentesco' => 'Parentesco',
+        'tipo_propietario' => 'Tipo de propietario',
+        'rol_legal' => 'Rol legal',
+        'ruc' => 'RUC',
+        'razon_social' => 'Razón social',
+        'domicilio_fiscal' => 'Domicilio fiscal',
+        'colegiatura' => 'Colegiatura',
+        'registro' => 'Registro',
+        'casilla_electronica' => 'Casilla electrónica',
+        'domicilio_procesal' => 'Domicilio procesal',
+        'persona_rep_nom' => 'Representado',
+        'condicion_representado' => 'Condición representado',
+        'entidad' => 'Entidad',
+        'asunto_nombre' => 'Asunto',
+        'asunto_detalle' => 'Detalle del asunto',
+        'referencia_texto' => 'Referencia',
+        'motivo' => 'Motivo',
+        'fecha_emision' => 'Fecha de emisión',
+        'veh_ut' => 'UT vinculada',
+        'persona_nombre' => 'Persona vinculada',
         'numero_peritaje' => 'Número',
         'fecha_peritaje' => 'Fecha',
         'perito_peritaje' => 'Perito',
@@ -613,6 +725,160 @@ function project_prefixed_record(array $row, string $prefix): array
         }
     }
     return $projected;
+}
+
+function render_summary_field_sections(array $record, array $sections): string
+{
+    $html = '';
+    foreach ($sections as $title => $fields) {
+        if (!record_has_any_content($record, $fields)) {
+            continue;
+        }
+
+        $html .= '<div class="section-block">';
+        $html .= '<h3>' . h((string) $title) . '</h3>';
+        $html .= '<div class="field-grid">' . render_field_cards($record, $fields) . '</div>';
+        $html .= '</div>';
+    }
+
+    return $html;
+}
+
+function render_summary_vehicle_block(array $vehicle, array $documents, string $title, array $vehicleFields, array $docSections): string
+{
+    $subtitleParts = [];
+    if (!empty($vehicle['veh_participacion'])) {
+        $subtitleParts[] = (string) $vehicle['veh_participacion'];
+    }
+    if (!empty($vehicle['veh_placa'])) {
+        $subtitleParts[] = (string) $vehicle['veh_placa'];
+    }
+
+    $html = '<div class="summary-subcard" data-collapsible-card>';
+    $html .= '<div class="summary-header"><div><h4>' . h($title) . '</h4>';
+    $html .= '<p>' . h($subtitleParts !== [] ? implode(' · ', $subtitleParts) : 'Vehículo vinculado') . '</p></div>';
+    $html .= '<div class="module-card-controls"><button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button></div></div>';
+    $html .= '<div class="module-card-panel js-card-panel" hidden>';
+    $html .= '<div class="field-grid">' . render_field_cards($vehicle, $vehicleFields) . '</div>';
+    $html .= '<div class="section-block"><h3>Documentos del vehículo</h3>';
+
+    if ($documents === []) {
+        $html .= '<div class="summary-empty">No hay documentos registrados para este vehículo.</div>';
+    } else {
+        foreach ($documents as $index => $document) {
+            $html .= '<div class="summary-subcard">';
+            $html .= '<div class="summary-header"><div><h4>' . h('Documento #' . ($index + 1)) . '</h4>';
+            $html .= '<p>' . h('Registro ID ' . (int) ($document['id'] ?? 0)) . '</p></div></div>';
+            foreach ($docSections as $section) {
+                $fields = $section['fields'] ?? [];
+                if (!record_has_any_content($document, $fields)) {
+                    continue;
+                }
+
+                $html .= '<div class="section-block">';
+                $html .= '<h3>' . h((string) ($section['label'] ?? 'Documento')) . '</h3>';
+                $html .= '<div class="field-grid">' . render_field_cards($document, $fields) . '</div>';
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+        }
+    }
+
+    $html .= '</div>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+function render_summary_person_block(
+    array $person,
+    array $extras,
+    string $title,
+    array $personSections,
+    array $lcFields,
+    array $rmlFields,
+    array $dosajeFields,
+    array $manifestacionFields,
+    array $occLevantamientoFields,
+    array $occPericialFields,
+    array $occProtocoloFields,
+    array $occEpicrisisFields
+): string {
+    $html = '<article class="record-card summary-person-card" data-collapsible-card>';
+    $html .= '<div class="summary-header"><div><h5 class="summary-person-name">' . h($title . ' · ' . person_label($person)) . '</h5>';
+    $html .= '<p>' . h(tab_person_label($person)) . person_heading_suffix($person) . '</p></div>';
+    $html .= '<div class="summary-chipline">';
+    $html .= '<span class="' . h(role_chip_class((string) ($person['rol_nombre'] ?? ''))) . '">' . h((string) (($person['rol_nombre'] ?? '') !== '' ? $person['rol_nombre'] : 'Sin rol')) . '</span>';
+    if ((string) ($person['lesion'] ?? '') !== '') {
+        $html .= '<span class="' . h(lesion_chip_class((string) ($person['lesion'] ?? ''))) . '">' . h((string) $person['lesion']) . '</span>';
+    }
+    if ((string) ($person['orden_participacion'] ?? '') !== '') {
+        $html .= '<span class="chip-simple">' . h((string) $person['orden_participacion']) . '</span>';
+    }
+    if ((string) ($person['veh_chip_text'] ?? '') !== '') {
+        $html .= '<span class="chip-simple">' . h((string) $person['veh_chip_text']) . '</span>';
+    }
+    $html .= '<button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>';
+    $html .= '</div></div>';
+    $html .= '<div class="module-card-panel js-card-panel" hidden>';
+
+    $html .= render_summary_field_sections($person, $personSections);
+
+    if (!empty($extras['lc'])) {
+        $html .= '<div class="section-block"><h3>Licencias</h3><div class="summary-doc-stack">';
+        foreach ($extras['lc'] as $index => $row) {
+            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Licencia #' . ($index + 1)) . '</h4></div></div>';
+            $html .= '<div class="field-grid">' . render_field_cards($row, $lcFields) . '</div></div>';
+        }
+        $html .= '</div></div>';
+    }
+
+    if (!empty($extras['rml'])) {
+        $html .= '<div class="section-block"><h3>RML</h3><div class="summary-doc-stack">';
+        foreach ($extras['rml'] as $index => $row) {
+            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('RML #' . ($index + 1)) . '</h4></div></div>';
+            $html .= '<div class="field-grid">' . render_field_cards($row, $rmlFields) . '</div></div>';
+        }
+        $html .= '</div></div>';
+    }
+
+    if (!empty($extras['dos'])) {
+        $html .= '<div class="section-block"><h3>Dosajes</h3><div class="summary-doc-stack">';
+        foreach ($extras['dos'] as $index => $row) {
+            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Dosaje #' . ($index + 1)) . '</h4></div></div>';
+            $html .= '<div class="field-grid">' . render_field_cards($row, $dosajeFields) . '</div></div>';
+        }
+        $html .= '</div></div>';
+    }
+
+    if (!empty($extras['man'])) {
+        $html .= '<div class="section-block"><h3>Manifestaciones</h3><div class="summary-doc-stack">';
+        foreach ($extras['man'] as $index => $row) {
+            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Manifestación #' . ($index + 1)) . '</h4></div></div>';
+            $html .= '<div class="field-grid">' . render_field_cards($row, $manifestacionFields) . '</div></div>';
+        }
+        $html .= '</div></div>';
+    }
+
+    if (!empty($extras['occ'])) {
+        $html .= '<div class="section-block"><h3>Documentos de occiso</h3><div class="summary-doc-stack">';
+        foreach ($extras['occ'] as $index => $row) {
+            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Occiso #' . ($index + 1)) . '</h4></div></div>';
+            $html .= render_summary_field_sections($row, [
+                'Levantamiento' => $occLevantamientoFields,
+                'Pericia' => $occPericialFields,
+                'Protocolo' => $occProtocoloFields,
+                'Epicrisis' => $occEpicrisisFields,
+            ]);
+            $html .= '</div>';
+        }
+        $html .= '</div></div>';
+    }
+
+    $html .= '</div>';
+    $html .= '</article>';
+
+    return $html;
 }
 
 function oficio_status_class(?string $estado): string
@@ -1504,6 +1770,7 @@ $vehiculoInvIds = array_values(array_unique(array_filter($vehiculoInvIds)));
 
 $docVehiculoPorInvolucrado = [];
 $docVehiculoCantidadPorInvolucrado = [];
+$docVehiculoTodosPorInvolucrado = [];
 if ($vehiculoInvIds !== []) {
     $placeholders = implode(',', array_fill(0, count($vehiculoInvIds), '?'));
     $docVehiculoRows = safe_query_all(
@@ -1522,6 +1789,7 @@ if ($vehiculoInvIds !== []) {
         }
 
         $docVehiculoCantidadPorInvolucrado[$involucradoVehiculoId] = ($docVehiculoCantidadPorInvolucrado[$involucradoVehiculoId] ?? 0) + 1;
+        $docVehiculoTodosPorInvolucrado[$involucradoVehiculoId][] = $docVehiculo;
         if (!isset($docVehiculoPorInvolucrado[$involucradoVehiculoId])) {
             $docVehiculoPorInvolucrado[$involucradoVehiculoId] = $docVehiculo;
         }
@@ -2311,6 +2579,163 @@ foreach ($personas as $persona) {
     ];
 }
 
+$summaryAccidentSections = [
+    'Identificación' => ['registro_sidpol', 'nro_informe_policial', 'estado', 'folder', ['key' => 'comisaria_nombre', 'class' => 'span-2']],
+    'Fechas' => ['fecha_accidente', 'fecha_comunicacion', 'fecha_intervencion'],
+    'Ubicación' => [['key' => 'lugar', 'class' => 'span-2'], ['key' => 'ubicacion_accidente', 'class' => 'span-2'], ['key' => 'referencia', 'class' => 'span-2']],
+    'Autoridades' => [['key' => 'fiscalia_nombre', 'class' => 'span-2'], ['key' => 'fiscal_nombre', 'class' => 'span-2']],
+    'Comunicación' => ['comunicante_nombre', 'comunicante_telefono', 'comunicacion_decreto', ['key' => 'comunicacion_oficio', 'class' => 'span-2'], ['key' => 'comunicacion_carpeta_nro', 'class' => 'span-2']],
+    'Descripción' => [['key' => 'sentido', 'class' => 'span-2'], ['key' => 'secuencia', 'class' => 'span-4']],
+];
+$summaryAccidentRecord = $A;
+$summaryAccidentRecord['comisaria_nombre'] = $A['comisaria_nombre'] ?? ($A['comisaria'] ?? '');
+$summaryAccidentRecord['fiscalia_nombre'] = $A['fiscalia_nombre'] ?? '';
+$summaryAccidentRecord['fiscal_nombre'] = $A['fiscal_nombre'] ?? '';
+$summaryAccidentRecord['ubicacion_accidente'] = trim((string) implode(' / ', array_filter([
+    $A['departamento_nombre'] ?? '',
+    $A['provincia_nombre'] ?? '',
+    $A['distrito_nombre'] ?? '',
+])));
+
+$summaryPersonSections = $policiaPersonaSections;
+$summaryPersonSections['Participación'] = [
+    'rol_nombre',
+    'lesion',
+    'orden_participacion',
+    ['key' => 'veh_participacion', 'class' => 'span-2'],
+    ['key' => 'involucrado_observaciones', 'class' => 'span-2'],
+];
+$summaryLcFields = ['clase', 'categoria', 'numero', ['key' => 'expedido_por', 'class' => 'span-2'], 'vigente_desde', 'vigente_hasta', ['key' => 'restricciones', 'class' => 'span-4']];
+$summaryRmlFields = ['numero', 'fecha', 'incapacidad_medico', 'atencion_facultativo', ['key' => 'observaciones', 'class' => 'span-4']];
+$summaryDosajeFields = ['numero', 'numero_registro', 'fecha_extraccion', 'resultado_cualitativo', 'resultado_cuantitativo', ['key' => 'observaciones', 'class' => 'span-4']];
+$summaryManifestacionFields = ['fecha', 'horario_inicio', 'hora_termino', 'modalidad', ['key' => 'observaciones', 'class' => 'span-4']];
+$summaryVehiculoFields = [
+    'veh_placa', 'veh_marca', 'veh_modelo', 'veh_anio', 'veh_color',
+    'veh_categoria', 'veh_tipo', 'veh_carroceria',
+    ['key' => 'veh_serie_vin', 'class' => 'span-2'],
+    ['key' => 'veh_nro_motor', 'class' => 'span-2'],
+    'veh_largo_mm', 'veh_ancho_mm', 'veh_alto_mm',
+    ['key' => 'veh_notas', 'class' => 'span-2'],
+];
+$summaryDocVehiculoSections = [
+    'propiedad' => [
+        'label' => 'Tarjeta de propiedad',
+        'fields' => ['numero_propiedad', 'titulo_propiedad', 'partida_propiedad', 'sede_propiedad'],
+    ],
+    'soat' => [
+        'label' => 'SOAT',
+        'fields' => ['numero_soat', 'aseguradora_soat', 'vigente_soat', 'vencimiento_soat'],
+    ],
+    'peritaje' => [
+        'label' => 'Peritaje',
+        'fields' => ['numero_peritaje', 'fecha_peritaje', 'perito_peritaje', ['key' => 'danos_peritaje', 'class' => 'span-2']],
+    ],
+    'revision' => [
+        'label' => 'Revisión técnica',
+        'fields' => ['numero_revision', 'certificadora_revision', 'vigente_revision', 'vencimiento_revision'],
+    ],
+];
+$summaryOccLevantamientoFields = [
+    'fecha_levantamiento', 'hora_levantamiento', ['key' => 'lugar_levantamiento', 'class' => 'span-2'],
+    'posicion_cuerpo_levantamiento', ['key' => 'lesiones_levantamiento', 'class' => 'span-2'],
+    'presuntivo_levantamiento', 'legista_levantamiento', 'cmp_legista',
+    ['key' => 'observaciones_levantamiento', 'class' => 'span-4'],
+];
+$summaryOccPericialFields = ['numero_pericial', 'fecha_pericial', 'hora_pericial', ['key' => 'observaciones_pericial', 'class' => 'span-4']];
+$summaryOccProtocoloFields = [
+    'numero_protocolo', 'fecha_protocolo', 'hora_protocolo',
+    ['key' => 'lesiones_protocolo', 'class' => 'span-2'],
+    'presuntivo_protocolo', 'dosaje_protocolo', 'toxicologico_protocolo',
+];
+$summaryOccEpicrisisFields = [
+    ['key' => 'nosocomio_epicrisis', 'class' => 'span-2'],
+    'numero_historia_epicrisis',
+    'hora_alta_epicrisis',
+    ['key' => 'tratamiento_epicrisis', 'class' => 'span-4'],
+];
+$summaryOwnerRecordFields = ['tipo_propietario', 'rol_legal', ['key' => 'ruc', 'class' => 'span-2'], ['key' => 'razon_social', 'class' => 'span-2'], ['key' => 'domicilio_fiscal', 'class' => 'span-2'], ['key' => 'observaciones', 'class' => 'span-2']];
+$summaryFamiliarRecordFields = ['parentesco', ['key' => 'observaciones', 'class' => 'span-4']];
+$summaryOficioFields = ['numero', 'anio', 'fecha_emision', 'estado', ['key' => 'entidad', 'class' => 'span-2'], ['key' => 'asunto_nombre', 'class' => 'span-2'], ['key' => 'referencia_texto', 'class' => 'span-4'], ['key' => 'motivo', 'class' => 'span-4'], 'veh_ut', 'veh_placa', ['key' => 'persona_nombre', 'class' => 'span-2']];
+
+$summaryUnits = [];
+foreach ($comboVehiculosRows as $comboVehiculo) {
+    $ut = trim((string) ($comboVehiculo['orden_participacion'] ?? ''));
+    if ($ut === '') {
+        continue;
+    }
+
+    $summaryUnits[$ut] ??= ['ut' => $ut, 'vehiculos' => [], 'personas' => []];
+    $summaryUnits[$ut]['vehiculos'][(int) ($comboVehiculo['inv_vehiculo_id'] ?? 0)] = $comboVehiculo;
+}
+foreach ($personas as $persona) {
+    $ut = trim((string) ($persona['orden_participacion'] ?? ''));
+    $hasVehicle = (int) ($persona['vehiculo_id'] ?? 0) > 0;
+
+    if ($ut !== '' && $hasVehicle) {
+        $summaryUnits[$ut] ??= ['ut' => $ut, 'vehiculos' => [], 'personas' => []];
+        $summaryUnits[$ut]['personas'][] = $persona;
+
+        $invVehiculoId = (int) ($persona['inv_vehiculo_id'] ?? 0);
+        if ($invVehiculoId > 0 && !isset($summaryUnits[$ut]['vehiculos'][$invVehiculoId])) {
+            $summaryUnits[$ut]['vehiculos'][$invVehiculoId] = vehicle_summary_record($persona);
+        }
+    }
+}
+uasort($summaryUnits, static fn(array $a, array $b): int => ut_sort_index($a['ut'] ?? '') <=> ut_sort_index($b['ut'] ?? ''));
+foreach ($summaryUnits as &$summaryUnit) {
+    $summaryUnit['vehiculos'] = array_values($summaryUnit['vehiculos']);
+    usort($summaryUnit['vehiculos'], static function (array $a, array $b): int {
+        return strcmp((string) ($a['veh_numero'] ?? ''), (string) ($b['veh_numero'] ?? ''));
+    });
+    usort($summaryUnit['personas'], static function (array $a, array $b): int {
+        $priority = person_summary_priority($a) <=> person_summary_priority($b);
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        return strcmp((string) ($a['orden_persona'] ?? 'Z'), (string) ($b['orden_persona'] ?? 'Z'));
+    });
+}
+unset($summaryUnit);
+
+$summaryPeatones = [];
+$summaryOtrosSinUnidad = [];
+foreach ($personas as $persona) {
+    $ut = trim((string) ($persona['orden_participacion'] ?? ''));
+    $hasVehicle = (int) ($persona['vehiculo_id'] ?? 0) > 0;
+    if ($ut !== '' && $hasVehicle) {
+        continue;
+    }
+
+    if (str_contains(role_key($persona), 'peat')) {
+        $summaryPeatones[] = $persona;
+        continue;
+    }
+
+    $summaryOtrosSinUnidad[] = $persona;
+}
+$sortSummaryPeople = static function (array &$rows): void {
+    usort($rows, static function (array $a, array $b): int {
+        $priority = person_summary_priority($a) <=> person_summary_priority($b);
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        return strcmp((string) ($a['orden_persona'] ?? 'Z'), (string) ($b['orden_persona'] ?? 'Z'));
+    });
+};
+$sortSummaryPeople($summaryPeatones);
+$sortSummaryPeople($summaryOtrosSinUnidad);
+
+$summaryBlocksCount = 1
+    + count($summaryUnits)
+    + (count($summaryPeatones) > 0 ? 1 : 0)
+    + (count($summaryOtrosSinUnidad) > 0 ? 1 : 0)
+    + (count($familiares) > 0 ? 1 : 0)
+    + (count($propietarios) > 0 ? 1 : 0)
+    + (count($abogados) > 0 ? 1 : 0)
+    + (count($oficios) > 0 ? 1 : 0);
+
 include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
@@ -2665,6 +3090,55 @@ include __DIR__ . '/sidebar.php';
   .module-card-panel{margin-top:8px}
   .module-card-panel[hidden]{display:none}
   .module-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .summary-sheet{display:grid;gap:10px}
+  .summary-block-card{
+    position:relative;
+    border-color:#d7cae8;
+    background:linear-gradient(180deg,#ffffff 0%,#fbf8ff 100%);
+    box-shadow:0 14px 32px rgba(91,44,160,.08), 0 10px 22px rgba(181,138,24,.07);
+    overflow:hidden;
+  }
+  .summary-block-card::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height:4px;
+    background:linear-gradient(90deg,#5b2ca0 0%,#8b5cf6 36%,#d4a93a 72%,#f0c654 100%);
+  }
+  .summary-block-card > header{
+    margin:-9px -11px 10px;
+    padding:14px 14px 10px;
+    background:linear-gradient(180deg,rgba(107,58,198,.06) 0%,rgba(240,198,84,.05) 100%);
+    border-bottom:1px solid rgba(171,142,207,.28);
+  }
+  .summary-subcard{border:1px solid var(--line);border-radius:13px;background:#fbfcfe;padding:10px}
+  .summary-block-title{
+    margin:0;
+    font-size:22px;
+    font-weight:900;
+    line-height:1.04;
+    letter-spacing:-.03em;
+    background:linear-gradient(135deg,#4d248f 0%,#7c3aed 32%,#b07b14 74%,#f0c654 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .summary-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .summary-person-name,
+  .summary-person-card .summary-person-name,
+  .summary-subcard .summary-person-name{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    line-height:1.08;
+    letter-spacing:-.02em;
+    color:#7b1e3a !important;
+  }
+  .summary-header p{margin:3px 0 0;color:var(--muted);font-size:11px;font-weight:600}
+  .summary-chipline{display:flex;gap:6px;flex-wrap:wrap}
+  .summary-person-card{display:grid;gap:8px}
+  .summary-doc-stack{display:grid;gap:8px}
+  .summary-empty{padding:12px;border:1px dashed var(--line);border-radius:12px;background:rgba(148,163,184,.06);color:var(--muted);font-size:12px;font-weight:600}
   .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-main{display:grid;gap:6px;min-width:0}
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -2739,6 +3213,7 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .field-card,
   html[data-theme-resolved="dark"] .general-edit-card,
   html[data-theme-resolved="dark"] .module-card,
+  html[data-theme-resolved="dark"] .summary-subcard,
   html[data-theme-resolved="dark"] .inner-panel,
   html[data-theme-resolved="dark"] .record-card,
   html[data-theme-resolved="dark"] .itp-builder,
@@ -2960,10 +3435,38 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .module-card p,
   html[data-theme-resolved="dark"] .record-card p,
   html[data-theme-resolved="dark"] .person-title p,
+  html[data-theme-resolved="dark"] .summary-header p,
   html[data-theme-resolved="dark"] .general-help,
   html[data-theme-resolved="dark"] .general-inline-note,
   html[data-theme-resolved="dark"] .empty-state{
     color:#9fb1ca;
+  }
+  html[data-theme-resolved="dark"] .summary-empty{
+    background:rgba(15,23,42,.74);
+    color:#9fb1ca;
+  }
+  html[data-theme-resolved="dark"] .summary-block-card{
+    border-color:#3c3252;
+    background:linear-gradient(180deg,#111827 0%,#161126 100%);
+    box-shadow:0 18px 38px rgba(7,10,20,.42), 0 0 0 1px rgba(124,58,237,.08) inset;
+  }
+  html[data-theme-resolved="dark"] .summary-block-card::before{
+    background:linear-gradient(90deg,#7c3aed 0%,#a78bfa 34%,#d4a93a 74%,#f0c654 100%);
+  }
+  html[data-theme-resolved="dark"] .summary-block-card > header{
+    background:linear-gradient(180deg,rgba(124,58,237,.12) 0%,rgba(240,198,84,.06) 100%);
+    border-bottom-color:rgba(98,82,135,.55);
+  }
+  html[data-theme-resolved="dark"] .summary-block-title{
+    background:linear-gradient(135deg,#b794ff 0%,#d6c4ff 30%,#e0b648 72%,#f7d97d 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  html[data-theme-resolved="dark"] .summary-person-name,
+  html[data-theme-resolved="dark"] .summary-person-card .summary-person-name,
+  html[data-theme-resolved="dark"] .summary-subcard .summary-person-name{
+    color:#d9879e !important;
   }
   html[data-theme-resolved="dark"] .general-checkbox{
     background:#0f172a;
@@ -3377,6 +3880,7 @@ include __DIR__ . '/sidebar.php';
     <div class="tabs-header main-tabs nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php
         $mainTabs = [
+            ['id' => 'resumen-integral', 'label' => 'RESUMEN', 'count' => $summaryBlocksCount],
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
@@ -3392,7 +3896,322 @@ include __DIR__ . '/sidebar.php';
     </div>
 
     <div class="tab-content mt-2">
-      <div class="tab-pane fade show active" id="itp" role="tabpanel">
+      <div class="tab-pane fade show active" id="resumen-integral" role="tabpanel">
+        <div class="tab-panel">
+          <div class="summary-sheet">
+            <article class="module-card summary-block-card">
+              <header>
+                <div>
+                  <h4 class="summary-block-title">Datos generales del accidente</h4>
+                  <p>Resumen consolidado del caso con unidades de tránsito, personas, documentos y oficios vinculados.</p>
+                </div>
+                <div class="module-card-controls">
+                  <span class="chip-simple"><?= h((string) $summaryBlocksCount) ?> bloque(s)</span>
+                </div>
+              </header>
+              <div class="summary-stack">
+                <div class="summary-pill"><strong>Modalidades:</strong> <?= $modsConcat ?></div>
+                <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
+              </div>
+              <?php foreach ($summaryAccidentSections as $summarySectionTitle => $summarySectionFields): ?>
+                <div class="section-block">
+                  <h3><?= h($summarySectionTitle) ?></h3>
+                  <div class="field-grid"><?= render_field_cards($summaryAccidentRecord, $summarySectionFields) ?></div>
+                </div>
+              <?php endforeach; ?>
+            </article>
+
+            <?php foreach ($summaryUnits as $summaryUnit): ?>
+              <?php
+                $unitPeople = $summaryUnit['personas'];
+                $unitDrivers = array_values(array_filter($unitPeople, static fn(array $row): bool => is_conductor($row)));
+                $unitCompanions = array_values(array_filter($unitPeople, static fn(array $row): bool => !is_conductor($row)));
+              ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title"><?= h((string) $summaryUnit['ut']) ?></h4>
+                    <p><?= h(count($summaryUnit['vehiculos']) . ' vehículo(s) · ' . count($unitPeople) . ' participante(s)') ?></p>
+                  </div>
+                  <div class="module-card-controls">
+                    <span class="chip-simple"><?= h((string) $summaryUnit['ut']) ?></span>
+                  </div>
+                </header>
+
+                <?php foreach ($summaryUnit['vehiculos'] as $vehIndex => $summaryVehicle): ?>
+                  <?php
+                    $vehTitle = count($summaryUnit['vehiculos']) > 1 ? 'Vehículo ' . summary_letter($vehIndex) : 'Vehículo';
+                    $vehDocs = $docVehiculoTodosPorInvolucrado[(int) ($summaryVehicle['inv_vehiculo_id'] ?? 0)] ?? [];
+                  ?>
+                  <?= render_summary_vehicle_block($summaryVehicle, $vehDocs, $vehTitle, $summaryVehiculoFields, $summaryDocVehiculoSections) ?>
+                <?php endforeach; ?>
+
+                <?php if ($unitDrivers !== []): ?>
+                  <div class="section-block">
+                    <h3>Conductores</h3>
+                    <div class="summary-doc-stack">
+                      <?php foreach ($unitDrivers as $driverIndex => $summaryPerson): ?>
+                        <?php $summaryExtras = $personaExtras[(int) ($summaryPerson['involucrado_id'] ?? 0)] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[]]; ?>
+                        <?= render_summary_person_block(
+                            $summaryPerson,
+                            $summaryExtras,
+                            count($unitDrivers) > 1 ? 'Conductor ' . summary_letter($driverIndex) : 'Conductor',
+                            $summaryPersonSections,
+                            $summaryLcFields,
+                            $summaryRmlFields,
+                            $summaryDosajeFields,
+                            $summaryManifestacionFields,
+                            $summaryOccLevantamientoFields,
+                            $summaryOccPericialFields,
+                            $summaryOccProtocoloFields,
+                            $summaryOccEpicrisisFields
+                        ) ?>
+                      <?php endforeach; ?>
+                    </div>
+                  </div>
+                <?php endif; ?>
+
+                <?php if ($unitCompanions !== []): ?>
+                  <div class="section-block">
+                    <h3>Ocupantes / pasajeros</h3>
+                    <div class="summary-doc-stack">
+                      <?php foreach ($unitCompanions as $companionIndex => $summaryPerson): ?>
+                        <?php
+                          $summaryExtras = $personaExtras[(int) ($summaryPerson['involucrado_id'] ?? 0)] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[]];
+                          $companionRole = trim((string) ($summaryPerson['rol_nombre'] ?? 'Participante'));
+                          $companionTitle = ($companionRole !== '' ? $companionRole : 'Participante') . ' ' . summary_letter($companionIndex);
+                        ?>
+                        <?= render_summary_person_block(
+                            $summaryPerson,
+                            $summaryExtras,
+                            $companionTitle,
+                            $summaryPersonSections,
+                            $summaryLcFields,
+                            $summaryRmlFields,
+                            $summaryDosajeFields,
+                            $summaryManifestacionFields,
+                            $summaryOccLevantamientoFields,
+                            $summaryOccPericialFields,
+                            $summaryOccProtocoloFields,
+                            $summaryOccEpicrisisFields
+                        ) ?>
+                      <?php endforeach; ?>
+                    </div>
+                  </div>
+                <?php endif; ?>
+              </article>
+            <?php endforeach; ?>
+
+            <?php if ($summaryPeatones !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Peatones</h4>
+                    <p><?= h(count($summaryPeatones)) ?> registro(s) vinculados al accidente.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($summaryPeatones as $peatonIndex => $summaryPerson): ?>
+                    <?php $summaryExtras = $personaExtras[(int) ($summaryPerson['involucrado_id'] ?? 0)] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[]]; ?>
+                    <?= render_summary_person_block(
+                        $summaryPerson,
+                        $summaryExtras,
+                        'Peatón ' . summary_letter($peatonIndex),
+                        $summaryPersonSections,
+                        $summaryLcFields,
+                        $summaryRmlFields,
+                        $summaryDosajeFields,
+                        $summaryManifestacionFields,
+                        $summaryOccLevantamientoFields,
+                        $summaryOccPericialFields,
+                        $summaryOccProtocoloFields,
+                        $summaryOccEpicrisisFields
+                    ) ?>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($summaryOtrosSinUnidad !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Otros involucrados sin unidad</h4>
+                    <p>Personas vinculadas al accidente que no están asociadas a una UT o al bloque de peatones.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($summaryOtrosSinUnidad as $otherIndex => $summaryPerson): ?>
+                    <?php $summaryExtras = $personaExtras[(int) ($summaryPerson['involucrado_id'] ?? 0)] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[]]; ?>
+                    <?= render_summary_person_block(
+                        $summaryPerson,
+                        $summaryExtras,
+                        'Involucrado ' . summary_letter($otherIndex),
+                        $summaryPersonSections,
+                        $summaryLcFields,
+                        $summaryRmlFields,
+                        $summaryDosajeFields,
+                        $summaryManifestacionFields,
+                        $summaryOccLevantamientoFields,
+                        $summaryOccPericialFields,
+                        $summaryOccProtocoloFields,
+                        $summaryOccEpicrisisFields
+                    ) ?>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($familiares !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Familiares de fallecidos</h4>
+                    <p>Bloque de familiares vinculados a personas fallecidas dentro del accidente.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($familiares as $row): ?>
+                    <?php
+                      $famRecord = project_prefixed_record($row, 'fam_');
+                      $fallRecord = project_prefixed_record($row, 'fall_');
+                    ?>
+                    <div class="summary-subcard" data-collapsible-card>
+                      <div class="summary-header">
+                        <div>
+                          <h4 class="summary-person-name"><?= h(person_label($famRecord)) ?></h4>
+                          <p>Familiar de <?= h(person_label($fallRecord)) ?></p>
+                        </div>
+                        <div class="summary-chipline">
+                          <span class="chip-simple"><?= h((string) (($row['parentesco'] ?? '') !== '' ? $row['parentesco'] : 'Sin parentesco')) ?></span>
+                          <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
+                        </div>
+                      </div>
+                      <div class="module-card-panel js-card-panel" hidden>
+                      <?= render_summary_field_sections($famRecord, $policiaPersonaSections) ?>
+                      <div class="section-block">
+                        <h3>Registro familiar</h3>
+                        <div class="field-grid"><?= render_field_cards($row, $summaryFamiliarRecordFields) ?></div>
+                      </div>
+                      <?= render_summary_field_sections($fallRecord, ['Fallecido relacionado' => $policiaPersonaSections['Identidad']]) ?>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($propietarios !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Propietarios de vehículos</h4>
+                    <p>Información del propietario natural o jurídico y su representante, según corresponda.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($propietarios as $row): ?>
+                    <?php
+                      $ownerRecord = project_prefixed_record($row, 'owner_');
+                      $repRecord = project_prefixed_record($row, 'rep_');
+                      $principalName = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
+                        ? person_label($ownerRecord)
+                        : ((string) ($row['razon_social'] ?? '') !== '' ? (string) $row['razon_social'] : 'Sin razón social');
+                    ?>
+                    <div class="summary-subcard" data-collapsible-card>
+                      <div class="summary-header">
+                        <div>
+                          <h4 class="summary-person-name"><?= h($principalName) ?></h4>
+                          <p><?= h(trim((string) (($row['orden_participacion'] ?? '') . ' · Placa ' . vehiculo_placa_visible((string) ($row['placa'] ?? ''))))) ?></p>
+                        </div>
+                        <div class="summary-chipline">
+                          <span class="chip-simple"><?= h((string) (($row['tipo_propietario'] ?? '') !== '' ? $row['tipo_propietario'] : 'Sin tipo')) ?></span>
+                          <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
+                        </div>
+                      </div>
+                      <div class="module-card-panel js-card-panel" hidden>
+                      <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL'): ?>
+                        <?= render_summary_field_sections($ownerRecord, $policiaPersonaSections) ?>
+                      <?php endif; ?>
+                      <?php if (trim((string) ($repRecord['nombres'] ?? '')) !== ''): ?>
+                        <?= render_summary_field_sections($repRecord, ['Representante' => $policiaPersonaSections['Identidad'], 'Representante · Contacto' => $policiaPersonaSections['Nacimiento y Contacto'], 'Representante · Perfil' => $policiaPersonaSections['Perfil Complementario']]) ?>
+                      <?php endif; ?>
+                      <div class="section-block">
+                        <h3>Registro propietario</h3>
+                        <div class="field-grid"><?= render_field_cards($row, $summaryOwnerRecordFields) ?></div>
+                      </div>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($abogados !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Abogados</h4>
+                    <p>Abogados vinculados al accidente y a las personas representadas.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($abogados as $row): ?>
+                    <div class="summary-subcard" data-collapsible-card>
+                      <div class="summary-header">
+                        <div>
+                          <h4 class="summary-person-name"><?= h(trim((string) (($row['apellido_paterno'] ?? '') . ' ' . ($row['apellido_materno'] ?? '') . ', ' . ($row['nombres'] ?? '')))) ?></h4>
+                          <p><?= h((string) (($row['persona_rep_nom'] ?? '') !== '' ? $row['persona_rep_nom'] : 'Sin persona representada')) ?></p>
+                        </div>
+                        <div class="summary-chipline">
+                          <span class="chip-simple"><?= h((string) (($row['colegiatura'] ?? '') !== '' ? $row['colegiatura'] : 'Sin colegiatura')) ?></span>
+                          <span class="chip-simple"><?= h((string) (($row['registro'] ?? '') !== '' ? $row['registro'] : 'Sin registro')) ?></span>
+                          <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
+                        </div>
+                      </div>
+                      <div class="module-card-panel js-card-panel" hidden>
+                      <?= render_summary_field_sections($row, $abogadoSections) ?>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($oficios !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Oficios realizados</h4>
+                    <p>Relación de oficios emitidos y su vínculo con unidades, personas o asuntos del accidente.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($oficios as $row): ?>
+                    <div class="summary-subcard" data-collapsible-card>
+                      <div class="summary-header">
+                        <div>
+                          <h4><?= h('Oficio N° ' . ($row['numero'] ?? '—') . '/' . ($row['anio'] ?? '—')) ?></h4>
+                          <p><?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></p>
+                        </div>
+                        <div class="summary-chipline">
+                          <span class="chip-simple"><?= h((string) (($row['estado'] ?? '') !== '' ? $row['estado'] : 'Sin estado')) ?></span>
+                          <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
+                        </div>
+                      </div>
+                      <div class="module-card-panel js-card-panel" hidden>
+                      <div class="field-grid"><?= render_field_cards($row, $summaryOficioFields) ?></div>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="itp" role="tabpanel">
         <div class="tab-panel">
           <?php
             $itpGeneralFields = ['fecha_itp', 'hora_itp', 'forma_via', ['key' => 'punto_referencia', 'class' => 'span-2'], ['key' => 'ubicacion_gps', 'class' => 'span-2']];
