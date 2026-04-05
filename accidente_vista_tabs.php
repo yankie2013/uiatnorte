@@ -6272,6 +6272,7 @@ include __DIR__ . '/sidebar.php';
 </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   (function () {
@@ -7382,7 +7383,7 @@ include __DIR__ . '/sidebar.php';
       const preview = previewId ? document.getElementById(previewId) : null;
       if (!preview) return;
 
-      input.addEventListener('change', () => {
+      input.addEventListener('change', async () => {
         const files = Array.from(input.files || []);
         const maxFiles = Number(input.dataset.maxFiles || '0');
         preview.innerHTML = '';
@@ -7399,8 +7400,19 @@ include __DIR__ . '/sidebar.php';
           return;
         }
 
-        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        let imageFiles = files.filter((file) => {
+          return file.type.startsWith('image/') || isHeicLikeClientFile(file);
+        });
         if (!imageFiles.length) {
+          preview.hidden = true;
+          return;
+        }
+
+        try {
+          imageFiles = await convertHeicFilesForClient(imageFiles);
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'No se pudo preparar la vista previa de las imágenes.');
+          input.value = '';
           preview.hidden = true;
           return;
         }
@@ -7416,6 +7428,43 @@ include __DIR__ . '/sidebar.php';
         });
         preview.hidden = false;
       });
+    }
+
+    function isHeicLikeClientFile(file) {
+      const name = String(file && file.name ? file.name : '').toLowerCase();
+      const type = String(file && file.type ? file.type : '').toLowerCase();
+      return name.endsWith('.heic')
+        || name.endsWith('.heif')
+        || ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'].includes(type);
+    }
+
+    async function convertSingleHeicClientFile(file) {
+      if (!isHeicLikeClientFile(file)) {
+        return file;
+      }
+      if (typeof window.heic2any !== 'function') {
+        throw new Error('Este navegador no pudo cargar el convertidor HEIC. Intenta nuevamente o usa JPG/PNG.');
+      }
+
+      const result = await window.heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9,
+      });
+      const blob = Array.isArray(result) ? result[0] : result;
+      const baseName = String(file.name || 'imagen').replace(/\.[^.]+$/u, '');
+      return new File([blob], baseName + '.jpg', {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+    }
+
+    async function convertHeicFilesForClient(files) {
+      const converted = [];
+      for (const file of files) {
+        converted.push(await convertSingleHeicClientFile(file));
+      }
+      return converted;
     }
 
     document.querySelectorAll('.js-analysis-upload-form').forEach((form) => {
@@ -7437,9 +7486,19 @@ include __DIR__ . '/sidebar.php';
         if (submitButton) submitButton.disabled = true;
 
         try {
+          const payload = new FormData();
+          Array.from(form.querySelectorAll('input[type="hidden"]')).forEach((hidden) => {
+            payload.append(hidden.name, hidden.value);
+          });
+
+          const convertedFiles = await convertHeicFilesForClient(Array.from(input.files || []));
+          convertedFiles.forEach((file) => {
+            payload.append('images[]', file, file.name);
+          });
+
           const response = await fetch(window.location.href, {
             method: 'POST',
-            body: new FormData(form),
+            body: payload,
             headers: {
               'X-Requested-With': 'XMLHttpRequest'
             }
