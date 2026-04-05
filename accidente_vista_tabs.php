@@ -1061,6 +1061,76 @@ function upload_error_message(int $errorCode): string
     };
 }
 
+function analysis_original_extension(string $fileName): string
+{
+    $extension = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+    return preg_replace('/[^a-z0-9]/', '', $extension) ?: '';
+}
+
+function analysis_is_heic_like_upload(string $fileName, string $mimeType): bool
+{
+    $extension = analysis_original_extension($fileName);
+    if (in_array($extension, ['heic', 'heif'], true)) {
+        return true;
+    }
+
+    $mimeType = strtolower(trim($mimeType));
+    return in_array($mimeType, ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'], true);
+}
+
+function analysis_try_convert_heic_to_jpeg(string $sourcePath, string $destPath): bool
+{
+    $tempScript = tempnam(sys_get_temp_dir(), 'heic_convert_');
+    if ($tempScript === false) {
+        return false;
+    }
+
+    $scriptPath = $tempScript . '.ps1';
+    @rename($tempScript, $scriptPath);
+
+    $script = <<<'PS1'
+Add-Type -AssemblyName PresentationCore
+$src = $args[0]
+$dst = $args[1]
+$input = [System.IO.File]::OpenRead($src)
+try {
+    $decoder = [System.Windows.Media.Imaging.BitmapDecoder]::Create(
+        $input,
+        [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,
+        [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+    )
+} finally {
+    $input.Close()
+}
+$encoder = New-Object System.Windows.Media.Imaging.JpegBitmapEncoder
+$encoder.QualityLevel = 92
+$encoder.Frames.Add($decoder.Frames[0])
+$output = [System.IO.File]::Open($dst, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+try {
+    $encoder.Save($output)
+} finally {
+    $output.Close()
+}
+PS1;
+
+    if (@file_put_contents($scriptPath, $script) === false) {
+        @unlink($scriptPath);
+        return false;
+    }
+
+    $command = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File '
+        . escapeshellarg($scriptPath) . ' '
+        . escapeshellarg($sourcePath) . ' '
+        . escapeshellarg($destPath);
+
+    $output = [];
+    $exitCode = 1;
+    @exec($command, $output, $exitCode);
+    @unlink($scriptPath);
+
+    return $exitCode === 0 && is_file($destPath) && filesize($destPath) > 0;
+}
+
 function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $section, array $uploadedFiles): int
 {
     if ($accidenteId <= 0) {
@@ -1135,14 +1205,39 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
                 throw new InvalidArgumentException('No se pudo validar una de las imágenes subidas.');
             }
 
-            $mimeType = (string) $finfo->file($tmpName);
-            if (!isset($allowedMimeToExt[$mimeType])) {
-                throw new InvalidArgumentException('Solo se permiten imágenes JPG, PNG, WEBP o GIF.');
+            $sortOrder = $currentCount + $offset + 1;
+            $safeBaseName = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) ($file['name'] ?? 'imagen')) ?: 'imagen';
+            $mimeType = strtolower((string) $finfo->file($tmpName));
+            $originalName = (string) ($file['name'] ?? 'imagen');
+
+            if (analysis_is_heic_like_upload($originalName, $mimeType)) {
+                $fileName = sprintf('%02d_%s.jpg', $sortOrder, bin2hex(random_bytes(8)));
+                $absolutePath = $targetDir . '/' . $fileName;
+                $relativePath = 'uploads/analisis/accidente_' . $accidenteId . '/' . $section . '/' . $fileName;
+
+                if (!analysis_try_convert_heic_to_jpeg($tmpName, $absolutePath)) {
+                    throw new InvalidArgumentException('La imagen HEIC/HEIF no se pudo convertir automáticamente. Intenta con JPG o PNG.');
+                }
+
+                $savedPaths[] = $absolutePath;
+                $insertStmt->execute([
+                    $accidenteId,
+                    $section,
+                    $sortOrder,
+                    $relativePath,
+                    $safeBaseName,
+                    'image/jpeg',
+                    is_file($absolutePath) ? (int) filesize($absolutePath) : (int) ($file['size'] ?? 0),
+                ]);
+                $inserted++;
+                continue;
             }
 
-            $sortOrder = $currentCount + $offset + 1;
+            if (!isset($allowedMimeToExt[$mimeType])) {
+                throw new InvalidArgumentException('Solo se permiten imágenes JPG, PNG, WEBP, GIF o HEIC.');
+            }
+
             $extension = $allowedMimeToExt[$mimeType];
-            $safeBaseName = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) ($file['name'] ?? 'imagen')) ?: 'imagen';
             $fileName = sprintf('%02d_%s.%s', $sortOrder, bin2hex(random_bytes(8)), $extension);
             $absolutePath = $targetDir . '/' . $fileName;
             $relativePath = 'uploads/analisis/accidente_' . $accidenteId . '/' . $section . '/' . $fileName;
@@ -6045,8 +6140,8 @@ include __DIR__ . '/sidebar.php';
                       <input type="hidden" name="section" value="danos">
                       <div>
                         <label for="analysis-danos-photo">Suba aqui la foto de los daños</label>
-                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-danos-photo" type="file" name="images[]" accept="image/*" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['danos'])) ?>" data-preview-target="analysis-danos-preview" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>
-                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['danos']) ?>/5.</p>
+                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-danos-photo" type="file" name="images[]" accept="image/*,.heic,.heif" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['danos'])) ?>" data-preview-target="analysis-danos-preview" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>
+                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['danos']) ?>/5. Admite JPG, PNG, WEBP, GIF y HEIC.</p>
                       </div>
                       <div class="analysis-upload-status" data-upload-message></div>
                       <div class="action-row">
@@ -6115,8 +6210,8 @@ include __DIR__ . '/sidebar.php';
                       <input type="hidden" name="section" value="lesiones">
                       <div>
                         <label for="analysis-lesiones-photo">Suba aqui la foto de las lesiones</label>
-                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-lesiones-photo" type="file" name="images[]" accept="image/*" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['lesiones'])) ?>" data-preview-target="analysis-lesiones-preview" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>
-                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['lesiones']) ?>/5.</p>
+                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-lesiones-photo" type="file" name="images[]" accept="image/*,.heic,.heif" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['lesiones'])) ?>" data-preview-target="analysis-lesiones-preview" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>
+                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['lesiones']) ?>/5. Admite JPG, PNG, WEBP, GIF y HEIC.</p>
                       </div>
                       <div class="analysis-upload-status" data-upload-message></div>
                       <div class="action-row">
