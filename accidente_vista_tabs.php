@@ -1001,8 +1001,201 @@ function json_response(array $payload, int $status = 200): never
     exit;
 }
 
+function safe_table_exists(PDO $pdo, string $table): bool
+{
+    try {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $st->execute([$table]);
+        return (int) $st->fetchColumn() > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function analysis_media_table_name(): string
+{
+    return 'accidente_analisis_imagenes';
+}
+
+function analysis_media_sections(): array
+{
+    return [
+        'danos' => 'danos',
+        'lesiones' => 'lesiones',
+    ];
+}
+
+function normalize_uploaded_files(array $fileBag): array
+{
+    $normalized = [];
+    $names = (array) ($fileBag['name'] ?? []);
+    $tmpNames = (array) ($fileBag['tmp_name'] ?? []);
+    $errors = (array) ($fileBag['error'] ?? []);
+    $sizes = (array) ($fileBag['size'] ?? []);
+    $types = (array) ($fileBag['type'] ?? []);
+
+    foreach ($names as $index => $name) {
+        $normalized[] = [
+            'name' => (string) $name,
+            'tmp_name' => (string) ($tmpNames[$index] ?? ''),
+            'error' => (int) ($errors[$index] ?? UPLOAD_ERR_NO_FILE),
+            'size' => (int) ($sizes[$index] ?? 0),
+            'type' => (string) ($types[$index] ?? ''),
+        ];
+    }
+
+    return $normalized;
+}
+
+function upload_error_message(int $errorCode): string
+{
+    return match ($errorCode) {
+        UPLOAD_ERR_OK => '',
+        UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'La imagen supera el tamaño permitido.',
+        UPLOAD_ERR_PARTIAL => 'La imagen no se cargó completamente.',
+        UPLOAD_ERR_NO_FILE => 'No se recibió ninguna imagen.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Falta la carpeta temporal del servidor.',
+        UPLOAD_ERR_CANT_WRITE => 'No se pudo escribir la imagen en disco.',
+        UPLOAD_ERR_EXTENSION => 'La carga de la imagen fue detenida por una extensión de PHP.',
+        default => 'No se pudo procesar la imagen subida.',
+    };
+}
+
+function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $section, array $uploadedFiles): int
+{
+    if ($accidenteId <= 0) {
+        throw new InvalidArgumentException('Accidente no encontrado.');
+    }
+
+    $sections = analysis_media_sections();
+    if (!isset($sections[$section])) {
+        throw new InvalidArgumentException('Sección de análisis no válida.');
+    }
+
+    if (!safe_table_exists($pdo, analysis_media_table_name())) {
+        throw new RuntimeException('La tabla de imágenes de análisis no existe aún. Ejecuta la migración correspondiente.');
+    }
+
+    $files = array_values(array_filter(
+        normalize_uploaded_files($uploadedFiles),
+        static fn(array $file): bool => (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+    ));
+
+    if ($files === []) {
+        throw new InvalidArgumentException('Selecciona al menos una imagen para subir.');
+    }
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM ' . analysis_media_table_name() . ' WHERE accidente_id = ? AND seccion = ?');
+    $countStmt->execute([$accidenteId, $section]);
+    $currentCount = (int) $countStmt->fetchColumn();
+    if ($currentCount >= 5) {
+        throw new InvalidArgumentException('Ya alcanzaste el máximo de 5 imágenes para esta sección.');
+    }
+    if ($currentCount + count($files) > 5) {
+        throw new InvalidArgumentException('Solo puedes guardar hasta 5 imágenes por sección.');
+    }
+
+    $allowedMimeToExt = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+    $maxBytes = 10 * 1024 * 1024;
+    $targetDir = __DIR__ . '/uploads/analisis/accidente_' . $accidenteId . '/' . $section;
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+        throw new RuntimeException('No se pudo crear la carpeta de destino para las imágenes.');
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $savedPaths = [];
+    $inserted = 0;
+
+    $pdo->beginTransaction();
+    try {
+        $insertStmt = $pdo->prepare(
+            'INSERT INTO ' . analysis_media_table_name() . ' (accidente_id, seccion, sort_order, archivo_path, archivo_nombre, mime_type, file_size, creado_en)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+        );
+
+        foreach ($files as $offset => $file) {
+            $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+            if ($errorCode !== UPLOAD_ERR_OK) {
+                throw new InvalidArgumentException(upload_error_message($errorCode));
+            }
+            if ((int) ($file['size'] ?? 0) <= 0) {
+                throw new InvalidArgumentException('Una de las imágenes está vacía.');
+            }
+            if ((int) ($file['size'] ?? 0) > $maxBytes) {
+                throw new InvalidArgumentException('Cada imagen debe pesar como máximo 10 MB.');
+            }
+
+            $tmpName = (string) ($file['tmp_name'] ?? '');
+            if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+                throw new InvalidArgumentException('No se pudo validar una de las imágenes subidas.');
+            }
+
+            $mimeType = (string) $finfo->file($tmpName);
+            if (!isset($allowedMimeToExt[$mimeType])) {
+                throw new InvalidArgumentException('Solo se permiten imágenes JPG, PNG, WEBP o GIF.');
+            }
+
+            $sortOrder = $currentCount + $offset + 1;
+            $extension = $allowedMimeToExt[$mimeType];
+            $safeBaseName = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) ($file['name'] ?? 'imagen')) ?: 'imagen';
+            $fileName = sprintf('%02d_%s.%s', $sortOrder, bin2hex(random_bytes(8)), $extension);
+            $absolutePath = $targetDir . '/' . $fileName;
+            $relativePath = 'uploads/analisis/accidente_' . $accidenteId . '/' . $section . '/' . $fileName;
+
+            if (!move_uploaded_file($tmpName, $absolutePath)) {
+                throw new RuntimeException('No se pudo guardar una de las imágenes en disco.');
+            }
+
+            $savedPaths[] = $absolutePath;
+            $insertStmt->execute([
+                $accidenteId,
+                $section,
+                $sortOrder,
+                $relativePath,
+                $safeBaseName,
+                $mimeType,
+                (int) ($file['size'] ?? 0),
+            ]);
+            $inserted++;
+        }
+
+        $pdo->commit();
+        return $inserted;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        foreach ($savedPaths as $savedPath) {
+            if (is_file($savedPath)) {
+                @unlink($savedPath);
+            }
+        }
+        throw $e;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string) ($_POST['action'] ?? ''));
+
+    if ($action === 'save_analysis_images') {
+        try {
+            $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
+            $section = trim((string) ($_POST['section'] ?? ''));
+            $saved = analysis_store_uploaded_images($pdo, $accidenteId, $section, $_FILES['images'] ?? []);
+            json_response([
+                'ok' => true,
+                'message' => $saved === 1 ? 'Imagen guardada correctamente.' : 'Imágenes guardadas correctamente.',
+                'saved' => $saved,
+            ]);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
 
     if ($action === 'save_accidente_estado_inline') {
         try {
@@ -2686,13 +2879,34 @@ foreach ($personas as $persona) {
     }
     $lesiones = array_values(array_unique(array_filter($lesiones)));
 
-    $analysisFallecidoRows[] = [
+$analysisFallecidoRows[] = [
         'nombre' => person_label($persona),
         'lesiones' => $lesiones !== [] ? implode(' | ', $lesiones) : trim((string) ($persona['lesion'] ?? '')),
     ];
 }
 
 $analysisTabCount = count($analysisDriverRows) + count($analysisFallecidoRows);
+$analysisMediaBySection = [
+    'danos' => [],
+    'lesiones' => [],
+];
+if (safe_table_exists($pdo, analysis_media_table_name())) {
+    $analysisMediaRows = safe_query_all(
+        $pdo,
+        'SELECT id, accidente_id, seccion, sort_order, archivo_path, archivo_nombre, mime_type, file_size, creado_en
+           FROM ' . analysis_media_table_name() . '
+          WHERE accidente_id = ?
+       ORDER BY seccion ASC, sort_order ASC, id ASC',
+        [$accidente_id]
+    );
+    foreach ($analysisMediaRows as $mediaRow) {
+        $section = trim((string) ($mediaRow['seccion'] ?? ''));
+        if (!isset($analysisMediaBySection[$section])) {
+            continue;
+        }
+        $analysisMediaBySection[$section][] = $mediaRow;
+    }
+}
 
 $summaryAccidentSections = [
     'Identificación' => ['registro_sidpol', 'nro_informe_policial', 'estado', 'folder', ['key' => 'comisaria_nombre', 'class' => 'span-2']],
@@ -3261,6 +3475,25 @@ include __DIR__ . '/sidebar.php';
   .summary-empty{padding:12px;border:1px dashed var(--line);border-radius:12px;background:rgba(148,163,184,.06);color:var(--muted);font-size:12px;font-weight:600}
   .analysis-two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .analysis-two-cols .module-card{height:100%}
+  .analysis-upload{margin-top:10px;padding:10px;border:1px dashed #c9d5e6;border-radius:14px;background:linear-gradient(180deg,#fbfdff 0%,#f4f8fd 100%)}
+  .analysis-upload-form{display:grid;gap:8px}
+  .analysis-upload label{display:block;margin:0 0 8px;font-size:11px;font-weight:800;color:var(--title-blue);letter-spacing:.01em}
+  .analysis-upload-input{display:block;width:100%;font-size:12px;font-weight:600;color:var(--ink)}
+  .analysis-upload-hint{margin:8px 0 0;font-size:11px;color:var(--muted);font-weight:600}
+  .analysis-upload-status{font-size:11px;font-weight:700;color:var(--muted)}
+  .analysis-preview{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:8px;min-height:180px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:hidden}
+  .analysis-preview[hidden]{display:none}
+  .analysis-preview img{display:block;max-width:100%;max-height:320px;border-radius:10px;object-fit:contain}
+  .analysis-inline-slider{margin-top:10px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:10px;display:grid;gap:10px}
+  .analysis-inline-stage{position:relative;min-height:420px;border-radius:14px;background:linear-gradient(180deg,#fbfdff 0%,#eef4fb 100%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .analysis-inline-image{display:block;max-width:100%;max-height:560px;object-fit:contain;border-radius:12px}
+  .analysis-inline-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:999px;border:1px solid rgba(15,23,42,.12);background:rgba(255,255,255,.9);color:#1f2937;font-size:22px;font-weight:800;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+  .analysis-inline-nav:hover{background:#fff}
+  .analysis-inline-prev{left:12px}
+  .analysis-inline-next{right:12px}
+  .analysis-inline-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+  .analysis-image-order{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#166534;font-size:10px;font-weight:800}
+  .analysis-image-name{font-size:11px;font-weight:700;color:var(--muted);word-break:break-word}
   .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-main{display:grid;gap:6px;min-width:0}
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -3635,6 +3868,9 @@ include __DIR__ . '/sidebar.php';
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9,.general-edit-card.g-12{grid-column:span 12}
     .field-grid{grid-template-columns:1fr}
     .analysis-two-cols{grid-template-columns:1fr}
+    .analysis-preview{grid-template-columns:1fr}
+    .analysis-inline-stage{min-height:280px}
+    .analysis-inline-image{max-height:360px}
     .general-checkbox-grid{grid-template-columns:1fr}
     .field-card.span-2{grid-column:span 1}
     .editable-toolbar{align-items:flex-start}
@@ -5802,6 +6038,48 @@ include __DIR__ . '/sidebar.php';
                       <?php endforeach; ?>
                     </div>
                   <?php endif; ?>
+                  <div class="analysis-upload">
+                    <form class="analysis-upload-form js-analysis-upload-form" data-preview-target="analysis-danos-preview">
+                      <input type="hidden" name="action" value="save_analysis_images">
+                      <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
+                      <input type="hidden" name="section" value="danos">
+                      <div>
+                        <label for="analysis-danos-photo">Suba aqui la foto de los daños</label>
+                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-danos-photo" type="file" name="images[]" accept="image/*" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['danos'])) ?>" data-preview-target="analysis-danos-preview" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>
+                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['danos']) ?>/5.</p>
+                      </div>
+                      <div class="analysis-upload-status" data-upload-message></div>
+                      <div class="action-row">
+                        <button type="submit" class="btn-shell" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>Guardar imágenes</button>
+                      </div>
+                    </form>
+                    <div class="analysis-preview" id="analysis-danos-preview" hidden></div>
+                    <?php if ($analysisMediaBySection['danos'] !== []): ?>
+                      <div class="analysis-inline-slider js-analysis-inline-slider">
+                        <div class="analysis-inline-stage">
+                          <button type="button" class="analysis-inline-nav analysis-inline-prev js-analysis-inline-prev" aria-label="Imagen anterior">‹</button>
+                          <img class="analysis-inline-image js-analysis-inline-image" src="" alt="Imagen de daños">
+                          <button type="button" class="analysis-inline-nav analysis-inline-next js-analysis-inline-next" aria-label="Imagen siguiente">›</button>
+                        </div>
+                        <div class="analysis-inline-meta">
+                          <span class="analysis-image-order js-analysis-inline-order"></span>
+                          <span class="analysis-image-name js-analysis-inline-caption"></span>
+                        </div>
+                        <div hidden>
+                          <?php foreach ($analysisMediaBySection['danos'] as $mediaIndex => $media): ?>
+                            <button
+                              type="button"
+                              class="js-analysis-inline-item"
+                              data-index="<?= (int) $mediaIndex ?>"
+                              data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
+                              data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
+                              data-order="<?= (int) ($media['sort_order'] ?? ($mediaIndex + 1)) ?>"
+                            ></button>
+                          <?php endforeach; ?>
+                        </div>
+                      </div>
+                    <?php endif; ?>
+                  </div>
                 </article>
 
                 <article class="module-card">
@@ -5830,14 +6108,56 @@ include __DIR__ . '/sidebar.php';
                       <?php endforeach; ?>
                     </div>
                   <?php endif; ?>
+                  <div class="analysis-upload">
+                    <form class="analysis-upload-form js-analysis-upload-form" data-preview-target="analysis-lesiones-preview">
+                      <input type="hidden" name="action" value="save_analysis_images">
+                      <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
+                      <input type="hidden" name="section" value="lesiones">
+                      <div>
+                        <label for="analysis-lesiones-photo">Suba aqui la foto de las lesiones</label>
+                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-lesiones-photo" type="file" name="images[]" accept="image/*" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['lesiones'])) ?>" data-preview-target="analysis-lesiones-preview" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>
+                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['lesiones']) ?>/5.</p>
+                      </div>
+                      <div class="analysis-upload-status" data-upload-message></div>
+                      <div class="action-row">
+                        <button type="submit" class="btn-shell" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>Guardar imágenes</button>
+                      </div>
+                    </form>
+                    <div class="analysis-preview" id="analysis-lesiones-preview" hidden></div>
+                    <?php if ($analysisMediaBySection['lesiones'] !== []): ?>
+                      <div class="analysis-inline-slider js-analysis-inline-slider">
+                        <div class="analysis-inline-stage">
+                          <button type="button" class="analysis-inline-nav analysis-inline-prev js-analysis-inline-prev" aria-label="Imagen anterior">‹</button>
+                          <img class="analysis-inline-image js-analysis-inline-image" src="" alt="Imagen de lesiones">
+                          <button type="button" class="analysis-inline-nav analysis-inline-next js-analysis-inline-next" aria-label="Imagen siguiente">›</button>
+                        </div>
+                        <div class="analysis-inline-meta">
+                          <span class="analysis-image-order js-analysis-inline-order"></span>
+                          <span class="analysis-image-name js-analysis-inline-caption"></span>
+                        </div>
+                        <div hidden>
+                          <?php foreach ($analysisMediaBySection['lesiones'] as $mediaIndex => $media): ?>
+                            <button
+                              type="button"
+                              class="js-analysis-inline-item"
+                              data-index="<?= (int) $mediaIndex ?>"
+                              data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
+                              data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
+                              data-order="<?= (int) ($media['sort_order'] ?? ($mediaIndex + 1)) ?>"
+                            ></button>
+                          <?php endforeach; ?>
+                        </div>
+                      </div>
+                    <?php endif; ?>
+                  </div>
                 </article>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+</div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -6941,6 +7261,145 @@ include __DIR__ . '/sidebar.php';
         setCollapsibleCardState(card, false);
       });
     }
+
+    function initAnalysisImagePreview(input) {
+      if (!input || input.dataset.previewBound === '1') return;
+      input.dataset.previewBound = '1';
+
+      const previewId = input.dataset.previewTarget || '';
+      const preview = previewId ? document.getElementById(previewId) : null;
+      if (!preview) return;
+
+      input.addEventListener('change', () => {
+        const files = Array.from(input.files || []);
+        const maxFiles = Number(input.dataset.maxFiles || '0');
+        preview.innerHTML = '';
+
+        if (!files.length) {
+          preview.hidden = true;
+          return;
+        }
+
+        if (maxFiles > 0 && files.length > maxFiles) {
+          window.alert('Solo puedes subir ' + maxFiles + ' imagen(es) adicional(es) en esta sección.');
+          input.value = '';
+          preview.hidden = true;
+          return;
+        }
+
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (!imageFiles.length) {
+          preview.hidden = true;
+          return;
+        }
+
+        imageFiles.forEach((file) => {
+          const image = document.createElement('img');
+          image.alt = 'Vista previa';
+          image.src = URL.createObjectURL(file);
+          image.addEventListener('load', () => {
+            URL.revokeObjectURL(image.src);
+          }, { once: true });
+          preview.appendChild(image);
+        });
+        preview.hidden = false;
+      });
+    }
+
+    document.querySelectorAll('.js-analysis-upload-form').forEach((form) => {
+      const input = form.querySelector('.js-analysis-image-input');
+      const message = form.querySelector('[data-upload-message]');
+      const submitButton = form.querySelector('button[type="submit"]');
+      if (input) {
+        initAnalysisImagePreview(input);
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!input || !input.files || !input.files.length) {
+          if (message) message.textContent = 'Selecciona al menos una imagen.';
+          return;
+        }
+
+        if (message) message.textContent = 'Guardando imágenes...';
+        if (submitButton) submitButton.disabled = true;
+
+        try {
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = null;
+          }
+
+          if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.message) ? data.message : 'No se pudieron guardar las imágenes.');
+          }
+
+          if (message) message.textContent = data.message || 'Imágenes guardadas.';
+          window.location.reload();
+        } catch (error) {
+          if (message) {
+            message.textContent = error instanceof Error ? error.message : 'No se pudieron guardar las imágenes.';
+          }
+        } finally {
+          if (submitButton) submitButton.disabled = false;
+        }
+      });
+    });
+
+    function initAnalysisInlineSlider(root) {
+      if (!root || root.dataset.sliderBound === '1') return;
+      root.dataset.sliderBound = '1';
+
+      const items = Array.from(root.querySelectorAll('.js-analysis-inline-item')).map((item) => ({
+        src: String(item.dataset.src || ''),
+        caption: String(item.dataset.caption || ''),
+        order: String(item.dataset.order || ''),
+      }));
+      const image = root.querySelector('.js-analysis-inline-image');
+      const caption = root.querySelector('.js-analysis-inline-caption');
+      const order = root.querySelector('.js-analysis-inline-order');
+      const prev = root.querySelector('.js-analysis-inline-prev');
+      const next = root.querySelector('.js-analysis-inline-next');
+      if (!items.length || !image || !caption || !order) return;
+
+      let index = 0;
+
+      const render = () => {
+        const total = items.length;
+        index = ((index % total) + total) % total;
+        const item = items[index];
+        image.src = item.src || '';
+        caption.textContent = (item.caption || 'Imagen guardada') + ' · ' + (index + 1) + '/' + total;
+        order.textContent = 'Orden ' + (item.order || String(index + 1));
+        if (prev) prev.hidden = total <= 1;
+        if (next) next.hidden = total <= 1;
+      };
+
+      prev?.addEventListener('click', () => {
+        index -= 1;
+        render();
+      });
+      next?.addEventListener('click', () => {
+        index += 1;
+        render();
+      });
+
+      render();
+    }
+
+    document.querySelectorAll('.js-analysis-inline-slider').forEach((slider) => {
+      initAnalysisInlineSlider(slider);
+    });
 
     document.querySelectorAll('.js-card-toggle').forEach((button) => {
       button.addEventListener('click', () => {
