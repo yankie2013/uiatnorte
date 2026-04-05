@@ -1177,7 +1177,7 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
         throw new RuntimeException('No se pudo crear la carpeta de destino para las imágenes.');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $finfo = class_exists('finfo') ? new \finfo(FILEINFO_MIME_TYPE) : null;
     $savedPaths = [];
     $inserted = 0;
 
@@ -1207,8 +1207,25 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
 
             $sortOrder = $currentCount + $offset + 1;
             $safeBaseName = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) ($file['name'] ?? 'imagen')) ?: 'imagen';
-            $mimeType = strtolower((string) $finfo->file($tmpName));
+            $mimeType = '';
+            if ($finfo instanceof \finfo) {
+                $mimeType = strtolower((string) $finfo->file($tmpName));
+            } elseif (function_exists('mime_content_type')) {
+                $mimeType = strtolower((string) mime_content_type($tmpName));
+            }
             $originalName = (string) ($file['name'] ?? 'imagen');
+
+            if ($mimeType === '') {
+                $mimeType = match (analysis_original_extension($originalName)) {
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                    'gif' => 'image/gif',
+                    'heic' => 'image/heic',
+                    'heif' => 'image/heif',
+                    default => '',
+                };
+            }
 
             if (analysis_is_heic_like_upload($originalName, $mimeType)) {
                 $fileName = sprintf('%02d_%s.jpg', $sortOrder, bin2hex(random_bytes(8)));
