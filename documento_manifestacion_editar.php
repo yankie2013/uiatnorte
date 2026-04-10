@@ -15,6 +15,10 @@ $service = new DocumentoManifestacionService(new DocumentoManifestacionRepositor
 $id = (int) g('id', 0);
 $embed = g('embed', '0') === '1';
 $returnTo = g('return_to', '');
+$selfUrl = 'documento_manifestacion_editar.php?id=' . (int) $id . '&embed=' . ($embed ? '1' : '0');
+if ($returnTo !== '') {
+    $selfUrl .= '&return_to=' . urlencode($returnTo);
+}
 $ctx = $service->detalle($id);
 if (!$ctx) {
     http_response_code(404);
@@ -33,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $service->actualizar($id, $_POST);
         $ok = 'Manifestacion actualizada';
         if ($embed) {
-            echo "<script>try{parent.postMessage({type:'manifestacion.saved'}, '*');}catch(e){}</script>";
+            echo "<script>try{parent.postMessage({type:'manifestacion.saved'}, '*'); parent.location.reload();}catch(e){}</script>";
             exit;
         }
         $ctx = $service->detalle($id) ?: $ctx;
@@ -68,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php if ($err): ?><div class="err"><?= h($err) ?></div><?php endif; ?>
   <?php if ($ok && !$embed): ?><div class="ok"><?= h($ok) ?></div><?php endif; ?>
 
-  <form method="post" class="card">
+  <form method="post" action="<?= h($selfUrl) ?>" class="card">
     <div class="grid">
       <div class="col-6"><label>Accidente</label><input type="text" value="<?= h($acc_label) ?>" readonly></div>
       <div class="col-6"><label>Persona</label><input type="text" value="<?= h($per_label) ?>" readonly></div>

@@ -24,6 +24,13 @@ final class DocumentoVehiculoService
         'numero_peritaje',
         'fecha_peritaje',
         'perito_peritaje',
+        'sistema_electrico_peritaje',
+        'sistema_frenos_peritaje',
+        'sistema_direccion_peritaje',
+        'sistema_transmision_peritaje',
+        'sistema_suspension_peritaje',
+        'planta_motriz_peritaje',
+        'otros_peritaje',
         'danos_peritaje',
     ];
 
@@ -45,7 +52,7 @@ final class DocumentoVehiculoService
     {
         $context = $this->repository->involucradoInfo($involucradoVehiculoId);
         if ($context === null) {
-            throw new InvalidArgumentException('No se encontró el involucrado de vehículo.');
+            throw new InvalidArgumentException('No se encontrÃ³ el involucrado de vehÃ­culo.');
         }
 
         $payload = $this->payload($input, (int) ($context['vehiculo_id'] ?? 0), $involucradoVehiculoId);
@@ -119,6 +126,13 @@ final class DocumentoVehiculoService
             ':numero_peritaje' => $this->nullableTrim($input['numero_peritaje'] ?? null),
             ':fecha_peritaje' => $this->nullableTrim($input['fecha_peritaje'] ?? null),
             ':perito_peritaje' => $this->nullableTrim($input['perito_peritaje'] ?? null),
+            ':sistema_electrico_peritaje' => $this->nullableTrim($input['sistema_electrico_peritaje'] ?? null),
+            ':sistema_frenos_peritaje' => $this->nullableTrim($input['sistema_frenos_peritaje'] ?? null),
+            ':sistema_direccion_peritaje' => $this->nullableTrim($input['sistema_direccion_peritaje'] ?? null),
+            ':sistema_transmision_peritaje' => $this->nullableTrim($input['sistema_transmision_peritaje'] ?? null),
+            ':sistema_suspension_peritaje' => $this->nullableTrim($input['sistema_suspension_peritaje'] ?? null),
+            ':planta_motriz_peritaje' => $this->nullableTrim($input['planta_motriz_peritaje'] ?? null),
+            ':otros_peritaje' => $this->nullableTrim($input['otros_peritaje'] ?? null),
             ':danos_peritaje' => $this->nullableMultiline($input['danos_peritaje'] ?? null),
         ];
     }

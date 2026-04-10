@@ -378,6 +378,13 @@ if ($doc_ult):
       <div class="dv-row"><div class="dv-key">Nro.</div><div class="dv-val"><?= h($doc_ult['numero_peritaje'] ?? '') ?></div></div>
       <div class="dv-row"><div class="dv-key">Fecha</div><div class="dv-val"><span class="pill"><?= h($doc_ult['fecha_peritaje'] ?? '') ?></span></div></div>
       <div class="dv-row"><div class="dv-key">Perito</div><div class="dv-val"><?= h($doc_ult['perito_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Sistema electrico</div><div class="dv-val"><?= h($doc_ult['sistema_electrico_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Sistema de frenos</div><div class="dv-val"><?= h($doc_ult['sistema_frenos_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Sistema de direccion</div><div class="dv-val"><?= h($doc_ult['sistema_direccion_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Sistema de transmision</div><div class="dv-val"><?= h($doc_ult['sistema_transmision_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Sistema de suspension</div><div class="dv-val"><?= h($doc_ult['sistema_suspension_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Planta motriz</div><div class="dv-val"><?= h($doc_ult['planta_motriz_peritaje'] ?? '') ?></div></div>
+      <div class="dv-row"><div class="dv-key">Otros</div><div class="dv-val"><?= h($doc_ult['otros_peritaje'] ?? '') ?></div></div>
       <?php
 $danosRaw = trim($doc_ult['danos_peritaje'] ?? '');
 if ($danosRaw) {

@@ -131,6 +131,18 @@ function fecha_simple(?string $value): string
     return date('d/m/Y', strtotime($value));
 }
 
+function fecha_generales_ley(?string $value): string
+{
+    if (!$value || !strtotime($value)) {
+        return '';
+    }
+
+    $months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    $time = strtotime($value);
+
+    return date('d', $time) . $months[(int) date('n', $time) - 1] . date('Y', $time);
+}
+
 function fecha_hora_simple(?string $value): string
 {
     if (!$value || !strtotime($value)) {
@@ -174,6 +186,311 @@ function join_con_y(array $items): string
         $escaped[] = h(format_list_item_case($item, $index === 0));
     }
     return implode(', ', array_slice($escaped, 0, -1)) . ' y ' . end($escaped);
+}
+
+function compact_text(?string $value): string
+{
+    return preg_replace('/\s+/u', ' ', trim((string) ($value ?? ''))) ?: '';
+}
+
+function lower_text(string $value): string
+{
+    return mb_strtolower(compact_text($value), 'UTF-8');
+}
+
+function title_text(string $value): string
+{
+    $text = compact_text($value);
+    if ($text === '') {
+        return '';
+    }
+
+    return mb_convert_case(mb_strtolower($text, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+}
+
+function upper_text(string $value): string
+{
+    $text = compact_text($value);
+    return $text !== '' ? mb_strtoupper($text, 'UTF-8') : '';
+}
+
+function person_name_generales_ley(array $row): string
+{
+    $parts = array_filter([
+        title_text((string) ($row['nombres'] ?? '')),
+        upper_text((string) ($row['apellido_paterno'] ?? '')),
+        upper_text((string) ($row['apellido_materno'] ?? '')),
+    ], static fn(string $item): bool => $item !== '');
+
+    return $parts !== [] ? implode(' ', $parts) : '';
+}
+
+function unique_text_values(array $values): array
+{
+    $unique = [];
+    $seen = [];
+
+    foreach ($values as $value) {
+        $text = compact_text((string) $value);
+        if ($text === '') {
+            continue;
+        }
+
+        $hash = mb_strtolower($text, 'UTF-8');
+        if (isset($seen[$hash])) {
+            continue;
+        }
+
+        $seen[$hash] = true;
+        $unique[] = $text;
+    }
+
+    return $unique;
+}
+
+function join_location_parts(array $values): string
+{
+    $parts = unique_text_values($values);
+    return $parts !== [] ? implode(', ', $parts) : '';
+}
+
+function persona_generales_ley_text(array $row): string
+{
+    $name = person_name_generales_ley($row);
+    if ($name === '') {
+        $name = 'Persona sin identificar';
+    }
+
+    $clauses = [];
+
+    $edad = compact_text((string) ($row['edad'] ?? ''));
+    $nameWithAge = $name;
+    if ($edad !== '') {
+        $nameWithAge .= ' (' . $edad . ')';
+    }
+
+    $fechaNacimiento = fecha_generales_ley((string) ($row['fecha_nacimiento'] ?? ''));
+    if ($fechaNacimiento !== '') {
+        $clauses[] = 'fecha de nacimiento ' . $fechaNacimiento;
+    }
+
+    $naturalDe = title_text((string) ($row['departamento_nac'] ?? ''));
+    if ($naturalDe !== '') {
+        $clauses[] = 'natural de ' . $naturalDe;
+    }
+
+    $estadoCivil = lower_text((string) ($row['estado_civil'] ?? ''));
+    if ($estadoCivil !== '') {
+        $clauses[] = 'estado civil ' . $estadoCivil;
+    }
+
+    $gradoInstruccion = lower_text((string) ($row['grado_instruccion'] ?? ''));
+    if ($gradoInstruccion !== '') {
+        $clauses[] = 'grado de instrucción ' . $gradoInstruccion;
+    }
+
+    $tipoDoc = compact_text((string) ($row['tipo_doc'] ?? ''));
+    $numDoc = compact_text((string) ($row['num_doc'] ?? ''));
+    if ($numDoc !== '') {
+        $docLabel = $tipoDoc !== '' ? mb_strtoupper($tipoDoc, 'UTF-8') : 'DOCUMENTO';
+        $clauses[] = 'con ' . $docLabel . ' N° ' . $numDoc;
+    }
+
+    $padre = title_text((string) ($row['nombre_padre'] ?? ''));
+    $madre = title_text((string) ($row['nombre_madre'] ?? ''));
+    $sexo = mb_strtoupper(compact_text((string) ($row['sexo'] ?? '')), 'UTF-8');
+    $filiacion = $sexo === 'F' ? 'hija' : 'hijo';
+    if ($padre !== '' && $madre !== '') {
+        $clauses[] = $filiacion . ' de don ' . $padre . ' y doña ' . $madre;
+    } elseif ($padre !== '') {
+        $clauses[] = $filiacion . ' de don ' . $padre;
+    } elseif ($madre !== '') {
+        $clauses[] = $filiacion . ' de doña ' . $madre;
+    }
+
+    $domicilioBase = title_text((string) ($row['domicilio'] ?? ''));
+    $domicilioUbicacion = join_location_parts([
+        title_text((string) ($row['domicilio_distrito'] ?? '')),
+        title_text((string) ($row['domicilio_provincia'] ?? '')),
+        title_text((string) ($row['domicilio_departamento'] ?? '')),
+    ]);
+    $domicilio = join_location_parts([$domicilioBase, $domicilioUbicacion]);
+    if ($domicilio !== '') {
+        $clauses[] = ($sexo === 'F' ? 'domiciliada en ' : 'domiciliado en ') . $domicilio;
+    }
+
+    $texto = '<span class="persona-story-name">' . h($nameWithAge) . '</span>';
+    if ($clauses !== []) {
+        $texto .= ' ' . h(implode(', ', $clauses)) . '.';
+    }
+
+    return $texto;
+}
+
+function persona_generales_ley_copy_text(array $row): string
+{
+    $html = persona_generales_ley_text($row);
+    $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    return $text !== '' ? (preg_replace('/\s+/u', ' ', $text) ?: $text) : '—';
+}
+
+function render_persona_story_block(array $row, string $title = 'Generales de ley'): string
+{
+    $html = '<div class="persona-story-block">';
+    $html .= '<div class="persona-story-head">';
+    $html .= '<h3 class="persona-story-title">' . h($title) . '</h3>';
+    $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h(persona_generales_ley_copy_text($row)) . '" aria-label="Copiar generales de ley" title="Copiar generales de ley">⧉</button>';
+    $html .= '</div>';
+    $html .= '<p class="persona-story-text">' . persona_generales_ley_text($row) . '</p>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+function join_con_y_text(array $items): string
+{
+    $items = array_values(array_filter(array_map(static fn($item) => preg_replace('/\s+/u', ' ', trim((string) $item)) ?? trim((string) $item), $items)));
+    $count = count($items);
+
+    if ($count === 0) {
+        return '';
+    }
+    if ($count === 1) {
+        return format_list_item_case($items[0], true);
+    }
+    if ($count === 2) {
+        return format_list_item_case($items[0], true) . ' y ' . format_list_item_case($items[1]);
+    }
+
+    $formatted = [];
+    foreach ($items as $index => $item) {
+        $formatted[] = format_list_item_case($item, $index === 0);
+    }
+
+    return implode(', ', array_slice($formatted, 0, -1)) . ' y ' . end($formatted);
+}
+
+function fecha_hora_aprox_text(?string $value): string
+{
+    if (!$value || !strtotime($value)) {
+        return '—';
+    }
+
+    $time = strtotime($value);
+    return fecha_generales_ley($value) . '; ' . date('H:i', $time) . ' horas, aprox.';
+}
+
+function participant_intervention_text(array $row): string
+{
+    $name = person_name_generales_ley($row);
+    if ($name === '') {
+        $name = 'Persona sin identificar';
+    }
+
+    $text = $name;
+    $edad = compact_text((string) ($row['edad'] ?? ''));
+    if ($edad !== '') {
+        $text .= ' (' . $edad . ')';
+    }
+
+    $nacionalidad = title_text((string) ($row['nacionalidad'] ?? ''));
+    if ($nacionalidad !== '') {
+        $text .= ', de nacionalidad ' . $nacionalidad;
+    }
+
+    return $text . '.';
+}
+
+function summary_unit_heading(array $summaryUnit): string
+{
+    $ut = compact_text((string) ($summaryUnit['ut'] ?? 'UT'));
+    $vehicles = $summaryUnit['vehiculos'] ?? [];
+
+    if ($vehicles === []) {
+        return $ut . ':';
+    }
+
+    if (count($vehicles) > 1) {
+        $plates = array_values(array_filter(array_map(static fn(array $vehicle): string => compact_text((string) ($vehicle['veh_placa'] ?? '')), $vehicles)));
+        return $ut . ' Combinado vehicular de placa ' . implode('/', $plates) . ':';
+    }
+
+    $vehicle = $vehicles[0];
+    $type = title_text((string) ($vehicle['veh_tipo'] ?? 'Vehículo'));
+    $plate = compact_text((string) ($vehicle['veh_placa'] ?? ''));
+    return trim($ut . ' ' . $type . ($plate !== '' ? ' con placa ' . $plate : '')) . ':';
+}
+
+function summary_role_heading(array $row): string
+{
+    $role = title_text((string) ($row['rol_nombre'] ?? 'Participante'));
+    $lesion = mb_strtolower(compact_text((string) ($row['lesion'] ?? '')), 'UTF-8');
+    if (str_contains($lesion, 'fall') && str_contains(mb_strtolower($role, 'UTF-8'), 'peat')) {
+        return 'Peatón: OCCISO';
+    }
+    if (str_contains($lesion, 'fall') && !str_contains(mb_strtolower($role, 'UTF-8'), 'occiso')) {
+        return $role . ': OCCISO';
+    }
+
+    return rtrim($role, ':') . ':';
+}
+
+function summary_units_intervention_html(array $summaryUnits, array $summaryPeatones, array $summaryOtrosSinUnidad): string
+{
+    $parts = [];
+
+    foreach ($summaryUnits as $summaryUnit) {
+        $chunk = '<div class="intervention-unit-block">';
+        $chunk .= '<div class="intervention-unit-title"><strong>' . h(summary_unit_heading($summaryUnit)) . '</strong></div>';
+        foreach (($summaryUnit['personas'] ?? []) as $person) {
+            $chunk .= '<div class="intervention-unit-role"><strong>' . h(summary_role_heading($person)) . '</strong></div>';
+            $chunk .= '<div class="intervention-unit-person">' . h(participant_intervention_text($person)) . '</div>';
+        }
+        $chunk .= '</div>';
+        $parts[] = $chunk;
+    }
+
+    foreach ($summaryPeatones as $person) {
+        $chunk = '<div class="intervention-unit-block">';
+        $chunk .= '<div class="intervention-unit-role"><strong>' . h(summary_role_heading($person)) . '</strong></div>';
+        $chunk .= '<div class="intervention-unit-person">' . h(participant_intervention_text($person)) . '</div>';
+        $chunk .= '</div>';
+        $parts[] = $chunk;
+    }
+
+    foreach ($summaryOtrosSinUnidad as $person) {
+        $chunk = '<div class="intervention-unit-block">';
+        $chunk .= '<div class="intervention-unit-role"><strong>' . h(summary_role_heading($person)) . '</strong></div>';
+        $chunk .= '<div class="intervention-unit-person">' . h(participant_intervention_text($person)) . '</div>';
+        $chunk .= '</div>';
+        $parts[] = $chunk;
+    }
+
+    return $parts !== [] ? implode('', $parts) : '—';
+}
+
+function summary_units_intervention_text(array $summaryUnits, array $summaryPeatones, array $summaryOtrosSinUnidad): string
+{
+    $parts = [];
+
+    foreach ($summaryUnits as $summaryUnit) {
+        $chunk = [summary_unit_heading($summaryUnit)];
+        foreach (($summaryUnit['personas'] ?? []) as $person) {
+            $chunk[] = summary_role_heading($person);
+            $chunk[] = participant_intervention_text($person);
+        }
+        $parts[] = implode("\n", $chunk);
+    }
+
+    foreach ($summaryPeatones as $person) {
+        $parts[] = summary_role_heading($person) . "\n" . participant_intervention_text($person);
+    }
+
+    foreach ($summaryOtrosSinUnidad as $person) {
+        $parts[] = summary_role_heading($person) . "\n" . participant_intervention_text($person);
+    }
+
+    return $parts !== [] ? implode("\n", $parts) : '—';
 }
 
 function safe_query_all(PDO $pdo, string $sql, array $params = []): array
@@ -551,7 +868,14 @@ function human_label(string $key): string
         'numero_peritaje' => 'Número',
         'fecha_peritaje' => 'Fecha',
         'perito_peritaje' => 'Perito',
-        'danos_peritaje' => 'Daños observados',
+        'sistema_electrico_peritaje' => 'Sistema electrico',
+        'sistema_frenos_peritaje' => 'Sistema de frenos',
+        'sistema_direccion_peritaje' => 'Sistema de direccion',
+        'sistema_transmision_peritaje' => 'Sistema de transmision',
+        'sistema_suspension_peritaje' => 'Sistema de suspension',
+        'planta_motriz_peritaje' => 'Planta motriz',
+        'otros_peritaje' => 'Otros',
+        'danos_peritaje' => 'Daños constatados',
         'fecha_levantamiento' => 'Fecha',
         'hora_levantamiento' => 'Hora',
         'lugar_levantamiento' => 'Lugar',
@@ -744,6 +1068,325 @@ function render_summary_field_sections(array $record, array $sections): string
     return $html;
 }
 
+function vehicle_measure_text(mixed $value): string
+{
+    $raw = compact_text((string) $value);
+    if ($raw === '' || !is_numeric($raw)) {
+        return '—';
+    }
+
+    $number = (float) $raw;
+    $meters = $number > 20 ? ($number / 1000) : $number;
+
+    return number_format($meters, 2, '.', '') . ' m.';
+}
+
+function vehicle_doc_date_text(?string $value): string
+{
+    return fecha_generales_ley($value);
+}
+
+function vehicle_revision_status(?string $expiresAt): string
+{
+    if (!$expiresAt || !strtotime($expiresAt)) {
+        return '';
+    }
+
+    return strtotime(date('Y-m-d')) <= strtotime(date('Y-m-d', strtotime($expiresAt))) ? 'VIGENTE' : 'VENCIDO';
+}
+
+function vehicle_document_sentences(array $document): array
+{
+    $sentences = [];
+
+    $numeroPropiedad = compact_text((string) ($document['numero_propiedad'] ?? ''));
+    $sedePropiedad = title_text((string) ($document['sede_propiedad'] ?? ''));
+    $partidaPropiedad = compact_text((string) ($document['partida_propiedad'] ?? ''));
+    $tituloPropiedad = compact_text((string) ($document['titulo_propiedad'] ?? ''));
+    if ($numeroPropiedad !== '' || $sedePropiedad !== '' || $partidaPropiedad !== '' || $tituloPropiedad !== '') {
+        $parts = [];
+        if ($numeroPropiedad !== '') {
+            $parts[] = 'Tarjeta de propiedad N° ' . $numeroPropiedad;
+        } else {
+            $parts[] = 'Tarjeta de propiedad';
+        }
+        if ($sedePropiedad !== '') {
+            $parts[] = 'oficina registral ' . $sedePropiedad;
+        }
+        if ($partidaPropiedad !== '') {
+            $parts[] = 'partida registral N° ' . $partidaPropiedad;
+        }
+        if ($tituloPropiedad !== '') {
+            $parts[] = 'titulo N° ' . $tituloPropiedad;
+        }
+        $sentences[] = implode(', ', $parts) . '.';
+    }
+
+    $numeroSoat = compact_text((string) ($document['numero_soat'] ?? ''));
+    $aseguradoraSoat = title_text((string) ($document['aseguradora_soat'] ?? ''));
+    $vigenteSoat = vehicle_doc_date_text((string) ($document['vigente_soat'] ?? ''));
+    $venceSoat = vehicle_doc_date_text((string) ($document['vencimiento_soat'] ?? ''));
+    if ($numeroSoat !== '' || $aseguradoraSoat !== '' || $vigenteSoat !== '' || $venceSoat !== '') {
+        $parts = [];
+        if ($numeroSoat !== '') {
+            $parts[] = 'Certificado SOAT N° ' . $numeroSoat;
+        } else {
+            $parts[] = 'Certificado SOAT';
+        }
+        if ($aseguradoraSoat !== '') {
+            $parts[] = 'de la empresa aseguradora "' . $aseguradoraSoat . '"';
+        }
+        if ($vigenteSoat !== '' || $venceSoat !== '') {
+            $vigencia = 'con fecha de vigencia';
+            if ($vigenteSoat !== '') {
+                $vigencia .= ' desde ' . $vigenteSoat;
+            }
+            if ($venceSoat !== '') {
+                $vigencia .= ' hasta el ' . $venceSoat;
+            }
+            $parts[] = $vigencia;
+        }
+        $sentences[] = implode(', ', $parts) . '.';
+    }
+
+    $numeroRevision = compact_text((string) ($document['numero_revision'] ?? ''));
+    $certificadoraRevision = title_text((string) ($document['certificadora_revision'] ?? ''));
+    $vigenteRevision = vehicle_doc_date_text((string) ($document['vigente_revision'] ?? ''));
+    $venceRevision = vehicle_doc_date_text((string) ($document['vencimiento_revision'] ?? ''));
+    $estadoRevision = vehicle_revision_status((string) ($document['vencimiento_revision'] ?? ''));
+    if ($numeroRevision !== '' || $certificadoraRevision !== '' || $vigenteRevision !== '' || $venceRevision !== '' || $estadoRevision !== '') {
+        $parts = [];
+        if ($numeroRevision !== '') {
+            $parts[] = 'Certificado de inspección técnica vehicular N° ' . $numeroRevision;
+        } else {
+            $parts[] = 'Certificado de inspección técnica vehicular';
+        }
+        if ($certificadoraRevision !== '') {
+            $parts[] = 'de la empresa certificadora ' . $certificadoraRevision;
+        }
+        if ($vigenteRevision !== '' || $venceRevision !== '') {
+            $fechas = [];
+            if ($vigenteRevision !== '') {
+                $fechas[] = 'fecha de expedición ' . $vigenteRevision;
+            }
+            if ($venceRevision !== '') {
+                $fechas[] = 'vencimiento ' . $venceRevision;
+            }
+            $parts[] = implode(' y ', $fechas);
+        }
+        if ($estadoRevision !== '') {
+            $parts[] = 'estado actual ' . $estadoRevision;
+        }
+        $sentences[] = implode(', ', $parts) . '.';
+    }
+
+    return $sentences;
+}
+
+function render_vehicle_peritaje_components_story(array $documents): string
+{
+    $labels = [
+        'sistema_electrico_peritaje' => 'Sistema electrico',
+        'sistema_frenos_peritaje' => 'Sistema de frenos',
+        'sistema_direccion_peritaje' => 'Sistema de direccion',
+        'sistema_transmision_peritaje' => 'Sistema de transmision',
+        'sistema_suspension_peritaje' => 'Sistema de suspension',
+        'planta_motriz_peritaje' => 'Planta motriz',
+        'otros_peritaje' => 'Otros',
+    ];
+
+    $blocks = [];
+    foreach ($documents as $document) {
+        $rows = [];
+        foreach ($labels as $field => $label) {
+            $value = compact_text((string) ($document[$field] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+            $rows[] = ['label' => $label, 'value' => $value];
+        }
+
+        $damages = compact_text((string) ($document['danos_peritaje'] ?? ''));
+        if ($rows === [] && $damages === '') {
+            continue;
+        }
+
+        $blocks[] = ['rows' => $rows, 'damages' => $damages];
+    }
+
+    if ($blocks === []) {
+        return '';
+    }
+
+    $html = '';
+    foreach ($blocks as $index => $block) {
+        $html .= '<div class="vehicle-peritaje-story-block">';
+        $html .= '<h3 class="vehicle-docs-story-title">' . h(($index + 6) . '. Peritaje') . '</h3>';
+        if ($block['rows'] !== []) {
+            $html .= '<div class="vehicle-story-list">';
+            foreach ($block['rows'] as $row) {
+                $html .= '<div class="vehicle-story-row">';
+                $html .= '<span class="vehicle-story-key">- ' . h($row['label']) . '</span>';
+                $html .= '<span class="vehicle-story-sep">:</span>';
+                $html .= '<span class="vehicle-story-value-wrap">';
+                $html .= '<span class="vehicle-story-value">' . h($row['value']) . '</span>';
+                $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($row['value']) . '" aria-label="Copiar peritaje" title="Copiar peritaje">⧉</button>';
+                $html .= '</span>';
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+        }
+        if ($block['damages'] !== '') {
+            $html .= '<div class="vehicle-docs-story-list" style="margin-top:8px">';
+            $html .= '<div class="vehicle-docs-story-item">';
+            $html .= '<span class="vehicle-docs-story-text">- Daños constatados: ' . h($block['damages']) . '</span>';
+            $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($block['damages']) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
+            $html .= '</div></div>';
+        }
+        $html .= '</div>';
+    }
+
+    return $html;
+}
+
+function render_analysis_peritaje_story(array $record): string
+{
+    $labels = [
+        'sistema_electrico_peritaje' => 'Sistema electrico',
+        'sistema_frenos_peritaje' => 'Sistema de frenos',
+        'sistema_direccion_peritaje' => 'Sistema de direccion',
+        'sistema_transmision_peritaje' => 'Sistema de transmision',
+        'sistema_suspension_peritaje' => 'Sistema de suspension',
+        'planta_motriz_peritaje' => 'Planta motriz',
+    ];
+
+    $rows = [];
+    foreach ($labels as $field => $label) {
+        $value = compact_text((string) ($record[$field] ?? ''));
+        if ($value === '') {
+            continue;
+        }
+        $rows[] = ['label' => $label, 'value' => $value];
+    }
+
+    $damages = compact_text((string) ($record['danos_peritaje'] ?? ''));
+    if ($rows === [] && $damages === '') {
+        return '<div class="summary-empty">No hay peritaje registrado para este conductor.</div>';
+    }
+
+    $html = '<div class="vehicle-docs-story-block">';
+    $html .= '<h3 class="vehicle-docs-story-title">6. Peritaje</h3>';
+    if ($rows !== []) {
+        $html .= '<div class="vehicle-story-list">';
+        foreach ($rows as $row) {
+            $html .= '<div class="vehicle-story-row">';
+            $html .= '<span class="vehicle-story-key">- ' . h($row['label']) . '</span>';
+            $html .= '<span class="vehicle-story-sep">:</span>';
+            $html .= '<span class="vehicle-story-value-wrap">';
+            $html .= '<span class="vehicle-story-value">' . h($row['value']) . '</span>';
+            $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($row['value']) . '" aria-label="Copiar peritaje" title="Copiar peritaje">⧉</button>';
+            $html .= '</span>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+    }
+    if ($damages !== '') {
+        $html .= '<div class="vehicle-docs-story-list" style="margin-top:8px">';
+        $html .= '<div class="vehicle-docs-story-item">';
+        $html .= '<span class="vehicle-docs-story-text">- Daños constatados: ' . h($damages) . '</span>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($damages) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
+        $html .= '</div></div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+function render_vehicle_documents_story(array $documents): string
+{
+    $sentences = [];
+    foreach ($documents as $document) {
+        $sentences = array_merge($sentences, vehicle_document_sentences($document));
+    }
+
+    if ($sentences === []) {
+        return '<div class="summary-empty">No hay documentos registrados para este vehículo.</div>';
+    }
+
+    $html = '<div class="vehicle-docs-story-block">';
+    $html .= '<h3 class="vehicle-docs-story-title">5. Documentos</h3>';
+    $html .= '<div class="vehicle-docs-story-list">';
+    foreach ($sentences as $sentence) {
+        $html .= '<div class="vehicle-docs-story-item">';
+        $html .= '<span class="vehicle-docs-story-text">- ' . h($sentence) . '</span>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($sentence) . '" aria-label="Copiar documento" title="Copiar documento">⧉</button>';
+        $html .= '</div>';
+    }
+    $html .= render_vehicle_peritaje_components_story($documents);
+    $html .= '</div>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+function render_vehicle_story_block(array $vehicle): string
+{
+    $vehicleType = title_text((string) ($vehicle['veh_tipo'] ?? ''));
+    if ($vehicleType === '') {
+        $vehicleType = 'Vehículo';
+    }
+
+    $plate = compact_text((string) ($vehicle['veh_placa'] ?? ''));
+    $title = $vehicleType . ($plate !== '' ? ' de placa de rodaje ' . $plate : ' sin placa registrada');
+
+    $sections = [
+        'Características' => [
+            'Categoría' => title_text((string) ($vehicle['veh_categoria'] ?? '')),
+            'Color' => title_text((string) ($vehicle['veh_color'] ?? '')),
+            'Modelo' => compact_text((string) ($vehicle['veh_modelo'] ?? '')),
+            'Año fab.' => compact_text((string) ($vehicle['veh_anio'] ?? '')),
+            'Carrocería' => title_text((string) ($vehicle['veh_carroceria'] ?? '')),
+        ],
+        'Medidas' => [
+            'Longitud' => vehicle_measure_text($vehicle['veh_largo_mm'] ?? ''),
+            'Ancho' => vehicle_measure_text($vehicle['veh_ancho_mm'] ?? ''),
+            'Altura' => vehicle_measure_text($vehicle['veh_alto_mm'] ?? ''),
+        ],
+    ];
+
+    $html = '<div class="vehicle-story-block">';
+    $html .= '<h3 class="vehicle-story-title">' . h($title) . '</h3>';
+
+    $sectionIndex = 1;
+    foreach ($sections as $label => $rows) {
+        $availableRows = array_filter($rows, static fn(string $value): bool => $value !== '' && $value !== '—');
+        if ($availableRows === []) {
+            continue;
+        }
+
+        $html .= '<div class="vehicle-story-section">';
+        $html .= '<h4 class="vehicle-story-subtitle">' . $sectionIndex . '. ' . h($label) . '</h4>';
+        $html .= '<div class="vehicle-story-list">';
+        foreach ($availableRows as $rowLabel => $rowValue) {
+            $html .= '<div class="vehicle-story-row">';
+            $html .= '<span class="vehicle-story-key">- ' . h($rowLabel) . '</span>';
+            $html .= '<span class="vehicle-story-sep">:</span>';
+            $html .= '<span class="vehicle-story-value-wrap">';
+            $html .= '<span class="vehicle-story-value">' . h($rowValue) . '</span>';
+            $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($rowValue) . '" aria-label="Copiar valor" title="Copiar valor">⧉</button>';
+            $html .= '</span>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+        $html .= '</div>';
+        $sectionIndex++;
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+
 function render_summary_vehicle_block(array $vehicle, array $documents, string $title, array $vehicleFields, array $docSections): string
 {
     $subtitleParts = [];
@@ -759,30 +1402,9 @@ function render_summary_vehicle_block(array $vehicle, array $documents, string $
     $html .= '<p>' . h($subtitleParts !== [] ? implode(' · ', $subtitleParts) : 'Vehículo vinculado') . '</p></div>';
     $html .= '<div class="module-card-controls"><button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button></div></div>';
     $html .= '<div class="module-card-panel js-card-panel" hidden>';
-    $html .= '<div class="field-grid">' . render_field_cards($vehicle, $vehicleFields) . '</div>';
+    $html .= render_vehicle_story_block($vehicle);
     $html .= '<div class="section-block"><h3>Documentos del vehículo</h3>';
-
-    if ($documents === []) {
-        $html .= '<div class="summary-empty">No hay documentos registrados para este vehículo.</div>';
-    } else {
-        foreach ($documents as $index => $document) {
-            $html .= '<div class="summary-subcard">';
-            $html .= '<div class="summary-header"><div><h4>' . h('Documento #' . ($index + 1)) . '</h4>';
-            $html .= '<p>' . h('Registro ID ' . (int) ($document['id'] ?? 0)) . '</p></div></div>';
-            foreach ($docSections as $section) {
-                $fields = $section['fields'] ?? [];
-                if (!record_has_any_content($document, $fields)) {
-                    continue;
-                }
-
-                $html .= '<div class="section-block">';
-                $html .= '<h3>' . h((string) ($section['label'] ?? 'Documento')) . '</h3>';
-                $html .= '<div class="field-grid">' . render_field_cards($document, $fields) . '</div>';
-                $html .= '</div>';
-            }
-            $html .= '</div>';
-        }
-    }
+    $html .= render_vehicle_documents_story($documents);
 
     $html .= '</div>';
     $html .= '</div>';
@@ -821,8 +1443,9 @@ function render_summary_person_block(
     $html .= '<button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>';
     $html .= '</div></div>';
     $html .= '<div class="module-card-panel js-card-panel" hidden>';
-
-    $html .= render_summary_field_sections($person, $personSections);
+    $html .= '<div class="section-block">';
+    $html .= render_persona_story_block($person, 'Generales de ley');
+    $html .= '</div>';
 
     if (!empty($extras['lc'])) {
         $html .= '<div class="section-block"><h3>Licencias</h3><div class="summary-doc-stack">';
@@ -2610,7 +3233,13 @@ $docVehiculoSections = [
     ],
     'peritaje' => [
         'label' => 'Peritaje',
-        'fields' => ['numero_peritaje', 'fecha_peritaje', 'perito_peritaje', ['key' => 'danos_peritaje', 'class' => 'span-2']],
+        'fields' => [
+            'numero_peritaje', 'fecha_peritaje', 'perito_peritaje',
+            'sistema_electrico_peritaje', 'sistema_frenos_peritaje', 'sistema_direccion_peritaje',
+            'sistema_transmision_peritaje', 'sistema_suspension_peritaje', 'planta_motriz_peritaje',
+            ['key' => 'otros_peritaje', 'class' => 'span-2'],
+            ['key' => 'danos_peritaje', 'class' => 'span-2'],
+        ],
     ],
     'revision' => [
         'label' => 'Revisión técnica',
@@ -2855,7 +3484,7 @@ foreach ($personas as $persona) {
         ) : [],
         'man' => $personaId > 0 ? safe_query_all(
             $pdo,
-            "SELECT id, fecha, horario_inicio, hora_termino, modalidad, observaciones
+            "SELECT id, fecha, horario_inicio, hora_termino, modalidad, '' AS observaciones
                FROM Manifestacion
               WHERE persona_id = ? AND accidente_id = ?
            ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
@@ -2924,7 +3553,16 @@ foreach ($analysisVehiclesByInvId as $invVehiculoId => $vehicle) {
     $documents = $docVehiculoTodosPorInvolucrado[$invVehiculoId] ?? [];
     $damageDocument = null;
     foreach ($documents as $document) {
-        if (trim((string) ($document['danos_peritaje'] ?? '')) !== '') {
+        if (
+            trim((string) ($document['danos_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['sistema_electrico_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['sistema_frenos_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['sistema_direccion_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['sistema_transmision_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['sistema_suspension_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['planta_motriz_peritaje'] ?? '')) !== ''
+            || trim((string) ($document['otros_peritaje'] ?? '')) !== ''
+        ) {
             $damageDocument = $document;
             break;
         }
@@ -2944,6 +3582,13 @@ foreach ($analysisVehiclesByInvId as $invVehiculoId => $vehicle) {
         'veh_color' => (string) ($vehicle['veh_color'] ?? ''),
         'numero_peritaje' => trim((string) ($damageDocument['numero_peritaje'] ?? '')),
         'fecha_peritaje' => $damageDocument['fecha_peritaje'] ?? null,
+        'sistema_electrico_peritaje' => trim((string) ($damageDocument['sistema_electrico_peritaje'] ?? '')),
+        'sistema_frenos_peritaje' => trim((string) ($damageDocument['sistema_frenos_peritaje'] ?? '')),
+        'sistema_direccion_peritaje' => trim((string) ($damageDocument['sistema_direccion_peritaje'] ?? '')),
+        'sistema_transmision_peritaje' => trim((string) ($damageDocument['sistema_transmision_peritaje'] ?? '')),
+        'sistema_suspension_peritaje' => trim((string) ($damageDocument['sistema_suspension_peritaje'] ?? '')),
+        'planta_motriz_peritaje' => trim((string) ($damageDocument['planta_motriz_peritaje'] ?? '')),
+        'otros_peritaje' => trim((string) ($damageDocument['otros_peritaje'] ?? '')),
         'danos_peritaje' => trim((string) ($damageDocument['danos_peritaje'] ?? '')),
     ];
 }
@@ -2967,6 +3612,7 @@ foreach ($personas as $persona) {
     $analysisDriverRows[] = [
         'nombre' => person_label($persona),
         'vehiculo' => $vehiculoLabel,
+        'peritaje' => $damageRow,
         'danos' => trim((string) ($damageRow['danos_peritaje'] ?? '')),
     ];
 }
@@ -3029,9 +3675,9 @@ $summaryAccidentSections = [
     'Descripción' => [['key' => 'sentido', 'class' => 'span-2'], ['key' => 'secuencia', 'class' => 'span-4']],
 ];
 $summaryAccidentRecord = $A;
-$summaryAccidentRecord['comisaria_nombre'] = $A['comisaria_nombre'] ?? ($A['comisaria'] ?? '');
-$summaryAccidentRecord['fiscalia_nombre'] = $A['fiscalia_nombre'] ?? '';
-$summaryAccidentRecord['fiscal_nombre'] = $A['fiscal_nombre'] ?? '';
+$summaryAccidentRecord['comisaria_nombre'] = $A['comisaria_nombre'] ?? ($A['comisaria_nom'] ?? ($A['comisaria'] ?? ''));
+$summaryAccidentRecord['fiscalia_nombre'] = $A['fiscalia_nombre'] ?? ($A['fiscalia_nom'] ?? '');
+$summaryAccidentRecord['fiscal_nombre'] = $A['fiscal_nombre'] ?? ($A['fiscal_nom'] ?? '');
 $summaryAccidentRecord['ubicacion_accidente'] = trim((string) implode(' / ', array_filter([
     $A['departamento_nombre'] ?? '',
     $A['provincia_nombre'] ?? '',
@@ -3069,7 +3715,13 @@ $summaryDocVehiculoSections = [
     ],
     'peritaje' => [
         'label' => 'Peritaje',
-        'fields' => ['numero_peritaje', 'fecha_peritaje', 'perito_peritaje', ['key' => 'danos_peritaje', 'class' => 'span-2']],
+        'fields' => [
+            'numero_peritaje', 'fecha_peritaje', 'perito_peritaje',
+            'sistema_electrico_peritaje', 'sistema_frenos_peritaje', 'sistema_direccion_peritaje',
+            'sistema_transmision_peritaje', 'sistema_suspension_peritaje', 'planta_motriz_peritaje',
+            ['key' => 'otros_peritaje', 'class' => 'span-2'],
+            ['key' => 'danos_peritaje', 'class' => 'span-2'],
+        ],
     ],
     'revision' => [
         'label' => 'Revisión técnica',
@@ -3172,10 +3824,49 @@ $summaryBlocksCount = 1
     + count($summaryUnits)
     + (count($summaryPeatones) > 0 ? 1 : 0)
     + (count($summaryOtrosSinUnidad) > 0 ? 1 : 0)
+    + (count($policias) > 0 ? 1 : 0)
     + (count($familiares) > 0 ? 1 : 0)
     + (count($propietarios) > 0 ? 1 : 0)
     + (count($abogados) > 0 ? 1 : 0)
     + (count($oficios) > 0 ? 1 : 0);
+
+$itpResumen = $itps[0] ?? [];
+$resumenComisaria = compact_text((string) ($summaryAccidentRecord['comisaria_nombre'] ?? ''));
+if ($resumenComisaria !== '' && mb_stripos($resumenComisaria, 'comisaria', 0, 'UTF-8') === false) {
+    $resumenComisaria = 'Comisaría PNP ' . $resumenComisaria;
+}
+$resumenLugarJurisdiccion = join_location_parts([
+    compact_text((string) ($A['lugar'] ?? '')),
+    $resumenComisaria,
+]);
+$claseViaZonaParts = unique_text_values([
+    title_text((string) ($itpResumen['forma_via'] ?? '')),
+    title_text((string) ($itpResumen['configuracion_via1'] ?? '')),
+]);
+if ($claseViaZonaParts === []) {
+    $claseViaZonaParts = unique_text_values([
+        title_text((string) ($itpResumen['descripcion_via1'] ?? '')),
+    ]);
+}
+$resumenClaseViaZona = $claseViaZonaParts !== [] ? implode('-', $claseViaZonaParts) : '—';
+$resumenInterventionRows = [
+    ['index' => '1.', 'label' => 'SIDPOL N°', 'value' => compact_text((string) ($A['sidpol'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['sidpol'] ?? '')) ?: '—'],
+    ['index' => '2.', 'label' => 'Informe N°', 'value' => compact_text((string) ($A['nro_informe_policial'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['nro_informe_policial'] ?? '')) ?: '—'],
+    ['index' => '3.', 'label' => 'Decreto N°', 'value' => compact_text((string) ($A['comunicacion_decreto'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['comunicacion_decreto'] ?? '')) ?: '—'],
+    ['index' => '4.', 'label' => 'Carpeta Fiscal N°', 'value' => compact_text((string) ($A['comunicacion_carpeta_nro'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['comunicacion_carpeta_nro'] ?? '')) ?: '—'],
+    ['index' => '5.', 'label' => 'Clase de accidente', 'value' => join_con_y_text($modalidades) ?: '—', 'copy_text' => join_con_y_text($modalidades) ?: '—'],
+    ['index' => '6.', 'label' => 'Consecuencia', 'value' => join_con_y_text($consecuencias) ?: '—', 'copy_text' => join_con_y_text($consecuencias) ?: '—'],
+    ['index' => '7.', 'label' => 'Lugar y jurisdicción policial', 'value' => $resumenLugarJurisdiccion !== '' ? $resumenLugarJurisdiccion : '—', 'copy_text' => $resumenLugarJurisdiccion !== '' ? $resumenLugarJurisdiccion : '—'],
+    ['index' => '8.', 'label' => 'Fecha y hora del accidente', 'value' => fecha_hora_aprox_text($A['fecha_accidente'] ?? null), 'copy_text' => fecha_hora_aprox_text($A['fecha_accidente'] ?? null)],
+    ['index' => '9.', 'label' => 'Fecha y hora de comunicación', 'value' => fecha_hora_aprox_text($A['fecha_comunicacion'] ?? null), 'copy_text' => fecha_hora_aprox_text($A['fecha_comunicacion'] ?? null)],
+    ['index' => '10.', 'label' => 'Fecha y hora de intervención', 'value' => fecha_hora_aprox_text($A['fecha_intervencion'] ?? null), 'copy_text' => fecha_hora_aprox_text($A['fecha_intervencion'] ?? null)],
+    ['index' => '11.', 'label' => 'Unidades participantes', 'value_html' => summary_units_intervention_html($summaryUnits, $summaryPeatones, $summaryOtrosSinUnidad), 'copy_text' => summary_units_intervention_text($summaryUnits, $summaryPeatones, $summaryOtrosSinUnidad)],
+    ['index' => '12.', 'label' => 'Clase de vía y zona', 'value' => $resumenClaseViaZona, 'copy_text' => $resumenClaseViaZona],
+    ['index' => '13.', 'label' => 'Fiscalía', 'value' => compact_text((string) ($summaryAccidentRecord['fiscalia_nombre'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($summaryAccidentRecord['fiscalia_nombre'] ?? '')) ?: '—'],
+    ['index' => '14.', 'label' => 'Fiscal a cargo', 'value' => compact_text((string) ($summaryAccidentRecord['fiscal_nombre'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($summaryAccidentRecord['fiscal_nombre'] ?? '')) ?: '—'],
+    ['index' => '15.', 'label' => 'Sentido', 'value' => compact_text((string) ($A['sentido'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['sentido'] ?? '')) ?: '—'],
+    ['index' => '16.', 'label' => 'Secuencia', 'value' => compact_text((string) ($A['secuencia'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['secuencia'] ?? '')) ?: '—'],
+];
 
 include __DIR__ . '/sidebar.php';
 ?>
@@ -3488,6 +4179,28 @@ include __DIR__ . '/sidebar.php';
   .action-row{display:flex;gap:8px;flex-wrap:wrap}
   .section-block{margin-top:8px}
   .section-block h3{margin:0 0 5px;font-size:12px;font-weight:800;color:var(--title-blue);letter-spacing:.01em}
+  .persona-story-block{padding:14px 16px;border:1px solid #f2c7c7;border-radius:14px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%);box-shadow:0 10px 24px rgba(127,29,29,.06)}
+  .persona-story-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}
+  .persona-story-block h3.persona-story-title{margin:0;font-size:14px !important;font-weight:900;line-height:1.1;color:#111827 !important;letter-spacing:-.02em}
+  .persona-story-block p.persona-story-text{margin:0;color:#111827 !important;font-size:14px !important;line-height:1.5;font-weight:500}
+  .persona-story-name{display:inline-block;padding:0 6px;background:rgba(200,30,30,.12);font-weight:900}
+  .vehicle-story-block{padding:14px 16px;border:1px solid #f2c7c7;border-radius:14px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%);box-shadow:0 10px 24px rgba(127,29,29,.06)}
+  .vehicle-story-title{margin:0 0 12px;font-size:14px;font-weight:900;line-height:1.15;color:#c81e1e;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
+  .vehicle-story-section + .vehicle-story-section{margin-top:14px}
+  .vehicle-story-subtitle{margin:0 0 8px;font-size:14px;font-weight:900;line-height:1.15;color:#c81e1e;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .vehicle-story-list{display:grid;gap:4px}
+  .vehicle-story-row{display:grid;grid-template-columns:minmax(150px,220px) 18px minmax(0,1fr);gap:10px;align-items:start}
+  .vehicle-story-key,.vehicle-story-sep,.vehicle-story-value{font-size:14px;line-height:1.3}
+  .vehicle-story-key{font-weight:700;color:#111827}
+  .vehicle-story-sep{font-weight:900;text-align:center;color:#111827}
+  .vehicle-story-value{font-weight:500;color:#111827}
+  .vehicle-story-value-wrap{display:inline-flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .copy-inline-btn{min-width:24px;height:24px;padding:0 6px;border-radius:8px;font-size:12px;box-shadow:0 4px 10px rgba(17,24,39,.06)}
+  .vehicle-docs-story-block{padding:10px 0 0}
+  .vehicle-docs-story-title{margin:0 0 8px;font-size:14px;font-weight:900;line-height:1.15;color:#111827;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .vehicle-docs-story-list{display:grid;gap:6px}
+  .vehicle-docs-story-item{display:flex;align-items:flex-start;gap:8px}
+  .vehicle-docs-story-text{margin:0;color:#111827;font-size:14px;line-height:1.45;font-weight:500;flex:1}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
   .field-card.span-2{grid-column:span 2}
@@ -3569,6 +4282,60 @@ include __DIR__ . '/sidebar.php';
     background-clip:text;
     color:transparent;
   }
+  .summary-block-card--intervention > header{padding-bottom:8px}
+  .intervention-main-title{
+    font-size:18px;
+    font-weight:900;
+    line-height:1.05;
+    letter-spacing:-.02em;
+    color:#111111 !important;
+    background:none !important;
+    -webkit-background-clip:initial !important;
+    background-clip:initial !important;
+  }
+  .intervention-subtitle{
+    margin:4px 0 0;
+    font-size:16px;
+    font-weight:900;
+    line-height:1.08;
+    color:#111111;
+    text-decoration:underline;
+    text-decoration-thickness:2px;
+    text-underline-offset:3px;
+  }
+  .intervention-sheet{display:grid;gap:6px;color:#111111}
+  .intervention-row{
+    display:grid;
+    grid-template-columns:44px minmax(220px, 390px) 18px minmax(0,1fr);
+    gap:8px;
+    align-items:start;
+  }
+  .intervention-index,
+  .intervention-label,
+  .intervention-sep,
+  .intervention-value{
+    font-size:14px;
+    line-height:1.28;
+    color:#111111;
+  }
+  .intervention-index,
+  .intervention-sep{font-weight:800}
+  .intervention-label{font-weight:500}
+  .intervention-value{font-weight:500;min-width:0}
+  .intervention-value-wrap{display:inline-flex;align-items:flex-start;gap:8px;max-width:100%}
+  .intervention-value-main{min-width:0}
+  .intervention-value strong{font-weight:900}
+  .intervention-unit-block + .intervention-unit-block{margin-top:4px}
+  .intervention-unit-title,
+  .intervention-unit-role,
+  .intervention-unit-person{
+    font-size:14px;
+    line-height:1.28;
+    color:#111111;
+  }
+  .intervention-unit-title + .intervention-unit-role,
+  .intervention-unit-person + .intervention-unit-role{margin-top:2px}
+  .intervention-unit-person{padding-left:0}
   .summary-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px}
   .summary-person-name,
   .summary-person-card .summary-person-name,
@@ -3812,6 +4579,34 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .section-block h3{
     color:#93c5fd;
   }
+  html[data-theme-resolved="dark"] .persona-story-block{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+    box-shadow:0 16px 30px rgba(2,6,23,.28);
+  }
+  html[data-theme-resolved="dark"] .vehicle-story-block{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+    box-shadow:0 16px 30px rgba(2,6,23,.28);
+  }
+  html[data-theme-resolved="dark"] .persona-story-block h3.persona-story-title,
+  html[data-theme-resolved="dark"] .persona-story-block p.persona-story-text{
+    color:#f8fafc !important;
+  }
+  html[data-theme-resolved="dark"] .vehicle-story-title,
+  html[data-theme-resolved="dark"] .vehicle-story-subtitle,
+  html[data-theme-resolved="dark"] .vehicle-story-key,
+  html[data-theme-resolved="dark"] .vehicle-story-sep,
+  html[data-theme-resolved="dark"] .vehicle-story-value{
+    color:#fecaca;
+  }
+  html[data-theme-resolved="dark"] .vehicle-docs-story-title,
+  html[data-theme-resolved="dark"] .vehicle-docs-story-text{
+    color:#fecaca;
+  }
+  html[data-theme-resolved="dark"] .persona-story-name{
+    background:rgba(248,113,113,.18);
+  }
   html[data-theme-resolved="dark"] .title-wrap h1{
     color:#8ec1ff;
     font-weight:800;
@@ -3938,6 +4733,17 @@ include __DIR__ . '/sidebar.php';
     background-clip:text;
     color:transparent;
   }
+  html[data-theme-resolved="dark"] .intervention-main-title,
+  html[data-theme-resolved="dark"] .intervention-subtitle,
+  html[data-theme-resolved="dark"] .intervention-index,
+  html[data-theme-resolved="dark"] .intervention-label,
+  html[data-theme-resolved="dark"] .intervention-sep,
+  html[data-theme-resolved="dark"] .intervention-value,
+  html[data-theme-resolved="dark"] .intervention-unit-title,
+  html[data-theme-resolved="dark"] .intervention-unit-role,
+  html[data-theme-resolved="dark"] .intervention-unit-person{
+    color:#f3f4f6 !important;
+  }
   html[data-theme-resolved="dark"] .summary-person-name,
   html[data-theme-resolved="dark"] .summary-person-card .summary-person-name,
   html[data-theme-resolved="dark"] .summary-subcard .summary-person-name{
@@ -4001,6 +4807,19 @@ include __DIR__ . '/sidebar.php';
     .diligencia-content-row{flex-direction:column;align-items:stretch}
     .diligencia-actions{justify-content:flex-start}
     .diligencia-side{justify-items:start}
+    .persona-story-block{padding:12px}
+    .persona-story-block h3.persona-story-title{font-size:14px !important}
+    .persona-story-block p.persona-story-text{font-size:14px !important}
+    .vehicle-story-block{padding:12px}
+    .vehicle-story-title{font-size:14px}
+    .vehicle-story-subtitle{font-size:14px}
+    .intervention-main-title{font-size:16px}
+    .intervention-subtitle{font-size:15px}
+    .intervention-row{grid-template-columns:40px minmax(140px,1fr) 16px minmax(0,1.2fr);gap:6px}
+    .intervention-index,.intervention-label,.intervention-sep,.intervention-value,.intervention-unit-title,.intervention-unit-role,.intervention-unit-person{font-size:13px}
+    .vehicle-story-row{grid-template-columns:minmax(110px,1fr) 14px minmax(0,1fr);gap:6px}
+    .vehicle-story-key,.vehicle-story-sep,.vehicle-story-value{font-size:14px}
+    .vehicle-docs-story-title,.vehicle-docs-story-text{font-size:14px}
   }
   @media (prefers-reduced-motion: reduce){
     .tab-panel.driver-panel::before{animation:none}
@@ -4379,26 +5198,28 @@ include __DIR__ . '/sidebar.php';
       <div class="tab-pane fade show active" id="resumen-integral" role="tabpanel">
         <div class="tab-panel">
           <div class="summary-sheet">
-            <article class="module-card summary-block-card">
+            <article class="module-card summary-block-card summary-block-card--intervention">
               <header>
                 <div>
-                  <h4 class="summary-block-title">Datos generales del accidente</h4>
-                  <p>Resumen consolidado del caso con unidades de tránsito, personas, documentos y oficios vinculados.</p>
-                </div>
-                <div class="module-card-controls">
-                  <span class="chip-simple"><?= h((string) $summaryBlocksCount) ?> bloque(s)</span>
+                  <h4 class="summary-block-title intervention-main-title">II. DATOS DE LA INTERVENCIÓN</h4>
+                  <p class="intervention-subtitle">A. SITUACIÓN</p>
                 </div>
               </header>
-              <div class="summary-stack">
-                <div class="summary-pill"><strong>Modalidades:</strong> <?= $modsConcat ?></div>
-                <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
+              <div class="intervention-sheet">
+                <?php foreach ($resumenInterventionRows as $row): ?>
+                  <div class="intervention-row">
+                    <div class="intervention-index"><?= h((string) $row['index']) ?></div>
+                    <div class="intervention-label"><?= h((string) $row['label']) ?></div>
+                    <div class="intervention-sep">:</div>
+                    <div class="intervention-value">
+                      <span class="intervention-value-wrap">
+                        <span class="intervention-value-main"><?= $row['value_html'] ?? h((string) ($row['value'] ?? '—')) ?></span>
+                        <button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="<?= h((string) ($row['copy_text'] ?? ($row['value'] ?? '—'))) ?>" aria-label="Copiar valor" title="Copiar valor">⧉</button>
+                      </span>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
               </div>
-              <?php foreach ($summaryAccidentSections as $summarySectionTitle => $summarySectionFields): ?>
-                <div class="section-block">
-                  <h3><?= h($summarySectionTitle) ?></h3>
-                  <div class="field-grid"><?= render_field_cards($summaryAccidentRecord, $summarySectionFields) ?></div>
-                </div>
-              <?php endforeach; ?>
             </article>
 
             <?php foreach ($summaryUnits as $summaryUnit): ?>
@@ -4542,6 +5363,42 @@ include __DIR__ . '/sidebar.php';
               </article>
             <?php endif; ?>
 
+            <?php if ($policias !== []): ?>
+              <article class="module-card summary-block-card">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Efectivos policiales</h4>
+                    <p><?= h(count($policias)) ?> registro(s) vinculados al accidente.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($policias as $row): ?>
+                    <div class="summary-subcard" data-collapsible-card>
+                      <div class="summary-header">
+                        <div>
+                          <h4 class="summary-person-name"><?= h(person_label($row)) ?></h4>
+                          <p><?= h(trim((string) (($row['grado_policial'] ?? '-') . ' · CIP ' . ($row['cip'] ?? '-')))) ?></p>
+                        </div>
+                        <div class="summary-chipline">
+                          <span class="chip-simple"><?= h((string) (($row['rol_funcion'] ?? '') !== '' ? $row['rol_funcion'] : 'Sin rol / función')) ?></span>
+                          <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
+                        </div>
+                      </div>
+                      <div class="module-card-panel js-card-panel" hidden>
+                        <div class="section-block">
+                          <?= render_persona_story_block($row, 'Generales de ley') ?>
+                        </div>
+                        <div class="section-block">
+                          <h3>Registro policial</h3>
+                          <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
+                        </div>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
             <?php if ($familiares !== []): ?>
               <article class="module-card summary-block-card">
                 <header>
@@ -4568,12 +5425,16 @@ include __DIR__ . '/sidebar.php';
                         </div>
                       </div>
                       <div class="module-card-panel js-card-panel" hidden>
-                      <?= render_summary_field_sections($famRecord, $policiaPersonaSections) ?>
-                      <div class="section-block">
-                        <h3>Registro familiar</h3>
-                        <div class="field-grid"><?= render_field_cards($row, $summaryFamiliarRecordFields) ?></div>
-                      </div>
-                      <?= render_summary_field_sections($fallRecord, ['Fallecido relacionado' => $policiaPersonaSections['Identidad']]) ?>
+                        <div class="section-block">
+                          <?= render_persona_story_block($famRecord, 'Generales de ley del familiar') ?>
+                        </div>
+                        <div class="section-block">
+                          <h3>Registro familiar</h3>
+                          <div class="field-grid"><?= render_field_cards($row, $summaryFamiliarRecordFields) ?></div>
+                        </div>
+                        <div class="section-block">
+                          <?= render_persona_story_block($fallRecord, 'Generales de ley del fallecido') ?>
+                        </div>
                       </div>
                     </div>
                   <?php endforeach; ?>
@@ -4611,10 +5472,14 @@ include __DIR__ . '/sidebar.php';
                       </div>
                       <div class="module-card-panel js-card-panel" hidden>
                       <?php if ((string) ($row['tipo_propietario'] ?? '') === 'NATURAL'): ?>
-                        <?= render_summary_field_sections($ownerRecord, $policiaPersonaSections) ?>
+                        <div class="section-block">
+                          <?= render_persona_story_block($ownerRecord, 'Generales de ley del propietario') ?>
+                        </div>
                       <?php endif; ?>
                       <?php if (trim((string) ($repRecord['nombres'] ?? '')) !== ''): ?>
-                        <?= render_summary_field_sections($repRecord, ['Representante' => $policiaPersonaSections['Identidad'], 'Representante · Contacto' => $policiaPersonaSections['Nacimiento y Contacto'], 'Representante · Perfil' => $policiaPersonaSections['Perfil Complementario']]) ?>
+                        <div class="section-block">
+                          <?= render_persona_story_block($repRecord, 'Generales de ley del representante') ?>
+                        </div>
                       <?php endif; ?>
                       <div class="section-block">
                         <h3>Registro propietario</h3>
@@ -5422,7 +6287,7 @@ include __DIR__ . '/sidebar.php';
                           <article class="record-card">
                             <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> · <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
                             <div class="record-chipline">
-                              <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?>â€“<?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
+                              <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?> - <?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
                             </div>
                             <?php if (!empty($man['observaciones'])): ?><p><?= nl2br(h((string) $man['observaciones'])) ?></p><?php endif; ?>
                             <div class="record-actions">
@@ -6141,10 +7006,13 @@ include __DIR__ . '/sidebar.php';
                                 <div class="field-value"><?= h((string) ($driver['vehiculo'] ?? 'Sin vehículo registrado')) ?></div>
                               </div>
                               <div class="field-card span-2">
-                                <div class="field-label">Daños</div>
-                                <div class="field-value"><?= nl2br(h((string) (($driver['danos'] ?? '') !== '' ? $driver['danos'] : 'Sin daños registrados'))) ?></div>
+                                <div class="field-label">Peritaje</div>
+                                <div class="field-value"><?= h((string) (($driver['peritaje']['numero_peritaje'] ?? '') !== '' ? ('N° ' . $driver['peritaje']['numero_peritaje']) : 'Sin número')) ?></div>
                               </div>
                             </div>
+                          </div>
+                          <div class="section-block">
+                            <?= render_analysis_peritaje_story((array) ($driver['peritaje'] ?? [])) ?>
                           </div>
                         </article>
                       <?php endforeach; ?>

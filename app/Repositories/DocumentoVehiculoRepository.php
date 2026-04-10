@@ -45,13 +45,19 @@ final class DocumentoVehiculoRepository
              numero_propiedad, titulo_propiedad, partida_propiedad, sede_propiedad,
              numero_soat, aseguradora_soat, vigente_soat, vencimiento_soat,
              numero_revision, certificadora_revision, vigente_revision, vencimiento_revision,
-             numero_peritaje, fecha_peritaje, perito_peritaje, danos_peritaje)
+             numero_peritaje, fecha_peritaje, perito_peritaje,
+             sistema_electrico_peritaje, sistema_frenos_peritaje, sistema_direccion_peritaje,
+             sistema_transmision_peritaje, sistema_suspension_peritaje, planta_motriz_peritaje,
+             otros_peritaje, danos_peritaje)
             VALUES
             (:involucrado_vehiculo_id, :vehiculo_id,
              :numero_propiedad, :titulo_propiedad, :partida_propiedad, :sede_propiedad,
              :numero_soat, :aseguradora_soat, :vigente_soat, :vencimiento_soat,
              :numero_revision, :certificadora_revision, :vigente_revision, :vencimiento_revision,
-             :numero_peritaje, :fecha_peritaje, :perito_peritaje, :danos_peritaje)";
+             :numero_peritaje, :fecha_peritaje, :perito_peritaje,
+             :sistema_electrico_peritaje, :sistema_frenos_peritaje, :sistema_direccion_peritaje,
+             :sistema_transmision_peritaje, :sistema_suspension_peritaje, :planta_motriz_peritaje,
+             :otros_peritaje, :danos_peritaje)";
         $st = $this->pdo->prepare($sql);
         $st->execute($payload);
         return (int) $this->pdo->lastInsertId();
@@ -78,6 +84,13 @@ final class DocumentoVehiculoRepository
                   numero_peritaje = :numero_peritaje,
                   fecha_peritaje = :fecha_peritaje,
                   perito_peritaje = :perito_peritaje,
+                  sistema_electrico_peritaje = :sistema_electrico_peritaje,
+                  sistema_frenos_peritaje = :sistema_frenos_peritaje,
+                  sistema_direccion_peritaje = :sistema_direccion_peritaje,
+                  sistema_transmision_peritaje = :sistema_transmision_peritaje,
+                  sistema_suspension_peritaje = :sistema_suspension_peritaje,
+                  planta_motriz_peritaje = :planta_motriz_peritaje,
+                  otros_peritaje = :otros_peritaje,
                   danos_peritaje = :danos_peritaje,
                   actualizado_en = NOW()
                 WHERE id = :id";

@@ -236,10 +236,38 @@ textarea{ min-height:96px; resize:vertical; }
             <label>Perito</label>
             <input type="text" name="perito_peritaje" maxlength="100" value="<?= h($form['perito_peritaje']) ?>">
           </div>
+          <div>
+            <label>Sistema electrico</label>
+            <input type="text" name="sistema_electrico_peritaje" maxlength="255" value="<?= h($form['sistema_electrico_peritaje']) ?>">
+          </div>
+          <div>
+            <label>Sistema de frenos</label>
+            <input type="text" name="sistema_frenos_peritaje" maxlength="255" value="<?= h($form['sistema_frenos_peritaje']) ?>">
+          </div>
+          <div>
+            <label>Sistema de direccion</label>
+            <input type="text" name="sistema_direccion_peritaje" maxlength="255" value="<?= h($form['sistema_direccion_peritaje']) ?>">
+          </div>
+          <div>
+            <label>Sistema de transmision</label>
+            <input type="text" name="sistema_transmision_peritaje" maxlength="255" value="<?= h($form['sistema_transmision_peritaje']) ?>">
+          </div>
+          <div>
+            <label>Sistema de suspension</label>
+            <input type="text" name="sistema_suspension_peritaje" maxlength="255" value="<?= h($form['sistema_suspension_peritaje']) ?>">
+          </div>
+          <div>
+            <label>Planta motriz</label>
+            <input type="text" name="planta_motriz_peritaje" maxlength="255" value="<?= h($form['planta_motriz_peritaje']) ?>">
+          </div>
+          <div class="col-span-2">
+            <label>Otros</label>
+            <input type="text" name="otros_peritaje" maxlength="255" value="<?= h($form['otros_peritaje']) ?>">
+          </div>
         </div>
 
         <div class="section-header" style="margin-top:10px;">
-          <label style="margin:0;">Danos observados</label>
+          <label style="margin:0;">Danos constatados</label>
           <button class="btn icon" type="button" id="btnAddDanio" title="Agregar dano">+</button>
         </div>
         <div id="danosWrap"></div>

@@ -17,6 +17,13 @@ $per_pref = (int) g('persona_id', 0);
 $rol_pref = g('rol_id', '');
 $embed = g('embed', '0') === '1';
 $returnTo = g('return_to', '');
+$selfUrl = 'documento_manifestacion_nuevo.php?persona_id=' . (int) $per_pref
+    . '&accidente_id=' . (int) $acc_pref
+    . '&rol_id=' . urlencode((string) $rol_pref)
+    . '&embed=' . ($embed ? '1' : '0');
+if ($returnTo !== '') {
+    $selfUrl .= '&return_to=' . urlencode($returnTo);
+}
 $ctx = $service->contextoNuevo($acc_pref, $per_pref);
 $acc_label = $ctx['acc_label'];
 $per_label = $ctx['per_label'];
@@ -32,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $service->crear($_POST);
         $ok = 'Manifestacion guardada';
         if ($embed) {
-            echo "<script>try{parent.postMessage({type:'manifestacion.saved'}, '*');}catch(e){}</script>";
+            echo "<script>try{parent.postMessage({type:'manifestacion.saved'}, '*'); parent.location.reload();}catch(e){}</script>";
             exit;
         }
     } catch (Throwable $e) {
@@ -64,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php if ($ok && !$embed): ?><div class="ok"><?= h($ok) ?></div><?php endif; ?>
   <?php if ($contextMissing): ?><div class="err">Selecciona un accidente y una persona validos antes de registrar la manifestacion.</div><?php endif; ?>
 
-  <form method="post" class="card">
+  <form method="post" action="<?= h($selfUrl) ?>" class="card">
     <input type="hidden" name="accidente_id" value="<?= (int) $acc_pref ?>">
     <input type="hidden" name="persona_id" value="<?= (int) $per_pref ?>">
     <div class="grid">
