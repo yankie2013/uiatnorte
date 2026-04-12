@@ -1387,6 +1387,476 @@ function render_vehicle_story_block(array $vehicle): string
     return $html;
 }
 
+function license_narrative_text(array $person, array $license): string
+{
+    $name = person_name_generales_ley($person);
+    if ($name === '') {
+        $name = person_label($person);
+    }
+
+    $number = upper_text((string) ($license['numero'] ?? ''));
+    $class = upper_text((string) ($license['clase'] ?? ''));
+    $category = upper_text((string) ($license['categoria'] ?? ''));
+    $issuedBy = compact_text((string) ($license['expedido_por'] ?? ''));
+    if ($issuedBy === '') {
+        $issuedBy = 'Ministerio de Transporte y Comunicaciones';
+    }
+
+    $details = [];
+    if ($number !== '') {
+        $details[] = 'N° ' . $number;
+    }
+    if ($class !== '' || $category !== '') {
+        $classCategory = [];
+        if ($class !== '') {
+            $classCategory[] = 'clase ' . $class;
+        }
+        if ($category !== '') {
+            $classCategory[] = 'categoría ' . $category;
+        }
+        $details[] = 'en la ' . implode(' ', $classCategory);
+    }
+
+    $startsAt = fecha_generales_ley((string) ($license['vigente_desde'] ?? ''));
+    $endsAt = fecha_generales_ley((string) ($license['vigente_hasta'] ?? ''));
+    if ($startsAt !== '' || $endsAt !== '') {
+        $validity = 'vigente';
+        if ($startsAt !== '') {
+            $validity .= ' desde ' . $startsAt;
+        }
+        if ($endsAt !== '') {
+            $validity .= ' hasta el ' . $endsAt;
+        }
+        $details[] = $validity;
+    }
+
+    $text = 'Revisado en el sistema de licencia de conducir del MTC https://licencias-tramite.mtc.gob.pe/rmLB_Consulta.aspx, se obtuvo como información que a la consulta a la persona de ' . $name . ', “Sí” registra licencia de conducir expedida por el ' . $issuedBy;
+    if ($details !== []) {
+        $text .= ', ' . implode(', ', $details);
+    }
+
+    return $text . '.';
+}
+
+function render_license_narrative_block(array $person, array $licenses): string
+{
+    if ($licenses === []) {
+        return '';
+    }
+
+    $html = '<div class="license-story-block">';
+    foreach ($licenses as $index => $license) {
+        $text = license_narrative_text($person, $license);
+        $html .= '<div class="license-story-item">';
+        $html .= '<h4 class="license-story-title">' . h(($index + 1) . ') Licencia de conducir') . '</h4>';
+        $html .= '<div class="license-story-line">';
+        $html .= '<p class="license-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar licencia" title="Copiar licencia">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+function number_0_99_spanish(int $number): string
+{
+    $number = max(0, min(99, $number));
+    $units = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+    $special = [
+        10 => 'diez',
+        11 => 'once',
+        12 => 'doce',
+        13 => 'trece',
+        14 => 'catorce',
+        15 => 'quince',
+        16 => 'dieciséis',
+        17 => 'diecisiete',
+        18 => 'dieciocho',
+        19 => 'diecinueve',
+        20 => 'veinte',
+        21 => 'veintiuno',
+        22 => 'veintidós',
+        23 => 'veintitrés',
+        24 => 'veinticuatro',
+        25 => 'veinticinco',
+        26 => 'veintiséis',
+        27 => 'veintisiete',
+        28 => 'veintiocho',
+        29 => 'veintinueve',
+        30 => 'treinta',
+        40 => 'cuarenta',
+        50 => 'cincuenta',
+        60 => 'sesenta',
+        70 => 'setenta',
+        80 => 'ochenta',
+        90 => 'noventa',
+    ];
+
+    if ($number < 10) {
+        return $units[$number];
+    }
+    if ($number < 30) {
+        return $special[$number];
+    }
+
+    $tens = (int) floor($number / 10) * 10;
+    $rest = $number % 10;
+
+    return $special[$tens] . ($rest > 0 ? ' y ' . $units[$rest] : '');
+}
+
+function dosaje_cuantitativo_text(?string $value): string
+{
+    $raw = str_replace(',', '.', compact_text((string) ($value ?? '')));
+    if ($raw === '' || !is_numeric($raw)) {
+        return '';
+    }
+
+    $quantity = round((float) $raw, 2);
+    $grams = (int) floor($quantity);
+    $centigrams = (int) round(($quantity - $grams) * 100);
+    if ($centigrams === 100) {
+        $grams++;
+        $centigrams = 0;
+    }
+
+    $gramsText = number_0_99_spanish($grams) . ' ' . ($grams === 1 ? 'gramo' : 'gramos');
+    $centigramsText = number_0_99_spanish($centigrams) . ' ' . ($centigrams === 1 ? 'centigramo' : 'centigramos');
+
+    return $gramsText . ' ' . $centigramsText . ' de alcohol por litro de sangre (' . number_format($quantity, 2, '.', '') . ' g/L)';
+}
+
+function dosaje_narrative_text(array $dosaje): string
+{
+    $date = fecha_generales_ley((string) ($dosaje['fecha_extraccion'] ?? ''));
+    $number = upper_text((string) ($dosaje['numero'] ?? ''));
+    $registry = upper_text((string) ($dosaje['numero_registro'] ?? ''));
+    $quantitative = dosaje_cuantitativo_text((string) ($dosaje['resultado_cuantitativo'] ?? ''));
+    $qualitative = compact_text((string) ($dosaje['resultado_cualitativo'] ?? ''));
+
+    $text = 'Fue sometido a la pericia de Dosaje Etílico, por personal médico de la unidad desconcentrada de dosaje etílico';
+    if ($date !== '') {
+        $text .= ', el ' . $date;
+    }
+
+    if ($number !== '') {
+        $text .= ', donde expidieron el Certificado N° ' . $number;
+    } else {
+        $text .= ', donde expidieron el Certificado de Dosaje Etílico';
+    }
+    if ($registry !== '') {
+        $text .= ' (registro N° ' . $registry . ')';
+    }
+
+    if ($quantitative !== '') {
+        $text .= ', con el resultado ' . $quantitative;
+    } elseif ($qualitative !== '') {
+        $text .= ', con resultado ' . $qualitative;
+    }
+
+    return $text . '.';
+}
+
+function render_dosaje_narrative_block(array $dosajes): string
+{
+    if ($dosajes === []) {
+        return '';
+    }
+
+    $html = '<div class="dosage-story-block">';
+    foreach ($dosajes as $index => $dosaje) {
+        $text = dosaje_narrative_text($dosaje);
+        $html .= '<div class="dosage-story-item">';
+        $html .= '<h4 class="dosage-story-title">' . h(($index + 2) . ') Dosaje etílico') . '</h4>';
+        $html .= '<div class="dosage-story-line">';
+        $html .= '<p class="dosage-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar dosaje" title="Copiar dosaje">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+function simple_time_text(?string $value): string
+{
+    $value = compact_text((string) ($value ?? ''));
+    if ($value === '') {
+        return '';
+    }
+
+    return substr($value, 0, 5);
+}
+
+function abogado_nombre_text(array $abogado): string
+{
+    return trim((string) preg_replace('/\s+/u', ' ', implode(' ', array_filter([
+        title_text((string) ($abogado['nombres'] ?? '')),
+        upper_text((string) ($abogado['apellido_paterno'] ?? '')),
+        upper_text((string) ($abogado['apellido_materno'] ?? '')),
+    ], static fn(string $item): bool => $item !== ''))));
+}
+
+function manifestacion_abogado_clause(array $abogados): string
+{
+    if ($abogados === []) {
+        return '';
+    }
+
+    $clauses = [];
+    foreach ($abogados as $abogado) {
+        $name = abogado_nombre_text($abogado);
+        if ($name === '') {
+            continue;
+        }
+
+        $parts = [$name];
+        $colegiatura = upper_text((string) ($abogado['colegiatura'] ?? ''));
+        $registro = upper_text((string) ($abogado['registro'] ?? ''));
+        $domicilio = compact_text((string) ($abogado['domicilio_procesal'] ?? ''));
+        $casilla = compact_text((string) ($abogado['casilla_electronica'] ?? ''));
+
+        if ($colegiatura !== '') {
+            $parts[] = 'con colegiatura N° ' . $colegiatura;
+        }
+        if ($registro !== '') {
+            $parts[] = 'registro N° ' . $registro;
+        }
+        if ($domicilio !== '') {
+            $parts[] = 'domicilio procesal en ' . $domicilio;
+        }
+        if ($casilla !== '') {
+            $parts[] = 'casilla electrónica ' . $casilla;
+        }
+
+        $clauses[] = implode(', ', $parts);
+    }
+
+    if ($clauses === []) {
+        return '';
+    }
+
+    return ' con la participación de su abogado defensor ' . implode('; ', $clauses);
+}
+
+function manifestacion_fiscal_clause(array $context): string
+{
+    $fiscal = compact_text((string) ($context['fiscal_nombre'] ?? ''));
+    $cargo = compact_text((string) ($context['fiscal_cargo'] ?? ''));
+    $fiscalia = compact_text((string) ($context['fiscalia_nombre'] ?? ''));
+
+    if ($fiscal === '' && $fiscalia === '') {
+        return '';
+    }
+
+    $clause = ' con la participación del representante del Ministerio Público';
+    if ($fiscal !== '') {
+        $clause .= ', ' . $fiscal;
+    }
+    if ($cargo !== '') {
+        $clause .= ', ' . $cargo;
+    }
+    if ($fiscalia !== '') {
+        $clause .= ' de ' . $fiscalia;
+    }
+
+    return $clause;
+}
+
+function manifestacion_narrative_text(array $manifestacion, array $abogados, array $context): string
+{
+    $date = fecha_generales_ley((string) ($manifestacion['fecha'] ?? ''));
+    $start = simple_time_text((string) ($manifestacion['horario_inicio'] ?? ''));
+    $end = simple_time_text((string) ($manifestacion['hora_termino'] ?? ''));
+    $modalidad = compact_text((string) ($manifestacion['modalidad'] ?? ''));
+
+    $text = 'Se recepcionó la manifestación';
+    if ($modalidad !== '') {
+        $text .= ' bajo la modalidad de ' . $modalidad;
+    }
+    if ($date !== '') {
+        $text .= ', el ' . $date;
+    }
+    if ($start !== '' || $end !== '') {
+        $text .= ', desde las ' . ($start !== '' ? $start : '--:--') . ' horas';
+        if ($end !== '') {
+            $text .= ' hasta las ' . $end . ' horas';
+        }
+    }
+
+    $text .= manifestacion_abogado_clause($abogados);
+    $text .= manifestacion_fiscal_clause($context);
+
+    return $text . '.';
+}
+
+function render_manifestacion_narrative_block(array $manifestaciones, array $abogados, array $context): string
+{
+    if ($manifestaciones === []) {
+        return '';
+    }
+
+    $html = '<div class="manifestation-story-block">';
+    foreach ($manifestaciones as $index => $manifestacion) {
+        $text = manifestacion_narrative_text($manifestacion, $abogados, $context);
+        $html .= '<div class="manifestation-story-item">';
+        $html .= '<h4 class="manifestation-story-title">' . h(($index + 3) . ') Manifestación') . '</h4>';
+        $html .= '<div class="manifestation-story-line">';
+        $html .= '<p class="manifestation-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar manifestación" title="Copiar manifestación">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+function abogado_narrative_text(array $abogado): string
+{
+    $name = abogado_nombre_text($abogado);
+    $parts = $name !== '' ? [$name] : [];
+    $colegiatura = upper_text((string) ($abogado['colegiatura'] ?? ''));
+    $registro = upper_text((string) ($abogado['registro'] ?? ''));
+    $casilla = compact_text((string) ($abogado['casilla_electronica'] ?? ''));
+    $domicilio = compact_text((string) ($abogado['domicilio_procesal'] ?? ''));
+    $celular = compact_text((string) ($abogado['celular'] ?? ''));
+    $email = compact_text((string) ($abogado['email'] ?? ''));
+
+    if ($colegiatura !== '') {
+        $parts[] = 'colegiatura N° ' . $colegiatura;
+    }
+    if ($registro !== '') {
+        $parts[] = 'registro N° ' . $registro;
+    }
+    if ($casilla !== '') {
+        $parts[] = 'casilla electrónica ' . $casilla;
+    }
+    if ($domicilio !== '') {
+        $parts[] = 'domicilio procesal en ' . $domicilio;
+    }
+    if ($celular !== '') {
+        $parts[] = 'celular ' . $celular;
+    }
+    if ($email !== '') {
+        $parts[] = 'correo ' . $email;
+    }
+
+    if ($parts === []) {
+        return 'Registra abogado defensor sin datos complementarios.';
+    }
+
+    return ($name !== '' ? 'Registra como abogado defensor a ' : 'Registra abogado defensor con ') . implode(', ', $parts) . '.';
+}
+
+function render_summary_abogado_block(array $abogados): string
+{
+    if ($abogados === []) {
+        return '';
+    }
+
+    $html = '<div class="section-block"><h3>Abogado defensor</h3><div class="summary-doc-stack">';
+    foreach ($abogados as $index => $abogado) {
+        $text = abogado_narrative_text($abogado);
+        $html .= '<div class="manifestation-story-item">';
+        $html .= '<h4 class="manifestation-story-title">' . h(($index + 1) . ') Abogado defensor') . '</h4>';
+        $html .= '<div class="manifestation-story-line">';
+        $html .= '<p class="manifestation-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar abogado" title="Copiar abogado">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div></div>';
+
+    return $html;
+}
+
+function render_summary_manifestacion_block(array $manifestaciones, array $abogados, array $context): string
+{
+    if ($manifestaciones === []) {
+        return '';
+    }
+
+    return '<div class="section-block"><h3>Manifestaciones</h3><div class="summary-doc-stack">' .
+        render_manifestacion_narrative_block($manifestaciones, $abogados, $context) .
+        '</div></div>';
+}
+
+function summary_records_for_person_ids(array $recordsByPersona, array $personIds): array
+{
+    $records = [];
+    $seen = [];
+    foreach ($personIds as $personId) {
+        $personId = (int) $personId;
+        if ($personId <= 0 || empty($recordsByPersona[$personId])) {
+            continue;
+        }
+
+        foreach ($recordsByPersona[$personId] as $index => $record) {
+            $key = array_key_exists('id', $record) ? (string) $record['id'] : $personId . ':' . $index;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $records[] = $record;
+        }
+    }
+
+    return $records;
+}
+
+function render_participant_manifestation_section(
+    array $manifestaciones,
+    int $personaId,
+    int $accidenteId,
+    string $workbenchId,
+    string $frameId,
+    string $returnTo,
+    string $emptyText = 'No hay manifestaciones registradas para esta persona en este accidente.'
+): string {
+    if ($personaId <= 0) {
+        return '<div class="empty-state">No hay persona vinculada para registrar manifestación.</div>';
+    }
+
+    $returnParam = urlencode($returnTo);
+    $html = '<div class="section-block">';
+    $html .= '<h3>Manifestaciones</h3>';
+    $html .= '<div class="record-actions" style="margin-top:0;margin-bottom:8px">';
+    $html .= '<a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=' . $personaId . '&accidente_id=' . $accidenteId . '&embed=1&return_to=' . $returnParam . '" data-workbench="' . h($workbenchId) . '" data-frame="' . h($frameId) . '" data-title="Manifestación">+ Nueva manifestación</a>';
+    $html .= '</div>';
+
+    if ($manifestaciones === []) {
+        $html .= '<div class="empty-state">' . h($emptyText) . '</div>';
+    } else {
+        $html .= '<div class="record-stack">';
+        foreach ($manifestaciones as $manifestacion) {
+            $title = compact_text((string) ($manifestacion['modalidad'] ?? ''));
+            if ($title === '') {
+                $title = 'Sin modalidad';
+            }
+            $start = simple_time_text((string) ($manifestacion['horario_inicio'] ?? ''));
+            $end = simple_time_text((string) ($manifestacion['hora_termino'] ?? ''));
+            $timeText = ($start !== '' ? $start : '--:--') . ' - ' . ($end !== '' ? $end : '--:--');
+
+            $html .= '<article class="record-card">';
+            $html .= '<h5>' . h($title . ' · ' . fecha_simple($manifestacion['fecha'] ?? null)) . '</h5>';
+            $html .= '<div class="record-chipline"><span class="chip-simple">' . h($timeText) . '</span></div>';
+            $html .= '<div class="record-actions">';
+            $html .= '<a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=' . (int) ($manifestacion['id'] ?? 0) . '&embed=1&return_to=' . $returnParam . '" data-workbench="' . h($workbenchId) . '" data-frame="' . h($frameId) . '" data-title="Manifestación">Ver / Editar</a>';
+            $html .= '</div>';
+            $html .= '</article>';
+        }
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+
 function render_summary_vehicle_block(array $vehicle, array $documents, string $title, array $vehicleFields, array $docSections): string
 {
     $subtitleParts = [];
@@ -1446,12 +1916,17 @@ function render_summary_person_block(
     $html .= '<div class="section-block">';
     $html .= render_persona_story_block($person, 'Generales de ley');
     $html .= '</div>';
+    $html .= render_summary_abogado_block($extras['abogados'] ?? []);
 
     if (!empty($extras['lc'])) {
         $html .= '<div class="section-block"><h3>Licencias</h3><div class="summary-doc-stack">';
-        foreach ($extras['lc'] as $index => $row) {
-            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Licencia #' . ($index + 1)) . '</h4></div></div>';
-            $html .= '<div class="field-grid">' . render_field_cards($row, $lcFields) . '</div></div>';
+        if (is_conductor($person)) {
+            $html .= render_license_narrative_block($person, $extras['lc']);
+        } else {
+            foreach ($extras['lc'] as $index => $row) {
+                $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Licencia #' . ($index + 1)) . '</h4></div></div>';
+                $html .= '<div class="field-grid">' . render_field_cards($row, $lcFields) . '</div></div>';
+            }
         }
         $html .= '</div></div>';
     }
@@ -1467,20 +1942,16 @@ function render_summary_person_block(
 
     if (!empty($extras['dos'])) {
         $html .= '<div class="section-block"><h3>Dosajes</h3><div class="summary-doc-stack">';
-        foreach ($extras['dos'] as $index => $row) {
-            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Dosaje #' . ($index + 1)) . '</h4></div></div>';
-            $html .= '<div class="field-grid">' . render_field_cards($row, $dosajeFields) . '</div></div>';
-        }
+        $html .= render_dosaje_narrative_block($extras['dos']);
         $html .= '</div></div>';
     }
 
     if (!empty($extras['man'])) {
-        $html .= '<div class="section-block"><h3>Manifestaciones</h3><div class="summary-doc-stack">';
-        foreach ($extras['man'] as $index => $row) {
-            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Manifestación #' . ($index + 1)) . '</h4></div></div>';
-            $html .= '<div class="field-grid">' . render_field_cards($row, $manifestacionFields) . '</div></div>';
-        }
-        $html .= '</div></div>';
+        $html .= render_summary_manifestacion_block(
+            $extras['man'],
+            $extras['abogados'] ?? [],
+            $extras['manifestacion_context'] ?? []
+        );
     }
 
     if (!empty($extras['occ'])) {
@@ -2469,6 +2940,7 @@ if (!empty($accidenteBase['comisaria_id']) && !in_array((int) $accidenteBase['co
 $fiscalesDeFiscalia = !empty($accidenteBase['fiscalia_id']) ? $accidenteRepo->fiscalesByFiscalia((int) $accidenteBase['fiscalia_id']) : [];
 $fiscalTelData = !empty($accidenteBase['fiscal_id']) ? $accidenteRepo->fiscalTelefono((int) $accidenteBase['fiscal_id']) : [];
 
+$fiscalCargoSelect = safe_column_exists($pdo, 'fiscales', 'cargo') ? 'fi.cargo' : "''";
 $accidenteInfo = safe_query_one(
     $pdo,
     "SELECT a.*,
@@ -2477,7 +2949,8 @@ $accidenteInfo = safe_query_one(
             t.nombre AS dist_nom,
             c.nombre AS comisaria_nom,
             fa.nombre AS fiscalia_nom,
-            CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nom
+            CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nom,
+            {$fiscalCargoSelect} AS fiscal_cargo
        FROM accidentes a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
   LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
@@ -2973,6 +3446,32 @@ $abogados = safe_query_all(
    ORDER BY a.apellido_paterno, a.apellido_materno, a.nombres, a.id",
     [$accidente_id]
 );
+
+$abogadosPorPersona = [];
+foreach ($abogados as $abogado) {
+    $personaRepresentadaId = (int) ($abogado['persona_id'] ?? 0);
+    if ($personaRepresentadaId <= 0) {
+        continue;
+    }
+    $abogadosPorPersona[$personaRepresentadaId][] = $abogado;
+}
+
+$manifestacionesPorPersona = [];
+$manifestacionesAccidente = safe_query_all(
+    $pdo,
+    "SELECT id, persona_id, fecha, horario_inicio, hora_termino, modalidad, '' AS observaciones
+       FROM Manifestacion
+      WHERE accidente_id = ?
+   ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
+    [$accidente_id]
+);
+foreach ($manifestacionesAccidente as $manifestacionAccidente) {
+    $manifestacionPersonaId = (int) ($manifestacionAccidente['persona_id'] ?? 0);
+    if ($manifestacionPersonaId <= 0) {
+        continue;
+    }
+    $manifestacionesPorPersona[$manifestacionPersonaId][] = $manifestacionAccidente;
+}
 
 $oficios = safe_query_all(
     $pdo,
@@ -3490,6 +3989,12 @@ foreach ($personas as $persona) {
            ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
             [$personaId, $accidente_id]
         ) : [],
+        'abogados' => $abogadosPorPersona[$personaId] ?? [],
+        'manifestacion_context' => [
+            'fiscalia_nombre' => $A['fiscalia_nombre'] ?? ($A['fiscalia_nom'] ?? ''),
+            'fiscal_nombre' => $A['fiscal_nombre'] ?? ($A['fiscal_nom'] ?? ''),
+            'fiscal_cargo' => $A['fiscal_cargo'] ?? '',
+        ],
         'occ' => $personaId > 0 ? safe_query_all(
             $pdo,
             "SELECT id,
@@ -3678,6 +4183,11 @@ $summaryAccidentRecord = $A;
 $summaryAccidentRecord['comisaria_nombre'] = $A['comisaria_nombre'] ?? ($A['comisaria_nom'] ?? ($A['comisaria'] ?? ''));
 $summaryAccidentRecord['fiscalia_nombre'] = $A['fiscalia_nombre'] ?? ($A['fiscalia_nom'] ?? '');
 $summaryAccidentRecord['fiscal_nombre'] = $A['fiscal_nombre'] ?? ($A['fiscal_nom'] ?? '');
+$summaryManifestacionContext = [
+    'fiscalia_nombre' => $summaryAccidentRecord['fiscalia_nombre'],
+    'fiscal_nombre' => $summaryAccidentRecord['fiscal_nombre'],
+    'fiscal_cargo' => $A['fiscal_cargo'] ?? '',
+];
 $summaryAccidentRecord['ubicacion_accidente'] = trim((string) implode(' / ', array_filter([
     $A['departamento_nombre'] ?? '',
     $A['provincia_nombre'] ?? '',
@@ -4201,6 +4711,21 @@ include __DIR__ . '/sidebar.php';
   .vehicle-docs-story-list{display:grid;gap:6px}
   .vehicle-docs-story-item{display:flex;align-items:flex-start;gap:8px}
   .vehicle-docs-story-text{margin:0;color:#111827;font-size:14px;line-height:1.45;font-weight:500;flex:1}
+  .license-story-block{display:grid;gap:10px}
+  .license-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
+  .license-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .license-story-line{display:flex;align-items:flex-start;gap:8px}
+  .license-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .dosage-story-block{display:grid;gap:10px}
+  .dosage-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
+  .dosage-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .dosage-story-line{display:flex;align-items:flex-start;gap:8px}
+  .dosage-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .manifestation-story-block{display:grid;gap:10px}
+  .manifestation-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
+  .manifestation-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .manifestation-story-line{display:flex;align-items:flex-start;gap:8px}
+  .manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
   .field-card.span-2{grid-column:span 2}
@@ -4240,6 +4765,12 @@ include __DIR__ . '/sidebar.php';
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
   .module-card h4{margin:0;font-size:14px;font-weight:800;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .module-card p{margin:0;color:var(--muted);font-weight:600;font-size:11px;line-height:1.25}
+  .module-card h4.license-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .module-card p.license-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .module-card h4.dosage-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .module-card p.dosage-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .module-card h4.manifestation-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .module-card p.manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .module-card-controls{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .module-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .module-title-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -4604,6 +5135,26 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .vehicle-docs-story-text{
     color:#fecaca;
   }
+  html[data-theme-resolved="dark"] .license-story-item{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+  }
+  html[data-theme-resolved="dark"] .dosage-story-item{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+  }
+  html[data-theme-resolved="dark"] .manifestation-story-item{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+  }
+  html[data-theme-resolved="dark"] .license-story-title,
+  html[data-theme-resolved="dark"] .license-story-text,
+  html[data-theme-resolved="dark"] .dosage-story-title,
+  html[data-theme-resolved="dark"] .dosage-story-text,
+  html[data-theme-resolved="dark"] .manifestation-story-title,
+  html[data-theme-resolved="dark"] .manifestation-story-text{
+    color:#fecaca;
+  }
   html[data-theme-resolved="dark"] .persona-story-name{
     background:rgba(248,113,113,.18);
   }
@@ -4701,6 +5252,14 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .diligencia-inline-box strong,
   html[data-theme-resolved="dark"] .summary-pill strong{
     color:#f0c654;
+  }
+  html[data-theme-resolved="dark"] .module-card h4.license-story-title,
+  html[data-theme-resolved="dark"] .module-card p.license-story-text,
+  html[data-theme-resolved="dark"] .module-card h4.dosage-story-title,
+  html[data-theme-resolved="dark"] .module-card p.dosage-story-text,
+  html[data-theme-resolved="dark"] .module-card h4.manifestation-story-title,
+  html[data-theme-resolved="dark"] .module-card p.manifestation-story-text{
+    color:#fecaca;
   }
   html[data-theme-resolved="dark"] .module-card p,
   html[data-theme-resolved="dark"] .record-card p,
@@ -5373,6 +5932,11 @@ include __DIR__ . '/sidebar.php';
                 </header>
                 <div class="summary-doc-stack">
                   <?php foreach ($policias as $row): ?>
+                    <?php
+                      $summaryPoliciaPersonaId = (int) ($row['persona_id'] ?? 0);
+                      $summaryPoliciaAbogados = summary_records_for_person_ids($abogadosPorPersona, [$summaryPoliciaPersonaId]);
+                      $summaryPoliciaManifestaciones = summary_records_for_person_ids($manifestacionesPorPersona, [$summaryPoliciaPersonaId]);
+                    ?>
                     <div class="summary-subcard" data-collapsible-card>
                       <div class="summary-header">
                         <div>
@@ -5392,6 +5956,8 @@ include __DIR__ . '/sidebar.php';
                           <h3>Registro policial</h3>
                           <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
                         </div>
+                        <?= render_summary_abogado_block($summaryPoliciaAbogados) ?>
+                        <?= render_summary_manifestacion_block($summaryPoliciaManifestaciones, $summaryPoliciaAbogados, $summaryManifestacionContext) ?>
                       </div>
                     </div>
                   <?php endforeach; ?>
@@ -5412,6 +5978,9 @@ include __DIR__ . '/sidebar.php';
                     <?php
                       $famRecord = project_prefixed_record($row, 'fam_');
                       $fallRecord = project_prefixed_record($row, 'fall_');
+                      $summaryFamiliarPersonaId = (int) ($row['familiar_persona_id'] ?? 0);
+                      $summaryFamiliarAbogados = summary_records_for_person_ids($abogadosPorPersona, [$summaryFamiliarPersonaId]);
+                      $summaryFamiliarManifestaciones = summary_records_for_person_ids($manifestacionesPorPersona, [$summaryFamiliarPersonaId]);
                     ?>
                     <div class="summary-subcard" data-collapsible-card>
                       <div class="summary-header">
@@ -5432,6 +6001,8 @@ include __DIR__ . '/sidebar.php';
                           <h3>Registro familiar</h3>
                           <div class="field-grid"><?= render_field_cards($row, $summaryFamiliarRecordFields) ?></div>
                         </div>
+                        <?= render_summary_abogado_block($summaryFamiliarAbogados) ?>
+                        <?= render_summary_manifestacion_block($summaryFamiliarManifestaciones, $summaryFamiliarAbogados, $summaryManifestacionContext) ?>
                         <div class="section-block">
                           <?= render_persona_story_block($fallRecord, 'Generales de ley del fallecido') ?>
                         </div>
@@ -5458,6 +6029,11 @@ include __DIR__ . '/sidebar.php';
                       $principalName = (string) ($row['tipo_propietario'] ?? '') === 'NATURAL'
                         ? person_label($ownerRecord)
                         : ((string) ($row['razon_social'] ?? '') !== '' ? (string) $row['razon_social'] : 'Sin razón social');
+                      $summaryPropietarioPersonaIds = (string) ($row['tipo_propietario'] ?? '') === 'JURIDICA'
+                        ? [(int) ($row['representante_persona_id'] ?? 0), (int) ($row['propietario_persona_id'] ?? 0)]
+                        : [(int) ($row['propietario_persona_id'] ?? 0), (int) ($row['representante_persona_id'] ?? 0)];
+                      $summaryPropietarioAbogados = summary_records_for_person_ids($abogadosPorPersona, $summaryPropietarioPersonaIds);
+                      $summaryPropietarioManifestaciones = summary_records_for_person_ids($manifestacionesPorPersona, $summaryPropietarioPersonaIds);
                     ?>
                     <div class="summary-subcard" data-collapsible-card>
                       <div class="summary-header">
@@ -5485,6 +6061,8 @@ include __DIR__ . '/sidebar.php';
                         <h3>Registro propietario</h3>
                         <div class="field-grid"><?= render_field_cards($row, $summaryOwnerRecordFields) ?></div>
                       </div>
+                      <?= render_summary_abogado_block($summaryPropietarioAbogados) ?>
+                      <?= render_summary_manifestacion_block($summaryPropietarioManifestaciones, $summaryPropietarioAbogados, $summaryManifestacionContext) ?>
                       </div>
                     </div>
                   <?php endforeach; ?>
@@ -5829,6 +6407,13 @@ include __DIR__ . '/sidebar.php';
           <div class="tabs-toolbar">
             <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo persona involucrada</a>
             <a class="btn-shell" href="involucrados_vehiculos_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id)) ?>">Nuevo vehículo involucrado</a>
+          </div>
+          <div class="inline-workbench" id="participantes-workbench" hidden>
+            <div class="inline-head">
+              <strong id="participantes-workbench-title">Formulario</strong>
+              <button type="button" class="btn-shell js-inline-close" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame">Cerrar</button>
+            </div>
+            <iframe class="inline-frame" id="participantes-workbench-frame" src="about:blank" loading="lazy"></iframe>
           </div>
           <?php
             $participantFixedTabs = [
@@ -6370,10 +6955,13 @@ include __DIR__ . '/sidebar.php';
             <div class="module-grid">
               <?php foreach ($policias as $row): ?>
                 <?php
-                  $policiaWa = preg_replace('/\D+/', '', (string) ($row['celular'] ?? ''));
-                  $policiaWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
-                  $policiaManifestUrl = 'marcador_manifestacion_policia.php?policia_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
-                ?>
+	                  $policiaWa = preg_replace('/\D+/', '', (string) ($row['celular'] ?? ''));
+	                  $policiaWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+	                  $policiaManifestUrl = 'marcador_manifestacion_policia.php?policia_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
+	                  $policiaPersonaId = (int) ($row['persona_id'] ?? 0);
+	                  $policiaManifestaciones = $manifestacionesPorPersona[$policiaPersonaId] ?? [];
+	                  $returnToParticipantes = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
+	                ?>
                 <article class="module-card" data-collapsible-card>
                   <header>
                     <div>
@@ -6406,9 +6994,12 @@ include __DIR__ . '/sidebar.php';
                   <div class="editable-shell" data-edit-shell="policia-<?= (int) $row['id'] ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
-                        <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PNP:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
-                      </div>
+	                        <a class="btn-shell" href="policial_interviniente_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+	                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PNP:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
+	                        <?php if ($policiaPersonaId > 0): ?>
+	                          <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= $policiaPersonaId ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($returnToParticipantes) ?>" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame" data-title="Manifestación">+ Manifestación</a>
+	                        <?php endif; ?>
+	                      </div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="policia-<?= (int) $row['id'] ?>">Editar</button>
                         <div class="editable-actions" data-edit-actions="policia-<?= (int) $row['id'] ?>" hidden>
@@ -6429,11 +7020,12 @@ include __DIR__ . '/sidebar.php';
                             <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
                           </div>
                         <?php endforeach; ?>
-                        <div class="section-block">
-                          <h3>Registro policial</h3>
-                          <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
-                        </div>
-                      </div>
+	                        <div class="section-block">
+	                          <h3>Registro policial</h3>
+	                          <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
+	                        </div>
+	                        <?= render_participant_manifestation_section($policiaManifestaciones, $policiaPersonaId, (int) $accidente_id, 'participantes-workbench', 'participantes-workbench-frame', $returnToParticipantes) ?>
+	                      </div>
 
                       <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="policia-inline-form-<?= (int) $row['id'] ?>" data-shell="policia-<?= (int) $row['id'] ?>" data-error="policia-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
                         <input type="hidden" name="action" value="save_policial_inline">
@@ -6488,10 +7080,18 @@ include __DIR__ . '/sidebar.php';
                   $propietarioCelular = (string) (($row['tipo_propietario'] ?? '') === 'JURIDICA'
                     ? ($repRecord['celular'] ?? '')
                     : ($ownerRecord['celular'] ?? ''));
-                  $propietarioWa = preg_replace('/\D+/', '', $propietarioCelular);
-                  $propietarioWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
-                  $propietarioManifestUrl = 'marcador_manifestacion_propietario.php?propietario_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
-                ?>
+	                  $propietarioWa = preg_replace('/\D+/', '', $propietarioCelular);
+	                  $propietarioWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+	                  $propietarioManifestUrl = 'marcador_manifestacion_propietario.php?propietario_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
+	                  $propietarioManifestPersonaId = (string) ($row['tipo_propietario'] ?? '') === 'JURIDICA'
+	                    ? (int) ($row['representante_persona_id'] ?? 0)
+	                    : (int) ($row['propietario_persona_id'] ?? 0);
+	                  if ($propietarioManifestPersonaId <= 0) {
+	                      $propietarioManifestPersonaId = (int) ($row['propietario_persona_id'] ?? 0);
+	                  }
+	                  $propietarioManifestaciones = $manifestacionesPorPersona[$propietarioManifestPersonaId] ?? [];
+	                  $returnToParticipantes = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
+	                ?>
                 <article class="module-card" data-collapsible-card>
                   <header>
                     <div>
@@ -6526,9 +7126,12 @@ include __DIR__ . '/sidebar.php';
                   <div class="editable-shell" data-edit-shell="propietario-<?= (int) $row['id'] ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
-                        <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PRO:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
-                      </div>
+	                        <a class="btn-shell" href="propietario_vehiculo_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+	                        <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('PRO:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
+	                        <?php if ($propietarioManifestPersonaId > 0): ?>
+	                          <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= $propietarioManifestPersonaId ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($returnToParticipantes) ?>" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame" data-title="Manifestación">+ Manifestación</a>
+	                        <?php endif; ?>
+	                      </div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="propietario-<?= (int) $row['id'] ?>">Editar</button>
                         <div class="editable-actions" data-edit-actions="propietario-<?= (int) $row['id'] ?>" hidden>
@@ -6560,11 +7163,12 @@ include __DIR__ . '/sidebar.php';
                           </div>
                         <?php endforeach; ?>
                       <?php endif; ?>
-                      <div class="section-block">
-                        <h3>Registro propietario</h3>
-                        <div class="field-grid"><?= render_field_cards($row, ['tipo_propietario', 'rol_legal', ['key' => 'ruc', 'class' => 'span-2'], ['key' => 'razon_social', 'class' => 'span-2'], ['key' => 'domicilio_fiscal', 'class' => 'span-2'], ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
-                      </div>
-                    </div>
+	                      <div class="section-block">
+	                        <h3>Registro propietario</h3>
+	                        <div class="field-grid"><?= render_field_cards($row, ['tipo_propietario', 'rol_legal', ['key' => 'ruc', 'class' => 'span-2'], ['key' => 'razon_social', 'class' => 'span-2'], ['key' => 'domicilio_fiscal', 'class' => 'span-2'], ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
+	                      </div>
+	                      <?= render_participant_manifestation_section($propietarioManifestaciones, $propietarioManifestPersonaId, (int) $accidente_id, 'participantes-workbench', 'participantes-workbench-frame', $returnToParticipantes) ?>
+	                    </div>
 
                     <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="propietario-inline-form-<?= (int) $row['id'] ?>" data-shell="propietario-<?= (int) $row['id'] ?>" data-error="propietario-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
                       <input type="hidden" name="action" value="save_propietario_inline">
@@ -6625,10 +7229,13 @@ include __DIR__ . '/sidebar.php';
                   $fallRecord = project_prefixed_record($row, 'fall_');
                   $nombreFamiliar = trim((string) (($famRecord['nombres'] ?? '') . ' ' . ($famRecord['apellido_paterno'] ?? '') . ' ' . ($famRecord['apellido_materno'] ?? '')));
                   $nombreFallecido = trim((string) (($fallRecord['nombres'] ?? '') . ' ' . ($fallRecord['apellido_paterno'] ?? '') . ' ' . ($fallRecord['apellido_materno'] ?? '')));
-                  $familiarWa = preg_replace('/\D+/', '', (string) ($famRecord['celular'] ?? ''));
-                  $familiarWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
-                  $familiarManifestUrl = 'marcador_manifestacion_familiar.php?fam_id=' . (int) $row['id'];
-                ?>
+	                  $familiarWa = preg_replace('/\D+/', '', (string) ($famRecord['celular'] ?? ''));
+	                  $familiarWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+	                  $familiarManifestUrl = 'marcador_manifestacion_familiar.php?fam_id=' . (int) $row['id'];
+	                  $familiarPersonaId = (int) ($row['familiar_persona_id'] ?? 0);
+	                  $familiarManifestaciones = $manifestacionesPorPersona[$familiarPersonaId] ?? [];
+	                  $returnToParticipantes = $_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id);
+	                ?>
                 <article class="module-card" data-collapsible-card>
                   <header>
                     <div>
@@ -6661,9 +7268,12 @@ include __DIR__ . '/sidebar.php';
                     <div class="editable-shell" data-edit-shell="familiar-persona-<?= (int) $row['id'] ?>">
                       <div class="editable-toolbar">
                         <div class="record-actions" style="margin-top:0">
-                          <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                          <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('FAM:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
-                        </div>
+	                          <a class="btn-shell" href="familiar_fallecido_leer.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
+	                          <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('FAM:' . (int) $row['id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
+	                          <?php if ($familiarPersonaId > 0): ?>
+	                            <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= $familiarPersonaId ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($returnToParticipantes) ?>" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame" data-title="Manifestación">+ Manifestación</a>
+	                          <?php endif; ?>
+	                        </div>
                         <div class="editable-actions">
                           <button type="button" class="btn-shell js-edit-start" data-shell="familiar-persona-<?= (int) $row['id'] ?>">Editar</button>
                           <div class="editable-actions" data-edit-actions="familiar-persona-<?= (int) $row['id'] ?>" hidden>
@@ -6678,13 +7288,14 @@ include __DIR__ . '/sidebar.php';
                       <div class="inline-edit-error" id="familiar-inline-error-<?= (int) $row['id'] ?>"></div>
 
                       <div class="editable-view" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
-                        <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
-                          <div class="section-block">
-                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
-                            <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
-                          </div>
-                        <?php endforeach; ?>
-                      </div>
+	                        <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+	                          <div class="section-block">
+	                            <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
+	                            <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
+	                          </div>
+	                        <?php endforeach; ?>
+	                        <?= render_participant_manifestation_section($familiarManifestaciones, $familiarPersonaId, (int) $accidente_id, 'participantes-workbench', 'participantes-workbench-frame', $returnToParticipantes) ?>
+	                      </div>
 
                       <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="familiar-inline-form-<?= (int) $row['id'] ?>" data-shell="familiar-persona-<?= (int) $row['id'] ?>" data-error="familiar-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
                         <input type="hidden" name="action" value="save_persona_inline">
