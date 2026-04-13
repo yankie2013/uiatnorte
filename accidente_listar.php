@@ -8,6 +8,28 @@ $pdo->exec("SET NAMES utf8mb4");
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+function lower_u(string $value): string {
+  return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+}
+
+function normalizar_rol_resumen(?string $rol): ?string {
+  $rol = trim((string)$rol);
+  if ($rol === '') return null;
+  $norm = str_replace('ó', 'o', lower_u($rol));
+  if (str_contains($norm, 'conduc')) return 'Conductor';
+  if (str_contains($norm, 'peaton')) return 'Peatón';
+  return null;
+}
+
+function normalizar_lesion_resumen(?string $lesion): string {
+  $lesion = trim((string)$lesion);
+  if ($lesion === '') return 'Ileso';
+  $norm = str_replace('ó', 'o', lower_u($lesion));
+  if (str_contains($norm, 'fallec')) return 'Fallecido';
+  if ($norm === 'ileso' || $norm === 'sin lesion' || $norm === 'sin lesiones') return 'Ileso';
+  return 'Herido';
+}
+
 /* ============================
    AJAX: cambiar estado (inline) / cambiar folder (inline) / priority
 ============================ */
@@ -176,6 +198,45 @@ $sql .= " ORDER BY a.priority DESC, (a.folder IS NULL) ASC, a.folder ASC, a.fech
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+
+$personasResumenPorAccidente = [];
+$accidenteIds = array_values(array_unique(array_map(static fn($row) => (int)($row['id'] ?? 0), $rows)));
+if ($accidenteIds !== []) {
+  $marks = implode(',', array_fill(0, count($accidenteIds), '?'));
+  $sqlInv = "SELECT ip.accidente_id,
+                    p.nombres, p.apellido_paterno, p.apellido_materno,
+                    ip.lesion,
+                    rp.Nombre AS rol_nombre
+               FROM involucrados_personas ip
+               JOIN personas p ON p.id = ip.persona_id
+               JOIN participacion_persona rp ON rp.Id = ip.rol_id
+              WHERE ip.accidente_id IN ($marks)
+              ORDER BY ip.accidente_id ASC, rp.Nombre ASC, p.apellido_paterno ASC, p.apellido_materno ASC, p.nombres ASC";
+  $stInv = $pdo->prepare($sqlInv);
+  $stInv->execute($accidenteIds);
+
+  while ($inv = $stInv->fetch(PDO::FETCH_ASSOC)) {
+    $rolUi = normalizar_rol_resumen($inv['rol_nombre'] ?? '');
+    if ($rolUi === null) continue;
+
+    $accId = (int)($inv['accidente_id'] ?? 0);
+    if ($accId <= 0) continue;
+
+    $nombre = trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([
+      (string)($inv['nombres'] ?? ''),
+      (string)($inv['apellido_paterno'] ?? ''),
+      (string)($inv['apellido_materno'] ?? ''),
+    ], static fn($part) => trim((string)$part) !== ''))));
+
+    if ($nombre === '') continue;
+
+    $personasResumenPorAccidente[$accId][] = [
+      'nombre' => $nombre,
+      'rol' => $rolUi,
+      'lesion' => normalizar_lesion_resumen($inv['lesion'] ?? ''),
+    ];
+  }
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -243,6 +304,13 @@ th:last-child, td:last-child{padding-right:14px}
 .td-actions{white-space:nowrap}
 .empty{padding:18px;text-align:center;color:rgba(var(--muted-rgb),1)}
 .badge.sidpol-reg { background:transparent; border-color:#d4af37; color:#facc15; font-weight:800; font-size:12px; }
+.sidpol-link{ display:inline-block; text-decoration:none; }
+.sidpol-link:hover .sidpol-reg,
+.sidpol-link:focus-visible .sidpol-reg{ box-shadow:0 0 0 2px rgba(212,175,55,.18); transform:translateY(-1px); }
+.inv-people{display:flex;flex-direction:column;gap:4px;min-width:250px}
+.inv-person{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.inv-name{font-weight:700}
+.inv-meta{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.16);color:var(--fg)}
 
 /* Compactar aún más la tabla */
 table.compact thead th{ padding:6px 8px !important; font-size:12px !important; }
@@ -394,47 +462,68 @@ html[data-theme-resolved="dark"]{
       <table class="compact" role="table" aria-describedby="tbl-desc">
 <thead>
   <tr role="row">
-    <th role="columnheader" data-sort="folder">Folder <span class="sort-indicator"></span></th>
-    <th role="columnheader" data-sort="estado">Estado <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="registro_sidpol">Registro SIDPOL <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="nro_informe_policial">N° informe policial <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="lugar">Lugar <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="fecha_accidente">Fecha <span class="sort-indicator"></span></th>
     <th role="columnheader" data-sort="comisaria">Comisaría <span class="sort-indicator"></span></th>
+    <th role="columnheader">Conductor / Peatón</th>
+    <th role="columnheader" data-sort="folder">Folder <span class="sort-indicator"></span></th>
+    <th role="columnheader" data-sort="estado">Estado <span class="sort-indicator"></span></th>
     <th class="td-actions" role="columnheader">Acciones</th>
   </tr>
 </thead>
         <tbody id="tbody-rows" role="rowgroup">
           <?php if (!$rows): ?>
-            <tr><td colspan="8" class="empty">Sin resultados</td></tr>
+            <tr><td colspan="9" class="empty">Sin resultados</td></tr>
           <?php else: foreach($rows as $i=>$r): 
               $estado = $r['estado'] ?: 'Pendiente';
               $cls = ($estado==='Resuelto') ? 'estado-resuelto'
                    : (($estado==='Con diligencias') ? 'estado-dilig' : 'estado-pendiente');
               $folderVal = (string)($r['folder'] ?? '');
+              $personasResumen = $personasResumenPorAccidente[(int)$r['id']] ?? [];
           ?>
             <tr data-id="<?= (int)$r['id'] ?>" role="row">
-  <!-- FOLDER (primera columna) + ESTRELLA prioridad -->
-<td class="col-folder folder-cell" role="cell">
-  <?php $isPrior = !empty($r['priority']) && (int)$r['priority']===1; ?>
-  <!-- Botón estrella separado -->
-  <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
-          data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
-          aria-pressed="<?= $isPrior ? 'true' : 'false' ?>">
-    <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '★' : '☆' ?></span>
-  </button>
+  <td role="cell">
+    <a class="sidpol-link" href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>" title="Ver detalles">
+      <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
+    </a>
+  </td>
+  <td role="cell"><?=h($r['nro_informe_policial'] ?? '-')?></td>
+  <td role="cell"><?=h($r['lugar'])?></td>
+  <td role="cell"><?=h($r['fecha_accidente'])?></td>
+  <td role="cell"><?=h($r['comisaria']??'-')?></td>
+  <td role="cell">
+    <?php if ($personasResumen === []): ?>
+      <span>-</span>
+    <?php else: ?>
+      <div class="inv-people">
+        <?php foreach ($personasResumen as $personaItem): ?>
+          <div class="inv-person">
+            <span class="inv-name"><?=h($personaItem['nombre'])?></span>
+            <span class="inv-meta"><?=h($personaItem['rol'])?> | <?=h($personaItem['lesion'])?></span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </td>
+  <!-- FOLDER + ESTRELLA prioridad -->
+  <td class="col-folder folder-cell" role="cell">
+    <?php $isPrior = !empty($r['priority']) && (int)$r['priority']===1; ?>
+    <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
+            data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
+            aria-pressed="<?= $isPrior ? 'true' : 'false' ?>">
+      <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '★' : '☆' ?></span>
+    </button>
 
-  <!-- Select Folder separado y con menor tipografía -->
-  <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
-    <?php $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']); ?>
-    <option value="" <?=($folderVal===''?'selected':'')?>>—</option>
-    <?php for($k=1;$k<=10;$k++): ?>
-      <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
-    <?php endfor; ?>
-  </select>
-</td>
-
-  <!-- ESTADO -->
+    <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
+      <?php $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']); ?>
+      <option value="" <?=($folderVal===''?'selected':'')?>>—</option>
+      <?php for($k=1;$k<=10;$k++): ?>
+        <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
+      <?php endfor; ?>
+    </select>
+  </td>
   <td role="cell">
     <span class="estado-badge <?=$cls?>"
           data-id="<?=$r['id']?>"
@@ -442,17 +531,7 @@ html[data-theme-resolved="dark"]{
       <?=h($estado)?>
     </span>
   </td>
-
-  <!-- DEMÁS CAMPOS -->
-  <td role="cell"><span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span></td>
-  <td role="cell"><?=h($r['nro_informe_policial'] ?? '-')?></td>
-  <td role="cell"><?=h($r['lugar'])?></td>
-  <td role="cell"><?=h($r['fecha_accidente'])?></td>
-  <td role="cell"><?=h($r['comisaria']??'-')?></td>
   <td class="td-actions" role="cell">
-    <a class="btn small" title="Ver detalles"
-       href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>">👁 Detalles</a>
-
     <form action="accidente_eliminar.php" method="post" style="display:inline"
           onsubmit="return confirm('¿Eliminar este accidente de forma permanente?');">
       <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
@@ -603,7 +682,7 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
 
       // --- REUBICAR FILA SEGÚN ORDEN (folder → fecha) ---
       const folder = tr.querySelector('.select-folder')?.value || '';
-      const fecha = tr.children[4]?.innerText.trim() || ''; // Fecha en columna 5
+      const fecha = tr.children[3]?.innerText.trim() || ''; // Fecha en columna 4
 
       // Insertar según orden SQL: prioridad DESC, folder ASC, fecha DESC
       let insertado = false;
@@ -619,7 +698,7 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
         if (otherPrior) continue;
 
         const otherFolder = other.querySelector('.select-folder')?.value || '';
-        const otherFecha = other.children[4]?.innerText.trim() || '';
+        const otherFecha = other.children[3]?.innerText.trim() || '';
 
         // Comparación por folder (vacío = NULL → va al final)
         const f1 = folder==='' ? 999 : parseInt(folder);
