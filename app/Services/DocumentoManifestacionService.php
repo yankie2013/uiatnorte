@@ -53,6 +53,15 @@ final class DocumentoManifestacionService
         $this->repository->update($id, $payload);
     }
 
+    public function eliminar(int $id): void
+    {
+        if ($this->repository->find($id) === null) {
+            throw new InvalidArgumentException('Manifestacion no encontrada.');
+        }
+
+        $this->repository->delete($id);
+    }
+
     private function payload(array $input, bool $withRelations): array
     {
         $accidenteId = (int) ($input['accidente_id'] ?? 0);

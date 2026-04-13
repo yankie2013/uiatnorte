@@ -62,6 +62,12 @@ final class DocumentoManifestacionRepository
         $st->execute([...$payload, $id]);
     }
 
+    public function delete(int $id): void
+    {
+        $st = $this->pdo->prepare('DELETE FROM Manifestacion WHERE id=? LIMIT 1');
+        $st->execute([$id]);
+    }
+
     private function columnExists(string $table, string $column): bool
     {
         $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');

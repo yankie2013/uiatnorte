@@ -15,6 +15,11 @@ $service = new DocumentoOccisoService(new DocumentoOccisoRepository($pdo));
 $id = (int)g('id',0);
 $embed = (int)g('embed',0);
 $return_to = g('return_to','');
+$section = g('section', '');
+$validSections = ['levantamiento', 'protocolo', 'epicrisis', 'pericial'];
+if (!in_array($section, $validSections, true)) {
+  $section = '';
+}
 if($id<=0){ die('ID invalido'); }
 
 $it = $service->detalle($id);
@@ -107,18 +112,18 @@ input:focus,select:focus,textarea:focus{ border-color:var(--primary); box-shadow
 .multi .btn-mini{ border:1px solid var(--bd); background:var(--card); color:var(--text); border-radius:8px; padding:4px 10px; font-weight:800; cursor:pointer; line-height:1; }
 .multi .btn-mini.add{ border-style:dashed; }
 .multi .btn-mini.remove{ border-style:solid; }
+.occiso-tabbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--bd);border-radius:14px;background:color-mix(in srgb,var(--card) 88%,var(--primary) 12%);}
+.occiso-tab{border:1px solid var(--bd);background:var(--card);color:var(--text);border-radius:8px;padding:8px 12px;font-weight:900;font-size:12px;cursor:pointer;box-shadow:var(--shadow);}
+.occiso-tab.is-active{border-color:var(--primary);background:var(--primary);color:var(--primary-ink);}
+.occiso-tabpanels{display:grid;gap:12px;}
+.occiso-tab-panel[hidden]{display:none;}
+.occiso-tab-panel .card{box-shadow:var(--shadow);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="topbar">
     <h2>Documento Occiso — Editar <span style="opacity:.6">#<?= (int)$id ?></span></h2>
-    <div class="theme">
-      <small style="opacity:.7">Tema</small>
-      <button type="button" id="tLight">Claro</button>
-      <button type="button" id="tAuto">Auto</button>
-      <button type="button" id="tDark">Oscuro</button>
-    </div>
   </div>
 
   <?php if($ok): ?>
@@ -262,13 +267,83 @@ input:focus,select:focus,textarea:focus{ border-color:var(--primary); box-shadow
 </div>
 
 <script>
-/* ===== Theme toggle (persistente) — igual que “nuevo” ===== */
-const root = document.documentElement;
-function applyTheme(m){ root.setAttribute('data-theme', m); localStorage.setItem('occiso-theme', m); }
-document.getElementById('tLight').onclick=()=>applyTheme('light');
-document.getElementById('tDark').onclick =()=>applyTheme('dark');
-document.getElementById('tAuto').onclick =()=>applyTheme('auto');
-(function(){ const saved=localStorage.getItem('occiso-theme'); if(saved) root.setAttribute('data-theme', saved); })();
+const OCCISO_SECTION_LOCK = <?= json_encode($section, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+/* ===== Subpestañas del formulario de occiso ===== */
+(function(){
+  const form = document.querySelector('form');
+  const cols = form ? form.querySelector('.cols') : null;
+  if (!form || !cols || cols.dataset.tabsReady === '1') return;
+
+  const sections = [
+    ['levantamiento', 'Levantamiento', 'levantamiento'],
+    ['protocolo', 'Protocolo de necropsia', 'protocolo'],
+    ['epicrisis', 'Epicrisis', 'epicrisis'],
+    ['pericial', 'Pericial', 'pericial'],
+  ];
+  const cards = Array.from(cols.querySelectorAll('.card'));
+  const byKey = new Map();
+  cards.forEach((card) => {
+    const title = (card.querySelector('.card-h')?.textContent || '').toLowerCase();
+    const found = sections.find(([,, token]) => title.includes(token));
+    if (found) byKey.set(found[0], card);
+  });
+  if (byKey.size < 2) return;
+
+  if (OCCISO_SECTION_LOCK && byKey.has(OCCISO_SECTION_LOCK)) {
+    const visibleCard = byKey.get(OCCISO_SECTION_LOCK);
+    const panels = document.createElement('div');
+    panels.className = 'occiso-tabpanels';
+    const hiddenKeeper = document.createElement('div');
+    hiddenKeeper.hidden = true;
+    hiddenKeeper.setAttribute('aria-hidden', 'true');
+    cards.forEach((card) => {
+      if (card === visibleCard) return;
+      hiddenKeeper.appendChild(card);
+    });
+    panels.appendChild(visibleCard);
+    panels.appendChild(hiddenKeeper);
+    cols.replaceWith(panels);
+    cols.dataset.tabsReady = '1';
+    return;
+  }
+
+  const tabbar = document.createElement('div');
+  tabbar.className = 'occiso-tabbar';
+  const panels = document.createElement('div');
+  panels.className = 'occiso-tabpanels';
+
+  sections.forEach(([key, label], index) => {
+    const card = byKey.get(key);
+    if (!card) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'occiso-tab' + (index === 0 ? ' is-active' : '');
+    button.dataset.target = key;
+    button.textContent = label;
+    tabbar.appendChild(button);
+
+    const panel = document.createElement('div');
+    panel.className = 'occiso-tab-panel';
+    panel.dataset.panel = key;
+    if (index !== 0) panel.hidden = true;
+    panel.appendChild(card);
+    panels.appendChild(panel);
+  });
+
+  cols.replaceWith(tabbar, panels);
+  cols.dataset.tabsReady = '1';
+
+  tabbar.addEventListener('click', (event) => {
+    const button = event.target.closest('.occiso-tab');
+    if (!button) return;
+    tabbar.querySelectorAll('.occiso-tab').forEach((item) => item.classList.toggle('is-active', item === button));
+    panels.querySelectorAll('.occiso-tab-panel').forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== button.dataset.target;
+    });
+  });
+})();
 
 /* ===== MultiInput v2 ( + en última fila, × en llenos ) — mismo componente de “nuevo” ===== */
 (function(){

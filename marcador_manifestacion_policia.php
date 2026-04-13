@@ -130,6 +130,39 @@ try {
         exit;
     }
 
+    // fiscalia y fiscal vinculados al accidente
+    $fiscalia = null;
+    if (!empty($accidente['fiscalia_id'])) {
+        $stmtFiscalia = $pdo->prepare("SELECT * FROM fiscalia WHERE id = :id LIMIT 1");
+        $stmtFiscalia->execute(['id' => (int) $accidente['fiscalia_id']]);
+        $fiscalia = $stmtFiscalia->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    $fiscal = null;
+    if (!empty($accidente['fiscal_id'])) {
+        $stmtFiscal = $pdo->prepare("SELECT * FROM fiscales WHERE id = :id LIMIT 1");
+        $stmtFiscal->execute(['id' => (int) $accidente['fiscal_id']]);
+        $fiscal = $stmtFiscal->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    // ultima manifestacion registrada para este efectivo en este accidente
+    $manifestacion = null;
+    if (!empty($policia['persona_id'])) {
+        $stmtM = $pdo->prepare(
+            "SELECT *
+               FROM Manifestacion
+              WHERE persona_id = :persona_id
+                AND accidente_id = :accidente_id
+           ORDER BY id DESC
+              LIMIT 1"
+        );
+        $stmtM->execute([
+            'persona_id' => (int) $policia['persona_id'],
+            'accidente_id' => $accidente_id,
+        ]);
+        $manifestacion = $stmtM->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
 } catch (Exception $e) {
     echo "Error DB: " . $e->getMessage();
     exit;
@@ -195,6 +228,41 @@ foreach ($accidente as $col => $val) {
     $replacements['accidente_' . $col] = to_str($val);
 }
 
+// --- fiscalia y fiscal en texto, no como ids numericos ---
+$fiscaliaNombre = to_str($fiscalia['nombre'] ?? '');
+$fiscalNombreCompleto = $fiscal ? trim(
+    to_str($fiscal['nombres'] ?? '') . ' ' .
+    to_str($fiscal['apellido_paterno'] ?? '') . ' ' .
+    to_str($fiscal['apellido_materno'] ?? '')
+) : '';
+
+$replacements['fiscalia_nombre'] = $fiscaliaNombre;
+$replacements['fiscalia_direccion'] = to_str($fiscalia['direccion'] ?? '');
+$replacements['fiscalia_notas'] = to_str($fiscalia['notas'] ?? '');
+$replacements['fiscal_nombre'] = $fiscalNombreCompleto;
+$replacements['fiscal_nombres'] = to_str($fiscal['nombres'] ?? '');
+$replacements['fiscal_apellido_paterno'] = to_str($fiscal['apellido_paterno'] ?? '');
+$replacements['fiscal_apellido_materno'] = to_str($fiscal['apellido_materno'] ?? '');
+$replacements['fiscal_cargo'] = to_str($fiscal['cargo'] ?? $fiscal['grado'] ?? '');
+$replacements['fiscal_telefono'] = to_str($fiscal['telefono'] ?? $fiscal['celular'] ?? '');
+$replacements['fiscal_email'] = to_str($fiscal['correo'] ?? $fiscal['email'] ?? '');
+
+// Si la plantilla usa estos marcadores antiguos, reemplazar con valores legibles.
+$replacements['accidente_fiscalia_id'] = $fiscaliaNombre;
+$replacements['accidente_fiscal_id'] = $fiscalNombreCompleto;
+
+// Alias en mayusculas compatibles con otras plantillas.
+$replacements['FISCALIA_NOMBRE'] = $replacements['fiscalia_nombre'];
+$replacements['FISCALIA_DIRECCION'] = $replacements['fiscalia_direccion'];
+$replacements['FISCALIA_NOTAS'] = $replacements['fiscalia_notas'];
+$replacements['FISCAL_NOMBRE_COMPLETO'] = $replacements['fiscal_nombre'];
+$replacements['FISCAL_NOMBRES'] = $replacements['fiscal_nombres'];
+$replacements['FISCAL_APELLIDO_PATERNO'] = $replacements['fiscal_apellido_paterno'];
+$replacements['FISCAL_APELLIDO_MATERNO'] = $replacements['fiscal_apellido_materno'];
+$replacements['FISCAL_CARGO'] = $replacements['fiscal_cargo'];
+$replacements['FISCAL_CELULAR'] = $replacements['fiscal_telefono'];
+$replacements['FISCAL_EMAIL'] = $replacements['fiscal_email'];
+
 // amigables
 $replacements['accidente_lugar']      = to_str($accidente['lugar'] ?? '');
 $replacements['accidente_referencia'] = to_str($accidente['referencia'] ?? '');
@@ -210,6 +278,27 @@ $replacements['accidente_hora'] =
 
 // compatibilidad con ${accidente_fecha}
 $replacements['accidente_fecha'] = $replacements['accidente_fecha_abrev'];
+
+// --- manifestacion registrada ---
+$manifestacionFecha = (string) ($manifestacion['fecha'] ?? '');
+$manifestacionInicio = (string) ($manifestacion['horario_inicio'] ?? '');
+$manifestacionTermino = (string) ($manifestacion['hora_termino'] ?? '');
+$manifestacionModalidad = (string) ($manifestacion['modalidad'] ?? '');
+
+$replacements['manifestacion_id'] = to_str($manifestacion['id'] ?? '');
+$replacements['manifestacion_fecha'] = $manifestacionFecha !== '' ? date('d/m/Y', strtotime($manifestacionFecha)) : '';
+$replacements['manifestacion_fecha_abrev'] = fecha_abrev($manifestacionFecha);
+$replacements['manifestacion_hora_inicio'] = $manifestacionInicio !== '' ? substr($manifestacionInicio, 0, 5) : '';
+$replacements['manifestacion_hora_termino'] = $manifestacionTermino !== '' ? substr($manifestacionTermino, 0, 5) : '';
+$replacements['manifestacion_modalidad'] = $manifestacionModalidad;
+
+// alias cortos compatibles con otras plantillas de manifestacion
+$replacements['manif_fecha'] = $replacements['manifestacion_fecha'];
+$replacements['manif_fecha_abrev'] = $replacements['manifestacion_fecha_abrev'];
+$replacements['manif_hora'] = $replacements['manifestacion_hora_inicio'];
+$replacements['manif_hora_inicio'] = $replacements['manifestacion_hora_inicio'];
+$replacements['manif_hora_termino'] = $replacements['manifestacion_hora_termino'];
+$replacements['manif_modalidad'] = $replacements['manifestacion_modalidad'];
 
 // ------------ Cargar plantilla ------------
 $templatePath = __DIR__ . '/plantillas/manifestacion_efectivopolicial.docx';

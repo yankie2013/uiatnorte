@@ -17,12 +17,19 @@ $per_pref = (int) g('persona_id', 0);
 $rol_pref = g('rol_id', '');
 $embed = g('embed', '0') === '1';
 $returnTo = g('return_to', '');
+$downloadUrl = g('download_url', '');
+if (preg_match('~^[a-z][a-z0-9+.-]*://~i', $downloadUrl) || str_starts_with($downloadUrl, '//')) {
+    $downloadUrl = '';
+}
 $selfUrl = 'documento_manifestacion_nuevo.php?persona_id=' . (int) $per_pref
     . '&accidente_id=' . (int) $acc_pref
     . '&rol_id=' . urlencode((string) $rol_pref)
     . '&embed=' . ($embed ? '1' : '0');
 if ($returnTo !== '') {
     $selfUrl .= '&return_to=' . urlencode($returnTo);
+}
+if ($downloadUrl !== '') {
+    $selfUrl .= '&download_url=' . urlencode($downloadUrl);
 }
 $ctx = $service->contextoNuevo($acc_pref, $per_pref);
 $acc_label = $ctx['acc_label'];
@@ -39,7 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $service->crear($_POST);
         $ok = 'Manifestacion guardada';
         if ($embed) {
-            echo "<script>try{parent.postMessage({type:'manifestacion.saved'}, '*'); parent.location.reload();}catch(e){}</script>";
+            $downloadUrlJs = json_encode($downloadUrl, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+            echo "<script>(function(){try{var url={$downloadUrlJs};if(url){var doc=parent.document;var frame=doc.getElementById('manifestacion-download-frame');if(!frame){frame=doc.createElement('iframe');frame.id='manifestacion-download-frame';frame.style.display='none';doc.body.appendChild(frame);}frame.src=url;parent.postMessage({type:'manifestacion.download_started'}, '*');setTimeout(function(){try{parent.location.reload();}catch(e){}},1200);}else{parent.postMessage({type:'manifestacion.saved'}, '*');parent.location.reload();}}catch(e){}})();</script>";
             exit;
         }
     } catch (Throwable $e) {
