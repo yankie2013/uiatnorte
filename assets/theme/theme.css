@@ -111,10 +111,12 @@ html[data-theme-resolved="dark"]{
 html,
 body{
   transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+  -webkit-text-size-adjust: 100%;
 }
 
 body{
   accent-color: var(--primary);
+  overflow-x: hidden;
 }
 
 input,
@@ -158,4 +160,70 @@ html[data-theme-resolved="dark"] select optgroup{
 html[data-theme-resolved="dark"] select option:checked{
   background: #1d4ed8;
   color: #eff6ff;
+}
+
+:where(img, svg, video, canvas, iframe){
+  max-width: 100%;
+}
+
+:where(.table-wrap){
+  max-width: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+:where(.table-wrap > table){
+  min-width: max-content;
+}
+
+@media (max-width: 900px){
+  :where(.wrap, .container, .card, .panel, .body, .foot){
+    min-width: 0;
+  }
+
+  :where(.filters, .grid){
+    min-width: 0;
+  }
+
+  :where(.toolbar, .actions, .search, .search-row, .field-row, .rowflex, .stack-actions){
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  :where(.toolbar, .actions, .search, .search-row, .field-row, .rowflex, .stack-actions) > *{
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :where(.search input, .search select, .search-row input, .search-row select, .filters input, .filters select){
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px){
+  :where(.toolbar, .actions, .search, .search-row, .field-row, .rowflex, .stack-actions){
+    flex-direction: column;
+  }
+
+  :where(.toolbar, .actions, .search, .search-row, .field-row, .rowflex, .stack-actions) > *{
+    width: 100%;
+  }
+
+  :where(.toolbar, .actions, .search, .search-row, .field-row, .rowflex, .stack-actions) > :where(.btn, button, a){
+    justify-content: center;
+  }
+
+  :where(.filters){
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  :where(input, select, textarea){
+    font-size: 16px !important;
+  }
+
+  :where(.btn, button, [type="button"], [type="submit"], [type="reset"]){
+    min-height: 44px;
+  }
 }
