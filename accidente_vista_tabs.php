@@ -1469,6 +1469,65 @@ function render_license_narrative_block(array $person, array $licenses): string
     return $html;
 }
 
+function rml_narrative_value(?string $value): string
+{
+    $text = lower_text((string) ($value ?? ''));
+    return $text !== '' ? $text : 'no requiere';
+}
+
+function rml_narrative_clause(?string $value, string $label): string
+{
+    $text = rml_narrative_value($value);
+    $numeric = str_replace(',', '.', $text);
+    if (is_numeric($numeric)) {
+        $days = (float) $numeric;
+        $dayText = abs($days - 1.0) < 0.001 ? 'día' : 'días';
+        return $text . ' ' . $dayText . ' de ' . $label;
+    }
+
+    return $text . ' ' . $label;
+}
+
+function rml_narrative_text(array $rml): string
+{
+    $number = upper_text((string) ($rml['numero'] ?? ''));
+    $atencion = rml_narrative_clause((string) ($rml['atencion_facultativo'] ?? ''), 'atención facultativa');
+    $incapacidad = rml_narrative_clause((string) ($rml['incapacidad_medico'] ?? ''), 'incapacidad médico legal');
+    $observaciones = compact_text((string) ($rml['observaciones'] ?? ''));
+
+    $text = 'N° ';
+    $text .= $number !== '' ? $number : '—';
+    $text .= ', donde se certifica ' . $atencion . ', ' . $incapacidad;
+
+    if ($observaciones !== '' && !in_array($observaciones, ['—', '-'], true)) {
+        $text .= ', con la observación: ' . $observaciones;
+    }
+
+    return $text . '.';
+}
+
+function render_rml_narrative_block(array $rmls, int $startIndex = 3): string
+{
+    if ($rmls === []) {
+        return '';
+    }
+
+    $html = '<div class="rml-story-block">';
+    foreach ($rmls as $index => $rml) {
+        $text = rml_narrative_text($rml);
+        $html .= '<div class="rml-story-item">';
+        $html .= '<h4 class="rml-story-title">' . h(($startIndex + $index) . ') Certificado Médico Legal') . '</h4>';
+        $html .= '<div class="rml-story-line">';
+        $html .= '<p class="rml-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar certificado médico legal" title="Copiar certificado médico legal">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
 function number_0_99_spanish(int $number): string
 {
     $number = max(0, min(99, $number));
@@ -1783,6 +1842,202 @@ function render_summary_abogado_block(array $abogados): string
     return $html;
 }
 
+function narrative_lines(?string $value): array
+{
+    $text = compact_text(str_replace(["\r\n", "\r"], "\n", (string) ($value ?? '')));
+    if ($text === '') {
+        return [];
+    }
+
+    $items = preg_split('/\n+/u', trim((string) ($value ?? ''))) ?: [];
+    $clean = [];
+    foreach ($items as $item) {
+        $item = trim((string) preg_replace('/^[\-\x{2022}\*\s]+/u', '', (string) $item));
+        if ($item !== '') {
+            $clean[] = $item;
+        }
+    }
+
+    return $clean;
+}
+
+function occiso_levantamiento_fiscal_clause(array $context): string
+{
+    $fiscal = compact_text((string) ($context['fiscal_nombre'] ?? ''));
+    $cargo = compact_text((string) ($context['fiscal_cargo'] ?? ''));
+    $fiscalia = compact_text((string) ($context['fiscalia_nombre'] ?? ''));
+
+    if ($fiscal === '' && $fiscalia === '') {
+        return '';
+    }
+
+    $clause = 'el representante del Ministerio Público';
+    if ($fiscal !== '') {
+        $clause .= ', ' . $fiscal;
+    }
+    if ($cargo !== '') {
+        $clause .= ', ' . $cargo;
+    }
+    if ($fiscalia !== '') {
+        $clause .= ' de ' . $fiscalia;
+    }
+
+    return $clause;
+}
+
+function occiso_levantamiento_text(array $occiso, array $context): string
+{
+    $date = fecha_generales_ley((string) ($occiso['fecha_levantamiento'] ?? ''));
+    $time = simple_time_text((string) ($occiso['hora_levantamiento'] ?? ''));
+    $place = compact_text((string) ($occiso['lugar_levantamiento'] ?? ''));
+    $position = compact_text((string) ($occiso['posicion_cuerpo_levantamiento'] ?? ''));
+    $legista = compact_text((string) ($occiso['legista_levantamiento'] ?? ''));
+    $cmp = upper_text((string) ($occiso['cmp_legista'] ?? ''));
+    $fiscal = occiso_levantamiento_fiscal_clause($context);
+
+    $text = 'Diligencia llevada a cabo';
+    if ($date !== '') {
+        $text .= ' el ' . $date;
+    }
+    if ($time !== '') {
+        $text .= ', a las ' . $time . ' horas';
+    }
+    if ($place !== '') {
+        $text .= ' en ' . $place;
+    }
+
+    $participants = ['por el personal policial de la UIAT Norte'];
+    if ($legista !== '') {
+        $legistaText = 'el médico legista ' . $legista;
+        if ($cmp !== '') {
+            $legistaText .= ' con CMP N° ' . $cmp;
+        }
+        $participants[] = $legistaText;
+    }
+    if ($fiscal !== '') {
+        $participants[] = $fiscal;
+    }
+
+    if ($participants !== []) {
+        $text .= ', ' . implode(', ', array_slice($participants, 0, -1));
+        $text .= count($participants) > 1 ? ' y ' . end($participants) : $participants[0];
+    }
+    if ($position !== '') {
+        $text .= ', con el cuerpo en posición ' . $position;
+    }
+
+    return $text . '.';
+}
+
+function render_occiso_levantamiento_narrative_block(array $occisos, array $context, int $startIndex = 2): string
+{
+    if ($occisos === []) {
+        return '';
+    }
+
+    $html = '<div class="occiso-story-block">';
+    foreach ($occisos as $index => $occiso) {
+        $text = occiso_levantamiento_text($occiso, $context);
+        $lesiones = narrative_lines((string) ($occiso['lesiones_levantamiento'] ?? ''));
+        $diagnostico = compact_text((string) ($occiso['presuntivo_levantamiento'] ?? ''));
+        $copyText = $text;
+        if ($lesiones !== []) {
+            $copyText .= "\n\nDescripción de lesiones:\n- " . implode("\n- ", $lesiones);
+        }
+        if ($diagnostico !== '') {
+            $copyText .= "\n\nDiagnóstico presuntivo de muerte\n" . $diagnostico;
+        }
+
+        $html .= '<div class="occiso-story-item">';
+        $html .= '<h4 class="occiso-story-title">' . h(($startIndex + $index) . ') Acta de levantamiento de cadáver') . '</h4>';
+        $html .= '<div class="occiso-story-line">';
+        $html .= '<p class="occiso-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($copyText) . '" aria-label="Copiar levantamiento de cadáver" title="Copiar levantamiento de cadáver">⧉</button>';
+        $html .= '</div>';
+        if ($lesiones !== []) {
+            $html .= '<div class="occiso-story-section"><h5>Descripción de lesiones:</h5><ul>';
+            foreach ($lesiones as $lesion) {
+                $html .= '<li>' . h($lesion) . '</li>';
+            }
+            $html .= '</ul></div>';
+        }
+        if ($diagnostico !== '') {
+            $html .= '<div class="occiso-story-section"><h5>Diagnóstico presuntivo de muerte</h5><p>' . h($diagnostico) . '</p></div>';
+        }
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
+function occiso_pericia_has_content(array $occiso): bool
+{
+    return compact_text((string) ($occiso['numero_pericial'] ?? '')) !== ''
+        || compact_text((string) ($occiso['fecha_pericial'] ?? '')) !== ''
+        || compact_text((string) ($occiso['observaciones_pericial'] ?? '')) !== '';
+}
+
+function occiso_pericia_text(array $occiso, array $person): string
+{
+    $number = upper_text((string) ($occiso['numero_pericial'] ?? ''));
+    $date = fecha_generales_ley((string) ($occiso['fecha_pericial'] ?? ''));
+    $observaciones = compact_text((string) ($occiso['observaciones_pericial'] ?? ''));
+    $name = person_name_generales_ley($person);
+    if ($name === '') {
+        $name = person_label($person);
+    }
+
+    $text = '';
+    if ($number !== '') {
+        $text .= 'N° ' . $number;
+    } else {
+        $text .= 'Informe pericial';
+    }
+    if ($date !== '') {
+        $text .= ' de fecha ' . $date;
+    }
+
+    $text .= ', expedido por la DITANFOR-Lima';
+    if ($name !== '') {
+        $text .= ', el cual se adjunta al presente correspondiente a Q.E.V.F. ' . $name;
+    } else {
+        $text .= ', el cual se adjunta al presente';
+    }
+
+    if ($observaciones !== '' && !in_array($observaciones, ['—', '-'], true)) {
+        $text .= ', con la observación: ' . $observaciones;
+    }
+
+    return $text . '.';
+}
+
+function render_occiso_pericia_narrative_block(array $occisos, array $person, int $startIndex = 3): string
+{
+    if ($occisos === []) {
+        return '';
+    }
+
+    $html = '<div class="occiso-story-block">';
+    foreach ($occisos as $index => $occiso) {
+        if (!occiso_pericia_has_content($occiso)) {
+            continue;
+        }
+
+        $text = occiso_pericia_text($occiso, $person);
+        $html .= '<div class="occiso-story-item">';
+        $html .= '<h4 class="occiso-story-title">' . h(($startIndex + $index) . ') Informe pericial de recepción de cadáver') . '</h4>';
+        $html .= '<div class="occiso-story-line">';
+        $html .= '<p class="occiso-story-text">' . h($text) . '</p>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar informe pericial de recepción de cadáver" title="Copiar informe pericial de recepción de cadáver">⧉</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
+}
+
 function render_summary_manifestacion_block(array $manifestaciones, array $abogados, array $context): string
 {
     if ($manifestaciones === []) {
@@ -1956,18 +2211,15 @@ function render_summary_person_block(
         $html .= '</div></div>';
     }
 
-    if (!empty($extras['rml'])) {
-        $html .= '<div class="section-block"><h3>RML</h3><div class="summary-doc-stack">';
-        foreach ($extras['rml'] as $index => $row) {
-            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('RML #' . ($index + 1)) . '</h4></div></div>';
-            $html .= '<div class="field-grid">' . render_field_cards($row, $rmlFields) . '</div></div>';
-        }
-        $html .= '</div></div>';
-    }
-
     if (!empty($extras['dos'])) {
         $html .= '<div class="section-block"><h3>Dosajes</h3><div class="summary-doc-stack">';
         $html .= render_dosaje_narrative_block($extras['dos']);
+        $html .= '</div></div>';
+    }
+
+    if (!empty($extras['rml'])) {
+        $html .= '<div class="section-block"><h3>RML</h3><div class="summary-doc-stack">';
+        $html .= render_rml_narrative_block($extras['rml'], 3);
         $html .= '</div></div>';
     }
 
@@ -1981,15 +2233,18 @@ function render_summary_person_block(
 
     if (!empty($extras['occ'])) {
         $html .= '<div class="section-block"><h3>Documentos de occiso</h3><div class="summary-doc-stack">';
+        $html .= render_occiso_levantamiento_narrative_block($extras['occ'], $extras['manifestacion_context'] ?? [], 2);
+        $html .= render_occiso_pericia_narrative_block($extras['occ'], $person, 2 + count($extras['occ']));
         foreach ($extras['occ'] as $index => $row) {
-            $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Occiso #' . ($index + 1)) . '</h4></div></div>';
-            $html .= render_summary_field_sections($row, [
-                'Levantamiento' => $occLevantamientoFields,
-                'Pericia' => $occPericialFields,
+            $remainingSections = render_summary_field_sections($row, [
                 'Protocolo' => $occProtocoloFields,
                 'Epicrisis' => $occEpicrisisFields,
             ]);
-            $html .= '</div>';
+            if ($remainingSections !== '') {
+                $html .= '<div class="summary-subcard"><div class="summary-header"><div><h4>' . h('Otros documentos de occiso #' . ($index + 1)) . '</h4></div></div>';
+                $html .= $remainingSections;
+                $html .= '</div>';
+            }
         }
         $html .= '</div></div>';
     }
@@ -4967,6 +5222,20 @@ include __DIR__ . '/sidebar.php';
   .dosage-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .dosage-story-line{display:flex;align-items:flex-start;gap:8px}
   .dosage-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .rml-story-block{display:grid;gap:10px}
+  .rml-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
+  .rml-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .rml-story-line{display:flex;align-items:flex-start;gap:8px}
+  .rml-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .occiso-story-block{display:grid;gap:10px}
+  .occiso-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
+  .occiso-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .occiso-story-line{display:flex;align-items:flex-start;gap:8px}
+  .occiso-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .occiso-story-section{margin-top:14px;color:#e11d1d}
+  .occiso-story-section h5{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:800;line-height:1.25;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+  .occiso-story-section ul{margin:0;padding-left:18px;display:grid;gap:4px}
+  .occiso-story-section li,.occiso-story-section p{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600}
   .manifestation-story-block{display:grid;gap:10px}
   .manifestation-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
   .manifestation-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
@@ -5015,6 +5284,10 @@ include __DIR__ . '/sidebar.php';
   .module-card p.license-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .module-card h4.dosage-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .module-card p.dosage-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .module-card h4.rml-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .module-card p.rml-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
+  .module-card h4.occiso-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .module-card p.occiso-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .module-card h4.manifestation-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .module-card p.manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .module-card-controls{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -5415,6 +5688,14 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
     border-color:#7f1d1d;
   }
+  html[data-theme-resolved="dark"] .rml-story-item{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+  }
+  html[data-theme-resolved="dark"] .occiso-story-item{
+    background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
+    border-color:#7f1d1d;
+  }
   html[data-theme-resolved="dark"] .manifestation-story-item{
     background:linear-gradient(180deg,#2d1418 0%,#241015 100%);
     border-color:#7f1d1d;
@@ -5423,6 +5704,14 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .license-story-text,
   html[data-theme-resolved="dark"] .dosage-story-title,
   html[data-theme-resolved="dark"] .dosage-story-text,
+  html[data-theme-resolved="dark"] .rml-story-title,
+  html[data-theme-resolved="dark"] .rml-story-text,
+  html[data-theme-resolved="dark"] .occiso-story-title,
+  html[data-theme-resolved="dark"] .occiso-story-text,
+  html[data-theme-resolved="dark"] .occiso-story-section,
+  html[data-theme-resolved="dark"] .occiso-story-section h5,
+  html[data-theme-resolved="dark"] .occiso-story-section li,
+  html[data-theme-resolved="dark"] .occiso-story-section p,
   html[data-theme-resolved="dark"] .manifestation-story-title,
   html[data-theme-resolved="dark"] .manifestation-story-text{
     color:#fecaca;
@@ -5529,6 +5818,10 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .module-card p.license-story-text,
   html[data-theme-resolved="dark"] .module-card h4.dosage-story-title,
   html[data-theme-resolved="dark"] .module-card p.dosage-story-text,
+  html[data-theme-resolved="dark"] .module-card h4.rml-story-title,
+  html[data-theme-resolved="dark"] .module-card p.rml-story-text,
+  html[data-theme-resolved="dark"] .module-card h4.occiso-story-title,
+  html[data-theme-resolved="dark"] .module-card p.occiso-story-text,
   html[data-theme-resolved="dark"] .module-card h4.manifestation-story-title,
   html[data-theme-resolved="dark"] .module-card p.manifestation-story-text{
     color:#fecaca;

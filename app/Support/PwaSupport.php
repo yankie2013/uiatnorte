@@ -347,6 +347,7 @@ HTML;
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
         $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260412-theme-auto');
+        $spellcheckScript = self::assetUrl($basePath, 'assets/form-spellcheck.js?v=20260414c');
         $scope = self::assetUrl($basePath, '');
         $escapedAppName = \htmlspecialchars(self::APP_NAME, ENT_QUOTES, 'UTF-8');
 
@@ -375,6 +376,7 @@ HTML;
   </div>
 </div>
 <script src="{$themeScript}"></script>
+<script src="{$spellcheckScript}"></script>
 <script src="{$registerScript}" data-pwa-scope="{$scope}"></script>
 HTML;
     }
