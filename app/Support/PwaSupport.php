@@ -53,7 +53,11 @@ final class PwaSupport
             'word_informe_atropello_probe.php',
             'word_informe_atropello_safe.php',
             'word_informe_atropello_tplcheck.php',
+            'word_informe_combinado_vehiculo.php',
             'word_informe_choque_dos_vehiculos.php',
+            'word_informe_peaton_fallecido.php',
+            'word_informe_un_vehiculo_fallecido.php',
+            'word_informe_un_vehiculo_ileso.php',
             'word_oficio_camaras.php',
         ];
         if (\in_array($script, $skipScripts, true)) {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /* ===========================================================
    INFORME ATROPELLO - UIAT NORTE (DOCX con PhpWord)
    Requiere: composer require phpoffice/phpword
@@ -760,5 +760,4 @@ header('Content-Length: '.filesize($tmp));
 readfile($tmp);
 @unlink($tmp);
 exit;
-
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /* ===========================================================
    WORD: INFORME CHOQUE DOS VEHICULOS (DOCX con PhpWord)
    Proyecto: UIAT NORTE
@@ -704,4 +704,3 @@ header('Content-Length: '.filesize($tmp));
 readfile($tmp);
 @unlink($tmp);
 exit;
-

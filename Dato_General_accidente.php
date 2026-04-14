@@ -1087,6 +1087,38 @@ include __DIR__ . '/sidebar.php';
    <span class="led <?= $cntChoque ?? 1 ? 'on' : '' ?>" 
          title="Generar documento Word del choque de vehículos"></span>
 </a>
+
+<a href="word_informe_un_vehiculo_ileso.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar informe de un vehículo ileso">
+   📝 Informe Un Vehículo Ileso
+   <span class="led <?= $cntVeh>0 ? 'on' : '' ?>"
+         title="Generar documento Word con conductor, documentos, vehículo, propietario y abogado"></span>
+</a>
+
+<a href="word_informe_un_vehiculo_fallecido.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar informe de un vehículo con fallecido">
+   📝 Informe Un Vehículo Fallecido
+   <span class="led <?= $cntPer>0 ? 'on' : '' ?>"
+         title="Generar documento Word con fallecido, occiso y familiar"></span>
+</a>
+
+<a href="word_informe_peaton_fallecido.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar informe de peatón fallecido">
+   📝 Informe Peatón Fallecido
+   <span class="led <?= $cntPer>0 ? 'on' : '' ?>"
+         title="Generar documento Word con peatón fallecido, occiso, familiar y abogado"></span>
+</a>
+
+<a href="word_informe_combinado_vehiculo.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar informe combinado vehicular">
+   🚗🚙 Informe Combinado Vehicular
+   <span class="led <?= $cntVeh>1 ? 'on' : '' ?>"
+         title="Generar documento Word del par combinado vehicular"></span>
+</a>
   
   
 </div>
