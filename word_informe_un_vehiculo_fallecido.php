@@ -163,6 +163,26 @@ function add_pairs($section, array $pairs): void
     $section->addTextBreak(1);
 }
 
+function add_records($section, string $emptyText, array $records, array $fieldMap): void
+{
+    if ($records === []) {
+        $section->addText($emptyText, ['italic' => true, 'size' => 9, 'color' => '666666']);
+        $section->addTextBreak(1);
+        return;
+    }
+
+    foreach ($records as $index => $record) {
+        if (count($records) > 1) {
+            $section->addText('Registro #' . ($index + 1), ['bold' => true, 'size' => 10]);
+        }
+        $pairs = [];
+        foreach ($fieldMap as $label => $field) {
+            $pairs[$label] = is_callable($field) ? $field($record) : ($record[$field] ?? '');
+        }
+        add_pairs($section, $pairs);
+    }
+}
+
 function load_modalidades(PDO $pdo, int $accidenteId): string
 {
     try {
@@ -211,6 +231,19 @@ function load_abogados(PDO $pdo, int $accidenteId, ?int $personaId): array
     return fetch_all($pdo, 'SELECT * FROM abogados WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
 }
 
+function load_vehiculo_docs(PDO $pdo, array $vehicle): array
+{
+    $ivId = (int) ($vehicle['iv_id'] ?? 0);
+    $vehiculoId = (int) ($vehicle['vehiculo_id'] ?? 0);
+    return fetch_all($pdo, "
+        SELECT *
+          FROM documento_vehiculo
+         WHERE involucrado_vehiculo_id = :iv
+            OR vehiculo_id = :veh
+         ORDER BY id DESC
+    ", [':iv' => $ivId, ':veh' => $vehiculoId]);
+}
+
 function load_fallecidos(PDO $pdo, int $accidenteId, array $vehicle, bool $singleVehicle): array
 {
     $vehiculoId = (int) ($vehicle['vehiculo_id'] ?? 0);
@@ -230,7 +263,7 @@ function load_fallecidos(PDO $pdo, int $accidenteId, array $vehicle, bool $singl
           JOIN personas p ON p.id = ip.persona_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
          WHERE ip.accidente_id = :a
-           AND ip.lesion = 'Fallecido'
+           AND LOWER(COALESCE(ip.lesion, '')) LIKE '%falle%'
            {$vehicleFilter}
          ORDER BY ip.id ASC
     ", $params);
@@ -245,7 +278,7 @@ function load_fallecidos(PDO $pdo, int $accidenteId, array $vehicle, bool $singl
               JOIN personas p ON p.id = ip.persona_id
          LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
              WHERE ip.accidente_id = :a
-               AND ip.lesion = 'Fallecido'
+               AND LOWER(COALESCE(ip.lesion, '')) LIKE '%falle%'
              ORDER BY ip.id ASC
         ", [':a' => $accidenteId]);
     }
@@ -299,7 +332,7 @@ function set_marker_aliases(array &$markers, array $prefixes, string $suffix, $v
     }
 }
 
-function fill_fallecido_template_markers(array &$markers, array $prefixes, array $vehicle, array $fallecido, array $occiso, array $familiar, array $familiarLawyer, array $accidente): void
+function fill_fallecido_template_markers(array &$markers, array $prefixes, array $vehicle, array $vehicleDoc, array $fallecido, array $occiso, array $familiar, array $familiarLawyer, array $accidente): void
 {
     $vehicleCategory = trim(textv($vehicle['categoria_codigo'] ?? '', '') . ' ' . textv($vehicle['categoria_descripcion'] ?? '', ''));
     $vehicleType = trim(textv($vehicle['tipo_codigo'] ?? '', '') . ' ' . textv($vehicle['tipo_nombre'] ?? '', ''));
@@ -317,6 +350,29 @@ function fill_fallecido_template_markers(array &$markers, array $prefixes, array
         'veh_serie_vin' => $vehicle['serie_vin'] ?? '',
         'veh_nro_motor' => $vehicle['nro_motor'] ?? '',
         'veh_observaciones' => $vehicle['involucrado_observaciones'] ?? ($vehicle['notas'] ?? ''),
+        'docv_num_propiedad' => $vehicleDoc['numero_propiedad'] ?? '',
+        'docv_titulo_propiedad' => $vehicleDoc['titulo_propiedad'] ?? '',
+        'docv_partida_propiedad' => $vehicleDoc['partida_propiedad'] ?? '',
+        'docv_sede_propiedad' => $vehicleDoc['sede_propiedad'] ?? '',
+        'docv_num_soat' => $vehicleDoc['numero_soat'] ?? '',
+        'docv_aseguradora_soat' => $vehicleDoc['aseguradora_soat'] ?? '',
+        'docv_vigente_soat' => date_pe($vehicleDoc['vigente_soat'] ?? ''),
+        'docv_vencimiento_soat' => date_pe($vehicleDoc['vencimiento_soat'] ?? ''),
+        'docv_num_revision' => $vehicleDoc['numero_revision'] ?? '',
+        'docv_certificadora_revision' => $vehicleDoc['certificadora_revision'] ?? '',
+        'docv_vigente_revision' => date_pe($vehicleDoc['vigente_revision'] ?? ''),
+        'docv_vencimiento_revision' => date_pe($vehicleDoc['vencimiento_revision'] ?? ''),
+        'docv_num_peritaje' => $vehicleDoc['numero_peritaje'] ?? '',
+        'docv_fecha_peritaje' => date_pe($vehicleDoc['fecha_peritaje'] ?? ''),
+        'docv_perito_peritaje' => $vehicleDoc['perito_peritaje'] ?? '',
+        'docv_sistema_electrico_peritaje' => $vehicleDoc['sistema_electrico_peritaje'] ?? '',
+        'docv_sistema_frenos_peritaje' => $vehicleDoc['sistema_frenos_peritaje'] ?? '',
+        'docv_sistema_direccion_peritaje' => $vehicleDoc['sistema_direccion_peritaje'] ?? '',
+        'docv_sistema_transmision_peritaje' => $vehicleDoc['sistema_transmision_peritaje'] ?? '',
+        'docv_sistema_suspension_peritaje' => $vehicleDoc['sistema_suspension_peritaje'] ?? '',
+        'docv_planta_motriz_peritaje' => $vehicleDoc['planta_motriz_peritaje'] ?? '',
+        'docv_otros_peritaje' => $vehicleDoc['otros_peritaje'] ?? '',
+        'docv_danos_peritaje' => $vehicleDoc['danos_peritaje'] ?? '',
         'fall_nombre' => name_person($fallecido),
         'fall_rol' => $fallecido['rol_nombre'] ?? '',
         'fall_lesion' => $fallecido['lesion'] ?? '',
@@ -430,11 +486,12 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
         if ($i === 1) {
             $prefixes[] = '';
         }
+        $vehicleDoc = $vehicle !== [] ? first_row(load_vehiculo_docs($pdo, $vehicle)) : [];
         $fallecido = $vehicle !== [] ? first_row(load_fallecidos($pdo, $accidenteId, $vehicle, $singleVehicle)) : [];
         $occiso = $fallecido !== [] ? load_occiso_doc($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0)) : [];
         $familiar = $fallecido !== [] ? load_familiar($pdo, $accidenteId, (int) ($fallecido['involucrado_persona_id'] ?? 0)) : [];
         $familiarLawyer = $familiar !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0))) : [];
-        fill_fallecido_template_markers($markers, $prefixes, $vehicle, $fallecido, $occiso, $familiar, $familiarLawyer, $accidente);
+        fill_fallecido_template_markers($markers, $prefixes, $vehicle, $vehicleDoc, $fallecido, $occiso, $familiar, $familiarLawyer, $accidente);
     }
 
     return $markers;
@@ -477,6 +534,16 @@ $vehicleFilter = '';
 if ($vehiculoInvId > 0) {
     $vehicleFilter = ' AND iv.id = :iv';
     $vehicleParams[':iv'] = $vehiculoInvId;
+} else {
+    $vehicleFilter = "
+        AND EXISTS (
+            SELECT 1
+              FROM involucrados_personas ipf
+             WHERE ipf.accidente_id = iv.accidente_id
+               AND ipf.vehiculo_id = iv.vehiculo_id
+               AND LOWER(COALESCE(ipf.lesion, '')) LIKE '%falle%'
+        )
+    ";
 }
 $vehicles = fetch_all($pdo, "
     SELECT iv.id AS iv_id, iv.orden_participacion, iv.tipo AS involucrado_tipo, iv.observaciones AS involucrado_observaciones,
@@ -500,6 +567,9 @@ $vehicles = fetch_all($pdo, "
 if ($vehicles === []) {
     http_response_code(404);
     exit('No hay vehiculos involucrados para este accidente.');
+}
+if ($vehiculoInvId <= 0) {
+    $vehicles = array_slice($vehicles, 0, 1);
 }
 
 $infpolRaw = trim((string) ($accidente['nro_informe_policial'] ?? ''));
@@ -585,6 +655,33 @@ foreach ($vehicles as $vehicle) {
         'Carroceria / color / anio' => textv($vehicle['carroceria_nombre'] ?? '') . ' / ' . textv($vehicle['color'] ?? '') . ' / ' . textv($vehicle['anio'] ?? ''),
         'Serie VIN / motor' => textv($vehicle['serie_vin'] ?? '') . ' / ' . textv($vehicle['nro_motor'] ?? ''),
         'Observaciones' => $vehicle['involucrado_observaciones'] ?? ($vehicle['notas'] ?? ''),
+    ]);
+
+    add_heading($section, 'Documentos del vehiculo', 2);
+    add_records($section, 'Sin documentos vehiculares registrados.', load_vehiculo_docs($pdo, $vehicle), [
+        'Tarjeta - numero de propiedad' => 'numero_propiedad',
+        'Tarjeta - titulo' => 'titulo_propiedad',
+        'Tarjeta - partida' => 'partida_propiedad',
+        'Tarjeta - sede' => 'sede_propiedad',
+        'SOAT - numero' => 'numero_soat',
+        'SOAT - aseguradora' => 'aseguradora_soat',
+        'SOAT - vigente desde' => static fn($r) => date_pe($r['vigente_soat'] ?? ''),
+        'SOAT - vencimiento' => static fn($r) => date_pe($r['vencimiento_soat'] ?? ''),
+        'CITV - numero' => 'numero_revision',
+        'CITV - certificadora' => 'certificadora_revision',
+        'CITV - vigente desde' => static fn($r) => date_pe($r['vigente_revision'] ?? ''),
+        'CITV - vencimiento' => static fn($r) => date_pe($r['vencimiento_revision'] ?? ''),
+        'Peritaje - numero' => 'numero_peritaje',
+        'Peritaje - fecha' => static fn($r) => date_pe($r['fecha_peritaje'] ?? ''),
+        'Peritaje - perito' => 'perito_peritaje',
+        'Peritaje - sistema electrico' => 'sistema_electrico_peritaje',
+        'Peritaje - frenos' => 'sistema_frenos_peritaje',
+        'Peritaje - direccion' => 'sistema_direccion_peritaje',
+        'Peritaje - transmision' => 'sistema_transmision_peritaje',
+        'Peritaje - suspension' => 'sistema_suspension_peritaje',
+        'Peritaje - planta motriz' => 'planta_motriz_peritaje',
+        'Peritaje - otros' => 'otros_peritaje',
+        'Peritaje - danos' => 'danos_peritaje',
     ]);
 
     $fallecidos = load_fallecidos($pdo, $accidenteId, $vehicle, $singleVehicle);

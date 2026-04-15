@@ -250,11 +250,72 @@ function load_person_docs(PDO $pdo, int $accidenteId, ?int $personaId): array
     ];
 }
 
+function is_combined_vehicle(array $vehicle): bool
+{
+    return in_array((string) ($vehicle['involucrado_tipo'] ?? ''), ['Combinado vehicular 1', 'Combinado vehicular 2'], true);
+}
+
+function load_combined_vehicle_ids(PDO $pdo, int $accidenteId, array $vehicle): array
+{
+    if (!is_combined_vehicle($vehicle)) {
+        return [];
+    }
+
+    $orden = trim((string) ($vehicle['orden_participacion'] ?? ''));
+    if ($orden === '') {
+        return [];
+    }
+
+    $rows = fetch_all($pdo, "
+        SELECT vehiculo_id
+          FROM involucrados_vehiculos
+         WHERE accidente_id = :a
+           AND orden_participacion = :orden
+           AND tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
+         ORDER BY FIELD(tipo, 'Combinado vehicular 1', 'Combinado vehicular 2'), id ASC
+    ", [':a' => $accidenteId, ':orden' => $orden]);
+
+    return array_values(array_unique(array_filter(array_map(static fn($row) => (int) ($row['vehiculo_id'] ?? 0), $rows))));
+}
+
 function load_conductores(PDO $pdo, int $accidenteId, array $vehicle, bool $singleVehicle): array
 {
     $vehiculoId = (int) ($vehicle['vehiculo_id'] ?? 0);
     if ($vehiculoId <= 0) {
         return [];
+    }
+
+    $combinedVehicleIds = load_combined_vehicle_ids($pdo, $accidenteId, $vehicle);
+    if ($combinedVehicleIds !== []) {
+        $placeholders = [];
+        $params = [':a' => $accidenteId];
+        foreach ($combinedVehicleIds as $index => $id) {
+            $key = ':v' . $index;
+            $placeholders[] = $key;
+            $params[$key] = $id;
+        }
+        $orderCase = 'CASE';
+        foreach ($combinedVehicleIds as $index => $id) {
+            $orderCase .= ' WHEN ip.vehiculo_id = ' . (int) $id . ' THEN ' . $index;
+        }
+        $orderCase .= ' ELSE 99 END';
+
+        $rows = fetch_all($pdo, "
+            SELECT ip.id AS involucrado_persona_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones AS participacion_observaciones,
+                   pr.Nombre AS rol_nombre,
+                   p.*
+              FROM involucrados_personas ip
+              JOIN personas p ON p.id = ip.persona_id
+         LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
+             WHERE ip.accidente_id = :a
+               AND ip.vehiculo_id IN (" . implode(',', $placeholders) . ")
+               AND LOWER(COALESCE(pr.Nombre, '')) LIKE '%conduc%'
+             ORDER BY {$orderCase}, ip.id ASC
+        ", $params);
+
+        if ($rows !== []) {
+            return $rows;
+        }
     }
 
     $rows = fetch_all($pdo, "
@@ -629,11 +690,31 @@ if ($accidente === []) {
     exit('Accidente no encontrado');
 }
 
+$selectedVehicle = [];
+if ($vehiculoInvId > 0) {
+    $selectedVehicle = fetch_one($pdo, "
+        SELECT accidente_id, orden_participacion, tipo
+          FROM involucrados_vehiculos
+         WHERE id = :iv
+           AND accidente_id = :a
+         LIMIT 1
+    ", [':iv' => $vehiculoInvId, ':a' => $accidenteId]);
+    if ($selectedVehicle === []) {
+        http_response_code(404);
+        exit('No se encontro la unidad vehicular seleccionada para este accidente.');
+    }
+}
+
 $vehicleParams = [':a' => $accidenteId];
 $vehicleFilter = '';
 if ($vehiculoInvId > 0) {
-    $vehicleFilter = ' AND iv.id = :iv';
-    $vehicleParams[':iv'] = $vehiculoInvId;
+    if (is_combined_vehicle(['involucrado_tipo' => $selectedVehicle['tipo'] ?? ''])) {
+        $vehicleFilter = " AND iv.orden_participacion = :orden AND iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')";
+        $vehicleParams[':orden'] = $selectedVehicle['orden_participacion'];
+    } else {
+        $vehicleFilter = ' AND iv.id = :iv';
+        $vehicleParams[':iv'] = $vehiculoInvId;
+    }
 }
 $vehicles = fetch_all($pdo, "
     SELECT iv.id AS iv_id, iv.orden_participacion, iv.tipo AS involucrado_tipo, iv.observaciones AS involucrado_observaciones,

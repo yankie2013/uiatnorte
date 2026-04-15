@@ -5027,6 +5027,7 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-documentos::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
   .main-tabs .nav-link.tab-diligencias::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
   .main-tabs .nav-link.tab-analisis::before{background:linear-gradient(180deg,#0f766e 0%,#22c55e 100%)}
+  .main-tabs .nav-link.tab-componentes-informe::before{background:linear-gradient(180deg,#0369a1 0%,#38bdf8 100%)}
   .main-tabs .nav-link.tab-itp.active{
     background:linear-gradient(135deg,#f2fffc 0%,#dbfaf3 48%,#c8f4ec 100%);
     box-shadow:0 18px 38px rgba(20,184,166,.17), 0 0 0 1px rgba(255,255,255,.58) inset;
@@ -5046,6 +5047,10 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-analisis.active{
     background:linear-gradient(135deg,#f3fff7 0%,#e0fbe8 50%,#cbf7d8 100%);
     box-shadow:0 18px 38px rgba(34,197,94,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
+  }
+  .main-tabs .nav-link.tab-componentes-informe.active{
+    background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#bae6fd 100%);
+    box-shadow:0 18px 38px rgba(14,165,233,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
   }
   .main-tabs .main-tab-title{
     display:block;
@@ -5464,6 +5469,7 @@ include __DIR__ . '/sidebar.php';
   .inline-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line);background:#eef3fb}
   .inline-head strong{font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#51627d}
   .inline-frame{width:100%;height:520px;border:0;background:#fff}
+  .componentes-informe-frame{height:760px;min-height:70vh;border-radius:12px}
   html[data-theme-resolved="dark"] .btn-shell{
     background:#10192c;
     color:var(--ink);
@@ -5631,6 +5637,11 @@ include __DIR__ . '/sidebar.php';
     color:#edfff4;
     box-shadow:0 18px 38px rgba(34,197,94,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-componentes-informe.active{
+    background:linear-gradient(135deg,#0b3551 0%,#0f5276 52%,#1476a8 100%);
+    color:#e8f7ff;
+    box-shadow:0 18px 38px rgba(14,165,233,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
   html[data-theme-resolved="dark"] .tab-panel.driver-panel{
     background:linear-gradient(180deg,rgba(10,44,37,.95) 0%,rgba(15,23,42,.96) 52%,rgba(11,35,31,.96) 100%);
   }
@@ -5785,6 +5796,9 @@ include __DIR__ . '/sidebar.php';
   }
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-analisis.active{
     color:#ddfce7;
+  }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-componentes-informe.active{
+    color:#dff4ff;
   }
   html[data-theme-resolved="dark"] .tabs-header .nav-link,
   html[data-theme-resolved="dark"] .participant-tabs .nav-link,
@@ -6308,12 +6322,13 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
             ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
+            ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
         ];
       ?>
       <?php foreach ($mainTabs as $index => $tab): ?>
         <button class="nav-link tab-<?= h((string) $tab['id']) ?> <?= $index === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
           <span class="main-tab-title"><?= h($tab['label']) ?></span>
-          <span class="tab-sub"><?= h((string) $tab['count']) ?> registro(s)</span>
+          <span class="tab-sub"><?= h((string) ($tab['sub'] ?? ((string) $tab['count'] . ' registro(s)'))) ?></span>
         </button>
       <?php endforeach; ?>
     </div>
@@ -8523,6 +8538,11 @@ include __DIR__ . '/sidebar.php';
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="componentes-informe" role="tabpanel">
+        <div class="tab-panel">
+          <iframe class="inline-frame componentes-informe-frame" id="componentes-informe-frame" src="word_informe_selector_vehiculo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" loading="lazy"></iframe>
         </div>
       </div>
 </div>

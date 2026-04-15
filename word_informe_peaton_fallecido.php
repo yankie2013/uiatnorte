@@ -225,12 +225,12 @@ function load_peatones_fallecidos(PDO $pdo, int $accidenteId, int $personaInvId 
                ip.observaciones AS participacion_observaciones,
                pr.Nombre AS rol_nombre,
                p.*
-          FROM involucrados_personas ip
+         FROM involucrados_personas ip
           JOIN personas p ON p.id = ip.persona_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
          WHERE ip.accidente_id = :a
-           AND ip.lesion = 'Fallecido'
-           AND (pr.Nombre IN ('Peatón', 'Peaton') OR ip.rol_id = 2)
+           AND LOWER(COALESCE(ip.lesion, '')) LIKE '%falle%'
+           AND (LOWER(COALESCE(pr.Nombre, '')) LIKE '%peat%' OR ip.rol_id = 2 OR ip.vehiculo_id IS NULL OR ip.vehiculo_id = 0)
            {$personFilter}
          ORDER BY ip.id ASC
     ", $params);

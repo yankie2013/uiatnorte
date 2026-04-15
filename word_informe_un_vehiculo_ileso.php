@@ -607,6 +607,21 @@ $vehicleFilter = '';
 if ($vehiculoInvId > 0) {
     $vehicleFilter = ' AND iv.id = :iv';
     $vehicleParams[':iv'] = $vehiculoInvId;
+} else {
+    $vehicleFilter = "
+        AND EXISTS (
+            SELECT 1
+              FROM involucrados_personas ipi
+         LEFT JOIN participacion_persona pri ON pri.Id = ipi.rol_id
+             WHERE ipi.accidente_id = iv.accidente_id
+               AND ipi.vehiculo_id = iv.vehiculo_id
+               AND (
+                   LOWER(COALESCE(ipi.lesion, '')) LIKE '%ileso%'
+                   OR LOWER(COALESCE(ipi.lesion, '')) LIKE '%herid%'
+               )
+               AND LOWER(COALESCE(pri.Nombre, '')) LIKE '%conduc%'
+        )
+    ";
 }
 $vehicles = fetch_all($pdo, "
     SELECT iv.id AS iv_id, iv.orden_participacion, iv.tipo AS involucrado_tipo, iv.observaciones AS involucrado_observaciones,
@@ -630,6 +645,9 @@ $vehicles = fetch_all($pdo, "
 if ($vehicles === []) {
     http_response_code(404);
     exit('No hay vehiculos involucrados para este accidente.');
+}
+if ($vehiculoInvId <= 0) {
+    $vehicles = array_slice($vehicles, 0, 1);
 }
 
 $infpolRaw = trim((string) ($accidente['nro_informe_policial'] ?? ''));
