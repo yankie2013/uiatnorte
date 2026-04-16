@@ -43,6 +43,7 @@ if (!is_dir($tmpDir)) {
     @mkdir($tmpDir, 0775, true);
 }
 Settings::setTempDir($tmpDir);
+Settings::setOutputEscapingEnabled(true);
 
 $accidenteId = (int) ($_GET['accidente_id'] ?? $_GET['id'] ?? 0);
 $vehiculoInvId = (int) ($_GET['vehiculo_inv_id'] ?? 0);
