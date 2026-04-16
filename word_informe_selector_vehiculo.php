@@ -77,9 +77,9 @@ function load_unidades(PDO $pdo, int $accidenteId, string $condicion): array
                v.anio,
                GROUP_CONCAT(
                    DISTINCT TRIM(CONCAT(
-                       COALESCE(p.apellido_paterno, ''), ' ',
-                       COALESCE(p.apellido_materno, ''), ' ',
                        COALESCE(p.nombres, ''),
+                       ' ', COALESCE(p.apellido_paterno, ''),
+                       ' ', COALESCE(p.apellido_materno, ''),
                        ' - ', COALESCE(pr.Nombre, ''),
                        ' / ', COALESCE(ip.lesion, '')
                    ))
@@ -124,9 +124,9 @@ function load_combinados(PDO $pdo, int $accidenteId, string $condicion): array
                (
                    SELECT GROUP_CONCAT(
                               DISTINCT TRIM(CONCAT(
-                                  COALESCE(p2.apellido_paterno, ''), ' ',
-                                  COALESCE(p2.apellido_materno, ''), ' ',
                                   COALESCE(p2.nombres, ''),
+                                  ' ', COALESCE(p2.apellido_paterno, ''),
+                                  ' ', COALESCE(p2.apellido_materno, ''),
                                   ' - ', COALESCE(pr2.Nombre, ''),
                                   ' / ', COALESCE(ip2.lesion, '')
                               ))
@@ -210,9 +210,9 @@ function load_peatones_fallecidos(PDO $pdo, int $accidenteId): array
     $rows = fetch_all_selector($pdo, $sql, [':a' => $accidenteId]);
     foreach ($rows as &$row) {
         $nombre = trim(
+            (string) ($row['nombres'] ?? '') . ' ' .
             (string) ($row['apellido_paterno'] ?? '') . ' ' .
-            (string) ($row['apellido_materno'] ?? '') . ' ' .
-            (string) ($row['nombres'] ?? '')
+            (string) ($row['apellido_materno'] ?? '')
         );
         $doc = trim((string) ($row['tipo_doc'] ?? '') . ' ' . (string) ($row['num_doc'] ?? ''));
         $row['placa_label'] = trim('Peaton - ' . ($nombre !== '' ? $nombre : 'SIN NOMBRE'));

@@ -9,6 +9,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+require_once __DIR__.'/word_manifestaciones_helper.php';
 
 $DEBUG = (isset($_GET['debug']) && $_GET['debug']=='1');
 if ($DEBUG) {
@@ -52,7 +53,7 @@ function ymd_pe($dt){ if(!$dt) return ''; $ts=strtotime($dt); if(!$ts) return ''
 function fecha_corta($dt){ if(!$dt) return ''; $ts=strtotime($dt); if(!$ts) return ''; return date('d/m/Y',$ts); }
 function hora_pe($dt){ if(!$dt) return ''; $ts=strtotime($dt); if(!$ts) return ''; return date('H:i',$ts); }
 function edad_from($fecha){ if(!$fecha) return ''; $ts=strtotime($fecha); if(!$ts) return ''; $hoy=new DateTime('today'); $n=DateTime::createFromFormat('Y-m-d',date('Y-m-d',$ts)); if(!$n) return ''; return (string)$n->diff($hoy)->y; }
-function nombre_completo($n='',$apep='',$apem=''){ return trim(($apep?:'').' '.($apem?:'').' '.($n?:'')); }
+function nombre_completo($n='',$apep='',$apem=''){ return trim(($n?:'').' '.($apep?:'').' '.($apem?:'')); }
 function list_item_case(string $item, bool $capitalize = false): string {
   $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
   if ($item === '') return '';
@@ -676,6 +677,14 @@ if(!empty($EFEC)){
 /* ===========================================================
    DILIGENCIAS (placeholder)
 =========================================================== */
+word_manifestation_set_template($T, 'ut1_cond_man', word_manifestation_first($pdo, $accidente_id, (int) ($COND1['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ut2_cond_man', word_manifestation_first($pdo, $accidente_id, (int) ($COND2['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ut1_prop_man', word_manifestation_first($pdo, $accidente_id, (int) ($PROP1['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ut2_prop_man', word_manifestation_first($pdo, $accidente_id, (int) ($PROP2['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ut1_fam_man', word_manifestation_first($pdo, $accidente_id, (int) ($FAM1['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ut2_fam_man', word_manifestation_first($pdo, $accidente_id, (int) ($FAM2['persona_id'] ?? 0)));
+word_manifestation_fill_global_template($T, $pdo, $accidente_id);
+
 $T->setValue('diligencias', 'â€”');
 
 /* ---------- Salida ---------- */

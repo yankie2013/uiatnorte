@@ -184,8 +184,8 @@ if(!$row){
 $acc_dt = $row['acc_fecha_accidente'];
 $now = date('Y-m-d H:i:s');
 
-$fal_nombre_completo = trim(($row['fal_apellido_paterno']??'').' '.($row['fal_apellido_materno']??'').' '.($row['fal_nombres']??''));
-$fam_nombre_completo = trim(($row['fam_apellido_paterno']??'').' '.($row['fam_apellido_materno']??'').' '.($row['fam_nombres']??''));
+$fal_nombre_completo = trim(($row['fal_nombres']??'').' '.($row['fal_apellido_paterno']??'').' '.($row['fal_apellido_materno']??''));
+$fam_nombre_completo = trim(($row['fam_nombres']??'').' '.($row['fam_apellido_paterno']??'').' '.($row['fam_apellido_materno']??''));
 
 $fal_doc = trim(($row['fal_tipo_doc']??'').' '.($row['fal_num_doc']??''));
 $fam_doc = trim(($row['fam_tipo_doc']??'').' '.($row['fam_num_doc']??''));
@@ -209,7 +209,7 @@ $acc_fiscal_telefono = '';
 $acc_fiscal_correo = '';
 
 if(!empty($row['fs_nombres']) || !empty($row['fs_apellido_paterno']) || !empty($row['fs_apellido_materno'])){
-  $acc_fiscal_nombre_completo = trim(($row['fs_apellido_paterno'] ?? '') . ' ' . ($row['fs_apellido_materno'] ?? '') . ' ' . ($row['fs_nombres'] ?? ''));
+  $acc_fiscal_nombre_completo = trim(($row['fs_nombres'] ?? '') . ' ' . ($row['fs_apellido_paterno'] ?? '') . ' ' . ($row['fs_apellido_materno'] ?? ''));
   $acc_fiscal_cargo = $row['fs_cargo'] ?? '';
   $acc_fiscal_dni = $row['fs_dni'] ?? '';
   $acc_fiscal_telefono = $row['fs_telefono'] ?? '';

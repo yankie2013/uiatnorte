@@ -361,7 +361,7 @@ final class OficioRepository
             return [];
         }
         $sql = "SELECT ip.id,
-                       TRIM(CONCAT(COALESCE(pe.apellido_paterno,''), ' ', COALESCE(pe.apellido_materno,''), ' ', COALESCE(pe.nombres,''))) AS nombre
+                       TRIM(CONCAT(COALESCE(pe.nombres,''), ' ', COALESCE(pe.apellido_paterno,''), ' ', COALESCE(pe.apellido_materno,''))) AS nombre
                 FROM involucrados_personas ip
                 LEFT JOIN personas pe ON pe.id = ip.persona_id
                 WHERE ip.accidente_id = ? AND (" . implode(' OR ', $filters) . ")

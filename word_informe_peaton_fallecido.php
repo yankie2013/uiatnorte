@@ -12,6 +12,7 @@ declare(strict_types=1);
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/word_manifestaciones_helper.php';
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -72,9 +73,9 @@ function textv($value, string $fallback = '-'): string
 function name_person(array $row, string $prefix = ''): string
 {
     return textv(trim(
+        (string) ($row[$prefix . 'nombres'] ?? '') . ' ' .
         (string) ($row[$prefix . 'apellido_paterno'] ?? '') . ' ' .
-        (string) ($row[$prefix . 'apellido_materno'] ?? '') . ' ' .
-        (string) ($row[$prefix . 'nombres'] ?? '')
+        (string) ($row[$prefix . 'apellido_materno'] ?? '')
     ));
 }
 
@@ -425,7 +426,11 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
         $familiar = $fallecido !== [] ? load_familiar($pdo, $accidenteId, (int) ($fallecido['involucrado_persona_id'] ?? 0)) : [];
         $familiarLawyer = $familiar !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0))) : [];
         fill_fallecido_template_markers($markers, $prefixes, $fallecido, $fallecidoLawyer, $occiso, $familiar, $familiarLawyer, $accidente);
+        word_manifestation_set_array($markers, $prefixes, 'fall_man', word_manifestation_first($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0)));
+        word_manifestation_set_array($markers, $prefixes, 'fam_man', word_manifestation_first($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0)));
     }
+
+    word_manifestation_fill_global_array($markers, $pdo, $accidenteId);
 
     return $markers;
 }

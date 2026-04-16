@@ -13,7 +13,7 @@ final class DocumentoRmlRepository
 
     public function personaById(int $personaId): ?array
     {
-        $sql = "SELECT id, num_doc, CONCAT(apellido_paterno,' ',apellido_materno,', ',nombres) AS nom FROM personas WHERE id=? LIMIT 1";
+        $sql = "SELECT id, num_doc, CONCAT(nombres,' ',apellido_paterno,' ',apellido_materno) AS nom FROM personas WHERE id=? LIMIT 1";
         $st = $this->pdo->prepare($sql);
         $st->execute([$personaId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -30,7 +30,7 @@ final class DocumentoRmlRepository
 
     public function findWithPersona(int $id): ?array
     {
-        $sql = "SELECT r.*, CONCAT(pe.apellido_paterno,' ',pe.apellido_materno,', ',pe.nombres) AS per_nom, pe.num_doc
+        $sql = "SELECT r.*, CONCAT(pe.nombres,' ',pe.apellido_paterno,' ',pe.apellido_materno) AS per_nom, pe.num_doc
                   FROM documento_rml r
              LEFT JOIN personas pe ON pe.id=r.persona_id
                  WHERE r.id=? LIMIT 1";
@@ -63,7 +63,7 @@ final class DocumentoRmlRepository
 
     public function search(int $personaId): array
     {
-        $sql = "SELECT r.*, CONCAT(pe.apellido_paterno,' ',pe.apellido_materno,', ',pe.nombres) AS per_nom, pe.num_doc
+        $sql = "SELECT r.*, CONCAT(pe.nombres,' ',pe.apellido_paterno,' ',pe.apellido_materno) AS per_nom, pe.num_doc
                   FROM documento_rml r
              LEFT JOIN personas pe ON pe.id = r.persona_id";
         $params = [];

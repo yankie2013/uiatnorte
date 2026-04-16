@@ -9,6 +9,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+require_once __DIR__.'/word_manifestaciones_helper.php';
 
 $DEBUG = isset($_GET['debug']) && $_GET['debug']=='1';
 if ($DEBUG) {
@@ -62,7 +63,7 @@ function ymd_pe($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) r
 function hora_pe($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) return 'â€”'; return date('H:i',$ts); }
 function fecha_corta($dt){ if(!$dt) return 'â€”'; $ts=strtotime($dt); if(!$ts) return 'â€”'; return date('d/m/Y',$ts); }
 function edad_from($fecha){ if(!$fecha) return 'â€”'; $ts=strtotime($fecha); if(!$ts) return 'â€”'; $hoy=new DateTime('today'); $n=DateTime::createFromFormat('Y-m-d',date('Y-m-d',$ts)); if(!$n) return 'â€”'; return $n->diff($hoy)->y; }
-function nombre_completo($n='',$apep='',$apem=''){ return trim(($apep?:'').' '.($apem?:'').' '.($n?:'')); }
+function nombre_completo($n='',$apep='',$apem=''){ return trim(($n?:'').' '.($apep?:'').' '.($apem?:'')); }
 function list_item_case(string $item, bool $capitalize = false): string {
   $item = preg_replace('/\s+/u', ' ', trim($item)) ?? trim($item);
   if ($item === '') return '';
@@ -710,6 +711,15 @@ $T->setValue('itp_evidencia_material',  v_itp($ITP,'evidencia_material'));
 /* ====== DILIGENCIAS (si tienes tabla, reemplaza) ====== */
 $T->setValue('diligencias', 'â€”');
 
+/* ====== MANIFESTACIONES DISPONIBLES COMO MARCADORES ====== */
+word_manifestation_set_template($T, 'cond_man', word_manifestation_first($pdo, $accidente_id, (int) ($COND['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'prop_man', word_manifestation_first($pdo, $accidente_id, (int) ($PROP['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'peaton_man', word_manifestation_first($pdo, $accidente_id, (int) ($PEA['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'fall_man', word_manifestation_first($pdo, $accidente_id, (int) ($PEA['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'fam_man', word_manifestation_first($pdo, $accidente_id, (int) ($FAM['persona_id'] ?? 0)));
+word_manifestation_set_template($T, 'ocu_man', word_manifestation_first($pdo, $accidente_id, (int) ($OCU['persona_id'] ?? 0)));
+word_manifestation_fill_global_template($T, $pdo, $accidente_id);
+
 /* ---------- DepuraciÃ³n opcional ---------- */
 if ($DEBUG) {
   header('Content-Type:text/plain; charset=utf-8');
@@ -760,4 +770,3 @@ header('Content-Length: '.filesize($tmp));
 readfile($tmp);
 @unlink($tmp);
 exit;
-

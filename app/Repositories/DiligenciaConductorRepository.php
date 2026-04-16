@@ -74,7 +74,7 @@ final class DiligenciaConductorRepository
         if ($personaId <= 0) {
             return '';
         }
-        $st = $this->pdo->prepare("SELECT CONCAT_WS(' ', apellido_paterno, apellido_materno, nombres) FROM personas WHERE id = ? LIMIT 1");
+        $st = $this->pdo->prepare("SELECT CONCAT_WS(' ', nombres, apellido_paterno, apellido_materno) FROM personas WHERE id = ? LIMIT 1");
         $st->execute([$personaId]);
         return (string) ($st->fetchColumn() ?: '');
     }

@@ -61,7 +61,7 @@ final class PropietarioVehiculoRepository
         $sql = "SELECT id, tipo_doc, num_doc, apellido_paterno, apellido_materno, nombres, fecha_nacimiento, domicilio, celular, email
                 FROM personas
                 WHERE (tipo_doc = 'DNI' AND num_doc LIKE ?)
-                   OR CONCAT(COALESCE(apellido_paterno,''), ' ', COALESCE(apellido_materno,''), ' ', COALESCE(nombres,'')) LIKE ?
+                   OR CONCAT(COALESCE(nombres,''), ' ', COALESCE(apellido_paterno,''), ' ', COALESCE(apellido_materno,'')) LIKE ?
                 ORDER BY apellido_paterno, apellido_materno, nombres
                 LIMIT 20";
         $st = $this->pdo->prepare($sql);

@@ -14,6 +14,7 @@ declare(strict_types=1);
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/word_manifestaciones_helper.php';
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -75,9 +76,9 @@ function textv($value, string $fallback = '-'): string
 function name_person(array $row, string $prefix = ''): string
 {
     return textv(trim(
+        (string) ($row[$prefix . 'nombres'] ?? '') . ' ' .
         (string) ($row[$prefix . 'apellido_paterno'] ?? '') . ' ' .
-        (string) ($row[$prefix . 'apellido_materno'] ?? '') . ' ' .
-        (string) ($row[$prefix . 'nombres'] ?? '')
+        (string) ($row[$prefix . 'apellido_materno'] ?? '')
     ));
 }
 
@@ -456,6 +457,9 @@ function fill_vehicle_template_markers(
         'veh_anio' => $vehicle['anio'] ?? '',
         'veh_serie_vin' => $vehicle['serie_vin'] ?? '',
         'veh_nro_motor' => $vehicle['nro_motor'] ?? '',
+        'veh_largo' => $vehicle['largo_mm'] ?? '',
+        'veh_ancho' => $vehicle['ancho_mm'] ?? '',
+        'veh_alto' => $vehicle['alto_mm'] ?? '',
         'veh_medidas' => $vehicleMeasures,
         'veh_tipo_accidente' => $vehicle['involucrado_tipo'] ?? '',
         'veh_observaciones' => $vehicle['involucrado_observaciones'] ?? ($vehicle['notas'] ?? ''),
@@ -654,7 +658,12 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
             $ownerLawyers = array_merge($ownerLawyers, load_abogados($pdo, $accidenteId, (int) $owner['representante_persona_id']));
         }
         fill_vehicle_template_markers($markers, $prefixes, $vehicle, $vehicleDoc, $driver, $driverDocs, $driverLawyer, $owner, first_row($ownerLawyers), $accidente);
+        word_manifestation_set_array($markers, $prefixes, 'cond_man', first_row($driverDocs['manifestacion'] ?? []));
+        word_manifestation_set_array($markers, $prefixes, 'prop_man', word_manifestation_first($pdo, $accidenteId, word_manifestation_owner_person_id($owner)));
+        word_manifestation_set_array($markers, $prefixes, 'prop_rep_man', word_manifestation_first($pdo, $accidenteId, (int) ($owner['representante_persona_id'] ?? 0)));
     }
+
+    word_manifestation_fill_global_array($markers, $pdo, $accidenteId);
 
     return $markers;
 }
@@ -849,7 +858,9 @@ foreach ($vehicles as $vehicle) {
         'Anio' => $vehicle['anio'] ?? '',
         'Serie VIN' => $vehicle['serie_vin'] ?? '',
         'Numero de motor' => $vehicle['nro_motor'] ?? '',
-        'Largo / ancho / alto' => trim(textv($vehicle['largo_mm'] ?? '', '') . ' / ' . textv($vehicle['ancho_mm'] ?? '', '') . ' / ' . textv($vehicle['alto_mm'] ?? '', '')),
+        'Largo' => $vehicle['largo_mm'] ?? '',
+        'Ancho' => $vehicle['ancho_mm'] ?? '',
+        'Alto' => $vehicle['alto_mm'] ?? '',
         'Tipo en accidente' => $vehicle['involucrado_tipo'] ?? '',
         'Observaciones' => $vehicle['involucrado_observaciones'] ?? ($vehicle['notas'] ?? ''),
     ]);

@@ -26,7 +26,7 @@ final class AbogadoRepository
                        GROUP_CONCAT(DISTINCT rol ORDER BY rol SEPARATOR ', ') AS roles
                 FROM (
                     SELECT p.id AS persona_id,
-                           TRIM(CONCAT(COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''), ', ', COALESCE(p.nombres,''))) AS nombre,
+                           TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            COALESCE(pr.Nombre, 'Involucrado') AS rol
                     FROM involucrados_personas ip
                     JOIN personas p ON p.id = ip.persona_id
@@ -36,7 +36,7 @@ final class AbogadoRepository
                     UNION ALL
 
                     SELECT p.id AS persona_id,
-                           TRIM(CONCAT(COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''), ', ', COALESCE(p.nombres,''))) AS nombre,
+                           TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            'Propietario vehiculo' AS rol
                     FROM propietario_vehiculo pv
                     JOIN personas p ON p.id = pv.propietario_persona_id
@@ -45,7 +45,7 @@ final class AbogadoRepository
                     UNION ALL
 
                     SELECT p.id AS persona_id,
-                           TRIM(CONCAT(COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''), ', ', COALESCE(p.nombres,''))) AS nombre,
+                           TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            'Familiar fallecido' AS rol
                     FROM familiar_fallecido ff
                     JOIN personas p ON p.id = ff.familiar_persona_id
@@ -61,7 +61,7 @@ final class AbogadoRepository
     public function listByAccidente(int $accidenteId): array
     {
         $sql = "SELECT a.*,
-                       TRIM(CONCAT(COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''), ', ', COALESCE(pr.nombres,''))) AS persona_rep_nom,
+                       TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
                 FROM abogados a
                 LEFT JOIN personas pr ON pr.id = a.persona_id
@@ -102,7 +102,7 @@ final class AbogadoRepository
     public function detail(int $id): ?array
     {
         $sql = "SELECT a.*,
-                       TRIM(CONCAT(COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''), ', ', COALESCE(pr.nombres,''))) AS persona_rep_nom,
+                       TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
                 FROM abogados a
                 LEFT JOIN personas pr ON pr.id = a.persona_id
