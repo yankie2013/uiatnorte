@@ -1,4 +1,8 @@
 <?php
-if (session_status()===PHP_SESSION_NONE) session_start();
-session_destroy();
+require __DIR__ . '/auth.php';
+
+use App\Support\Auth;
+
+Auth::logout();
 header('Location: login.php');
+exit;

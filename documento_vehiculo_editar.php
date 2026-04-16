@@ -91,7 +91,6 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
   <div class="alert success">Documento actualizado (#<?=h($id)?>).</div>
   <script>
     try { parent.postMessage({type:'docveh:updated', id:<?=json_encode($id)?>}, '*'); } catch (e) {}
-    setTimeout(() => { if (window === window.top) window.close(); }, 600);
   </script>
 <?php elseif($error_msg): ?>
   <div class="alert error">Error: <?=h($error_msg)?></div>

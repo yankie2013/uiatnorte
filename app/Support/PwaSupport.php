@@ -352,6 +352,8 @@ HTML;
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
         $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260412-theme-auto');
         $spellcheckScript = self::assetUrl($basePath, 'assets/form-spellcheck.js?v=20260414c');
+        $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260416');
+        $keepaliveUrl = self::assetUrl($basePath, 'session_keepalive.php');
         $scope = self::assetUrl($basePath, '');
         $escapedAppName = \htmlspecialchars(self::APP_NAME, ENT_QUOTES, 'UTF-8');
 
@@ -381,6 +383,7 @@ HTML;
 </div>
 <script src="{$themeScript}"></script>
 <script src="{$spellcheckScript}"></script>
+<script src="{$keepaliveScript}" data-session-url="{$keepaliveUrl}"></script>
 <script src="{$registerScript}" data-pwa-scope="{$scope}"></script>
 HTML;
     }

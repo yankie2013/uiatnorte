@@ -122,7 +122,6 @@ textarea{ min-height:96px; resize:vertical; }
   <div class="alert success">Documento creado (#<?=h($nuevo_id)?>) para el involucrado vehiculo #<?=h($invol_id)?>.</div>
   <script>
   try { parent.postMessage({type:'docveh:created', id:<?=json_encode($nuevo_id)?>, involucrado_vehiculo_id:<?=json_encode($invol_id)?>}, '*'); } catch (e) {}
-  setTimeout(function(){ if (window === window.top) window.close(); }, 600);
   </script>
 <?php elseif($error_msg): ?>
   <div class="alert error">Error: <?=h($error_msg)?></div>

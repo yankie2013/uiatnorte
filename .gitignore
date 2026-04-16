@@ -5,6 +5,8 @@
 !/logs/.gitkeep
 /uploads/*
 !/uploads/.gitkeep
+/storage/sessions/*
+!/storage/sessions/.gitkeep
 *.log
 /error_log
 /php_errors.log
