@@ -448,6 +448,24 @@ if (!$isEmbed) {
         </div>
       </div>
 
+      <div class="auto-list" style="margin-bottom:10px;">
+        <div class="auto-row">
+          <div>
+            <div class="auto-main">Descripcion Analitica</div>
+            <div class="auto-meta">
+              <span class="pill">word_informe_descripcion_analitica.php</span>
+              <span class="pill">Accidente + ITP</span>
+              <span class="pill">Plantilla / Fallback</span>
+            </div>
+            <div class="auto-meta" style="margin-top:6px">
+              Descarga el informe de datos generales. Si existe <b>plantillas/word_informe_descripcion_analitica.docx</b>, usa esa plantilla; si no existe, genera el DOCX directo.
+            </div>
+          </div>
+          <a class="btn primary" href="word_informe_descripcion_analitica.php?accidente_id=<?= (int) $accidenteId ?>">Descargar Word</a>
+        </div>
+      </div>
+
+
       <?php if ($autoOptions): ?>
         <div class="auto-list">
           <?php foreach ($autoOptions as $row): ?>
