@@ -53,6 +53,8 @@ final class PwaSupport
             'word_informe_atropello_probe.php',
             'word_informe_atropello_safe.php',
             'word_informe_atropello_tplcheck.php',
+            'word_informe_datos_generales.php',
+            'word_informe_datos_generales_marcadores.php',
             'word_informe_combinado_vehiculo.php',
             'word_informe_choque_dos_vehiculos.php',
             'word_informe_peaton_fallecido.php',

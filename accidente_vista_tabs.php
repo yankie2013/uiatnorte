@@ -6758,6 +6758,8 @@ include __DIR__ . '/sidebar.php';
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="itp_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo ITP</a>
             <a class="btn-shell" href="itp_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+            <a class="btn-shell" href="word_informe_datos_generales.php?accidente_id=<?= (int) $accidente_id ?>" target="_blank" rel="noopener">Word datos generales</a>
+            <a class="btn-shell" href="word_informe_datos_generales_marcadores.php" target="_blank" rel="noopener">Word marcadores</a>
             <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Datos generales SIDPOL</a>
           </div>
           <?php if (!$itps): ?>

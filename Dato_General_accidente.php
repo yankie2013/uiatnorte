@@ -1080,6 +1080,23 @@ include __DIR__ . '/sidebar.php';
    <span class="led <?= $cntPer>0 ? 'on' : '' ?>" title="<?= $cntPer>0?'Con registros de personas':'Sin registros de personas' ?>"></span>
 </a>
 
+<a href="word_informe_datos_generales.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar informe de datos generales e ITP"
+   target="_blank">
+   ðŸ“ Informe Datos Generales
+   <span class="led <?= ($cntItp>0 || $cntPer>0 || $cntVeh>0) ? 'on' : '' ?>"
+         title="Generar documento Word con datos generales del accidente e ITP"></span>
+</a>
+
+<a href="word_informe_datos_generales_marcadores.php"
+   class="btn-informe"
+   title="Descargar lista de marcadores del informe de datos generales"
+   target="_blank">
+   Ã°Å¸â€œâ€˜ Marcadores Datos Generales
+   <span class="led on" title="Descargar documento Word con lista de marcadores"></span>
+</a>
+
 <a href="word_informe_choque_dos_vehiculos.php?accidente_id=<?=h($accidente_id)?>"
    class="btn-informe"
    title="Descargar informe de choque entre dos vehículos">
