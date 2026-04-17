@@ -233,6 +233,26 @@ function load_abogados(PDO $pdo, int $accidenteId, ?int $personaId): array
     return fetch_all($pdo, 'SELECT * FROM abogados WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
 }
 
+function load_person_docs(PDO $pdo, int $accidenteId, ?int $personaId): array
+{
+    if (!$personaId) {
+        return ['lc' => [], 'rml' => [], 'dosaje' => [], 'manifestacion' => []];
+    }
+
+    return [
+        'lc' => fetch_all($pdo, 'SELECT * FROM documento_lc WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]),
+        'rml' => fetch_all($pdo, 'SELECT * FROM documento_rml WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, id DESC', [
+            ':p' => $personaId,
+            ':a' => $accidenteId,
+        ]),
+        'dosaje' => fetch_all($pdo, 'SELECT * FROM documento_dosaje WHERE persona_id = :p ORDER BY fecha_extraccion DESC, id DESC', [':p' => $personaId]),
+        'manifestacion' => fetch_all($pdo, 'SELECT * FROM Manifestacion WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, horario_inicio DESC, id DESC', [
+            ':p' => $personaId,
+            ':a' => $accidenteId,
+        ]),
+    ];
+}
+
 function load_vehiculo_docs(PDO $pdo, array $vehicle): array
 {
     $ivId = (int) ($vehicle['iv_id'] ?? 0);
@@ -246,9 +266,69 @@ function load_vehiculo_docs(PDO $pdo, array $vehicle): array
     ", [':iv' => $ivId, ':veh' => $vehiculoId]);
 }
 
-function load_propietarios(PDO $pdo, int $accidenteId, int $vehiculoInvId): array
+function load_legacy_propietario_from_vehiculo(PDO $pdo, int $vehiculoId): array
 {
-    return fetch_all($pdo, "
+    if ($vehiculoId <= 0) {
+        return [];
+    }
+
+    try {
+        $vehiculo = fetch_one($pdo, 'SELECT * FROM vehiculos WHERE id = :id LIMIT 1', [':id' => $vehiculoId]);
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $ownerId = 0;
+    foreach (['propietario_id', 'persona_id', 'duenio_id', 'propietario_persona_id', 'owner_id'] as $column) {
+        if (isset($vehiculo[$column]) && (int) $vehiculo[$column] > 0) {
+            $ownerId = (int) $vehiculo[$column];
+            break;
+        }
+    }
+
+    if ($ownerId > 0) {
+        $owner = fetch_one($pdo, "
+            SELECT 0 AS id, 'NATURAL' AS tipo_propietario, p.id AS propietario_persona_id,
+                   NULL AS representante_persona_id, NULL AS ruc, NULL AS razon_social,
+                   NULL AS domicilio_fiscal, NULL AS rol_legal, NULL AS observaciones,
+                   p.tipo_doc AS nat_tipo_doc, p.num_doc AS nat_num_doc, p.apellido_paterno AS nat_apellido_paterno,
+                   p.apellido_materno AS nat_apellido_materno, p.nombres AS nat_nombres, p.domicilio AS nat_domicilio,
+                   p.celular AS nat_celular, p.email AS nat_email,
+                   NULL AS rep_tipo_doc, NULL AS rep_num_doc, NULL AS rep_apellido_paterno,
+                   NULL AS rep_apellido_materno, NULL AS rep_nombres, NULL AS rep_domicilio,
+                   NULL AS rep_celular, NULL AS rep_email
+              FROM personas p
+             WHERE p.id = :id
+             LIMIT 1
+        ", [':id' => $ownerId]);
+        return $owner !== [] ? [$owner] : [];
+    }
+
+    try {
+        $owner = fetch_one($pdo, "
+            SELECT 0 AS id, 'NATURAL' AS tipo_propietario, p.id AS propietario_persona_id,
+                   NULL AS representante_persona_id, NULL AS ruc, NULL AS razon_social,
+                   NULL AS domicilio_fiscal, NULL AS rol_legal, NULL AS observaciones,
+                   p.tipo_doc AS nat_tipo_doc, p.num_doc AS nat_num_doc, p.apellido_paterno AS nat_apellido_paterno,
+                   p.apellido_materno AS nat_apellido_materno, p.nombres AS nat_nombres, p.domicilio AS nat_domicilio,
+                   p.celular AS nat_celular, p.email AS nat_email,
+                   NULL AS rep_tipo_doc, NULL AS rep_num_doc, NULL AS rep_apellido_paterno,
+                   NULL AS rep_apellido_materno, NULL AS rep_nombres, NULL AS rep_domicilio,
+                   NULL AS rep_celular, NULL AS rep_email
+              FROM propietarios pr
+              JOIN personas p ON p.id = pr.persona_id
+             WHERE pr.vehiculo_id = :id
+             LIMIT 1
+        ", [':id' => $vehiculoId]);
+        return $owner !== [] ? [$owner] : [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function load_propietarios(PDO $pdo, int $accidenteId, int $vehiculoInvId, int $vehiculoId = 0): array
+{
+    $owners = fetch_all($pdo, "
         SELECT pv.*,
                pn.tipo_doc AS nat_tipo_doc, pn.num_doc AS nat_num_doc, pn.apellido_paterno AS nat_apellido_paterno,
                pn.apellido_materno AS nat_apellido_materno, pn.nombres AS nat_nombres, pn.domicilio AS nat_domicilio,
@@ -263,6 +343,7 @@ function load_propietarios(PDO $pdo, int $accidenteId, int $vehiculoInvId): arra
            AND pv.vehiculo_inv_id = :iv
          ORDER BY pv.id DESC
     ", [':a' => $accidenteId, ':iv' => $vehiculoInvId]);
+    return $owners !== [] ? $owners : load_legacy_propietario_from_vehiculo($pdo, $vehiculoId);
 }
 
 function load_conductores(PDO $pdo, int $accidenteId, array $vehicle, bool $singleVehicle): array
@@ -392,11 +473,30 @@ function set_marker_aliases(array &$markers, array $prefixes, string $suffix, $v
     }
 }
 
-function fill_fallecido_template_markers(array &$markers, array $prefixes, array $vehicle, array $vehicleDoc, array $owner, array $ownerLawyer, array $fallecido, array $occiso, array $familiar, array $familiarLawyer, array $accidente): void
+function fill_fallecido_template_markers(
+    array &$markers,
+    array $prefixes,
+    array $vehicle,
+    array $vehicleDoc,
+    array $driver,
+    array $driverDocs,
+    array $driverLawyer,
+    array $owner,
+    array $ownerLawyer,
+    array $fallecido,
+    array $occiso,
+    array $familiar,
+    array $familiarLawyer,
+    array $accidente
+): void
 {
     $vehicleCategory = trim(textv($vehicle['categoria_codigo'] ?? '', '') . ' ' . textv($vehicle['categoria_descripcion'] ?? '', ''));
     $vehicleType = trim(textv($vehicle['tipo_codigo'] ?? '', '') . ' ' . textv($vehicle['tipo_nombre'] ?? '', ''));
     $vehicleMeasures = trim(textv($vehicle['largo_mm'] ?? '', '') . ' / ' . textv($vehicle['ancho_mm'] ?? '', '') . ' / ' . textv($vehicle['alto_mm'] ?? '', ''));
+    $lc = first_row($driverDocs['lc'] ?? []);
+    $rml = first_row($driverDocs['rml'] ?? []);
+    $dosaje = first_row($driverDocs['dosaje'] ?? []);
+    $manifestacion = first_row($driverDocs['manifestacion'] ?? []);
     $ownerNaturalName = name_person($owner, 'nat_');
     $ownerNaturalDoc = doc_type_number($owner, 'nat_tipo_doc', 'nat_num_doc');
     $ownerDisplayName = ($owner['tipo_propietario'] ?? '') === 'JURIDICA'
@@ -456,6 +556,60 @@ function fill_fallecido_template_markers(array &$markers, array $prefixes, array
         'docv_planta_motriz_peritaje' => $vehicleDoc['planta_motriz_peritaje'] ?? '',
         'docv_otros_peritaje' => $vehicleDoc['otros_peritaje'] ?? '',
         'docv_danos_peritaje' => $vehicleDoc['danos_peritaje'] ?? '',
+        'cond_nombre' => name_person($driver),
+        'cond_rol' => $driver['rol_nombre'] ?? '',
+        'cond_lesion' => $driver['lesion'] ?? '',
+        'cond_doc_tipo' => $driver['tipo_doc'] ?? '',
+        'cond_doc_num' => $driver['num_doc'] ?? '',
+        'cond_doc' => doc_type_number($driver),
+        'cond_sexo' => $driver['sexo'] ?? '',
+        'cond_fecha_nacimiento' => date_pe($driver['fecha_nacimiento'] ?? ''),
+        'cond_edad' => age_from($driver['fecha_nacimiento'] ?? ''),
+        'cond_edad_accidente' => age_from($driver['fecha_nacimiento'] ?? '', $accidente['fecha_accidente'] ?? null),
+        'cond_estado_civil' => $driver['estado_civil'] ?? '',
+        'cond_nacionalidad' => $driver['nacionalidad'] ?? '',
+        'cond_nacimiento' => trim(textv($driver['departamento_nac'] ?? '', '') . ' / ' . textv($driver['provincia_nac'] ?? '', '') . ' / ' . textv($driver['distrito_nac'] ?? '', '')),
+        'cond_domicilio' => $driver['domicilio'] ?? '',
+        'cond_domicilio_ubigeo' => trim(textv($driver['domicilio_departamento'] ?? '', '') . ' / ' . textv($driver['domicilio_provincia'] ?? '', '') . ' / ' . textv($driver['domicilio_distrito'] ?? '', '')),
+        'cond_ocupacion' => $driver['ocupacion'] ?? '',
+        'cond_grado_instruccion' => $driver['grado_instruccion'] ?? '',
+        'cond_padre' => $driver['nombre_padre'] ?? '',
+        'cond_madre' => $driver['nombre_madre'] ?? '',
+        'cond_celular' => $driver['celular'] ?? '',
+        'cond_email' => $driver['email'] ?? '',
+        'cond_observaciones' => $driver['participacion_observaciones'] ?? '',
+        'lc_clase' => $lc['clase'] ?? '',
+        'lc_categoria' => $lc['categoria'] ?? '',
+        'lc_numero' => $lc['numero'] ?? '',
+        'lc_expedido_por' => $lc['expedido_por'] ?? '',
+        'lc_vigente_desde' => date_pe($lc['vigente_desde'] ?? ''),
+        'lc_vigente_hasta' => date_pe($lc['vigente_hasta'] ?? ''),
+        'lc_restricciones' => $lc['restricciones'] ?? '',
+        'rml_numero' => $rml['numero'] ?? '',
+        'rml_fecha' => date_pe($rml['fecha'] ?? ''),
+        'rml_incapacidad' => $rml['incapacidad_medico'] ?? '',
+        'rml_atencion' => $rml['atencion_facultativo'] ?? '',
+        'rml_observaciones' => $rml['observaciones'] ?? '',
+        'dosaje_numero' => $dosaje['numero'] ?? '',
+        'dosaje_registro' => $dosaje['numero_registro'] ?? '',
+        'dosaje_fecha' => date_pe($dosaje['fecha_extraccion'] ?? ''),
+        'dosaje_hora' => time_pe($dosaje['fecha_extraccion'] ?? ''),
+        'dosaje_resultado_cual' => $dosaje['resultado_cualitativo'] ?? '',
+        'dosaje_resultado_cuant' => $dosaje['resultado_cuantitativo'] ?? '',
+        'dosaje_lectura_cuant' => $dosaje['leer_cuantitativo'] ?? '',
+        'dosaje_observaciones' => $dosaje['observaciones'] ?? '',
+        'man_fecha' => date_pe($manifestacion['fecha'] ?? ''),
+        'man_hora_inicio' => time_pe($manifestacion['horario_inicio'] ?? ''),
+        'man_hora_termino' => time_pe($manifestacion['hora_termino'] ?? ''),
+        'man_modalidad' => $manifestacion['modalidad'] ?? '',
+        'cond_abog_nombre' => name_person($driverLawyer),
+        'cond_abog_condicion' => $driverLawyer['condicion'] ?? '',
+        'cond_abog_colegiatura' => $driverLawyer['colegiatura'] ?? '',
+        'cond_abog_registro' => $driverLawyer['registro'] ?? '',
+        'cond_abog_casilla' => $driverLawyer['casilla_electronica'] ?? '',
+        'cond_abog_domicilio_procesal' => $driverLawyer['domicilio_procesal'] ?? '',
+        'cond_abog_celular' => $driverLawyer['celular'] ?? '',
+        'cond_abog_email' => $driverLawyer['email'] ?? '',
         'prop_tipo' => $owner['tipo_propietario'] ?? '',
         'prop_nombre' => $ownerDisplayName,
         'prop_doc' => $ownerDisplayDoc,
@@ -596,7 +750,7 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
             $prefixes[] = '';
         }
         $vehicleDoc = $vehicle !== [] ? first_row(load_vehiculo_docs($pdo, $vehicle)) : [];
-        $owners = $vehicle !== [] ? load_propietarios($pdo, $accidenteId, (int) ($vehicle['iv_id'] ?? 0)) : [];
+        $owners = $vehicle !== [] ? load_propietarios($pdo, $accidenteId, (int) ($vehicle['iv_id'] ?? 0), (int) ($vehicle['vehiculo_id'] ?? 0)) : [];
         $owner = first_row($owners);
         $ownerLawyers = [];
         if (!empty($owner['propietario_persona_id'])) {
@@ -610,8 +764,13 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
         $familiar = $fallecido !== [] ? load_familiar($pdo, $accidenteId, (int) ($fallecido['involucrado_persona_id'] ?? 0)) : [];
         $familiarLawyer = $familiar !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0))) : [];
         $driver = $vehicle !== [] ? first_row(load_conductores($pdo, $accidenteId, $vehicle, $singleVehicle)) : [];
+        if ($driver === [] && $fallecido !== []) {
+            $driver = $fallecido;
+        }
+        $driverDocs = $driver !== [] ? load_person_docs($pdo, $accidenteId, (int) ($driver['id'] ?? 0)) : ['lc' => [], 'rml' => [], 'dosaje' => [], 'manifestacion' => []];
+        $driverLawyer = $driver !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($driver['id'] ?? 0))) : [];
         $driverManifestacion = word_manifestation_first($pdo, $accidenteId, (int) ($driver['id'] ?? 0));
-        fill_fallecido_template_markers($markers, $prefixes, $vehicle, $vehicleDoc, $owner, first_row($ownerLawyers), $fallecido, $occiso, $familiar, $familiarLawyer, $accidente);
+        fill_fallecido_template_markers($markers, $prefixes, $vehicle, $vehicleDoc, $driver, $driverDocs, $driverLawyer, $owner, first_row($ownerLawyers), $fallecido, $occiso, $familiar, $familiarLawyer, $accidente);
         word_manifestation_set_array($markers, $prefixes, 'man', $driverManifestacion);
         word_manifestation_set_array($markers, $prefixes, 'cond_man', $driverManifestacion);
         word_manifestation_set_array($markers, $prefixes, 'prop_man', word_manifestation_first($pdo, $accidenteId, word_manifestation_owner_person_id($owner)));
@@ -816,7 +975,7 @@ foreach ($vehicles as $vehicle) {
     ]);
 
     add_heading($section, 'Propietario del vehiculo', 2);
-    $owners = load_propietarios($pdo, $accidenteId, (int) $vehicle['iv_id']);
+    $owners = load_propietarios($pdo, $accidenteId, (int) $vehicle['iv_id'], (int) ($vehicle['vehiculo_id'] ?? 0));
     if ($owners === []) {
         $section->addText('Sin propietario registrado para esta unidad.', ['italic' => true, 'size' => 9, 'color' => '666666']);
         $section->addTextBreak(1);
