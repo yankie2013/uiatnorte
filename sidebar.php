@@ -373,6 +373,10 @@ body.uiat-sidebar-open .sidebar-backdrop{
             <span class="section-icon">&#128214;</span>
             <span>Prontuario entidades</span>
         </a>
+        <a class="btn" href="catalogos.php">
+            <span class="section-icon">&#128451;</span>
+            <span>Catalogos</span>
+        </a>
     </div>
 
     <?php if (false): ?>

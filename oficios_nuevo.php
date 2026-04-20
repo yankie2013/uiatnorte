@@ -300,7 +300,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
           </select>
           <button class="btn mini" type="button" onclick="openCreate('asunto')">+</button>
         </div>
-        <div class="muted">Este selector siempre muestra todos los asuntos guardados. Si existen varias plantillas con el mismo nombre, podrás elegir la variante.</div>
+        <div class="muted">Este selector siempre muestra todos los asuntos guardados. El asunto no cambia la entidad destino; si existen varias plantillas con el mismo nombre, podrás elegir la variante.</div>
       </div>
 
       <div class="c12">
@@ -663,14 +663,6 @@ async function refreshAsuntoPreview() {
   }
   if (tipoSel && info.item.tipo && tipoSel.value !== info.item.tipo) {
     tipoSel.value = info.item.tipo;
-  }
-  const asuntoEntidadId = String(info.item.entidad_id || '');
-  if (entidadSel && asuntoEntidadId !== '' && entidadSel.value !== asuntoEntidadId) {
-    entidadSel.value = asuntoEntidadId;
-    setEntidadTextById(asuntoEntidadId);
-    lastEntidadLoaded = asuntoEntidadId;
-    await loadSubentidades(asuntoEntidadId);
-    await loadPersonas(asuntoEntidadId, personaSel ? personaSel.value : '');
   }
   n.textContent = info.item.nombre || '';
   detail.textContent = (info.item.detalle || '').trim() || '—';

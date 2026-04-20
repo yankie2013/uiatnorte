@@ -190,9 +190,21 @@ final class OficioRepository
         if ($base === null) {
             return [];
         }
-        $st = $this->pdo->prepare('SELECT id, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE entidad_id = ? AND tipo = ? AND nombre = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
-        $st->execute([(int) $base['entidad_id'], (string) $base['tipo'], (string) $base['nombre']]);
-        return $st->fetchAll(PDO::FETCH_ASSOC);
+        $key = $this->asuntoCatalogKey((string) ($base['nombre'] ?? ''));
+        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE tipo = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
+        $st->execute([(string) $base['tipo']]);
+
+        $items = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            if ($this->asuntoCatalogKey((string) ($row['nombre'] ?? '')) === $key) {
+                $items[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'detalle' => (string) ($row['detalle'] ?? ''),
+                ];
+            }
+        }
+
+        return $items;
     }
 
     public function accidentes(): array
