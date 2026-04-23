@@ -29,6 +29,10 @@ $error = '';
 $success = '';
 $newId = null;
 $context = null;
+$createdId = isset($_GET['created']) ? (int) $_GET['created'] : 0;
+$calendarStatus = trim((string) ($_GET['calendar'] ?? ''));
+$calendarLink = trim((string) ($_GET['calendar_link'] ?? ''));
+$autoDownload = $createdId > 0 && (string) ($_GET['download'] ?? '') === '1';
 
 try {
     $context = $service->quickContext($accidenteId, $personaSelector);
@@ -62,6 +66,8 @@ $motivoOpciones = [
     'Entrega documentos',
 ];
 
+$calendarEmbedUrl = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FLima&showPrint=0&src=YTg4ZTg1MjI3NDkwZDZhMzJlNDcyMzIwMDZjMDYxZjljMDYyNmIzMmM2M2E1ZmQ2NWRkMGVlNGVkNTFlNTYwZUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MjUzNmFiZGUzMWY3YjA5ZmNhMDBhMGQ4NjEwZTY0ZDM3MWMwNDBmMGQ4ZWU0YTlhZTdlMWJhMmZhY2RiNjFkYUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=N250Ym05aGFibG00am0wbGJpMXN2Mm83YTRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%2333b679&color=%23d50000&color=%23009688';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $context !== null) {
     $data = [
         'en_calidad' => $_POST['en_calidad'] ?? '',
@@ -77,14 +83,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $context !== null) {
     try {
         $created = $service->create($accidenteId, ['persona' => $personaSelector] + $data);
         $newId = (int) $created['id'];
+        $calendarStatus = 'ok';
 
         try {
-            gc_crear_evento_citacion($service->calendarPayload($accidenteId, $newId, $created));
+            $linkEvento = gc_crear_evento_citacion($service->calendarPayload($accidenteId, $newId, $created));
+            if (!$linkEvento) {
+                $calendarStatus = 'sin_link';
+            }
         } catch (Throwable $calendarError) {
-            // Si falla Google Calendar no bloqueamos la descarga del Word.
+            $calendarStatus = 'error';
+            error_log('No se pudo crear evento Google Calendar para citacion rapida #' . $newId . ': ' . $calendarError->getMessage());
         }
 
-        header('Location: citacion_diligencia.php?citacion_id=' . urlencode((string) $newId));
+        $redirectParams = [
+            'accidente_id' => $accidenteId,
+            'persona' => $personaSelector,
+            'return_to' => $returnTo,
+            'created' => $newId,
+            'calendar' => $calendarStatus,
+            'download' => 1,
+        ];
+        if (!empty($linkEvento)) {
+            $redirectParams['calendar_link'] = $linkEvento;
+        }
+
+        header('Location: citacion_rapida.php?' . http_build_query($redirectParams));
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -104,6 +127,7 @@ include __DIR__ . '/sidebar.php';
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca;--ok:#bbf7d0}}
 body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px auto;padding:16px}.toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}.card input,.card select,.card textarea{width:100%;box-sizing:border-box;min-height:42px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);line-height:1.25}.card select{padding-right:38px;appearance:auto;-webkit-appearance:menulist}.card textarea{min-height:120px;resize:vertical}.muted{color:var(--muted);font-size:.92rem}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.summary{border:1px dashed var(--border);border-radius:14px;padding:14px;background:rgba(148,163,184,.06)}.summary strong{display:block;margin-bottom:4px}.pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);font-weight:700}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:6px}.doc-link{display:inline-flex;margin-top:10px}@media (max-width:900px){.c3,.c4,.c6,.c8{grid-column:span 12}}
+.calendar-card{margin-top:18px}.calendar-frame{border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--card)}.calendar-frame iframe{display:block;width:100%;height:600px;border:0}
 </style>
 </head>
 <body>
@@ -120,6 +144,22 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
   </div>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
+  <?php if ($createdId > 0): ?>
+    <div class="alert <?= $calendarStatus === 'error' ? 'err' : 'ok' ?>">
+      Citacion rapida registrada correctamente.
+      <?php if ($calendarStatus === 'ok'): ?>
+        Evento creado en Google Calendar.
+      <?php elseif ($calendarStatus === 'sin_link'): ?>
+        Google Calendar respondio, pero no devolvio enlace del evento.
+      <?php elseif ($calendarStatus === 'error'): ?>
+        No se pudo crear el evento en Google Calendar. La citacion si fue guardada.
+      <?php endif; ?>
+      <?php if ($calendarLink !== ''): ?>
+        <a class="btn doc-link" href="<?= h($calendarLink) ?>" target="_blank" rel="noopener">Ver evento</a>
+      <?php endif; ?>
+      <a class="btn doc-link" href="citacion_diligencia.php?citacion_id=<?= (int) $createdId ?>" target="_blank" rel="noopener">Descargar Word</a>
+    </div>
+  <?php endif; ?>
   <?php if ($context !== null): ?>
     <form method="post" class="card">
       <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
@@ -234,6 +274,14 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
       </div>
     </form>
   <?php endif; ?>
+
+  <div class="card calendar-card">
+    <h2 style="margin:0 0 8px;font-size:16px;">Calendario de turnos</h2>
+    <div class="muted" style="margin-bottom:12px;">Aqui puedes ver tus dias de servicio, franco y las citaciones creadas en Google Calendar.</div>
+    <div class="calendar-frame">
+      <iframe src="<?= h($calendarEmbedUrl) ?>" frameborder="0" scrolling="no"></iframe>
+    </div>
+  </div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -288,6 +336,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
+
+  <?php if ($autoDownload): ?>
+  const downloadFrame = document.createElement('iframe');
+  downloadFrame.style.display = 'none';
+  downloadFrame.src = 'citacion_diligencia.php?citacion_id=<?= (int) $createdId ?>';
+  document.body.appendChild(downloadFrame);
+  <?php endif; ?>
 });
 </script>
 </body>
