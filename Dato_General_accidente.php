@@ -1155,12 +1155,17 @@ include __DIR__ . '/sidebar.php';
       <div class="grid">
         
           <!-- Registro SIDPOL con estilo dorado -->
-  <div class="f s3 sidpol-registro">
-    <div class="l">Registro SIDPOL</div>
-    <div class="v"><?=fmt($A['registro_sidpol'])?></div>
-  </div>
+	  <div class="f s3 sidpol-registro">
+	    <div class="l">Registro SIDPOL</div>
+	    <div class="v"><?=fmt($A['registro_sidpol'])?></div>
+	  </div>
 
-        <div class="f s3 centered <?=$estadoClass?>">
+	  <div class="f s3 centered">
+	    <div class="l">Tipo de registro</div>
+	    <div class="v"><?= (string)($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></div>
+	  </div>
+
+	        <div class="f s3 centered <?=$estadoClass?>">
   <div class="l">Estado</div>
   <div class="v"><?=fmt($A['estado'])?></div>
 </div>

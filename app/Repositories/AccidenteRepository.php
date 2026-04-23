@@ -24,7 +24,7 @@ final class AccidenteRepository
 
     public function accidenteById(int $accidenteId): ?array
     {
-        $sql = 'SELECT id, sidpol, registro_sidpol, lugar, referencia,
+        $sql = 'SELECT id, sidpol, registro_sidpol, tipo_registro, lugar, referencia,
                        cod_dep, cod_prov, cod_dist, comisaria_id,
                        fecha_accidente, estado, fecha_comunicacion, fecha_intervencion,
                        comunicante_nombre, comunicante_telefono,
@@ -192,15 +192,16 @@ final class AccidenteRepository
     public function insertAccidente(array $payload): int
     {
         $sql = 'INSERT INTO accidentes
-            (registro_sidpol,lugar,referencia,cod_dep,cod_prov,cod_dist,comisaria_id,
+            (registro_sidpol,tipo_registro,lugar,referencia,cod_dep,cod_prov,cod_dist,comisaria_id,
              fecha_accidente,estado,fecha_comunicacion,fecha_intervencion,
              comunicante_nombre,comunicante_telefono,comunicacion_decreto,comunicacion_oficio,comunicacion_carpeta_nro,
              fiscalia_id,fiscal_id,nro_informe_policial,sentido,secuencia)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['registro_sidpol'],
+            $payload['tipo_registro'],
             $payload['lugar'],
             $payload['referencia'],
             $payload['cod_dep'],
@@ -230,6 +231,7 @@ final class AccidenteRepository
     {
         $sql = 'UPDATE accidentes SET
                   registro_sidpol=?,
+                  tipo_registro=?,
                   lugar=?, referencia=?, cod_dep=?, cod_prov=?, cod_dist=?, comisaria_id=?,
                   fecha_accidente=?, estado=?, fecha_comunicacion=?, fecha_intervencion=?,
                   comunicante_nombre=?, comunicante_telefono=?, comunicacion_decreto=?, comunicacion_oficio=?, comunicacion_carpeta_nro=?,
@@ -239,6 +241,7 @@ final class AccidenteRepository
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['registro_sidpol'],
+            $payload['tipo_registro'],
             $payload['lugar'],
             $payload['referencia'],
             $payload['cod_dep'],

@@ -126,6 +126,7 @@ $fiscal_tel = $context['fiscal_tel'];
 $err='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $registro_sidpol=trim($_POST['registro_sidpol']??'');
+  $tipo_registro=trim($_POST['tipo_registro']??'');
   $lugar=trim($_POST['lugar']??'');
   $referencia=trim($_POST['referencia']??'');
   $cod_dep=substr($_POST['cod_dep']??'',0,2);
@@ -158,6 +159,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   try{
     $result = $accidenteService->updateAccidente($accidente_id, [
       'registro_sidpol' => $registro_sidpol,
+      'tipo_registro' => $tipo_registro,
       'lugar' => $lugar,
       'referencia' => $referencia,
       'cod_dep' => $cod_dep,
@@ -191,6 +193,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
   $acc = array_merge($acc, [
     'registro_sidpol'=>$registro_sidpol,
+    'tipo_registro'=>$tipo_registro,
     'lugar'=>$lugar,
     'referencia'=>$referencia,
     'cod_dep'=>str_pad($cod_dep, 2, '0', STR_PAD_LEFT),
@@ -255,9 +258,19 @@ include __DIR__ . '/sidebar.php';
         <input type="text" id="sidpol" value="<?=h($sidpol_url)?>" readonly>
       </div>
 
-      <div class="col-6">
+      <div class="col-3">
         <label>Registro SIDPOL</label>
         <input type="text" name="registro_sidpol" id="registro_sidpol" maxlength="50" value="<?=h($acc['registro_sidpol'])?>">
+      </div>
+
+      <div class="col-3">
+        <label>Tipo de registro</label>
+        <?php $tipoRegistroActual = (string)($acc['tipo_registro'] ?? ''); ?>
+        <select name="tipo_registro" id="tipo_registro">
+          <option value="" <?= $tipoRegistroActual === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+          <option value="Carpeta" <?= $tipoRegistroActual === 'Carpeta' ? 'selected' : '' ?>>Carpeta</option>
+          <option value="Intervencion" <?= $tipoRegistroActual === 'Intervencion' ? 'selected' : '' ?>>Intervención</option>
+        </select>
       </div>
 
       <!-- ESTADO -->

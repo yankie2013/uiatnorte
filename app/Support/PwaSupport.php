@@ -353,7 +353,6 @@ HTML;
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
         $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260412-theme-auto');
-        $spellcheckScript = self::assetUrl($basePath, 'assets/form-spellcheck.js?v=20260414c');
         $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260416');
         $keepaliveUrl = self::assetUrl($basePath, 'session_keepalive.php');
         $scope = self::assetUrl($basePath, '');
@@ -384,7 +383,32 @@ HTML;
   </div>
 </div>
 <script src="{$themeScript}"></script>
-<script src="{$spellcheckScript}"></script>
+<script>
+(() => {
+  const selector = 'input, textarea, [contenteditable="true"]';
+  const disable = (root = document) => {
+    root.querySelectorAll(selector).forEach((el) => {
+      el.setAttribute('spellcheck', 'false');
+      el.setAttribute('autocorrect', 'off');
+      el.setAttribute('autocapitalize', 'off');
+    });
+  };
+  disable();
+  new MutationObserver((items) => {
+    items.forEach((item) => {
+      item.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        if (node.matches(selector)) {
+          node.setAttribute('spellcheck', 'false');
+          node.setAttribute('autocorrect', 'off');
+          node.setAttribute('autocapitalize', 'off');
+        }
+        disable(node);
+      });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
 <script src="{$keepaliveScript}" data-session-url="{$keepaliveUrl}"></script>
 <script src="{$registerScript}" data-pwa-scope="{$scope}"></script>
 HTML;

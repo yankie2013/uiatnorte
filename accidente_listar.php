@@ -56,6 +56,16 @@ function placa_visible(?string $placa): string {
   return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
 }
 
+function url_estado_accidente(string $estado): string {
+  return 'accidente_listar.php?' . http_build_query(['estado' => $estado]);
+}
+
+function tipo_registro_label(?string $tipo): string {
+  $tipo = trim((string)$tipo);
+  if ($tipo === 'Intervencion') return 'Intervención';
+  return $tipo;
+}
+
 function vehiculo_tipo_resumen(array $veh): string {
   foreach (['tipo_nombre', 'carroceria_nombre', 'vinculo_tipo'] as $key) {
     $value = trim((string)($veh[$key] ?? ''));
@@ -137,6 +147,25 @@ $distrito  = trim($_GET['distrito'] ?? '');
 $vehiculo  = trim($_GET['vehiculo'] ?? '');
 $registro_sidpol = trim($_GET['registro_sidpol'] ?? ''); // <-- NUEVO
 $nro_informe_policial = trim($_GET['nro_informe_policial'] ?? '');
+$tipoRegistroOpciones = [
+  '' => 'TODOS',
+  'Carpeta' => 'CARPETA',
+  'Intervencion' => 'INTERVENCIÓN',
+];
+$tipo_registro = trim($_GET['tipo_registro'] ?? '');
+if (!array_key_exists($tipo_registro, $tipoRegistroOpciones)) {
+  $tipo_registro = '';
+}
+$estadoOpciones = [
+  'todos' => 'TODOS',
+  'Pendiente' => 'PENDIENTE',
+  'Resuelto' => 'RESUELTO',
+  'Con diligencias' => 'CON DILIGENCIAS',
+];
+$estadoFiltro = trim($_GET['estado'] ?? 'Pendiente');
+if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
+  $estadoFiltro = 'Pendiente';
+}
 
 /* ============================
    LISTA DE ComisariaS
@@ -147,7 +176,7 @@ $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC
    QUERY BASE
 ============================ */
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
-$sql = "SELECT a.id,a.registro_sidpol,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,c.nombre AS comisaria
+$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,c.nombre AS comisaria
         FROM accidentes a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
         WHERE 1=1";
@@ -167,6 +196,10 @@ if($nro_informe_policial !== ''){
   $sql .= " AND a.nro_informe_policial LIKE ?";
   $params[] = "%$nro_informe_policial%";
 }
+if($tipo_registro !== ''){
+  $sql .= " AND a.tipo_registro = ?";
+  $params[] = $tipo_registro;
+}
 
 
 if($desde!==''){
@@ -180,6 +213,10 @@ if($hasta!==''){
 if($comisaria_id!==''){
   $sql .= " AND a.comisaria_id=?";
   $params[]=$comisaria_id;
+}
+if($estadoFiltro !== 'todos'){
+  $sql .= " AND COALESCE(NULLIF(TRIM(a.estado), ''), 'Pendiente') = ?";
+  $params[] = $estadoFiltro;
 }
 
 /* PERSONA: nombres o apellidos */
@@ -346,6 +383,45 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .wrap{max-width:1200px;margin:20px auto;padding:14px}
 .title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.quick-status{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:0 0 12px;
+}
+.neon-state{
+  --neon:#22d3ee;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:9px 16px;
+  border:1px solid var(--neon);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
+  color:var(--fg);
+  font-size:12px;
+  font-weight:900;
+  text-decoration:none;
+  text-transform:uppercase;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 0 14px rgba(34,211,238,.18);
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.neon-state:hover,
+.neon-state:focus-visible{
+  transform:translateY(-1px);
+  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 0 18px var(--neon),0 8px 24px rgba(15,23,42,.18);
+  outline:none;
+}
+.neon-state.active{
+  color:#071019;
+  background:linear-gradient(90deg,var(--neon),#ffffff);
+  box-shadow:0 0 0 1px rgba(255,255,255,.4) inset,0 0 22px var(--neon),0 10px 28px rgba(15,23,42,.2);
+}
+.neon-pending{--neon:#ff4fd8}
+.neon-resolved{--neon:#39ff88}
+.neon-dilig{--neon:#ffd166}
 .card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:14px;padding:14px;backdrop-filter:blur(8px)}
 
 label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
@@ -362,8 +438,8 @@ input,select{width:100%;padding:8px 10px;border:1px solid var(--field-bd);border
 
 /* ===== Caja de filtros ===== */
 .filters{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px}
-.col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
-@media(max-width:1000px){.col-6,.col-4,.col-3{grid-column:span 12}}
+.col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}
+@media(max-width:1000px){.col-6,.col-4,.col-3,.col-2{grid-column:span 12}}
 
 /* ===== Tabla ===== */
 .table-wrap{overflow:auto;border:1px solid var(--tbl-bd);border-radius:12px}
@@ -563,6 +639,19 @@ html[data-theme-resolved="dark"]{
   color:#475569;
   background:#eef2f7;
 }
+.tipo-reg-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  color:#0f766e;
+  background:#ccfbf1;
+  border:1px solid #99f6e4;
+}
+.tipo-reg-carpeta{color:#92400e;background:#fef3c7;border-color:#fde68a}
+.tipo-reg-intervencion{color:#155e75;background:#cffafe;border-color:#a5f3fc}
 .acc-place{font-size:15px;font-weight:700;line-height:1.35;color:#14213d}
 .acc-meta{display:flex;flex-wrap:wrap;gap:10px 14px}
 .acc-meta-item{display:flex;flex-direction:column;gap:2px;min-width:110px}
@@ -614,6 +703,8 @@ html[data-theme-resolved="dark"] .acc-card{
 html[data-theme-resolved="dark"] .acc-place,
 html[data-theme-resolved="dark"] .vehicle-plate{color:#e5edf8}
 html[data-theme-resolved="dark"] .acc-report{background:#1e293b;color:#cbd5e1}
+html[data-theme-resolved="dark"] .tipo-reg-carpeta{background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.34);color:#fcd34d}
+html[data-theme-resolved="dark"] .tipo-reg-intervencion{background:rgba(6,182,212,.16);border-color:rgba(6,182,212,.34);color:#67e8f9}
 html[data-theme-resolved="dark"] .acc-meta-value,
 html[data-theme-resolved="dark"] .vehicle-extra{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-hint{color:#9fb0c6}
@@ -661,6 +752,12 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     </nav>
   </div>
 
+  <nav class="quick-status" aria-label="Accesos rapidos por estado">
+    <a class="neon-state neon-pending <?= $estadoFiltro === 'Pendiente' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Pendiente'))?>">Pendiente</a>
+    <a class="neon-state neon-resolved <?= $estadoFiltro === 'Resuelto' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Resuelto'))?>">Resueltos</a>
+    <a class="neon-state neon-dilig <?= $estadoFiltro === 'Con diligencias' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Con diligencias'))?>">Con diligencias</a>
+  </nav>
+
   <div class="card">
     <form method="get" class="filters" id="filterForm">
         
@@ -698,6 +795,22 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="col-3">
+        <label>Estado</label>
+        <select name="estado">
+          <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
+            <option value="<?=h($estadoValue)?>" <?=($estadoFiltro===$estadoValue?'selected':'')?>><?=h($estadoLabel)?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Tipo de registro</label>
+        <select name="tipo_registro">
+          <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
+            <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
       <div class="col-2" style="align-self:end;display:flex;gap:6px">
         <button class="btn small" type="submit">Filtrar</button>
         <a class="btn small" href="accidente_listar.php">Limpiar</a>
@@ -717,6 +830,8 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $vehiculosPreview = array_slice($vehiculosResumen, 0, 2);
           $isPrior = !empty($r['priority']) && (int)$r['priority']===1;
           $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']);
+          $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
+          $tipoRegistroClass = ($r['tipo_registro'] ?? '') === 'Intervencion' ? 'tipo-reg-intervencion' : 'tipo-reg-carpeta';
       ?>
         <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
@@ -726,6 +841,9 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                   <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
                 </a>
                 <span class="acc-report"><?=h($r['nro_informe_policial'] ?? '-')?></span>
+                <?php if ($tipoRegistro !== ''): ?>
+                  <span class="tipo-reg-chip <?=h($tipoRegistroClass)?>"><?=h($tipoRegistro)?></span>
+                <?php endif; ?>
               </div>
               <div class="acc-place"><?=h($r['lugar'])?></div>
               <div class="acc-meta">
@@ -857,6 +975,8 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                 static fn($item) => trim((string)($item['nombre'] ?? '')).' - '.trim((string)($item['rol'] ?? '')).' - '.trim((string)($item['lesion'] ?? '')),
                 $personasExtra
               ));
+              $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
+              $tipoRegistroClass = ($r['tipo_registro'] ?? '') === 'Intervencion' ? 'tipo-reg-intervencion' : 'tipo-reg-carpeta';
           ?>
             <tr data-id="<?= (int)$r['id'] ?>" role="row">
   <td role="cell">
@@ -867,6 +987,9 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
   <td role="cell">
     <div class="cell-stack">
       <span class="cell-primary"><?=h($r['nro_informe_policial'] ?? '-')?></span>
+      <?php if ($tipoRegistro !== ''): ?>
+        <span class="tipo-reg-chip <?=h($tipoRegistroClass)?>"><?=h($tipoRegistro)?></span>
+      <?php endif; ?>
     </div>
   </td>
   <td role="cell">
@@ -946,10 +1069,49 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
 </div>
 
 <script>
-// Auto-submit filtros al cambiar
-document.querySelectorAll('#filterForm input, #filterForm select').forEach(el=>{
-  el.addEventListener('change', ()=> document.getElementById('filterForm').submit());
-});
+// Busqueda progresiva: los textos filtran mientras se escriben; los selects filtran al cambiar.
+(function(){
+  const form = document.getElementById('filterForm');
+  if (!form) return;
+
+  let submitTimer = null;
+  const submitNow = () => form.submit();
+  const submitSoon = () => {
+    clearTimeout(submitTimer);
+    submitTimer = setTimeout(submitNow, 450);
+  };
+
+  form.querySelectorAll('input[type="text"]').forEach(input=>{
+    input.addEventListener('input', submitSoon);
+  });
+
+  form.querySelectorAll('select').forEach(select=>{
+    select.addEventListener('change', submitNow);
+  });
+
+  const hasActiveFilters = () => {
+    const data = new FormData(form);
+    for (const [name, value] of data.entries()) {
+      const val = String(value).trim();
+      if (name === 'estado') {
+        if (val !== '' && val !== 'Pendiente') return true;
+        continue;
+      }
+      if (val !== '') return true;
+    }
+    return false;
+  };
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Escape') return;
+    const menuOpen = document.querySelector('.estado-menu');
+    if(menuOpen) return;
+    if(!hasActiveFilters()) return;
+    e.preventDefault();
+    clearTimeout(submitTimer);
+    window.location.href = 'accidente_listar.php';
+  });
+})();
 
 document.querySelectorAll('.js-toggle-card').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -1265,4 +1427,3 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
 </script>
 </body>
 </html>
-

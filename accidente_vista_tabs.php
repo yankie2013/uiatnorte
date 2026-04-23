@@ -2698,6 +2698,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $result = $accidenteService->updateAccidente($accidenteId, [
                 'registro_sidpol' => $acc['registro_sidpol'] ?? '',
+                'tipo_registro' => $acc['tipo_registro'] ?? '',
                 'lugar' => $acc['lugar'] ?? '',
                 'referencia' => $acc['referencia'] ?? '',
                 'cod_dep' => $acc['cod_dep'] ?? '',
@@ -2737,6 +2738,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $result = $accidenteService->updateAccidente($accidenteId, [
                 'registro_sidpol' => $_POST['registro_sidpol'] ?? '',
+                'tipo_registro' => $_POST['tipo_registro'] ?? '',
                 'lugar' => $_POST['lugar'] ?? '',
                 'referencia' => $_POST['referencia'] ?? '',
                 'cod_dep' => $_POST['cod_dep'] ?? '',
@@ -6005,6 +6007,10 @@ include __DIR__ . '/sidebar.php';
               <div class="label">Registro SIDPOL</div>
               <div class="value"><?= fmt($A['registro_sidpol'] ?? '') ?></div>
             </div>
+            <div class="data-card centered">
+              <div class="label">Tipo de registro</div>
+              <div class="value"><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></div>
+            </div>
             <?php
               $estadoKey = mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8');
               $estadoClass = $estadoKey === 'pendiente'
@@ -6156,6 +6162,15 @@ include __DIR__ . '/sidebar.php';
             <div class="general-edit-card g-3">
               <label for="acc-registro-sidpol">Registro SIDPOL</label>
               <input class="edit-control" id="acc-registro-sidpol" type="text" name="registro_sidpol" maxlength="50" value="<?= h((string) ($accidenteBase['registro_sidpol'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-tipo-registro">Tipo de registro</label>
+              <?php $tipoRegistroActual = (string) ($accidenteBase['tipo_registro'] ?? ''); ?>
+              <select class="edit-control" id="acc-tipo-registro" name="tipo_registro">
+                <option value="" <?= $tipoRegistroActual === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+                <option value="Carpeta" <?= $tipoRegistroActual === 'Carpeta' ? 'selected' : '' ?>>Carpeta</option>
+                <option value="Intervencion" <?= $tipoRegistroActual === 'Intervencion' ? 'selected' : '' ?>>Intervención</option>
+              </select>
             </div>
             <div class="general-edit-card g-3">
               <label for="acc-estado">Estado</label>

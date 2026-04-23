@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 final class AccidenteService
 {
+    private const TIPOS_REGISTRO = ['Carpeta', 'Intervencion'];
+
     private const SIMPLE_CATALOGS = [
         'fiscalia' => ['table' => 'fiscalia', 'col' => 'nombre'],
         'modalidad' => ['table' => 'modalidad_accidente', 'col' => 'nombre'],
@@ -131,8 +133,11 @@ final class AccidenteService
         $codProv = str_pad(substr((string) ($input['cod_prov'] ?? ''), 0, 2), 2, '0', STR_PAD_LEFT);
         $codDist = str_pad(substr((string) ($input['cod_dist'] ?? ''), 0, 2), 2, '0', STR_PAD_LEFT);
 
+        $tipoRegistro = trim((string) ($input['tipo_registro'] ?? ''));
+
         return [
             'registro_sidpol' => trim((string) ($input['registro_sidpol'] ?? '')) ?: null,
+            'tipo_registro' => in_array($tipoRegistro, self::TIPOS_REGISTRO, true) ? $tipoRegistro : null,
             'lugar' => trim((string) ($input['lugar'] ?? '')),
             'referencia' => trim((string) ($input['referencia'] ?? '')),
             'cod_dep' => $codDep,
@@ -188,6 +193,10 @@ final class AccidenteService
 
         if ($payload['fiscal_id'] && !$this->repository->fiscalBelongsToFiscalia($payload['fiscal_id'], $payload['fiscalia_id'])) {
             throw new InvalidArgumentException('El fiscal seleccionado no pertenece a la fiscalía elegida.');
+        }
+
+        if ($payload['tipo_registro'] !== null && !in_array($payload['tipo_registro'], self::TIPOS_REGISTRO, true)) {
+            throw new InvalidArgumentException('Selecciona un tipo de registro válido.');
         }
     }
 }
