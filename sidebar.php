@@ -25,6 +25,22 @@ $cntOfi  = $cntOfi  ?? sc($pdo_conn,"SELECT COUNT(*) FROM oficios WHERE accident
 $cntCit  = $cntCit  ?? sc($pdo_conn,"SELECT COUNT(*) FROM citacion WHERE accidente_id=?",[$accidente_id]);
 $cntDil  = $cntDil  ?? sc($pdo_conn,"SELECT COUNT(*) FROM diligencias_pendientes WHERE accidente_id=?",[$accidente_id]);
 
+$sidebarCurrentPath = basename((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? '')), PHP_URL_PATH));
+$sidebarReturnTo = trim((string) ($_SERVER['REQUEST_URI'] ?? ''));
+$googleCalendarParams = [];
+if ($accidente_id !== null) {
+    $googleCalendarParams['accidente_id'] = (int) $accidente_id;
+}
+if ($sidebarReturnTo !== '') {
+    $googleCalendarParams['return_to'] = $sidebarReturnTo;
+}
+$googleCalendarUrl = 'citacion_rapida.php' . ($googleCalendarParams !== [] ? ('?' . http_build_query($googleCalendarParams)) : '');
+
+function sidebar_active(string ...$routes): string {
+    global $sidebarCurrentPath;
+    return in_array($sidebarCurrentPath, $routes, true) ? ' active' : '';
+}
+
 ?>
 <style>
 /* Sidebar layout */
@@ -164,6 +180,11 @@ body.uiat-sidebar-open .sidebar-backdrop{
 }
 #app-sidebar .top-actions .btn:hover{
     background:var(--uiat-sidebar-hover, #13426f);
+}
+
+#app-sidebar .top-actions .btn.active{
+    background:#204266;
+    border-color:#3b82f6;
 }
 
 /* Ocultar texto cuando colapsado */
@@ -343,37 +364,43 @@ body.uiat-sidebar-open .sidebar-backdrop{
 
     <!-- BOTONES SUPERIORES -->
     <div class="top-actions">
-
-
-<a class="btn" href="index.php">
+<a class="btn<?= sidebar_active('index.php') ?>" href="index.php">
         <span class="section-icon">🏠</span>
         <span>Ir a panel</span>
     </a>
 
-        <a class="btn" href="accidente_listar.php">
+        <a class="btn<?= sidebar_active('accidente_listar.php') ?>" href="accidente_listar.php">
             <span class="section-icon">⬅️</span>
             <span>Volver a lista</span>
         </a>
+        <a class="btn<?= sidebar_active('accidente_mapa.php') ?>" href="accidente_mapa.php">
+            <span class="section-icon">🗺️</span>
+            <span>Mapa de accidentes</span>
+        </a>
 
         <?php if($accidente_id !== null): ?>
-        <a class="btn" href="Dato_General_accidente.php?accidente_id=<?=h($accidente_id)?>">
+        <a class="btn<?= sidebar_active('Dato_General_accidente.php','accidente_general_tabs.php','accidente_general_sticky_modulos.php') ?>" href="Dato_General_accidente.php?accidente_id=<?=h($accidente_id)?>">
             <span class="section-icon">📄</span>
             <span>Ver datos generales</span>
         </a>
-        <a class="btn" href="accidente_vista_tabs.php?accidente_id=<?=h($accidente_id)?>">
+        <a class="btn<?= sidebar_active('accidente_vista_tabs.php') ?>" href="accidente_vista_tabs.php?accidente_id=<?=h($accidente_id)?>">
             <span class="section-icon">🗂</span>
             <span>Vista por tabs</span>
         </a>
         <?php endif; ?>
-        <a class="btn" href="enlaces_interes_listar.php">
+        <a class="btn<?= sidebar_active('citacion_rapida.php') ?>" href="<?= h($googleCalendarUrl) ?>">
+            <span class="section-icon">📅</span>
+            <span>Google Calendar</span>
+        </a>
+        <a class="btn<?= sidebar_active('enlaces_interes_listar.php') ?>" href="enlaces_interes_listar.php">
             <span class="section-icon">&#128279;</span>
             <span>Enlaces de interes</span>
         </a>
-        <a class="btn" href="oficio_entidades_listar.php">
+        <a class="btn<?= sidebar_active('oficio_entidades_listar.php') ?>" href="oficio_entidades_listar.php">
             <span class="section-icon">&#128214;</span>
             <span>Prontuario entidades</span>
         </a>
-        <a class="btn" href="catalogos.php">
+        <a class="btn<?= sidebar_active('catalogos.php') ?>" href="catalogos.php">
             <span class="section-icon">&#128451;</span>
             <span>Catalogos</span>
         </a>

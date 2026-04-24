@@ -25,6 +25,7 @@ use App\Services\PersonaService;
 use App\Services\PolicialIntervinienteService;
 use App\Services\PropietarioVehiculoService;
 use App\Services\VehiculoService;
+use App\Support\GeoSearch;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -39,6 +40,7 @@ $accidenteRepo = new AccidenteRepository($pdo);
 $accidenteService = new AccidenteService($accidenteRepo);
 $oficioService = new OficioService(new OficioRepository($pdo));
 $oficioEstados = $oficioService->formContext()['estados'] ?? ['BORRADOR', 'FIRMADO', 'ENVIADO', 'ANULADO', 'ARCHIVADO'];
+$googleMapsApiKey = trim((string) app_config('services.google_maps.js_api_key', ''));
 
 function h($value): string
 {
@@ -63,6 +65,32 @@ function fmt($value): string
 {
     $value = trim((string) ($value ?? ''));
     return $value !== '' ? h($value) : '—';
+}
+
+function parse_gps_string(?string $raw): ?array
+{
+    $raw = trim((string) $raw);
+    if ($raw === '') {
+        return null;
+    }
+
+    if (!preg_match('/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/', $raw, $match)) {
+        return null;
+    }
+
+    $lat = (float) $match[1];
+    $lng = (float) $match[2];
+
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        return null;
+    }
+
+    return ['lat' => $lat, 'lng' => $lng];
+}
+
+function build_google_maps_url(float $lat, float $lng): string
+{
+    return 'https://www.google.com/maps?q=' . rawurlencode(number_format($lat, 6, '.', '') . ',' . number_format($lng, 6, '.', ''));
 }
 
 function full_name(array $row): string
@@ -2729,6 +2757,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'geo_search') {
+        try {
+            $q = trim((string) ($_POST['q'] ?? $_GET['q'] ?? ''));
+            $limit = (int) ($_POST['limit'] ?? $_GET['limit'] ?? 6);
+            json_response(['ok' => true, 'data' => GeoSearch::searchPeruLima($q, $limit)]);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
     if ($action === 'save_accidente_inline') {
         try {
             $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
@@ -2741,6 +2779,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tipo_registro' => $_POST['tipo_registro'] ?? '',
                 'lugar' => $_POST['lugar'] ?? '',
                 'referencia' => $_POST['referencia'] ?? '',
+                'latitud' => $_POST['latitud'] ?? '',
+                'longitud' => $_POST['longitud'] ?? '',
                 'cod_dep' => $_POST['cod_dep'] ?? '',
                 'cod_prov' => $_POST['cod_prov'] ?? '',
                 'cod_dist' => $_POST['cod_dist'] ?? '',
@@ -3987,6 +4027,30 @@ $itps = safe_query_all(
     [$accidente_id]
 );
 
+$mapPoint = null;
+$mapPointLabel = '';
+$accidentLat = is_numeric((string) ($A['latitud'] ?? null)) ? (float) $A['latitud'] : null;
+$accidentLng = is_numeric((string) ($A['longitud'] ?? null)) ? (float) $A['longitud'] : null;
+
+if ($accidentLat !== null && $accidentLng !== null && $accidentLat >= -90 && $accidentLat <= 90 && $accidentLng >= -180 && $accidentLng <= 180) {
+    $mapPoint = ['lat' => $accidentLat, 'lng' => $accidentLng];
+    $mapPointLabel = 'GPS del accidente';
+} else {
+    foreach ($itps as $itpRow) {
+        $parsedGps = parse_gps_string((string) ($itpRow['ubicacion_gps'] ?? ''));
+        if ($parsedGps !== null) {
+            $mapPoint = $parsedGps;
+            $mapPointLabel = 'GPS del ITP #' . (int) ($itpRow['id'] ?? 0);
+            break;
+        }
+    }
+}
+
+$googleMapsUrl = $mapPoint !== null ? build_google_maps_url($mapPoint['lat'], $mapPoint['lng']) : '';
+$googleMapsCoords = $mapPoint !== null
+    ? number_format((float) $mapPoint['lat'], 6, '.', '') . ', ' . number_format((float) $mapPoint['lng'], 6, '.', '')
+    : '';
+
 $diligencias = safe_query_all(
     $pdo,
     "SELECT dp.*,
@@ -4886,6 +4950,7 @@ include __DIR__ . '/sidebar.php';
 <title>Accidente · Vista por pestañas</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 <style>
   :root{
     --page:#f5f7fb;
@@ -5277,6 +5342,31 @@ include __DIR__ . '/sidebar.php';
   .general-inline-note{font-size:10px;color:var(--muted);font-weight:700}
   .inline-edit-error{display:none;padding:8px 10px;border:1px solid #f1b3b3;background:#fff1f1;color:#aa2222;border-radius:10px;font-size:11px;font-weight:800}
   .inline-edit-error.is-visible{display:block}
+  .geo-inline-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .geo-inline-status{display:flex;align-items:center;gap:6px;min-height:34px;padding:8px 10px;border:1px dashed #d6dfec;border-radius:10px;background:#fffdf5;color:#5f6674;font-size:11px;font-weight:700;line-height:1.35}
+  .geo-inline-status.is-ready{border-style:solid;border-color:#b8d9c5;background:#f2fff7;color:#166534}
+  .geo-inline-modal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.52)}
+  .geo-inline-modal.is-open{display:flex}
+  .geo-inline-modal-card{width:min(960px,96vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 22px 60px rgba(15,23,42,.28)}
+  .geo-inline-modal-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+  .geo-inline-modal-sub{color:var(--muted);font-size:12px;font-weight:700}
+  .geo-inline-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:10px;margin-bottom:12px}
+  .geo-search-wrap{position:relative}
+  .geo-suggest-list{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;margin:0;padding:6px;list-style:none;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 16px 32px rgba(15,23,42,.18);max-height:260px;overflow:auto}
+  .geo-suggest-list[hidden]{display:none !important}
+  .geo-suggest-item{width:100%;display:block;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--ink);text-align:left;cursor:pointer}
+  .geo-suggest-item:hover,.geo-suggest-item.is-active{background:#f5f7fb}
+  .geo-suggest-primary{display:block;font-weight:800}
+  .geo-suggest-secondary{display:block;margin-top:3px;color:var(--muted);font-size:12px;font-weight:600}
+  .geo-suggest-empty{padding:10px 12px;color:var(--muted);font-size:12px;font-weight:800}
+  .pac-container{z-index:1400 !important;border-radius:14px;border:1px solid var(--line);box-shadow:0 16px 32px rgba(15,23,42,.18);overflow:hidden}
+  .geo-inline-map{height:420px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#eef2f7}
+  .geo-inline-coords{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f7f9fc;font-size:12px;font-weight:700;color:#314157}
+  .geo-inline-modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}
+  @media (max-width: 900px){
+    .geo-inline-toolbar{grid-template-columns:1fr}
+    .geo-inline-map{height:320px}
+  }
   .edit-field{padding:6px 8px}
   .edit-control{width:100%;border:1px solid #d5ddeb;border-radius:9px;background:#fff;padding:7px 9px;font-size:12px;font-weight:600;color:#314157;line-height:1.25}
   .edit-control:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
@@ -5974,6 +6064,9 @@ include __DIR__ . '/sidebar.php';
       <p>Accidente #<?= (int) $accidente_id ?> · SIDPOL <?= fmt($A['sidpol'] ?? '') ?></p>
     </div>
     <div class="top-actions">
+      <?php if ($googleMapsUrl !== ''): ?>
+        <a class="btn-shell" href="<?= h($googleMapsUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
+      <?php endif; ?>
       <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Volver a datos generales</a>
       <a class="btn-shell" href="accidente_listar.php">Volver al listado</a>
     </div>
@@ -6065,6 +6158,22 @@ include __DIR__ . '/sidebar.php';
             <div class="data-card g-4">
               <div class="label">Referencia</div>
               <div class="value"><?= fmt($A['referencia'] ?? '') ?></div>
+            </div>
+            <div class="data-card g-4">
+              <div class="label">Google Maps</div>
+              <div class="value">
+                <?php if ($googleMapsUrl !== ''): ?>
+                  <div style="display:grid;gap:6px;justify-items:start">
+                    <span><?= h($googleMapsCoords) ?></span>
+                    <div class="summary-chipline">
+                      <span class="chip-simple"><?= h($mapPointLabel) ?></span>
+                      <a class="chip-simple" href="<?= h($googleMapsUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
+                    </div>
+                  </div>
+                <?php else: ?>
+                  —
+                <?php endif; ?>
+              </div>
             </div>
           </div>
         </div>
@@ -6253,6 +6362,26 @@ include __DIR__ . '/sidebar.php';
               <label for="acc-referencia">Referencia</label>
               <input class="edit-control" id="acc-referencia" type="text" name="referencia" maxlength="200" value="<?= h((string) ($accidenteBase['referencia'] ?? '')) ?>">
             </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-latitud">Latitud</label>
+              <input class="edit-control" id="acc-latitud" type="text" name="latitud" value="<?= h((string) ($accidenteBase['latitud'] ?? '')) ?>" placeholder="Se completa desde el mapa" readonly>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-longitud">Longitud</label>
+              <input class="edit-control" id="acc-longitud" type="text" name="longitud" value="<?= h((string) ($accidenteBase['longitud'] ?? '')) ?>" placeholder="Se completa desde el mapa" readonly>
+            </div>
+            <div class="general-edit-card g-6">
+              <label>Georreferencia</label>
+              <div class="geo-inline-actions">
+                <button type="button" class="btn-shell js-acc-geo-open">Marcar en mapa</button>
+                <button type="button" class="btn-shell js-acc-geo-clear">Limpiar punto</button>
+                <a class="btn-shell js-acc-geo-external" href="#" target="_blank" rel="noopener">Ver en Google Maps</a>
+              </div>
+            </div>
+            <div class="general-edit-card g-12">
+              <label>Estado GPS</label>
+              <div class="geo-inline-status js-acc-geo-status">Todavía no hay un punto georreferenciado para este accidente.</div>
+            </div>
           </div>
         </div>
 
@@ -6324,6 +6453,33 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
       </form>
+
+      <div class="geo-inline-modal" id="accidente-inline-geo-modal" aria-hidden="true">
+        <div class="geo-inline-modal-card">
+          <div class="geo-inline-modal-head">
+            <div>
+              <h3 style="margin:0">Ubicación del accidente</h3>
+              <div class="geo-inline-modal-sub">Haz clic en el mapa o busca una dirección para fijar las coordenadas del accidente.</div>
+            </div>
+            <button type="button" class="btn-shell js-acc-geo-close">Cerrar</button>
+          </div>
+          <div class="geo-inline-toolbar">
+            <input class="edit-control js-acc-geo-search" type="text" placeholder="Buscar dirección, avenida, cruce o referencia">
+            <select class="edit-control js-acc-geo-map-type">
+              <option value="roadmap" selected>Mapa</option>
+              <option value="hybrid">Híbrido</option>
+              <option value="satellite">Satélite</option>
+              <option value="terrain">Relieve</option>
+            </select>
+          </div>
+          <div class="geo-inline-map js-acc-geo-map"></div>
+          <div class="geo-inline-coords js-acc-geo-coords">Sin coordenadas seleccionadas.</div>
+          <div class="geo-inline-modal-actions">
+            <button type="button" class="btn-shell js-acc-geo-cancel">Cancelar</button>
+            <button type="button" class="btn-shell btn-primary js-acc-geo-use">Usar estas coordenadas</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -8567,6 +8723,10 @@ include __DIR__ . '/sidebar.php';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<?php if ($googleMapsApiKey !== ''): ?>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= h($googleMapsApiKey) ?>&libraries=places" async defer></script>
+<?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   (function () {
@@ -8793,6 +8953,638 @@ include __DIR__ . '/sidebar.php';
       select.disabled = true;
     }
 
+    function initAccidenteInlineGeo(form) {
+      if (!form || form.dataset.accidenteGeoBound === '1') return;
+      form.dataset.accidenteGeoBound = '1';
+
+      const modal = document.getElementById('accidente-inline-geo-modal');
+      const mapEl = modal ? modal.querySelector('.js-acc-geo-map') : null;
+      const searchInput = modal ? modal.querySelector('.js-acc-geo-search') : null;
+      const mapType = modal ? modal.querySelector('.js-acc-geo-map-type') : null;
+      const coordsText = modal ? modal.querySelector('.js-acc-geo-coords') : null;
+      const latInput = form.querySelector('[name="latitud"]');
+      const lngInput = form.querySelector('[name="longitud"]');
+      const openBtn = form.querySelector('.js-acc-geo-open');
+      const clearBtn = form.querySelector('.js-acc-geo-clear');
+      const externalLink = form.querySelector('.js-acc-geo-external');
+      const statusBox = form.querySelector('.js-acc-geo-status');
+      const closeBtn = modal ? modal.querySelector('.js-acc-geo-close') : null;
+      const cancelBtn = modal ? modal.querySelector('.js-acc-geo-cancel') : null;
+      const useBtn = modal ? modal.querySelector('.js-acc-geo-use') : null;
+
+      if (!modal || !mapEl || !latInput || !lngInput || !window.L) {
+        return;
+      }
+
+      const defaultCenter = { lat: -9.189967, lng: -75.015152 };
+      let map = null;
+      let marker = null;
+      let draftPoint = null;
+      let activeLayer = null;
+      let googleAutocompleteService = null;
+      let googleGeocoder = null;
+      let suggestItems = [];
+      let suggestIndex = -1;
+      let searchDebounce = null;
+      let searchAbort = null;
+
+      const limaBounds = {
+        west: -77.25,
+        north: -11.75,
+        east: -76.75,
+        south: -12.35,
+      };
+
+      const tileLayers = {
+        hybrid: () => L.layerGroup([
+          L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+            maxZoom: 19,
+          }),
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 20,
+          })
+        ]),
+        satellite: () => L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+          maxZoom: 19,
+        }),
+        roadmap: () => L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap',
+          maxZoom: 19,
+        }),
+        terrain: () => L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenTopoMap, OpenStreetMap',
+          maxZoom: 17,
+        }),
+      };
+
+      function parseInputPoint() {
+        const lat = parseFloat(String(latInput.value || '').replace(',', '.'));
+        const lng = parseFloat(String(lngInput.value || '').replace(',', '.'));
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          return { lat, lng };
+        }
+        return null;
+      }
+
+      function formatPoint(point) {
+        return point.lat.toFixed(6) + ', ' + point.lng.toFixed(6);
+      }
+
+      function setDraft(point) {
+        draftPoint = point ? { lat: point.lat, lng: point.lng } : null;
+        if (draftPoint) {
+          if (marker && map) {
+            marker.setLatLng([draftPoint.lat, draftPoint.lng]);
+            if (!map.hasLayer(marker)) {
+              marker.addTo(map);
+            }
+          }
+          if (coordsText) {
+            coordsText.textContent = 'Coordenadas seleccionadas: ' + formatPoint(draftPoint);
+          }
+        } else {
+          if (marker && map && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+          }
+          if (coordsText) {
+            coordsText.textContent = 'Sin coordenadas seleccionadas.';
+          }
+        }
+      }
+
+      function updateExternalLink() {
+        const point = parseInputPoint() || draftPoint;
+        if (externalLink) {
+          externalLink.href = point ? ('https://www.google.com/maps?q=' + encodeURIComponent(point.lat + ',' + point.lng)) : '#';
+        }
+      }
+
+      function refreshStatus() {
+        const point = parseInputPoint();
+        if (point) {
+          if (statusBox) {
+            statusBox.textContent = 'Punto guardado: ' + formatPoint(point) + '. Puedes actualizarlo o abrirlo en Google Maps.';
+            statusBox.classList.add('is-ready');
+          }
+        } else {
+          if (statusBox) {
+            statusBox.textContent = 'Todavía no hay un punto georreferenciado para este accidente.';
+            statusBox.classList.remove('is-ready');
+          }
+        }
+        updateExternalLink();
+      }
+
+      function syncBaseLayer() {
+        if (!map) return;
+        if (activeLayer) {
+          map.removeLayer(activeLayer);
+        }
+        const key = mapType && tileLayers[mapType.value] ? mapType.value : 'roadmap';
+        activeLayer = tileLayers[key]();
+        activeLayer.addTo(map);
+      }
+
+      function hasGooglePlaces() {
+        return !!(window.google && google.maps && google.maps.places && google.maps.places.AutocompleteService);
+      }
+
+      function ensureGooglePlaces() {
+        if (!hasGooglePlaces()) {
+          return false;
+        }
+        if (!googleAutocompleteService) {
+          googleAutocompleteService = new google.maps.places.AutocompleteService();
+        }
+        if (!googleGeocoder) {
+          googleGeocoder = new google.maps.Geocoder();
+        }
+        return true;
+      }
+
+      function ensureSuggestUi() {
+        if (!searchInput) return null;
+        let wrap = searchInput.parentElement;
+        if (!wrap || !wrap.classList.contains('geo-search-wrap')) {
+          wrap = document.createElement('div');
+          wrap.className = 'geo-search-wrap';
+          searchInput.parentNode.insertBefore(wrap, searchInput);
+          wrap.appendChild(searchInput);
+        }
+        let list = wrap.querySelector('.geo-suggest-list');
+        if (!list) {
+          list = document.createElement('ul');
+          list.className = 'geo-suggest-list';
+          list.hidden = true;
+          wrap.appendChild(list);
+        }
+        return list;
+      }
+
+      function hideSuggestions() {
+        const list = ensureSuggestUi();
+        suggestItems = [];
+        suggestIndex = -1;
+        if (list) {
+          list.hidden = true;
+          list.innerHTML = '';
+        }
+      }
+
+      function normalizeQuery(query) {
+        const trimmed = String(query || '').trim();
+        if (!trimmed) return '';
+        if (/lima|per[uú]/i.test(trimmed)) {
+          return trimmed;
+        }
+        return trimmed + ', Lima, Perú';
+      }
+
+      function buildLocalSearchRequest(query, limit = 6) {
+        const formData = new FormData();
+        formData.append('action', 'geo_search');
+        formData.append('q', query);
+        formData.append('limit', String(limit));
+        return formData;
+      }
+
+      function buildSearchUrl(query, limit = 6) {
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('addressdetails', '1');
+        url.searchParams.set('limit', String(limit));
+        url.searchParams.set('countrycodes', 'pe');
+        url.searchParams.set('accept-language', 'es');
+        url.searchParams.set('bounded', '1');
+        url.searchParams.set('viewbox', `${limaBounds.west},${limaBounds.north},${limaBounds.east},${limaBounds.south}`);
+        url.searchParams.set('q', normalizeQuery(query));
+        return url.toString();
+      }
+
+      function labelFromSuggestion(item) {
+        if (item && item.provider === 'google') {
+          return {
+            primary: item.primary || item.description || 'Ubicación sugerida',
+            secondary: item.secondary || '',
+          };
+        }
+        const address = item.address || {};
+        const primary = address.road || address.pedestrian || address.footway || address.cycleway || address.path || address.neighbourhood || address.suburb || address.industrial || item.name || item.display_name || 'Ubicación sugerida';
+        const secondaryParts = [
+          address.suburb,
+          address.city_district,
+          address.city || address.town || address.village,
+          address.state,
+        ].filter(Boolean);
+
+        return {
+          primary,
+          secondary: secondaryParts.join(' · ') || item.display_name || '',
+        };
+      }
+
+      function renderSuggestions(items) {
+        const list = ensureSuggestUi();
+        if (!list) return;
+
+        suggestItems = items;
+        suggestIndex = -1;
+        list.innerHTML = '';
+
+        if (!items.length) {
+          const empty = document.createElement('li');
+          empty.className = 'geo-suggest-empty';
+          empty.textContent = 'No se encontraron coincidencias cercanas en Lima.';
+          list.appendChild(empty);
+          list.hidden = false;
+          return;
+        }
+
+        items.forEach((item, index) => {
+          const li = document.createElement('li');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'geo-suggest-item';
+          const labels = labelFromSuggestion(item);
+          button.innerHTML = '<span class="geo-suggest-primary"></span><span class="geo-suggest-secondary"></span>';
+          button.querySelector('.geo-suggest-primary').textContent = labels.primary;
+          button.querySelector('.geo-suggest-secondary').textContent = labels.secondary;
+          button.addEventListener('click', () => {
+            selectSuggestion(index);
+          });
+          li.appendChild(button);
+          list.appendChild(li);
+        });
+
+        list.hidden = false;
+      }
+
+      function updateSuggestionActive() {
+        const list = ensureSuggestUi();
+        if (!list) return;
+        list.querySelectorAll('.geo-suggest-item').forEach((button, index) => {
+          button.classList.toggle('is-active', index === suggestIndex);
+        });
+      }
+
+      async function resolveSuggestionPoint(item) {
+        if (item && item.provider === 'google') {
+          if (!ensureGooglePlaces() || !item.placeId) {
+            return null;
+          }
+          const result = await new Promise((resolve, reject) => {
+            googleGeocoder.geocode({ placeId: item.placeId }, (responses, status) => {
+              if (status !== 'OK' || !Array.isArray(responses) || !responses.length) {
+                reject(new Error('Google Maps no devolvió coordenadas para esa búsqueda.'));
+                return;
+              }
+              resolve(responses[0]);
+            });
+          });
+          const location = result && result.geometry ? result.geometry.location : null;
+          if (!location) {
+            return null;
+          }
+          return {
+            lat: location.lat(),
+            lng: location.lng(),
+            label: result.formatted_address || item.primary || '',
+          };
+        }
+
+        const point = {
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          label: labelFromSuggestion(item).primary || '',
+        };
+        if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+          return null;
+        }
+        return point;
+      }
+
+      async function applySuggestion(item) {
+        const point = await resolveSuggestionPoint(item);
+        if (!point) {
+          return false;
+        }
+        setDraft(point);
+        if (map) {
+          map.setView([point.lat, point.lng], 17);
+        }
+        if (searchInput) {
+          searchInput.value = point.label || labelFromSuggestion(item).primary;
+        }
+        hideSuggestions();
+        if (coordsText && point.label) {
+          coordsText.textContent = (item && item.provider === 'google' ? 'Ubicación sugerida por Google Maps: ' : 'Ubicación sugerida: ') + point.label;
+        }
+        return true;
+      }
+
+      async function selectSuggestion(index) {
+        if (index < 0 || index >= suggestItems.length) {
+          return false;
+        }
+        return applySuggestion(suggestItems[index]);
+      }
+
+      async function fetchSuggestions(query, limit = 6) {
+        try {
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: buildLocalSearchRequest(query, limit),
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+          const json = await response.json();
+          if (response.ok && json && json.ok && Array.isArray(json.data)) {
+            return json.data;
+          }
+        } catch (error) {
+          console.warn('Geo local search fallback:', error);
+        }
+
+        const fetchOpenStreetSuggestions = async () => {
+          if (searchAbort) {
+            searchAbort.abort();
+          }
+          searchAbort = new AbortController();
+          const response = await fetch(buildSearchUrl(query, limit), {
+            signal: searchAbort.signal,
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          const results = await response.json();
+          if (!Array.isArray(results)) {
+            return [];
+          }
+          const unique = [];
+          const seen = new Set();
+          results.forEach((item) => {
+            const key = `${item.lat},${item.lon},${item.display_name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            unique.push(item);
+          });
+          return unique;
+        };
+
+        if (ensureGooglePlaces()) {
+          try {
+            const predictions = await Promise.race([
+              new Promise((resolve, reject) => {
+                googleAutocompleteService.getPlacePredictions({
+                  input: normalizeQuery(query),
+                  componentRestrictions: { country: 'pe' },
+                }, (items, status) => {
+                  if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                    resolve([]);
+                    return;
+                  }
+                  if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                    reject(new Error('Google Maps no devolvió sugerencias en este momento.'));
+                    return;
+                  }
+                  resolve(Array.isArray(items) ? items : []);
+                });
+              }),
+              new Promise((_, reject) => {
+                window.setTimeout(() => reject(new Error('Google Maps tardó demasiado en responder.')), 1400);
+              })
+            ]);
+
+            const mapped = predictions.slice(0, limit).map((item) => ({
+              provider: 'google',
+              placeId: item.place_id || '',
+              description: item.description || '',
+              primary: item.structured_formatting?.main_text || item.description || '',
+              secondary: item.structured_formatting?.secondary_text || '',
+            }));
+
+            if (mapped.length) {
+              return mapped;
+            }
+          } catch (error) {
+            console.warn('Google Places fallback:', error);
+          }
+        }
+
+        if (coordsText) {
+          coordsText.textContent = 'Google Maps no respondió. Probando búsqueda alternativa...';
+        }
+
+        return fetchOpenStreetSuggestions();
+      }
+
+      async function runSuggestionSearch(query, autoSelectFirst = false) {
+        const trimmed = String(query || '').trim();
+        if (trimmed.length < 2) {
+          hideSuggestions();
+          return;
+        }
+
+        if (coordsText) {
+          coordsText.textContent = 'Buscando coincidencias en Lima...';
+        }
+
+        try {
+          const items = await fetchSuggestions(trimmed, autoSelectFirst ? 1 : 6);
+          if (autoSelectFirst) {
+            if (items.length) {
+              await applySuggestion(items[0]);
+            } else if (coordsText) {
+              coordsText.textContent = 'No se encontró una ubicación con ese texto dentro de Lima.';
+            }
+            return;
+          }
+          renderSuggestions(items);
+          if (!items.length && coordsText) {
+            coordsText.textContent = 'No se encontraron coincidencias cercanas en Lima.';
+          }
+        } catch (error) {
+          if (error && error.name === 'AbortError') {
+            return;
+          }
+          hideSuggestions();
+          if (coordsText) {
+            coordsText.textContent = 'No se pudo completar la búsqueda en este momento.';
+          }
+        }
+      }
+
+      function ensureMap() {
+        if (map) return;
+
+        map = L.map(mapEl, {
+          center: [defaultCenter.lat, defaultCenter.lng],
+          zoom: 6,
+          zoomControl: true,
+        });
+
+        syncBaseLayer();
+
+        marker = L.marker([defaultCenter.lat, defaultCenter.lng], {
+          draggable: true,
+        });
+
+        map.on('click', (event) => {
+          setDraft({ lat: event.latlng.lat, lng: event.latlng.lng });
+        });
+
+        marker.on('dragend', (event) => {
+          const point = event.target.getLatLng();
+          setDraft({ lat: point.lat, lng: point.lng });
+        });
+
+        if (searchInput) {
+          ensureSuggestUi();
+
+          searchInput.addEventListener('input', () => {
+            const query = String(searchInput.value || '').trim();
+            if (searchDebounce) {
+              clearTimeout(searchDebounce);
+            }
+            if (query.length < 2) {
+              hideSuggestions();
+              return;
+            }
+            searchDebounce = window.setTimeout(() => {
+              runSuggestionSearch(query, false);
+            }, 260);
+          });
+
+          searchInput.addEventListener('keydown', (event) => {
+            const list = ensureSuggestUi();
+            const listVisible = !!(list && !list.hidden && suggestItems.length > 0);
+
+            if (event.key === 'ArrowDown' && listVisible) {
+              event.preventDefault();
+              suggestIndex = Math.min(suggestIndex + 1, suggestItems.length - 1);
+              updateSuggestionActive();
+              return;
+            }
+            if (event.key === 'ArrowUp' && listVisible) {
+              event.preventDefault();
+              suggestIndex = Math.max(suggestIndex - 1, 0);
+              updateSuggestionActive();
+              return;
+            }
+            if (event.key !== 'Enter') return;
+
+            event.preventDefault();
+            const query = String(searchInput.value || '').trim();
+            if (!query) {
+              hideSuggestions();
+              return;
+            }
+            if (listVisible) {
+              if (suggestIndex >= 0) {
+                void selectSuggestion(suggestIndex);
+              } else {
+                void selectSuggestion(0);
+              }
+              return;
+            }
+            void runSuggestionSearch(query, true);
+          });
+
+          searchInput.addEventListener('blur', () => {
+            window.setTimeout(() => {
+              hideSuggestions();
+            }, 180);
+          });
+        }
+
+        if (mapType) {
+          mapType.addEventListener('change', () => {
+            syncBaseLayer();
+          });
+        }
+      }
+
+      function openModal() {
+        ensureMap();
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        const point = parseInputPoint() || draftPoint;
+        setDraft(point);
+        window.setTimeout(() => {
+          map.invalidateSize();
+          if (point) {
+            map.setView([point.lat, point.lng], Math.max(map.getZoom(), 16));
+          } else {
+            map.setView([defaultCenter.lat, defaultCenter.lng], 6);
+          }
+        }, 80);
+      }
+
+      function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+
+      openBtn?.addEventListener('click', () => {
+        openModal();
+      });
+
+      clearBtn?.addEventListener('click', () => {
+        latInput.value = '';
+        lngInput.value = '';
+        setDraft(null);
+        refreshStatus();
+        latInput.dispatchEvent(new Event('input', { bubbles: true }));
+        lngInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      externalLink?.addEventListener('click', (event) => {
+        const point = parseInputPoint() || draftPoint;
+        if (!point) {
+          event.preventDefault();
+          window.alert('Primero marca un punto en el mapa.');
+        }
+      });
+
+      [closeBtn, cancelBtn].forEach((button) => {
+        button?.addEventListener('click', () => {
+          closeModal();
+        });
+      });
+
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+
+      useBtn?.addEventListener('click', () => {
+        if (!draftPoint) {
+          window.alert('Selecciona un punto en el mapa.');
+          return;
+        }
+        latInput.value = draftPoint.lat.toFixed(6);
+        lngInput.value = draftPoint.lng.toFixed(6);
+        refreshStatus();
+        latInput.dispatchEvent(new Event('input', { bubbles: true }));
+        lngInput.dispatchEvent(new Event('input', { bubbles: true }));
+        closeModal();
+      });
+
+      form.__accidenteGeo = {
+        refresh() {
+          setDraft(parseInputPoint());
+          refreshStatus();
+        }
+      };
+
+      form.__accidenteGeo.refresh();
+    }
+
     function initAccidenteInlineForm(form) {
       if (!form || form.dataset.accidenteBound === '1') return;
       form.dataset.accidenteBound = '1';
@@ -8916,6 +9708,7 @@ include __DIR__ . '/sidebar.php';
 
       fiscal?.addEventListener('change', loadFiscalInfo);
 
+      initAccidenteInlineGeo(form);
       form.__accidenteLoaders = { loadProvincias, loadDistritos, loadComisarias, loadFiscales, loadFiscalInfo };
     }
 
@@ -9252,6 +10045,9 @@ include __DIR__ . '/sidebar.php';
             .then(() => loaders.loadComisarias(true))
             .then(() => loaders.loadFiscales(true))
             .then(() => loaders.loadFiscalInfo());
+        }
+        if (state.form.__accidenteGeo) {
+          state.form.__accidenteGeo.refresh();
         }
       }
       if (state.form.classList.contains('js-persona-inline-form')) {

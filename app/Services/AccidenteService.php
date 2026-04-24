@@ -140,6 +140,8 @@ final class AccidenteService
             'tipo_registro' => in_array($tipoRegistro, self::TIPOS_REGISTRO, true) ? $tipoRegistro : null,
             'lugar' => trim((string) ($input['lugar'] ?? '')),
             'referencia' => trim((string) ($input['referencia'] ?? '')),
+            'latitud' => $this->normalizeCoordinate($input['latitud'] ?? null),
+            'longitud' => $this->normalizeCoordinate($input['longitud'] ?? null),
             'cod_dep' => $codDep,
             'cod_prov' => $codProv,
             'cod_dist' => $codDist,
@@ -198,5 +200,32 @@ final class AccidenteService
         if ($payload['tipo_registro'] !== null && !in_array($payload['tipo_registro'], self::TIPOS_REGISTRO, true)) {
             throw new InvalidArgumentException('Selecciona un tipo de registro válido.');
         }
+
+        if (($payload['latitud'] === null) xor ($payload['longitud'] === null)) {
+            throw new InvalidArgumentException('La georreferencia debe incluir latitud y longitud.');
+        }
+
+        if ($payload['latitud'] !== null && ($payload['latitud'] < -90 || $payload['latitud'] > 90)) {
+            throw new InvalidArgumentException('La latitud debe estar entre -90 y 90.');
+        }
+
+        if ($payload['longitud'] !== null && ($payload['longitud'] < -180 || $payload['longitud'] > 180)) {
+            throw new InvalidArgumentException('La longitud debe estar entre -180 y 180.');
+        }
+    }
+
+    private function normalizeCoordinate(mixed $value): ?float
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        $normalized = str_replace(',', '.', $raw);
+        if (!is_numeric($normalized)) {
+            throw new InvalidArgumentException('Las coordenadas deben tener formato numérico válido.');
+        }
+
+        return round((float) $normalized, 7);
     }
 }

@@ -39,17 +39,11 @@ function gc_get_client() {
 /**
  * Crea un evento de citación en Google Calendar.
  *
- * Parámetros esperados en $opts:
- *  - fecha (Y-m-d)
- *  - hora  (H:i)
- *  - titulo
- *  - descripcion
- *  - lugar
- *  - duracion (minutos, por defecto 60)
- *
- * Devuelve: URL del evento (string) o null si algo falla.
+ * Devuelve:
+ * - event_id
+ * - html_link
  */
-function gc_crear_evento_citacion(array $opts) {
+function gc_crear_evento_citacion_detalle(array $opts): array {
     $fecha       = $opts['fecha'] ?? null;
     $hora        = $opts['hora'] ?? null;
     $titulo      = $opts['titulo'] ?? 'Citación';
@@ -88,5 +82,25 @@ function gc_crear_evento_citacion(array $opts) {
     $calendarId   = GCAL_CITACIONES_ID;
     $createdEvent = $service->events->insert($calendarId, $event);
 
-    return $createdEvent->getHtmlLink();
+    return [
+        'event_id' => (string) $createdEvent->getId(),
+        'html_link' => (string) $createdEvent->getHtmlLink(),
+    ];
+}
+
+function gc_crear_evento_citacion(array $opts) {
+    $detail = gc_crear_evento_citacion_detalle($opts);
+    return $detail['html_link'] ?? null;
+}
+
+function gc_eliminar_evento_citacion(string $eventId): void
+{
+    $eventId = trim($eventId);
+    if ($eventId === '') {
+        throw new InvalidArgumentException('Falta el identificador del evento de Google Calendar.');
+    }
+
+    $client = gc_get_client();
+    $service = new Google_Service_Calendar($client);
+    $service->events->delete(GCAL_CITACIONES_ID, $eventId);
 }

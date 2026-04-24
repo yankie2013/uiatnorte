@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require __DIR__ . '/google_calendar.php';
 
 use App\Repositories\CitacionRepository;
 use App\Services\CitacionService;
@@ -15,7 +16,8 @@ if (!function_exists('h')) {
     }
 }
 
-$service = new CitacionService(new CitacionRepository($pdo));
+$citacionRepository = new CitacionRepository($pdo);
+$service = new CitacionService($citacionRepository);
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 if ($accidenteId <= 0) {
     http_response_code(400);
@@ -27,6 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     $id = (int) ($_POST['id'] ?? 0);
     try {
         if ($id > 0) {
+            $citacion = $service->detail($id);
+            if ($citacion !== null) {
+                $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
+                if ($eventId !== '') {
+                    gc_eliminar_evento_citacion($eventId);
+                }
+            }
             $service->delete($id, $accidenteId);
         }
         header('Location: citacion_listar.php?accidente_id=' . $accidenteId);
@@ -55,7 +64,7 @@ include __DIR__ . '/sidebar.php';
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c3{grid-column:span 3}.c2{grid-column:span 2}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:16px 0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:1160px}th,td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(59,130,246,.05)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px}.muted{color:var(--muted)}input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}@media(max-width:900px){.c3,.c2{grid-column:span 12}}
+body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c3{grid-column:span 3}.c2{grid-column:span 2}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:16px 0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:1240px}th,td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(59,130,246,.05)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px}.pill.sync-ok{background:rgba(22,163,74,.12);color:#166534;border-color:rgba(22,163,74,.2)}.pill.sync-off{background:rgba(148,163,184,.1);color:var(--muted)}.pill.sync-error{background:rgba(220,38,38,.12);color:var(--danger);border-color:rgba(220,38,38,.2)}.muted{color:var(--muted)}input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}@media(max-width:900px){.c3,.c2{grid-column:span 12}}
 </style>
 </head>
 <body>
@@ -108,12 +117,13 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <th>Hora</th>
           <th>Lugar</th>
           <th>Oficio</th>
+          <th>Google Calendar</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
       <?php if ($rows === []): ?>
-        <tr><td colspan="10" class="muted" style="text-align:center;padding:24px;">No hay citaciones registradas con esos filtros.</td></tr>
+        <tr><td colspan="11" class="muted" style="text-align:center;padding:24px;">No hay citaciones registradas con esos filtros.</td></tr>
       <?php else: ?>
         <?php foreach ($rows as $row): ?>
           <?php
@@ -122,6 +132,18 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
             $oficio = (!empty($row['oficio_num']) && !empty($row['oficio_anio']))
                 ? ((string) $row['oficio_num'] . '/' . (string) $row['oficio_anio'])
                 : 'Sin oficio';
+            $calendarEventLink = trim((string) ($row['google_calendar_event_link'] ?? ''));
+            $calendarEventId = trim((string) ($row['google_calendar_event_id'] ?? ''));
+            $syncStatus = trim((string) ($row['google_calendar_sync_status'] ?? ''));
+            $syncClass = 'sync-off';
+            $syncLabel = 'No sincronizada';
+            if ($calendarEventId !== '' && $syncStatus !== 'error') {
+                $syncClass = 'sync-ok';
+                $syncLabel = 'Sincronizada';
+            } elseif ($syncStatus === 'error') {
+                $syncClass = 'sync-error';
+                $syncLabel = 'Error de sincronización';
+            }
           ?>
           <tr>
             <td>#<?= (int) $row['id'] ?></td>
@@ -137,12 +159,24 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
             <td><?= h((string) ($row['lugar'] ?? '')) ?></td>
             <td><?= h($oficio) ?></td>
             <td>
+              <span class="pill <?= h($syncClass) ?>"><?= h($syncLabel) ?></span>
+              <?php if (!empty($row['google_calendar_synced_at'])): ?>
+                <div class="small">Sync: <?= h((string) $row['google_calendar_synced_at']) ?></div>
+              <?php endif; ?>
+              <?php if ($syncStatus === 'error' && !empty($row['google_calendar_last_error'])): ?>
+                <div class="small" style="color:var(--danger);"><?= h((string) $row['google_calendar_last_error']) ?></div>
+              <?php endif; ?>
+              <?php if ($calendarEventLink !== ''): ?>
+                <div class="small"><a href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a></div>
+              <?php endif; ?>
+            </td>
+            <td>
               <div class="stack-actions">
                 <a class="btn" href="citacion_leer.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>">Ver</a>
                 <a class="btn" href="citacion_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>">Editar</a>
                 <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">DOCX</a>
                 <?php if ($pdfDisponible): ?><a class="btn" href="citacion_diligencia_pdf.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">PDF</a><?php endif; ?>
-                <form method="post" onsubmit="return confirm('Eliminar esta citacion?');" style="display:inline;">
+                <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                   <button class="btn danger" type="submit">Eliminar</button>

@@ -4,6 +4,7 @@ require_login();
 require __DIR__.'/db.php';
 
 use App\Repositories\AccidenteRepository;
+use App\Support\GeoSearch;
 use App\Services\AccidenteService;
 
 header('Content-Type: text/html; charset=utf-8');
@@ -13,6 +14,7 @@ function json_out($a){ header('Content-Type: application/json; charset=utf-8'); 
 
 $accidenteRepo = new AccidenteRepository($pdo);
 $accidenteService = new AccidenteService($accidenteRepo);
+$googleMapsApiKey = trim((string) app_config('services.google_maps.js_api_key', ''));
 
 /* =========================================================
  *                         AJAX
@@ -51,6 +53,12 @@ if (isset($_GET['ajax'])) {
   if ($a==='fiscal_info'){
     $id = (int)($_GET['fiscal_id'] ?? 0);
     json_out(['ok'=>true,'data'=>$accidenteRepo->fiscalTelefono($id)]);
+  }
+
+  if ($a==='geo_search'){
+    $q = trim((string) ($_GET['q'] ?? ''));
+    $limit = (int) ($_GET['limit'] ?? 6);
+    json_out(['ok' => true, 'data' => GeoSearch::searchPeruLima($q, $limit)]);
   }
 
   // Creaciones rápidas
@@ -160,6 +168,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $tipo_registro=trim($_POST['tipo_registro']??'');
   $lugar=trim($_POST['lugar']??'');
   $referencia=trim($_POST['referencia']??'');
+  $latitud=trim($_POST['latitud']??'');
+  $longitud=trim($_POST['longitud']??'');
   $cod_dep=substr($_POST['cod_dep']??'',0,2);
   $cod_prov=substr($_POST['cod_prov']??'',0,2);
   $cod_dist=substr($_POST['cod_dist']??'',0,2);
@@ -234,6 +244,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         'tipo_registro' => $tipo_registro,
         'lugar' => $lugar,
         'referencia' => $referencia,
+        'latitud' => $latitud,
+        'longitud' => $longitud,
         'cod_dep' => $cod_dep,
         'cod_prov' => $cod_prov,
         'cod_dist' => $cod_dist,
@@ -321,6 +333,7 @@ include __DIR__ . '/sidebar.php';
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nuevo Accidente | UIAT Norte</title>
 <link rel="stylesheet" href="assets/accidente.css">
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 </head>
 <body>
 <div class="wrap">
@@ -416,6 +429,27 @@ include __DIR__ . '/sidebar.php';
 
       <div class="col-6"><label>Lugar del hecho *</label><input type="text" name="lugar" maxlength="200" required></div>
       <div class="col-6"><label>Referencia</label><input type="text" name="referencia" maxlength="200"></div>
+
+      <div class="col-3">
+        <label>Latitud</label>
+        <input type="text" name="latitud" id="latitud" value="<?=h($latitud ?? '')?>" placeholder="Se completa desde el mapa" readonly>
+      </div>
+      <div class="col-3">
+        <label>Longitud</label>
+        <input type="text" name="longitud" id="longitud" value="<?=h($longitud ?? '')?>" placeholder="Se completa desde el mapa" readonly>
+      </div>
+      <div class="col-6">
+        <label>Georreferencia</label>
+        <div class="rowflex geo-actions">
+          <button type="button" class="btn" id="btn-open-geo" onclick="return abrirModalGeo();">Marcar en mapa</button>
+          <button type="button" class="btn" id="btn-clear-geo" onclick="return limpiarGeoAccidente();">Limpiar punto</button>
+          <a class="btn" id="geo-open-external" href="#" target="_blank" rel="noopener noreferrer" onclick="return abrirGeoExterno(event);">Ver en Google Maps</a>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="geo-preview" id="geo-preview-status">Todavía no hay un punto georreferenciado para este accidente.</div>
+      </div>
 
       <div class="col-4"><label>Departamento *</label>
         <select name="cod_dep" id="dep" required>
@@ -543,6 +577,35 @@ include __DIR__ . '/sidebar.php';
   </form>
 </div></div>
 
+<div class="modal" id="modal-geo">
+  <div class="card geo-modal-card">
+    <div class="geo-modal-head">
+      <div>
+        <h3 style="margin:0">Ubicación del accidente</h3>
+        <div class="geo-modal-sub">Busca una dirección o haz clic sobre el mapa para fijar el punto exacto.</div>
+      </div>
+      <button type="button" class="btn" id="btn-close-geo">Cerrar</button>
+    </div>
+    <div class="geo-toolbar">
+      <input type="text" id="geo-search" placeholder="Buscar dirección, cruce, avenida o referencia">
+      <select id="geo-map-type">
+        <option value="roadmap" selected>Mapa</option>
+        <option value="hybrid">Híbrido</option>
+        <option value="satellite">Satélite</option>
+        <option value="terrain">Relieve</option>
+      </select>
+    </div>
+    <div id="geo-map" class="geo-map"></div>
+    <div class="geo-coords-bar">
+      <span id="geo-coords-text">Sin coordenadas seleccionadas.</span>
+    </div>
+    <div class="rowflex" style="justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" id="btn-cancel-geo">Cancelar</button>
+      <button type="button" class="btn primary" id="btn-use-geo">Usar estas coordenadas</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL XL - Vehículos -->
 <div class="modal-xl" id="modal-veh">
   <div class="box">
@@ -572,5 +635,10 @@ include __DIR__ . '/sidebar.php';
 </div>
 
 <script src="assets/accidente.js"></script>
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<?php if ($googleMapsApiKey !== ''): ?>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= h($googleMapsApiKey) ?>&libraries=places" async defer></script>
+<?php endif; ?>
+<script>window.initAccidenteGeoMap && window.initAccidenteGeoMap();</script>
 </body>
 </html>

@@ -145,6 +145,14 @@ final class CitacionService
         $this->repository->delete($id, $accidenteId);
     }
 
+    public function updateCalendarSync(int $id, array $payload): void
+    {
+        if ($this->repository->find($id) === null) {
+            throw new InvalidArgumentException('Citacion no encontrada.');
+        }
+        $this->repository->updateCalendarSync($id, $payload);
+    }
+
     public function listado(int $accidenteId, array $filters): array
     {
         return $this->repository->searchByAccidente($accidenteId, $filters);

@@ -742,12 +742,14 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
 </style>
 </head>
 <body>
+<?php include __DIR__ . '/sidebar.php'; ?>
 <div class="wrap">
   <div class="title">
     <h1 style="margin:0">Accidentes <span class="badge">Listado</span></h1>
     <nav class="toolbar" aria-label="Acciones">
       <a class="btn" href="#" onclick="history.back();return false;">Atras</a>
       <a class="btn" href="index.php">Inicio</a>
+      <a class="btn" href="accidente_mapa.php">Mapa</a>
       <a class="btn primary" href="accidente_nuevo.php">Nuevo</a>
     </nav>
   </div>

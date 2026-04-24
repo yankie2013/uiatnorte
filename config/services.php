@@ -9,4 +9,9 @@ return [
         'dni_url' => getenv('SEEKER_DNI_URL') ?: 'https://seeker.red/personas/apiPremium/dni',
         'placa_url' => getenv('SEEKER_PLACA_URL') ?: 'https://seeker.red/vehiculos/api_newPlacas',
     ],
+    'google_maps' => [
+        'js_api_key' => getenv('GOOGLE_MAPS_JS_API_KEY')
+            ?: (getenv('GOOGLE_MAPS_API_KEY')
+                ?: 'AIzaSyBBnJS7WFYPLcroPFi-l0felTh2UW_QR4Q'),
+    ],
 ];

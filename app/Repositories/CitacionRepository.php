@@ -3,9 +3,12 @@
 namespace App\Repositories;
 
 use PDO;
+use Throwable;
 
 final class CitacionRepository
 {
+    private array $columnCache = [];
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -111,6 +114,28 @@ final class CitacionRepository
         return $row ?: null;
     }
 
+    public function updateCalendarSync(int $id, array $payload): void
+    {
+        $this->ensureCalendarColumns();
+
+        $sql = "UPDATE citacion
+                   SET google_calendar_event_id = ?,
+                       google_calendar_event_link = ?,
+                       google_calendar_sync_status = ?,
+                       google_calendar_synced_at = ?,
+                       google_calendar_last_error = ?
+                 WHERE id = ?";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([
+            $payload['event_id'] ?? null,
+            $payload['event_link'] ?? null,
+            $payload['sync_status'] ?? 'pendiente',
+            $payload['synced_at'] ?? null,
+            $payload['last_error'] ?? null,
+            $id,
+        ]);
+    }
+
     public function update(int $id, array $payload): void
     {
         $sql = "UPDATE citacion SET
@@ -183,5 +208,43 @@ final class CitacionRepository
         $st = $this->pdo->prepare($sql);
         $st->execute($params);
         return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function ensureCalendarColumns(): void
+    {
+        $required = [
+            'google_calendar_event_id' => "ALTER TABLE citacion ADD COLUMN google_calendar_event_id VARCHAR(255) NULL AFTER oficio_id",
+            'google_calendar_event_link' => "ALTER TABLE citacion ADD COLUMN google_calendar_event_link TEXT NULL AFTER google_calendar_event_id",
+            'google_calendar_sync_status' => "ALTER TABLE citacion ADD COLUMN google_calendar_sync_status VARCHAR(30) NULL AFTER google_calendar_event_link",
+            'google_calendar_synced_at' => "ALTER TABLE citacion ADD COLUMN google_calendar_synced_at DATETIME NULL AFTER google_calendar_sync_status",
+            'google_calendar_last_error' => "ALTER TABLE citacion ADD COLUMN google_calendar_last_error TEXT NULL AFTER google_calendar_synced_at",
+        ];
+
+        foreach ($required as $column => $sql) {
+            if ($this->columnExists('citacion', $column)) {
+                continue;
+            }
+
+            try {
+                $this->pdo->exec($sql);
+            } catch (Throwable) {
+                // Another request may have added the column concurrently.
+            }
+            unset($this->columnCache['citacion.' . $column]);
+        }
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $cacheKey = $table . '.' . $column;
+        if (array_key_exists($cacheKey, $this->columnCache)) {
+            return $this->columnCache[$cacheKey];
+        }
+
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $st->execute([$table, $column]);
+        $exists = (int) $st->fetchColumn() > 0;
+        $this->columnCache[$cacheKey] = $exists;
+        return $exists;
     }
 }

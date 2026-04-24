@@ -16,7 +16,8 @@ if (!function_exists('h')) {
     }
 }
 
-$service = new CitacionService(new CitacionRepository($pdo));
+$citacionRepository = new CitacionRepository($pdo);
+$service = new CitacionService($citacionRepository);
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 if ($accidenteId <= 0) {
     http_response_code(400);
@@ -47,11 +48,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newId = (int) $created['id'];
         $success = 'Citación registrada correctamente.';
         try {
-            $linkEvento = gc_crear_evento_citacion($service->calendarPayload($accidenteId, $newId, $created));
+            $calendarDetail = gc_crear_evento_citacion_detalle($service->calendarPayload($accidenteId, $newId, $created));
+            $linkEvento = (string) ($calendarDetail['html_link'] ?? '');
+            $service->updateCalendarSync($newId, [
+                'event_id' => (string) ($calendarDetail['event_id'] ?? ''),
+                'event_link' => $linkEvento !== '' ? $linkEvento : null,
+                'sync_status' => 'sincronizado',
+                'synced_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
             if ($linkEvento) {
                 $success .= ' Evento creado en Google Calendar.';
             }
         } catch (Throwable $calendarError) {
+            $service->updateCalendarSync($newId, [
+                'event_id' => null,
+                'event_link' => null,
+                'sync_status' => 'error',
+                'synced_at' => null,
+                'last_error' => $calendarError->getMessage(),
+            ]);
             $success .= ' (No se pudo crear el evento en Google Calendar: ' . $calendarError->getMessage() . ')';
         }
         $data = $service->defaultData();

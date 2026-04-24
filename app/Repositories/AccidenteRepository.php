@@ -25,6 +25,7 @@ final class AccidenteRepository
     public function accidenteById(int $accidenteId): ?array
     {
         $sql = 'SELECT id, sidpol, registro_sidpol, tipo_registro, lugar, referencia,
+                       latitud, longitud,
                        cod_dep, cod_prov, cod_dist, comisaria_id,
                        fecha_accidente, estado, fecha_comunicacion, fecha_intervencion,
                        comunicante_nombre, comunicante_telefono,
@@ -192,11 +193,11 @@ final class AccidenteRepository
     public function insertAccidente(array $payload): int
     {
         $sql = 'INSERT INTO accidentes
-            (registro_sidpol,tipo_registro,lugar,referencia,cod_dep,cod_prov,cod_dist,comisaria_id,
+            (registro_sidpol,tipo_registro,lugar,referencia,latitud,longitud,cod_dep,cod_prov,cod_dist,comisaria_id,
              fecha_accidente,estado,fecha_comunicacion,fecha_intervencion,
              comunicante_nombre,comunicante_telefono,comunicacion_decreto,comunicacion_oficio,comunicacion_carpeta_nro,
              fiscalia_id,fiscal_id,nro_informe_policial,sentido,secuencia)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
         $st = $this->pdo->prepare($sql);
         $st->execute([
@@ -204,6 +205,8 @@ final class AccidenteRepository
             $payload['tipo_registro'],
             $payload['lugar'],
             $payload['referencia'],
+            $payload['latitud'],
+            $payload['longitud'],
             $payload['cod_dep'],
             $payload['cod_prov'],
             $payload['cod_dist'],
@@ -232,7 +235,7 @@ final class AccidenteRepository
         $sql = 'UPDATE accidentes SET
                   registro_sidpol=?,
                   tipo_registro=?,
-                  lugar=?, referencia=?, cod_dep=?, cod_prov=?, cod_dist=?, comisaria_id=?,
+                  lugar=?, referencia=?, latitud=?, longitud=?, cod_dep=?, cod_prov=?, cod_dist=?, comisaria_id=?,
                   fecha_accidente=?, estado=?, fecha_comunicacion=?, fecha_intervencion=?,
                   comunicante_nombre=?, comunicante_telefono=?, comunicacion_decreto=?, comunicacion_oficio=?, comunicacion_carpeta_nro=?,
                   fiscalia_id=?, fiscal_id=?, nro_informe_policial=?,
@@ -244,6 +247,8 @@ final class AccidenteRepository
             $payload['tipo_registro'],
             $payload['lugar'],
             $payload['referencia'],
+            $payload['latitud'],
+            $payload['longitud'],
             $payload['cod_dep'],
             $payload['cod_prov'],
             $payload['cod_dist'],
