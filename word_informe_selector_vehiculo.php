@@ -113,6 +113,61 @@ function load_unidades(PDO $pdo, int $accidenteId, string $condicion): array
     return $rows;
 }
 
+function load_un_vehiculo_conductor_ileso(PDO $pdo, int $accidenteId): array
+{
+    if (count_vehicle_groups($pdo, $accidenteId) !== 1) {
+        return [];
+    }
+
+    $sql = "
+        SELECT iv.id AS vehiculo_inv_id,
+               iv.orden_participacion,
+               iv.tipo AS involucrado_tipo,
+               v.id AS vehiculo_id,
+               v.placa,
+               v.color,
+               v.anio,
+               GROUP_CONCAT(
+                   DISTINCT TRIM(CONCAT(
+                       COALESCE(p.nombres, ''),
+                       ' ', COALESCE(p.apellido_paterno, ''),
+                       ' ', COALESCE(p.apellido_materno, ''),
+                       ' - ', COALESCE(pr.Nombre, ''),
+                       ' / ', COALESCE(ip.lesion, '')
+                   ))
+                   ORDER BY ip.id
+                   SEPARATOR '; '
+               ) AS personas
+          FROM involucrados_vehiculos iv
+          JOIN vehiculos v ON v.id = iv.vehiculo_id
+          JOIN involucrados_personas ip ON ip.accidente_id = iv.accidente_id AND ip.vehiculo_id = iv.vehiculo_id
+     LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
+          JOIN personas p ON p.id = ip.persona_id
+         WHERE iv.accidente_id = :a
+           AND iv.tipo NOT IN ('Combinado vehicular 1', 'Combinado vehicular 2')
+           AND LOWER(COALESCE(ip.lesion, '')) LIKE '%ileso%'
+           AND LOWER(COALESCE(pr.Nombre, '')) LIKE '%conduc%'
+      GROUP BY iv.id, iv.orden_participacion, iv.tipo, v.id, v.placa, v.color, v.anio
+      ORDER BY FIELD(iv.orden_participacion, 'UT-1','UT-2','UT-3','UT-4','UT-5','UT-6','UT-7'), iv.id ASC
+      LIMIT 1
+    ";
+
+    $rows = fetch_all_selector($pdo, $sql, [':a' => $accidenteId]);
+    foreach ($rows as &$row) {
+        $placa = placa_visible((string) ($row['placa'] ?? ''));
+        $row['placa_label'] = trim((string) ($row['orden_participacion'] ?? '') . ' - ' . $placa);
+        if (!empty($row['color'])) {
+            $row['placa_label'] .= ' - ' . $row['color'];
+        }
+        if (!empty($row['anio'])) {
+            $row['placa_label'] .= ' (' . $row['anio'] . ')';
+        }
+        $row['detalle'] = $row['involucrado_tipo'] ?? 'Unidad';
+    }
+
+    return $rows;
+}
+
 function load_combinados(PDO $pdo, int $accidenteId, string $condicion): array
 {
     $cond = condicion_sql($condicion, 'ip2', 'pr2');
@@ -265,6 +320,25 @@ function load_auto_options(PDO $pdo, int $accidenteId): array
                 $row['download_url'] = $row['reporte'] . '?accidente_id=' . $accidenteId . '&vehiculo_inv_id=' . (int) $row['vehiculo_inv_id'];
                 $items[] = $row;
             }
+        }
+    }
+
+    $existingKeys = [];
+    foreach ($items as $item) {
+        $existingKeys[(string) ($item['reporte'] ?? '') . ':' . (int) ($item['vehiculo_inv_id'] ?? 0)] = true;
+    }
+
+    foreach (load_un_vehiculo_conductor_ileso($pdo, $accidenteId) as $row) {
+        $row['tipo_vehiculo'] = 'unidad';
+        $row['condicion'] = 'ileso';
+        $row['tipo_label'] = 'Un vehiculo';
+        $row['condicion_label'] = 'Conductor ileso';
+        $row['reporte'] = 'word_informe_un_vehiculo_ileso.php';
+        $row['download_url'] = $row['reporte'] . '?accidente_id=' . $accidenteId . '&vehiculo_inv_id=' . (int) $row['vehiculo_inv_id'];
+        $key = $row['reporte'] . ':' . (int) $row['vehiculo_inv_id'];
+        if (empty($existingKeys[$key])) {
+            $items[] = $row;
+            $existingKeys[$key] = true;
         }
     }
 

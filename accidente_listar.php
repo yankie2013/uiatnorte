@@ -176,7 +176,7 @@ $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC
    QUERY BASE
 ============================ */
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
-$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,c.nombre AS comisaria
+$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria
         FROM accidentes a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
         WHERE 1=1";
@@ -615,11 +615,23 @@ html[data-theme-resolved="dark"]{
 .acc-card-list{display:flex;flex-direction:column;gap:14px}
 .table-wrap{display:none}
 .acc-card{
-  border:1px solid var(--tbl-bd);
+  border:1px solid rgba(148,163,184,.38);
   border-radius:14px;
   background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.96));
+  box-shadow:0 10px 24px rgba(15,23,42,.07), inset 4px 0 0 rgba(37,99,235,.22);
   overflow:hidden;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
+.acc-card[data-url] .acc-card-main{cursor:pointer}
+.acc-card:hover{
+  border-color:rgba(37,99,235,.38);
+  box-shadow:0 14px 30px rgba(15,23,42,.10), inset 4px 0 0 rgba(37,99,235,.42);
+}
+.acc-card[data-url] .acc-card-main:hover{background:rgba(37,99,235,.035)}
+.acc-card button,
+.acc-card select,
+.acc-card a,
+.acc-card .estado-badge{cursor:pointer}
 .acc-card-main{
   display:grid;
   grid-template-columns:minmax(0,1.5fr) minmax(220px,.9fr) auto;
@@ -666,6 +678,23 @@ html[data-theme-resolved="dark"]{
 .acc-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;justify-content:space-between;min-height:100%}
 .acc-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .acc-bottom-actions{display:flex;justify-content:flex-end;width:100%}
+.acc-gps-btn{
+  min-width:42px;
+  height:34px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid #b7e4c7;
+  background:linear-gradient(180deg,#f0fff5 0%,#dcfce7 100%);
+  color:#166534;
+  font-size:11px;
+  font-weight:900;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 8px 18px rgba(22,101,52,.12);
+}
+.acc-gps-btn:hover{background:#bbf7d0;border-color:#86efac;color:#14532d}
 .acc-card .col-folder{min-width:auto}
 .acc-inline-form{display:inline}
 .acc-toggle{
@@ -699,6 +728,12 @@ html[data-theme-resolved="dark"]{
 
 html[data-theme-resolved="dark"] .acc-card{
   background:linear-gradient(180deg,rgba(15,20,34,.96),rgba(17,25,43,.96));
+  border-color:rgba(148,163,184,.24);
+  box-shadow:0 10px 24px rgba(0,0,0,.24), inset 4px 0 0 rgba(96,165,250,.34);
+}
+html[data-theme-resolved="dark"] .acc-card:hover{
+  border-color:rgba(96,165,250,.5);
+  box-shadow:0 14px 30px rgba(0,0,0,.32), inset 4px 0 0 rgba(96,165,250,.58);
 }
 html[data-theme-resolved="dark"] .acc-place,
 html[data-theme-resolved="dark"] .vehicle-plate{color:#e5edf8}
@@ -709,6 +744,16 @@ html[data-theme-resolved="dark"] .acc-meta-value,
 html[data-theme-resolved="dark"] .vehicle-extra{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-hint{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-detail{background:rgba(15,23,42,.72)}
+html[data-theme-resolved="dark"] .acc-gps-btn{
+  background:rgba(22,101,52,.28);
+  border-color:rgba(134,239,172,.42);
+  color:#bbf7d0;
+}
+html[data-theme-resolved="dark"] .acc-gps-btn:hover{
+  background:rgba(22,163,74,.38);
+  border-color:rgba(134,239,172,.62);
+  color:#dcfce7;
+}
 html[data-theme-resolved="dark"] .acc-panel{
   background:rgba(15,23,42,.78);
   border-color:rgba(148,163,184,.2);
@@ -834,8 +879,12 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']);
           $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
           $tipoRegistroClass = ($r['tipo_registro'] ?? '') === 'Intervencion' ? 'tipo-reg-intervencion' : 'tipo-reg-carpeta';
+          $lat = trim((string)($r['latitud'] ?? ''));
+          $lng = trim((string)($r['longitud'] ?? ''));
+          $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
+          $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -870,6 +919,9 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
 
             <div class="acc-card-right">
               <div class="acc-top-actions">
+                <?php if ($hasGps): ?>
+                  <a class="acc-gps-btn" href="<?= h($gpsUrl) ?>" target="_blank" rel="noopener noreferrer" title="Ver ubicación GPS en Google Maps" aria-label="Ver ubicación GPS en Google Maps">GPS</a>
+                <?php endif; ?>
                 <div class="col-folder folder-cell">
                   <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
                           data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
@@ -1123,6 +1175,15 @@ document.querySelectorAll('.js-toggle-card').forEach(btn=>{
     btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
     btn.textContent = expanded ? '+' : '-';
     detail.hidden = expanded;
+  });
+});
+
+document.querySelectorAll('.acc-card[data-url] .acc-card-main').forEach(cardMain=>{
+  cardMain.addEventListener('click', (e)=>{
+    if(e.target.closest('a, button, select, input, textarea, label, form, .estado-badge')) return;
+    const card = cardMain.closest('.acc-card');
+    const url = card?.dataset.url || '';
+    if(url) window.location.href = url;
   });
 });
 

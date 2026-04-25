@@ -2693,6 +2693,65 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
     }
 }
 
+function analysis_delete_image(PDO $pdo, int $accidenteId, int $mediaId): void
+{
+    if ($accidenteId <= 0 || $mediaId <= 0) {
+        throw new InvalidArgumentException('Imagen no encontrada.');
+    }
+
+    if (!safe_table_exists($pdo, analysis_media_table_name())) {
+        throw new RuntimeException('La tabla de imágenes de análisis no existe aún.');
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $selectStmt = $pdo->prepare(
+            'SELECT id, seccion, sort_order, archivo_path
+               FROM ' . analysis_media_table_name() . '
+              WHERE id = ? AND accidente_id = ?
+              LIMIT 1'
+        );
+        $selectStmt->execute([$mediaId, $accidenteId]);
+        $media = $selectStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$media) {
+            throw new InvalidArgumentException('Imagen no encontrada para este accidente.');
+        }
+
+        $section = trim((string) ($media['seccion'] ?? ''));
+        if (!isset(analysis_media_sections()[$section])) {
+            throw new InvalidArgumentException('Sección de análisis no válida.');
+        }
+
+        $deleteStmt = $pdo->prepare('DELETE FROM ' . analysis_media_table_name() . ' WHERE id = ? AND accidente_id = ?');
+        $deleteStmt->execute([$mediaId, $accidenteId]);
+
+        $reorderStmt = $pdo->prepare(
+            'UPDATE ' . analysis_media_table_name() . '
+                SET sort_order = sort_order - 1
+              WHERE accidente_id = ? AND seccion = ? AND sort_order > ?'
+        );
+        $reorderStmt->execute([$accidenteId, $section, (int) ($media['sort_order'] ?? 0)]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    $relativePath = trim((string) ($media['archivo_path'] ?? ''));
+    if ($relativePath === '') {
+        return;
+    }
+
+    $baseDir = realpath(__DIR__ . '/uploads/analisis/accidente_' . $accidenteId . '/' . $section);
+    $absolutePath = realpath(__DIR__ . '/' . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath));
+    if ($baseDir !== false && $absolutePath !== false && str_starts_with($absolutePath, $baseDir . DIRECTORY_SEPARATOR) && is_file($absolutePath)) {
+        @unlink($absolutePath);
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string) ($_POST['action'] ?? ''));
 
@@ -2705,6 +2764,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ok' => true,
                 'message' => $saved === 1 ? 'Imagen guardada correctamente.' : 'Imágenes guardadas correctamente.',
                 'saved' => $saved,
+            ]);
+        } catch (Throwable $e) {
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    if ($action === 'delete_analysis_image') {
+        try {
+            $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
+            $mediaId = (int) ($_POST['media_id'] ?? 0);
+            analysis_delete_image($pdo, $accidenteId, $mediaId);
+            json_response([
+                'ok' => true,
+                'message' => 'Imagen eliminada correctamente.',
             ]);
         } catch (Throwable $e) {
             json_response(['ok' => false, 'message' => $e->getMessage()], 422);
@@ -5500,7 +5573,11 @@ include __DIR__ . '/sidebar.php';
   .summary-doc-stack{display:grid;gap:8px}
   .summary-empty{padding:12px;border:1px dashed var(--line);border-radius:12px;background:rgba(148,163,184,.06);color:var(--muted);font-size:12px;font-weight:600}
   .analysis-two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .analysis-two-cols .module-card{height:100%}
+  .analysis-two-cols .module-card{height:100%;display:flex;flex-direction:column}
+  .analysis-two-cols .module-card > header{order:1}
+  .analysis-two-cols .module-card > .analysis-upload{order:2}
+  .analysis-two-cols .module-card > .summary-doc-stack,
+  .analysis-two-cols .module-card > .summary-empty{order:3}
   .analysis-upload{margin-top:10px;padding:10px;border:1px dashed #c9d5e6;border-radius:14px;background:linear-gradient(180deg,#fbfdff 0%,#f4f8fd 100%)}
   .analysis-upload-form{display:grid;gap:8px}
   .analysis-upload label{display:block;margin:0 0 8px;font-size:11px;font-weight:800;color:var(--title-blue);letter-spacing:.01em}
@@ -5511,8 +5588,8 @@ include __DIR__ . '/sidebar.php';
   .analysis-preview[hidden]{display:none}
   .analysis-preview img{display:block;max-width:100%;max-height:320px;border-radius:10px;object-fit:contain}
   .analysis-inline-slider{margin-top:10px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:10px;display:grid;gap:10px}
-  .analysis-inline-stage{position:relative;min-height:420px;border-radius:14px;background:linear-gradient(180deg,#fbfdff 0%,#eef4fb 100%);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .analysis-inline-image{display:block;max-width:100%;max-height:560px;object-fit:contain;border-radius:12px}
+  .analysis-inline-stage{position:relative;height:420px;border-radius:14px;background:linear-gradient(180deg,#fbfdff 0%,#eef4fb 100%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .analysis-inline-image{display:block;width:100%;height:100%;max-width:100%;object-fit:contain;border-radius:12px}
   .analysis-inline-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:999px;border:1px solid rgba(15,23,42,.12);background:rgba(255,255,255,.9);color:#1f2937;font-size:22px;font-weight:800;line-height:1;display:inline-flex;align-items:center;justify-content:center}
   .analysis-inline-nav:hover{background:#fff}
   .analysis-inline-prev{left:12px}
@@ -5520,6 +5597,8 @@ include __DIR__ . '/sidebar.php';
   .analysis-inline-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
   .analysis-image-order{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#166534;font-size:10px;font-weight:800}
   .analysis-image-name{font-size:11px;font-weight:700;color:var(--muted);word-break:break-word}
+  .analysis-delete-btn{margin-left:auto;border-color:#fecaca;background:#fff7f7;color:#b91c1c}
+  .analysis-delete-btn:hover{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
   .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-main{display:grid;gap:6px;min-width:0}
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -6017,8 +6096,7 @@ include __DIR__ . '/sidebar.php';
     .field-grid{grid-template-columns:1fr}
     .analysis-two-cols{grid-template-columns:1fr}
     .analysis-preview{grid-template-columns:1fr}
-    .analysis-inline-stage{min-height:280px}
-    .analysis-inline-image{max-height:360px}
+    .analysis-inline-stage{height:280px}
     .general-checkbox-grid{grid-template-columns:1fr}
     .field-card.span-2{grid-column:span 1}
     .editable-toolbar{align-items:flex-start}
@@ -6364,11 +6442,11 @@ include __DIR__ . '/sidebar.php';
             </div>
             <div class="general-edit-card g-3">
               <label for="acc-latitud">Latitud</label>
-              <input class="edit-control" id="acc-latitud" type="text" name="latitud" value="<?= h((string) ($accidenteBase['latitud'] ?? '')) ?>" placeholder="Se completa desde el mapa" readonly>
+              <input class="edit-control" id="acc-latitud" type="text" name="latitud" value="<?= h((string) ($accidenteBase['latitud'] ?? '')) ?>" placeholder="Ingresa o marca desde el mapa" inputmode="decimal">
             </div>
             <div class="general-edit-card g-3">
               <label for="acc-longitud">Longitud</label>
-              <input class="edit-control" id="acc-longitud" type="text" name="longitud" value="<?= h((string) ($accidenteBase['longitud'] ?? '')) ?>" placeholder="Se completa desde el mapa" readonly>
+              <input class="edit-control" id="acc-longitud" type="text" name="longitud" value="<?= h((string) ($accidenteBase['longitud'] ?? '')) ?>" placeholder="Ingresa o marca desde el mapa" inputmode="decimal">
             </div>
             <div class="general-edit-card g-6">
               <label>Georreferencia</label>
@@ -8621,12 +8699,14 @@ include __DIR__ . '/sidebar.php';
                         <div class="analysis-inline-meta">
                           <span class="analysis-image-order js-analysis-inline-order"></span>
                           <span class="analysis-image-name js-analysis-inline-caption"></span>
+                          <button type="button" class="btn-shell analysis-delete-btn js-analysis-delete-image">Eliminar imagen</button>
                         </div>
                         <div hidden>
                           <?php foreach ($analysisMediaBySection['danos'] as $mediaIndex => $media): ?>
                             <button
                               type="button"
                               class="js-analysis-inline-item"
+                              data-id="<?= (int) ($media['id'] ?? 0) ?>"
                               data-index="<?= (int) $mediaIndex ?>"
                               data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
                               data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
@@ -8691,12 +8771,14 @@ include __DIR__ . '/sidebar.php';
                         <div class="analysis-inline-meta">
                           <span class="analysis-image-order js-analysis-inline-order"></span>
                           <span class="analysis-image-name js-analysis-inline-caption"></span>
+                          <button type="button" class="btn-shell analysis-delete-btn js-analysis-delete-image">Eliminar imagen</button>
                         </div>
                         <div hidden>
                           <?php foreach ($analysisMediaBySection['lesiones'] as $mediaIndex => $media): ?>
                             <button
                               type="button"
                               class="js-analysis-inline-item"
+                              data-id="<?= (int) ($media['id'] ?? 0) ?>"
                               data-index="<?= (int) $mediaIndex ?>"
                               data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
                               data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
@@ -9546,7 +9628,7 @@ include __DIR__ . '/sidebar.php';
         const point = parseInputPoint() || draftPoint;
         if (!point) {
           event.preventDefault();
-          window.alert('Primero marca un punto en el mapa.');
+          window.alert('Primero ingresa las coordenadas o marca un punto en el mapa.');
         }
       });
 
@@ -9574,6 +9656,14 @@ include __DIR__ . '/sidebar.php';
         lngInput.dispatchEvent(new Event('input', { bubbles: true }));
         closeModal();
       });
+
+      function syncManualPoint() {
+        setDraft(parseInputPoint());
+        refreshStatus();
+      }
+
+      latInput.addEventListener('input', syncManualPoint);
+      lngInput.addEventListener('input', syncManualPoint);
 
       form.__accidenteGeo = {
         refresh() {
@@ -10662,6 +10752,7 @@ include __DIR__ . '/sidebar.php';
       root.dataset.sliderBound = '1';
 
       const items = Array.from(root.querySelectorAll('.js-analysis-inline-item')).map((item) => ({
+        id: String(item.dataset.id || ''),
         src: String(item.dataset.src || ''),
         caption: String(item.dataset.caption || ''),
         order: String(item.dataset.order || ''),
@@ -10671,6 +10762,7 @@ include __DIR__ . '/sidebar.php';
       const order = root.querySelector('.js-analysis-inline-order');
       const prev = root.querySelector('.js-analysis-inline-prev');
       const next = root.querySelector('.js-analysis-inline-next');
+      const deleteButton = root.querySelector('.js-analysis-delete-image');
       if (!items.length || !image || !caption || !order) return;
 
       let index = 0;
@@ -10684,6 +10776,7 @@ include __DIR__ . '/sidebar.php';
         order.textContent = 'Orden ' + (item.order || String(index + 1));
         if (prev) prev.hidden = total <= 1;
         if (next) next.hidden = total <= 1;
+        if (deleteButton) deleteButton.disabled = !item.id;
       };
 
       prev?.addEventListener('click', () => {
@@ -10693,6 +10786,54 @@ include __DIR__ . '/sidebar.php';
       next?.addEventListener('click', () => {
         index += 1;
         render();
+      });
+      deleteButton?.addEventListener('click', async () => {
+        const item = items[index];
+        if (!item || !item.id) return;
+        if (!window.confirm('¿Eliminar esta imagen del análisis?')) return;
+
+        const uploadBlock = root.closest('.analysis-upload');
+        const accidenteInput = uploadBlock ? uploadBlock.querySelector('input[name="accidente_id"]') : null;
+        const accidenteId = accidenteInput ? String(accidenteInput.value || '') : '';
+        if (!accidenteId) {
+          window.alert('No se pudo identificar el accidente.');
+          return;
+        }
+
+        deleteButton.disabled = true;
+        const originalText = deleteButton.textContent;
+        deleteButton.textContent = 'Eliminando...';
+        try {
+          const payload = new FormData();
+          payload.append('action', 'delete_analysis_image');
+          payload.append('accidente_id', accidenteId);
+          payload.append('media_id', item.id);
+
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: payload,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = null;
+          }
+
+          if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.message) ? data.message : 'No se pudo eliminar la imagen.');
+          }
+
+          window.location.reload();
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'No se pudo eliminar la imagen.');
+          deleteButton.disabled = false;
+          deleteButton.textContent = originalText || 'Eliminar imagen';
+        }
       });
 
       render();

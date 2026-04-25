@@ -357,11 +357,11 @@ include __DIR__ . '/sidebar.php';
 
       <div class="col-3">
         <label>Latitud</label>
-        <input type="text" name="latitud" id="latitud" value="<?=h($acc['latitud'] ?? '')?>" placeholder="Se completa desde el mapa" readonly>
+        <input type="text" name="latitud" id="latitud" value="<?=h($acc['latitud'] ?? '')?>" placeholder="Ingresa o marca desde el mapa" inputmode="decimal">
       </div>
       <div class="col-3">
         <label>Longitud</label>
-        <input type="text" name="longitud" id="longitud" value="<?=h($acc['longitud'] ?? '')?>" placeholder="Se completa desde el mapa" readonly>
+        <input type="text" name="longitud" id="longitud" value="<?=h($acc['longitud'] ?? '')?>" placeholder="Ingresa o marca desde el mapa" inputmode="decimal">
       </div>
       <div class="col-6">
         <label>Georreferencia</label>

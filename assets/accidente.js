@@ -301,7 +301,7 @@ window.abrirGeoExterno = function(ev){
   const finalLat = lat || (draft ? String(draft.lat) : '');
   const finalLng = lng || (draft ? String(draft.lng) : '');
   if(!finalLat || !finalLng){
-    alert('Primero marca un punto en el mapa.');
+    alert('Primero ingresa las coordenadas o marca un punto en el mapa.');
     return false;
   }
   window.open(`https://www.google.com/maps?q=${encodeURIComponent(`${finalLat},${finalLng}`)}`, '_blank', 'noopener');
@@ -937,6 +937,22 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     syncStatus();
   }
 
+  function syncManualPoint(){
+    const point = currentPoint();
+    draftPoint = point;
+    window.__accidenteGeoDraftPoint = point;
+    if(map && marker){
+      if(point){
+        renderDraft(false);
+      }else if(map.hasLayer(marker)){
+        map.removeLayer(marker);
+      }
+    }
+    syncStatus();
+  }
+
+  latInput.addEventListener('input', syncManualPoint);
+  lngInput.addEventListener('input', syncManualPoint);
   openBtn?.addEventListener('click', openModal);
   clearBtn?.addEventListener('click', clearPoint);
   closeBtn?.addEventListener('click', closeModal);
@@ -964,7 +980,7 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     const draft = window.__accidenteGeoDraftPoint;
     const finalPoint = point || draft;
     if(!finalPoint){
-      alert('Primero marca un punto en el mapa.');
+      alert('Primero ingresa las coordenadas o marca un punto en el mapa.');
       return false;
     }
     window.open(`https://www.google.com/maps?q=${encodeURIComponent(`${finalPoint.lat},${finalPoint.lng}`)}`, '_blank', 'noopener');
