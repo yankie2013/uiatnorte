@@ -10,6 +10,7 @@ ob_start();
 
 // ---------------------- Dependencias --------------------------
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/word_filename_helper.php';
 use PhpOffice\PhpWord\TemplateProcessor;
 
 if (class_exists('ZipArchive')) {
@@ -382,7 +383,7 @@ try {
         }
     }
 
-    $outputName = 'manifestacion_investigado_' . slug_nombre_archivo($apellidoArchivo) . '.docx';
+    $outputName = uiat_manifestacion_filename('Investigado', $persona ?: ['CONDUCTOR_APELLIDOS' => $replacements['CONDUCTOR_APELLIDOS'] ?? $apellidoArchivo]);
     $tempFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $outputName;
     $template->saveAs($tempFile);
 

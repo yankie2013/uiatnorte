@@ -10,6 +10,7 @@ require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
 require_once __DIR__.'/word_manifestaciones_helper.php';
+require_once __DIR__.'/word_filename_helper.php';
 
 $DEBUG = (isset($_GET['debug']) && $_GET['debug']=='1');
 if ($DEBUG) {
@@ -696,8 +697,7 @@ if ($tmp === false) {
   exit('No se pudo crear un archivo temporal para el DOCX.');
 }
 $T->saveAs($tmp);
-$filename = 'INFORME_CHOQUE_DOS_VEHICULOS_'.$ACC['id'].'_'.date('Ymd_His').'.docx';
-$filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: ('INFORME_CHOQUE_DOS_VEHICULOS_' . ($ACC['id'] ?? '0') . '.docx');
+$filename = uiat_vehicle_report_filename('UT1', 'Choque', $UT1, $COND1, 'INFORME_CHOQUE_DOS_VEHICULOS_' . ($ACC['id'] ?? '0'));
 
 while (ob_get_level()) { @ob_end_clean(); }
 if (headers_sent($fileSent, $lineSent)) {

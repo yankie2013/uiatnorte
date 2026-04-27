@@ -13,6 +13,7 @@ require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/word_manifestaciones_helper.php';
+require_once __DIR__ . '/word_filename_helper.php';
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -512,7 +513,7 @@ $infpolRaw = trim((string) ($accidente['nro_informe_policial'] ?? ''));
 $infpol = $infpolRaw !== '' ? $infpolRaw : (string) ($accidente['id'] ?? '0');
 $infpol = preg_replace('/\s+/', '_', $infpol);
 $infpol = preg_replace('/[^A-Za-z0-9_\-]/', '', (string) $infpol);
-$filename = 'INFORME_PEATON_FALLECIDO_' . $infpol . '_' . date('Ymd_His') . '.docx';
+$filename = uiat_docx_filename(['Peaton_Fallecido', uiat_person_surnames(first_row($peatones))], 'INFORME_PEATON_FALLECIDO_' . $infpol);
 $templatePath = __DIR__ . '/plantillas/word_informe_peaton_fallecido.docx';
 $useTemplate = is_file($templatePath) && (string) ($_GET['sin_plantilla'] ?? '') !== '1';
 if ($useTemplate) {

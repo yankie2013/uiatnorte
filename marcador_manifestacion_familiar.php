@@ -73,6 +73,7 @@ if(!$autoload_ok){
   echo "No se encontró autoload de PHPWord. Instala 'phpoffice/phpword' o ajusta la ruta.";
   exit;
 }
+require_once __DIR__ . '/word_filename_helper.php';
 use PhpOffice\PhpWord\TemplateProcessor;
 
 if (class_exists('ZipArchive')) {
@@ -334,7 +335,7 @@ $tpl->setValue('fallecido_inv_id',      $row['fallecido_inv_id']);
 $tpl->setValue('familiar_persona_id',   $row['familiar_persona_id']);
 
 /* -------- Descargar archivo -------- */
-$fname = 'manifestacion_familiar_'.slug_nombre_archivo($row['fam_apellido_paterno'] ?? '').'.docx';
+$fname = uiat_manifestacion_filename('Familiar', $row);
 while (ob_get_level() > 0) {
   ob_end_clean();
 }

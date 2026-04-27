@@ -10,6 +10,7 @@ require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
 require_once __DIR__.'/word_manifestaciones_helper.php';
+require_once __DIR__.'/word_filename_helper.php';
 
 $DEBUG = isset($_GET['debug']) && $_GET['debug']=='1';
 if ($DEBUG) {
@@ -753,7 +754,9 @@ $infpol_raw = trim((string)($ACC['nro_informe_policial'] ?? ''));
 $infpol = $infpol_raw !== '' ? $infpol_raw : (string)($ACC['id'] ?? '0');
 $infpol = preg_replace('/\s+/', '_', $infpol);
 $infpol = preg_replace('/[^A-Za-z0-9_\-]/', '', $infpol);
-$filename = 'INFORME_POLICIAL_'.$infpol.'_'.date('Ymd_His').'.docx';
+$filename = $PEA !== []
+  ? uiat_docx_filename(['Peaton_Fallecido', uiat_person_surnames($PEA)], 'INFORME_POLICIAL_' . $infpol)
+  : uiat_vehicle_report_filename('UT1', 'Atropello', $COND, $COND, 'INFORME_POLICIAL_' . $infpol);
 /* ------------------------------------------------------------------------------- */
 
 while (ob_get_level()) { @ob_end_clean(); }

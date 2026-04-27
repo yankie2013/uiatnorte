@@ -8,6 +8,7 @@ ob_start();
 
 // ------------ Dependencias ------------
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/word_filename_helper.php';
 use PhpOffice\PhpWord\TemplateProcessor;
 
 // ------------ Conexión ------------
@@ -327,7 +328,7 @@ try {
         }
     }
 
-    $outputName = 'manifestacion_efectivo_policial_' . slug_nombre_archivo($apellidoArchivo) . '.docx';
+    $outputName = uiat_manifestacion_filename('Efectivo_Policial', $persona ?: ['apellidos' => $replacements['policia_apellidos'] ?? $apellidoArchivo]);
     $tempFile = sys_get_temp_dir() . '/' . $outputName;
     $template->saveAs($tempFile);
 
