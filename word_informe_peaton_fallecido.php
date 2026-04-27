@@ -251,6 +251,19 @@ function load_occiso_doc(PDO $pdo, int $accidenteId, ?int $personaId): array
     ", [':a' => $accidenteId, ':p' => $personaId]));
 }
 
+function load_dosaje_doc(PDO $pdo, ?int $personaId): array
+{
+    if (!$personaId) {
+        return [];
+    }
+    return first_row(fetch_all($pdo, "
+        SELECT *
+          FROM documento_dosaje
+         WHERE persona_id = :p
+         ORDER BY fecha_extraccion DESC, id DESC
+    ", [':p' => $personaId]));
+}
+
 function load_familiar(PDO $pdo, int $accidenteId, ?int $fallecidoInvId): array
 {
     if (!$fallecidoInvId) {
@@ -284,7 +297,7 @@ function set_marker_aliases(array &$markers, array $prefixes, string $suffix, $v
     }
 }
 
-function fill_fallecido_template_markers(array &$markers, array $prefixes, array $fallecido, array $fallecidoLawyer, array $occiso, array $familiar, array $familiarLawyer, array $accidente): void
+function fill_fallecido_template_markers(array &$markers, array $prefixes, array $fallecido, array $fallecidoLawyer, array $occiso, array $dosaje, array $familiar, array $familiarLawyer, array $accidente): void
 {
     foreach ([
         'fall_nombre' => name_person($fallecido),
@@ -343,6 +356,14 @@ function fill_fallecido_template_markers(array &$markers, array $prefixes, array
         'occ_presuntivo_protocolo' => $occiso['presuntivo_protocolo'] ?? '',
         'occ_dosaje_protocolo' => $occiso['dosaje_protocolo'] ?? '',
         'occ_toxicologico_protocolo' => $occiso['toxicologico_protocolo'] ?? '',
+        'fall_dosaje_numero' => $dosaje['numero'] ?? '',
+        'fall_dosaje_registro' => $dosaje['numero_registro'] ?? '',
+        'fall_dosaje_fecha' => date_pe($dosaje['fecha_extraccion'] ?? ''),
+        'fall_dosaje_hora' => time_pe($dosaje['fecha_extraccion'] ?? ''),
+        'fall_dosaje_resultado_cual' => $dosaje['resultado_cualitativo'] ?? '',
+        'fall_dosaje_resultado_cuant' => $dosaje['resultado_cuantitativo'] ?? '',
+        'fall_dosaje_lectura_cuant' => $dosaje['leer_cuantitativo'] ?? '',
+        'fall_dosaje_observaciones' => $dosaje['observaciones'] ?? '',
         'occ_nosocomio_epicrisis' => $occiso['nosocomio_epicrisis'] ?? '',
         'occ_numero_historia_epicrisis' => $occiso['numero_historia_epicrisis'] ?? '',
         'occ_tratamiento_epicrisis' => $occiso['tratamiento_epicrisis'] ?? '',
@@ -381,6 +402,19 @@ function fill_fallecido_template_markers(array &$markers, array $prefixes, array
         'fam_abog_domicilio_procesal' => $familiarLawyer['domicilio_procesal'] ?? '',
         'fam_abog_celular' => $familiarLawyer['celular'] ?? '',
         'fam_abog_email' => $familiarLawyer['email'] ?? '',
+    ] as $suffix => $value) {
+        set_marker_aliases($markers, $prefixes, $suffix, $value);
+    }
+
+    foreach ([
+        'dosaje_numero' => $dosaje['numero'] ?? '',
+        'dosaje_registro' => $dosaje['numero_registro'] ?? '',
+        'dosaje_fecha' => date_pe($dosaje['fecha_extraccion'] ?? ''),
+        'dosaje_hora' => time_pe($dosaje['fecha_extraccion'] ?? ''),
+        'dosaje_resultado_cual' => $dosaje['resultado_cualitativo'] ?? '',
+        'dosaje_resultado_cuant' => $dosaje['resultado_cuantitativo'] ?? '',
+        'dosaje_lectura_cuant' => $dosaje['leer_cuantitativo'] ?? '',
+        'dosaje_observaciones' => $dosaje['observaciones'] ?? '',
     ] as $suffix => $value) {
         set_marker_aliases($markers, $prefixes, $suffix, $value);
     }
@@ -423,9 +457,10 @@ function build_template_markers(PDO $pdo, int $accidenteId, array $accidente, ar
         }
         $fallecidoLawyer = $fallecido !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0))) : [];
         $occiso = $fallecido !== [] ? load_occiso_doc($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0)) : [];
+        $dosaje = $fallecido !== [] ? load_dosaje_doc($pdo, (int) ($fallecido['id'] ?? 0)) : [];
         $familiar = $fallecido !== [] ? load_familiar($pdo, $accidenteId, (int) ($fallecido['involucrado_persona_id'] ?? 0)) : [];
         $familiarLawyer = $familiar !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0))) : [];
-        fill_fallecido_template_markers($markers, $prefixes, $fallecido, $fallecidoLawyer, $occiso, $familiar, $familiarLawyer, $accidente);
+        fill_fallecido_template_markers($markers, $prefixes, $fallecido, $fallecidoLawyer, $occiso, $dosaje, $familiar, $familiarLawyer, $accidente);
         word_manifestation_set_array($markers, $prefixes, 'fall_man', word_manifestation_first($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0)));
         word_manifestation_set_array($markers, $prefixes, 'fam_man', word_manifestation_first($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0)));
     }
@@ -547,6 +582,7 @@ add_pairs($section, [
 
 foreach ($peatones as $idx => $fallecido) {
     $occiso = load_occiso_doc($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0));
+    $dosaje = load_dosaje_doc($pdo, (int) ($fallecido['id'] ?? 0));
     $familiar = load_familiar($pdo, $accidenteId, (int) ($fallecido['involucrado_persona_id'] ?? 0));
     $fallecidoLawyer = first_row(load_abogados($pdo, $accidenteId, (int) ($fallecido['id'] ?? 0)));
     $familiarLawyer = $familiar !== [] ? first_row(load_abogados($pdo, $accidenteId, (int) ($familiar['familiar_persona_id'] ?? 0))) : [];
@@ -596,6 +632,17 @@ foreach ($peatones as $idx => $fallecido) {
         'Numero pericial' => $occiso['numero_pericial'] ?? '',
         'Fecha y hora pericial' => date_pe($occiso['fecha_pericial'] ?? '') . ' ' . time_pe($occiso['hora_pericial'] ?? ''),
         'Observaciones periciales' => $occiso['observaciones_pericial'] ?? '',
+    ]);
+
+    add_heading($section, 'Dosaje etilico', 2);
+    add_pairs($section, [
+        'Numero' => $dosaje['numero'] ?? '',
+        'Registro' => $dosaje['numero_registro'] ?? '',
+        'Fecha y hora de extraccion' => date_pe($dosaje['fecha_extraccion'] ?? '') . ' ' . time_pe($dosaje['fecha_extraccion'] ?? ''),
+        'Resultado cualitativo' => $dosaje['resultado_cualitativo'] ?? '',
+        'Resultado cuantitativo' => $dosaje['resultado_cuantitativo'] ?? '',
+        'Lectura cuantitativa' => $dosaje['leer_cuantitativo'] ?? '',
+        'Observaciones' => $dosaje['observaciones'] ?? '',
     ]);
 
     add_heading($section, 'Protocolo de necropsia', 2);
