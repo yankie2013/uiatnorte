@@ -443,6 +443,8 @@ if (!$isEmbed) {
   .auto-row{ display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; border:1px solid var(--line,#e5e7eb); border-radius:10px; padding:12px; background:var(--bg-2,#f8fafc); }
   .auto-main{ font-weight:900; margin-bottom:6px; }
   .auto-meta{ color:var(--fg-2,#64748b); font-size:12px; line-height:1.45; }
+  .auto-list.with-footer-space{ margin-bottom:18px; }
+  .analysis-template-row{ margin-top:6px; }
   @media (max-width:760px){ .grid,.grid-select{ grid-template-columns:1fr; } .topbar{ flex-direction:column; } }
   @media (max-width:760px){ .auto-row{ grid-template-columns:1fr; } }
 </style>
@@ -541,7 +543,7 @@ if (!$isEmbed) {
 
 
       <?php if ($autoOptions): ?>
-        <div class="auto-list">
+        <div class="auto-list with-footer-space">
           <?php foreach ($autoOptions as $row): ?>
             <div class="auto-row">
               <div>
@@ -567,8 +569,22 @@ if (!$isEmbed) {
           <?php endforeach; ?>
         </div>
       <?php else: ?>
-        <div class="empty">No se detecto automaticamente un informe descargable para este accidente. Revisa que las personas tengan lesion registrada como ileso, herido o fallecido; para ileso/herido debe figurar rol de conductor y para peaton debe figurar rol peaton o estar sin vehiculo.</div>
+        <div class="empty with-footer-space">No se detecto automaticamente un informe descargable para este accidente. Revisa que las personas tengan lesion registrada como ileso, herido o fallecido; para ileso/herido debe figurar rol de conductor y para peaton debe figurar rol peaton o estar sin vehiculo.</div>
       <?php endif; ?>
+
+      <div class="auto-row analysis-template-row">
+        <div>
+          <div class="auto-main">Analisis del Informe</div>
+          <div class="auto-meta">
+            <span class="pill">analisis_del_informe.docx</span>
+            <span class="pill">Plantilla Word</span>
+          </div>
+          <div class="auto-meta" style="margin-top:6px">
+            Descarga la plantilla <b>plantillas/analisis_del_informe.docx</b>.
+          </div>
+        </div>
+        <a class="btn primary" href="plantillas/analisis_del_informe.docx" download>Descargar Word</a>
+      </div>
     </div>
 
     <?php if ($opciones): ?>
