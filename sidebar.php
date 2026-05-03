@@ -159,6 +159,25 @@ body.uiat-sidebar-open .sidebar-backdrop{
     transform:translateX(6px);
 }
 
+.is-empty-field{
+    border-color:#ff3b64 !important;
+    box-shadow:0 0 0 1px rgba(255,59,100,.58), 0 0 11px rgba(255,59,100,.45) !important;
+}
+
+:where(.field-card,.data-card,.field,.line-card).is-empty-field{
+    background:linear-gradient(180deg,rgba(255,59,100,.07),rgba(255,255,255,.94)) !important;
+}
+
+html[data-theme-resolved="dark"] :where(.field-card,.data-card,.field,.line-card).is-empty-field{
+    background:linear-gradient(180deg,rgba(255,59,100,.14),rgba(255,59,100,.04)) !important;
+}
+
+@media (prefers-color-scheme: dark){
+    :where(.field-card,.data-card,.field,.line-card).is-empty-field{
+        background:linear-gradient(180deg,rgba(255,59,100,.14),rgba(255,59,100,.04)) !important;
+    }
+}
+
 /* Botones superiores */
 #app-sidebar .top-actions{
     margin:0 10px 8px;
@@ -647,4 +666,44 @@ if (typeof mobileQuery.addEventListener === 'function') {
 }
 
 syncSidebarMode();
+
+(function markEmptyFields(){
+    const fieldSelectors = '.field-card, .data-card, .field, .line-card';
+    const valueSelectors = '.field-value, .value, .v, .val';
+    const emptyTexts = new Set(['', '-', '—']);
+
+    function textValue(field) {
+        const valueNode = field.querySelector(valueSelectors);
+        if (valueNode) return valueNode.textContent.trim();
+
+        const control = field.querySelector('input:not([type="hidden"]), select, textarea');
+        if (control) return String(control.value || '').trim();
+
+        return field.textContent.trim();
+    }
+
+    function syncField(field) {
+        if (!field || field.closest('#app-sidebar')) return;
+        field.classList.toggle('is-empty-field', emptyTexts.has(textValue(field)));
+    }
+
+    function syncAll() {
+        document.querySelectorAll(fieldSelectors).forEach(syncField);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncAll, {once:true});
+    } else {
+        syncAll();
+    }
+
+    document.addEventListener('input', (event) => {
+        const field = event.target.closest ? event.target.closest(fieldSelectors) : null;
+        if (field) syncField(field);
+    });
+    document.addEventListener('change', (event) => {
+        const field = event.target.closest ? event.target.closest(fieldSelectors) : null;
+        if (field) syncField(field);
+    });
+})();
 </script>

@@ -67,6 +67,12 @@ function fmt($value): string
     return $value !== '' ? h($value) : '—';
 }
 
+function is_empty_display_value($value): bool
+{
+    $text = trim((string) ($value ?? ''));
+    return $text === '' || $text === '-' || $text === '—';
+}
+
 function parse_gps_string(?string $raw): ?array
 {
     $raw = trim((string) $raw);
@@ -1032,7 +1038,8 @@ function render_field_cards(array $record, array $fields): string
             continue;
         }
         $class = is_array($field) ? (string) ($field['class'] ?? '') : '';
-        $html .= '<div class="field-card ' . h($class) . '">';
+        $emptyClass = is_empty_display_value($record[$key] ?? null) ? ' is-empty-field' : '';
+        $html .= '<div class="field-card ' . h(trim($class . $emptyClass)) . '">';
         $html .= '<div class="field-label">' . h(human_label($key)) . '</div>';
         $html .= '<div class="field-value">' . field_html($key, $record[$key] ?? null) . '</div>';
         $html .= '</div>';
@@ -5388,6 +5395,13 @@ include __DIR__ . '/sidebar.php';
   .manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
+  .field-card.is-empty-field,
+  .data-card.is-empty-field,
+  .line-card.is-empty-field{
+    border-color:#ff3b64 !important;
+    box-shadow:0 0 0 1px rgba(255,59,100,.58), 0 0 11px rgba(255,59,100,.45);
+    background:linear-gradient(180deg,rgba(255,59,100,.07),rgba(255,255,255,.96));
+  }
   .field-card.span-2{grid-column:span 2}
   .field-card.span-4{grid-column:span 4}
   .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
