@@ -10068,7 +10068,61 @@ include __DIR__ . '/sidebar.php';
       return editStates.get(shellName) || null;
     }
 
-    function openEditShell(shellName) {
+    function normalizeInlineLabel(text) {
+      return String(text || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function labelFromViewField(field) {
+      if (!field) return '';
+      const label = field.querySelector('.label, .field-label');
+      if (label) return label.textContent || '';
+      const strong = field.querySelector('strong');
+      if (strong) return (strong.textContent || '').replace(/:$/, '');
+      return '';
+    }
+
+    function focusEditControl(form, preferredLabel) {
+      if (!form) return;
+      let control = null;
+      const wanted = normalizeInlineLabel(preferredLabel);
+
+      if (wanted) {
+        const labels = Array.from(form.querySelectorAll('.edit-label, .general-edit-card label'));
+        const match = labels.find((item) => normalizeInlineLabel(item.textContent) === wanted)
+          || labels.find((item) => normalizeInlineLabel(item.textContent).includes(wanted) || wanted.includes(normalizeInlineLabel(item.textContent)));
+        if (match) {
+          const wrap = match.closest('.edit-field, .general-edit-card') || match.parentElement;
+          control = wrap ? wrap.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])') : null;
+        }
+      }
+
+      control = control || form.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+      if (!control) return;
+
+      control.focus();
+      if (typeof control.select === 'function' && !['date', 'datetime-local', 'time', 'number'].includes(control.type || '')) {
+        control.select();
+      }
+    }
+
+    function submitInlineForm(form) {
+      if (!form) return;
+      const saveButton = form.id ? document.querySelector('[form="' + form.id + '"][type="submit"]') : null;
+      if (saveButton) {
+        saveButton.click();
+      } else if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    }
+
+    function openEditShell(shellName, preferredLabel) {
       const shell = document.querySelector('[data-edit-shell="' + shellName + '"]');
       if (!shell) return;
 
@@ -10126,10 +10180,10 @@ include __DIR__ . '/sidebar.php';
         if (!latest) return;
         latest.initial = serializeForm(form);
         latest.dirty = false;
+        focusEditControl(form, preferredLabel);
       });
 
-      const firstControl = form.querySelector('input:not([type="hidden"]), select, textarea');
-      if (firstControl) firstControl.focus();
+      focusEditControl(form, preferredLabel);
     }
 
     function closeEditShellImmediate(shellName) {
@@ -10179,14 +10233,7 @@ include __DIR__ . '/sidebar.php';
 
       const shouldSave = window.confirm('Hay cambios sin guardar. ¿Desea guardar los cambios?');
       if (shouldSave) {
-        const saveButton = document.querySelector('[form="' + state.form.id + '"][type="submit"]');
-        if (saveButton) {
-          saveButton.click();
-        } else if (typeof state.form.requestSubmit === 'function') {
-          state.form.requestSubmit();
-        } else {
-          state.form.submit();
-        }
+        submitInlineForm(state.form);
         return;
       }
 
@@ -10490,6 +10537,16 @@ include __DIR__ . '/sidebar.php';
 
       form.addEventListener('input', markDirty, true);
       form.addEventListener('change', markDirty, true);
+      form.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.isComposing || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (!target.matches('input, select, textarea')) return;
+        if (target.matches('input[type="button"], input[type="submit"], input[type="reset"], input[type="file"]')) return;
+
+        event.preventDefault();
+        submitInlineForm(form);
+      }, true);
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -10535,6 +10592,32 @@ include __DIR__ . '/sidebar.php';
           setCollapsibleCardState(card, true);
         }
         openEditShell(button.dataset.shell || '');
+      });
+    });
+
+    document.querySelectorAll('[data-edit-shell] .editable-view').forEach((view) => {
+      view.addEventListener('dblclick', (event) => {
+        const interactive = event.target instanceof Element
+          ? event.target.closest('a, button, select, input, textarea, label')
+          : null;
+        if (interactive) return;
+
+        const field = event.target instanceof Element
+          ? event.target.closest('.field-card, .data-card, .line-card, .module-card, .summary-pill')
+          : null;
+        if (!field || !view.contains(field)) return;
+
+        const shell = view.closest('[data-edit-shell]');
+        const shellName = shell ? shell.getAttribute('data-edit-shell') : '';
+        if (!shellName) return;
+
+        const card = shell.closest('[data-collapsible-card]');
+        if (card) {
+          setCollapsibleCardState(card, true);
+        }
+
+        event.preventDefault();
+        openEditShell(shellName, labelFromViewField(field));
       });
     });
 
