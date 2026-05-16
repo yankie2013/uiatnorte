@@ -244,6 +244,10 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     if (!values.length) addRow('');
     syncHidden();
   }
+  function capitalizeDamage(value){
+    const text = String(value || '').trim();
+    return text ? text.charAt(0).toLocaleUpperCase('es-PE') + text.slice(1) : '';
+  }
   const pre = hidden.value ? hidden.value.split(/\r?\n/) : [''];
   pre.forEach(v=>addRow(v));
   addBtn.onclick = ()=>addRow('');
@@ -405,7 +409,7 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     const values = textBox.value
       .replace(/\r?\n/g, ' ')
       .split(';')
-      .map(value => value.replace(/\s+/g, ' ').trim())
+      .map(value => capitalizeDamage(value.replace(/\s+/g, ' ').trim()))
       .filter(Boolean);
     if(!values.length){
       setStatus('No se encontraron danos separados por punto y coma.', false);
