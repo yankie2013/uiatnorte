@@ -81,6 +81,16 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 .btn.icon{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid var(--line) }
 .danio-row .remove{ display:none } .danio-row.filled .remove{ display:inline-flex }
 .section-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px }
+.section-actions{ display:flex; align-items:center; gap:8px; }
+.modal-mask{ position:fixed; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.48); }
+.modal{ width:min(760px,100%); padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--bg-1,#101827); box-shadow:0 20px 50px rgba(0,0,0,.35); }
+.modal h3{ margin:0 0 8px; }
+.modal .help{ color:var(--fg-2); font-size:12px; }
+.modal .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+.paste-zone{ margin-top:12px; padding:12px; border-radius:12px; border:1px dashed var(--line); background:var(--bg-2); }
+.ocr-preview-wrap{ display:none; margin-top:12px; }
+.ocr-preview-wrap img{ max-width:100%; max-height:280px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
+.ocr-status{ min-height:18px; margin-top:10px; font-size:12px; }
 .alert.success{ background:var(--success-bg); color:var(--success-fg); padding:12px 14px; border-radius:12px; margin-bottom:12px }
 .alert.error{ background:var(--error-bg); color:var(--error-fg); padding:12px 14px; border-radius:12px; margin-bottom:12px }
 </style>
@@ -169,7 +179,10 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 
         <div class="section-header">
           <label style="margin:0;">Danos constatados</label>
-          <button class="btn icon" type="button" id="btnAddDanio" title="Agregar dano">+</button>
+          <div class="section-actions">
+            <button class="btn ghost" type="button" id="btnSubirImagenDanios">Subir/Pegar Imagen</button>
+            <button class="btn icon" type="button" id="btnAddDanio" title="Agregar dano">+</button>
+          </div>
         </div>
         <div id="danosWrap"></div>
       </div>
@@ -181,6 +194,25 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     <button class="btn primary" type="submit">Guardar cambios</button>
   </div>
 </form>
+
+<div class="modal-mask" id="daniosOcrModalMask" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="daniosOcrTitle">
+    <h3 id="daniosOcrTitle">Extraer danos desde imagen</h3>
+    <div class="help">Sube o pega una imagen. Al aplicar, cada texto separado por punto y coma se convertira en un campo nuevo.</div>
+    <input type="file" id="daniosOcrImageInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-top:12px;">
+    <div class="paste-zone" id="daniosOcrPasteZone" tabindex="0">Pega aqui una imagen con Ctrl+V o Cmd+V</div>
+    <div class="ocr-preview-wrap" id="daniosOcrPreviewWrap">
+      <img id="daniosOcrPreview" alt="Vista previa OCR">
+    </div>
+    <div class="ocr-status" id="daniosOcrStatus"></div>
+    <textarea id="daniosOcrTextBox" rows="6" style="margin-top:10px;" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="btnDaniosOcrCancel">Cancelar</button>
+      <button type="button" class="btn ghost" id="btnDaniosOcrProcesar">Procesar imagen</button>
+      <button type="button" class="btn primary" id="btnDaniosOcrAplicar" disabled>Aplicar danos</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -199,6 +231,12 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
   }
   function addRow(v=''){ const r=rowTemplate(v); wrap.appendChild(r); if(!v) r.querySelector('input').focus(); return r; }
   function syncHidden(){ hidden.value = Array.from(wrap.querySelectorAll('.danio-input')).map(i=>i.value.trim()).filter(Boolean).join('\n'); }
+  function replaceRows(values){
+    wrap.innerHTML = '';
+    values.forEach(value => addRow(value));
+    if (!values.length) addRow('');
+    syncHidden();
+  }
   const pre = hidden.value ? hidden.value.split(/\r?\n/) : [''];
   pre.forEach(v=>addRow(v));
   addBtn.onclick = ()=>addRow('');
@@ -216,6 +254,159 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     addRow('');
   });
   form.addEventListener('submit', syncHidden);
+
+  const openBtn = document.getElementById('btnSubirImagenDanios');
+  const modalMask = document.getElementById('daniosOcrModalMask');
+  const imageInput = document.getElementById('daniosOcrImageInput');
+  const pasteZone = document.getElementById('daniosOcrPasteZone');
+  const previewWrap = document.getElementById('daniosOcrPreviewWrap');
+  const preview = document.getElementById('daniosOcrPreview');
+  const status = document.getElementById('daniosOcrStatus');
+  const textBox = document.getElementById('daniosOcrTextBox');
+  const cancelBtn = document.getElementById('btnDaniosOcrCancel');
+  const processBtn = document.getElementById('btnDaniosOcrProcesar');
+  const applyBtn = document.getElementById('btnDaniosOcrAplicar');
+  let clipboardFile = null;
+
+  function setStatus(message, ok=null){
+    status.textContent = message || '';
+    status.style.color = ok === true ? '#19a974' : ok === false ? '#ff4d4d' : '';
+  }
+  function openModal(){
+    clipboardFile = null;
+    imageInput.value = '';
+    textBox.value = '';
+    previewWrap.style.display = 'none';
+    preview.removeAttribute('src');
+    applyBtn.disabled = true;
+    setStatus('Sube una imagen y luego procesa el OCR.');
+    modalMask.style.display = 'flex';
+    modalMask.setAttribute('aria-hidden', 'false');
+    setTimeout(() => pasteZone.focus(), 0);
+  }
+  function closeModal(){
+    modalMask.style.display = 'none';
+    modalMask.setAttribute('aria-hidden', 'true');
+  }
+  function loadPreview(file){
+    if(!file){
+      previewWrap.style.display = 'none';
+      preview.removeAttribute('src');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      preview.src = String(reader.result || '');
+      previewWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+  function setImageFile(file, label){
+    clipboardFile = file || null;
+    loadPreview(file || null);
+    if(file) setStatus(`${label} lista. Presiona "Procesar imagen".`);
+  }
+  function selectedFile(){
+    return (imageInput.files && imageInput.files[0]) || clipboardFile;
+  }
+  function clipboardImage(event){
+    const items = event.clipboardData?.items || [];
+    for(const item of items){
+      if(item.kind === 'file' && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        if(file) return file;
+      }
+    }
+    return null;
+  }
+  async function ensureTesseractLoaded(){
+    if(window.Tesseract) return window.Tesseract;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('No se pudo cargar el motor OCR.'));
+      document.head.appendChild(script);
+    });
+    if(!window.Tesseract) throw new Error('El motor OCR no quedo disponible.');
+    return window.Tesseract;
+  }
+
+  openBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  modalMask.addEventListener('click', (event) => { if(event.target === modalMask) closeModal(); });
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files && imageInput.files[0];
+    if(!file){
+      clipboardFile = null;
+      loadPreview(null);
+      return;
+    }
+    setImageFile(file, 'Imagen subida');
+  });
+  pasteZone.addEventListener('paste', (event) => {
+    const file = clipboardImage(event);
+    if(!file) return;
+    event.preventDefault();
+    imageInput.value = '';
+    setImageFile(file, 'Imagen pegada');
+  });
+  document.addEventListener('paste', (event) => {
+    if(modalMask.getAttribute('aria-hidden') !== 'false') return;
+    const tag = document.activeElement?.tagName || '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const file = clipboardImage(event);
+    if(!file) return;
+    event.preventDefault();
+    imageInput.value = '';
+    setImageFile(file, 'Imagen pegada');
+  });
+  processBtn.addEventListener('click', async () => {
+    const file = selectedFile();
+    if(!file){
+      setStatus('Selecciona o pega una imagen primero.', false);
+      return;
+    }
+    processBtn.disabled = true;
+    applyBtn.disabled = true;
+    textBox.value = '';
+    try{
+      const Tesseract = await ensureTesseractLoaded();
+      const result = await Tesseract.recognize(file, 'spa', {
+        logger: (message) => {
+          if(!message.status) return;
+          const progress = typeof message.progress === 'number' ? ` ${Math.round(message.progress * 100)}%` : '';
+          setStatus(`${message.status}${progress}`);
+        }
+      });
+      const text = String(result?.data?.text || '').trim();
+      if(!text) throw new Error('No se pudo extraer texto de la imagen.');
+      textBox.value = text;
+      applyBtn.disabled = false;
+      setStatus('Texto extraido. Revisa y aplica los danos.', true);
+    }catch(error){
+      setStatus(error.message || 'No se pudo procesar la imagen.', false);
+    }finally{
+      processBtn.disabled = false;
+    }
+  });
+  textBox.addEventListener('input', () => {
+    applyBtn.disabled = textBox.value.trim() === '';
+  });
+  applyBtn.addEventListener('click', () => {
+    const values = textBox.value
+      .replace(/\r?\n/g, ' ')
+      .split(';')
+      .map(value => value.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    if(!values.length){
+      setStatus('No se encontraron danos separados por punto y coma.', false);
+      return;
+    }
+    replaceRows(values);
+    closeModal();
+  });
 })();
 </script>
 
