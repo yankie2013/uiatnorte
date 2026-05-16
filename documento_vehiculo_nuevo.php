@@ -115,15 +115,16 @@ textarea{ min-height:96px; resize:vertical; }
 .danio-row.filled .remove{ display:inline-flex; }
 .section-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
 .section-actions{ display:flex; align-items:center; gap:8px; }
-.modal-mask{ position:fixed; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.48); }
-.modal{ width:min(760px,100%); padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--bg-1,#101827); box-shadow:0 20px 50px rgba(0,0,0,.35); }
+.modal-mask{ position:fixed; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; padding:12px; background:rgba(0,0,0,.48); }
+.modal{ width:min(760px,100%); max-height:calc(100vh - 24px); display:flex; flex-direction:column; overflow:hidden; padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--bg-1,#101827); box-shadow:0 20px 50px rgba(0,0,0,.35); }
 .modal h3{ margin:0 0 8px; }
 .modal .help{ color:var(--fg-2); font-size:12px; }
-.modal .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+.modal .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex:none; }
 .paste-zone{ margin-top:12px; padding:12px; border-radius:12px; border:1px dashed var(--line); background:var(--bg-2); }
 .ocr-preview-wrap{ display:none; margin-top:12px; }
-.ocr-preview-wrap img{ max-width:100%; max-height:280px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
+.ocr-preview-wrap img{ display:block; width:100%; max-width:100%; max-height:180px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
 .ocr-status{ min-height:18px; margin-top:10px; font-size:12px; }
+#daniosOcrTextBox{ min-height:84px; max-height:120px; }
 </style>
 </head>
 <body class="p">
@@ -303,7 +304,7 @@ textarea{ min-height:96px; resize:vertical; }
       <img id="daniosOcrPreview" alt="Vista previa OCR">
     </div>
     <div class="ocr-status" id="daniosOcrStatus"></div>
-    <textarea id="daniosOcrTextBox" rows="6" style="margin-top:10px;" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
+    <textarea id="daniosOcrTextBox" rows="4" style="margin-top:10px;" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
     <div class="actions">
       <button type="button" class="btn ghost" id="btnDaniosOcrCancel">Cancelar</button>
       <button type="button" class="btn ghost" id="btnDaniosOcrProcesar">Procesar imagen</button>
