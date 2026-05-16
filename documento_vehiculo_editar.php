@@ -82,11 +82,12 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 .danio-row .remove{ display:none } .danio-row.filled .remove{ display:inline-flex }
 .section-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px }
 .section-actions{ display:flex; align-items:center; gap:8px; }
-.modal-mask{ position:fixed; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; padding:12px; background:rgba(0,0,0,.48); }
+.modal-mask{ position:fixed; inset:0; z-index:1200; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:12px; background:rgba(0,0,0,.48); }
 .modal{ width:min(760px,100%); max-height:calc(100vh - 24px); display:flex; flex-direction:column; overflow:hidden; padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--bg-1,#101827); box-shadow:0 20px 50px rgba(0,0,0,.35); }
 .modal h3{ margin:0 0 8px; }
 .modal .help{ color:var(--fg-2); font-size:12px; }
 .modal .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex:none; }
+.modal .top-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
 .paste-zone{ margin-top:12px; padding:12px; border-radius:12px; border:1px dashed var(--line); background:var(--bg-2); }
 .ocr-preview-wrap{ display:none; margin-top:12px; }
 .ocr-preview-wrap img{ display:block; width:100%; max-width:100%; max-height:180px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
@@ -202,6 +203,9 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     <div class="help">Sube o pega una imagen. Al aplicar, cada texto separado por punto y coma se convertira en un campo nuevo.</div>
     <input type="file" id="daniosOcrImageInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-top:12px;">
     <div class="paste-zone" id="daniosOcrPasteZone" tabindex="0">Pega aqui una imagen con Ctrl+V o Cmd+V</div>
+    <div class="top-actions">
+      <button type="button" class="btn ghost" id="btnDaniosOcrProcesar">Procesar imagen</button>
+    </div>
     <div class="ocr-preview-wrap" id="daniosOcrPreviewWrap">
       <img id="daniosOcrPreview" alt="Vista previa OCR">
     </div>
@@ -209,7 +213,6 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
     <textarea id="daniosOcrTextBox" rows="4" style="margin-top:10px;" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
     <div class="actions">
       <button type="button" class="btn ghost" id="btnDaniosOcrCancel">Cancelar</button>
-      <button type="button" class="btn ghost" id="btnDaniosOcrProcesar">Procesar imagen</button>
       <button type="button" class="btn primary" id="btnDaniosOcrAplicar" disabled>Aplicar danos</button>
     </div>
   </div>
