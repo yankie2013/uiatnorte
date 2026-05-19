@@ -166,6 +166,15 @@ $estadoFiltro = trim($_GET['estado'] ?? 'Pendiente');
 if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
   $estadoFiltro = 'Pendiente';
 }
+$ordenOpciones = [
+  'registro_desc' => 'RECIÉN REGISTRADO',
+  'fecha_desc' => 'FECHA ACCIDENTE: RECIENTE A ANTIGUA',
+  'fecha_asc' => 'FECHA ACCIDENTE: ANTIGUA A RECIENTE',
+];
+$orden = trim($_GET['orden'] ?? 'registro_desc');
+if (!array_key_exists($orden, $ordenOpciones)) {
+  $orden = 'registro_desc';
+}
 
 /* ============================
    LISTA DE ComisariaS
@@ -264,8 +273,13 @@ if($vehiculo!==''){
   $params[] = "%$vehiculo%";
 }
 
-/* Orden: prioritarios arriba, luego folder y fecha */
-$sql .= " ORDER BY a.priority DESC, (a.folder IS NULL) ASC, a.folder ASC, a.fecha_accidente DESC LIMIT 200";
+/* Orden: por registro o por fecha del accidente */
+$orderBy = match ($orden) {
+  'fecha_desc' => 'a.fecha_accidente DESC, a.id DESC',
+  'fecha_asc' => 'a.fecha_accidente ASC, a.id ASC',
+  default => 'a.id DESC',
+};
+$sql .= " ORDER BY $orderBy LIMIT 200";
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
@@ -855,6 +869,14 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
         <select name="tipo_registro">
           <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
             <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Ordenar por</label>
+        <select name="orden">
+          <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
+            <option value="<?=h($ordenValue)?>" <?=($orden===$ordenValue?'selected':'')?>><?=h($ordenLabel)?></option>
           <?php endforeach; ?>
         </select>
       </div>

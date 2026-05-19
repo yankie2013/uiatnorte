@@ -132,9 +132,10 @@ function consultar_placa(string $placa): array
 
     assert_token((string) API_PLACA_TOKEN, 'SEEKER_TOKEN_VEHICULO');
 
-    $url = API_PLACA_URL . '?placa=' . urlencode($placa) . '&token=' . urlencode(API_PLACA_TOKEN);
+    $url = API_PLACA_URL . '?placa=' . urlencode($placa);
     $res = curl_json($url, [
         CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . API_PLACA_TOKEN,
             'Accept: application/json',
         ],
     ]);

@@ -181,7 +181,7 @@ if (window.parent && window.parent !== window) {
           </label>
           <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button type="button" class="btn small" id="btnCheckPlaca">Verificar</button>
-            <button type="button" class="btn small" id="btnAbrirSeeker">Abrir Seeker</button>
+            <button type="button" class="btn small" id="btnAbrirSeeker">Consultar Seeker</button>
             <button type="button" class="btn small" id="btnPegarJson">Pegar JSON</button>
             <button type="button" class="btn small" id="btnSubirImagen">Subir/Pegar Imagen</button>
           </div>
@@ -724,6 +724,15 @@ async function checkPlacaExists(placa){
   return await readJsonSafe(r);
 }
 
+async function consultarSeekerPlaca(placa){
+  const r = await fetch(`proxy_seeker.php?placa=${encodeURIComponent(placa)}`, {credentials:'same-origin'});
+  const j = await readJsonSafe(r);
+  if(!r.ok || !j.ok){
+    throw new Error(j.error || j.msg || 'No se pudo consultar Seeker.');
+  }
+  return extractSeekerPayload(j.data || j);
+}
+
 function setSelectValue(id, value){
   const el = document.getElementById(id);
   if(!el) return;
@@ -1058,7 +1067,7 @@ async function applySeekerToForm(data){
   if(data.numPlaca) placaInput.value = String(data.numPlaca).toUpperCase();
   document.getElementById('nro_motor').value = data.numMotor || '';
   document.getElementById('serie_vin').value = data.noVin || data.numSerie || '';
-  document.getElementById('anio').value = (data.anoFab || '').toString().trim();
+  document.getElementById('anio').value = (data.anoFab || data.anMode || '').toString().trim();
   document.getElementById('color').value = data.color || '';
   document.getElementById('largo_mm').value = toNum(data.longitud);
   document.getElementById('ancho_mm').value = toNum(data.ancho);
@@ -1069,17 +1078,36 @@ async function applySeekerToForm(data){
 
   await ensureMarcaModeloSelections(data.marca || '', data.modelo || '');
 
+  if(data.descTipoCarr){
+    const carroceriaMatch = findCarroceriaMatch(data.descTipoCarr);
+    if(carroceriaMatch){
+      const tipoInfo = findTipoById(carroceriaMatch.tipo_id);
+      if(tipoInfo && tipoInfo.categoria_id){
+        setSelectValue('categoria_id', String(tipoInfo.categoria_id));
+      }
+      refreshTipos();
+      if(carroceriaMatch.tipo_id){
+        setSelectValue('tipo_id', String(carroceriaMatch.tipo_id));
+      }
+      refreshCarrocerias();
+      setSelectValue('carroceria_id', String(carroceriaMatch.id));
+    }
+  }
+
   const notaParts = [];
   if(data.marca) notaParts.push(`Marca API: ${data.marca}`);
   if(data.modelo) notaParts.push(`Modelo API: ${data.modelo}`);
+  if(data.coCateg) notaParts.push(`Categoría API: ${data.coCateg}`);
   if(data.descTipoCarr) notaParts.push(`Carrocería API: ${data.descTipoCarr}`);
   if(data.descTipoComb) notaParts.push(`Combustible API: ${data.descTipoComb}`);
+  if(data.descTipoUso) notaParts.push(`Uso API: ${data.descTipoUso}`);
   if(data.fecIns) notaParts.push(`Fec. Inscripción API: ${data.fecIns}`);
   if(data.tipoActo) notaParts.push(`Acto API: ${data.tipoActo}`);
+  if(data.numPartida) notaParts.push(`Partida API: ${data.numPartida}`);
 
   const notasEl = document.getElementById('notas');
   const extra = notaParts.join(' | ');
-  if(extra){
+  if(extra && !notasEl.value.includes(extra)){
     notasEl.value = (notasEl.value ? (notasEl.value + "\n") : "") + extra;
   }
 }
@@ -1104,11 +1132,24 @@ btnCheckPlaca.addEventListener('click', async ()=>{
   }
 });
 
-btnAbrirSeeker.addEventListener('click', ()=>{
+btnAbrirSeeker.addEventListener('click', async ()=>{
   const placa = placaInput.value.trim().toUpperCase();
-  const url = placa ? `https://seeker.red/?placa=${encodeURIComponent(placa)}` : 'https://seeker.red/';
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setStatus('Se abrió Seeker en otra pestaña. Consulta la placa, copia el JSON y luego usa "Pegar JSON".', true);
+  if(!placa) return setStatus('Ingresa placa para consultar Seeker.', false);
+
+  btnAbrirSeeker.disabled = true;
+  setStatus('Consultando Seeker...', null);
+  try{
+    const data = await consultarSeekerPlaca(placa);
+    if(!data || (data.status || '') !== 'success'){
+      throw new Error(data?.message || data?.error || 'Seeker no devolvió datos para esa placa.');
+    }
+    await applySeekerToForm(data);
+    setStatus('Datos de Seeker aplicados. Revisa y guarda.', true);
+  }catch(e){
+    setStatus('Seeker: ' + (e.message || e), false);
+  }finally{
+    btnAbrirSeeker.disabled = false;
+  }
 });
 
 btnPegarJson.addEventListener('click', openJsonModal);

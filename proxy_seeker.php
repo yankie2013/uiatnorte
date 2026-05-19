@@ -67,7 +67,7 @@ if ($baseUrl === '' || $token === '') {
     json_out(['ok' => false, 'error' => 'El servicio de placas no está disponible en este momento.'], 503);
 }
 
-$url = rtrim($baseUrl, '/') . '/vehiculos/api_newPlacas?placa=' . urlencode($placa) . '&token=' . urlencode($token);
+$url = rtrim($baseUrl, '/') . '/vehiculos/api_newPlacas?placa=' . urlencode($placa);
 
 $ch = curl_init($url);
 curl_setopt_array($ch, [
@@ -76,6 +76,7 @@ curl_setopt_array($ch, [
     CURLOPT_TIMEOUT => 25,
     CURLOPT_CONNECTTIMEOUT => 10,
     CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . $token,
         'Accept: application/json,text/plain,*/*',
         'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
     ],
