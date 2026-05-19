@@ -19,6 +19,7 @@ if (!function_exists('h')) {
 $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 if ($accidenteId <= 0) {
     http_response_code(400);
     exit('Falta accidente_id');
@@ -38,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
             }
             $service->delete($id, $accidenteId);
         }
-        header('Location: citacion_listar.php?accidente_id=' . $accidenteId);
+        header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : ''));
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -52,7 +53,9 @@ $filters = [
 ];
 $rows = $service->listado($accidenteId, $filters);
 $pdfDisponible = file_exists(__DIR__ . '/citacion_diligencia_pdf.php');
-include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    include __DIR__ . '/sidebar.php';
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -64,10 +67,10 @@ include __DIR__ . '/sidebar.php';
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c3{grid-column:span 3}.c2{grid-column:span 2}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:16px 0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:1240px}th,td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(59,130,246,.05)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px}.pill.sync-ok{background:rgba(22,163,74,.12);color:#166534;border-color:rgba(22,163,74,.2)}.pill.sync-off{background:rgba(148,163,184,.1);color:var(--muted)}.pill.sync-error{background:rgba(220,38,38,.12);color:var(--danger);border-color:rgba(220,38,38,.2)}.muted{color:var(--muted)}input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}@media(max-width:900px){.c3,.c2{grid-column:span 12}}
+body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c3{grid-column:span 3}.c2{grid-column:span 2}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:16px 0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:1240px}th,td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(59,130,246,.05)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px}.pill.sync-ok{background:rgba(22,163,74,.12);color:#166534;border-color:rgba(22,163,74,.2)}.pill.sync-off{background:rgba(148,163,184,.1);color:var(--muted)}.pill.sync-error{background:rgba(220,38,38,.12);color:var(--danger);border-color:rgba(220,38,38,.2)}.muted{color:var(--muted)}input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}body.is-embed{background:transparent}.is-embed .wrap{max-width:none;margin:0;padding:0}.is-embed .toolbar{margin-bottom:10px}.is-embed h1{font-size:22px}.is-embed .card{padding:12px;margin-bottom:10px}.is-embed table{min-width:1120px}.is-embed th,.is-embed td{padding:8px 10px}.embed-hide{display:none!important}@media(max-width:900px){.c3,.c2{grid-column:span 12}}
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <div class="toolbar">
     <div>
@@ -75,7 +78,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       <div class="small">Accidente ID: <?= (int) $accidenteId ?> · <?= count($rows) ?> registro(s)</div>
     </div>
     <div class="actions" style="margin:0;">
-      <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">Volver al accidente</a>
+      <?php if (!$embed): ?><a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">Volver al accidente</a><?php endif; ?>
       <a class="btn primary" href="citacion_nuevo.php?accidente_id=<?= (int) $accidenteId ?>">Nueva citacion</a>
     </div>
   </div>
@@ -85,6 +88,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
   <div class="card" style="margin-bottom:14px;">
     <form method="get" class="grid">
       <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
+      <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
       <div class="c3">
         <label class="small">Buscar</label>
         <input name="q" value="<?= h($filters['q']) ?>" placeholder="Nombre, documento, lugar, motivo">
@@ -99,7 +103,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       </div>
       <div class="c3" style="display:flex;align-items:end;gap:8px;">
         <button class="btn" type="submit">Filtrar</button>
-        <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?>">Limpiar</a>
+        <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?><?= $embed ? '&embed=1' : '' ?>">Limpiar</a>
       </div>
     </form>
   </div>
@@ -178,6 +182,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                 <?php if ($pdfDisponible): ?><a class="btn" href="citacion_diligencia_pdf.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">PDF</a><?php endif; ?>
                 <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
                   <input type="hidden" name="action" value="delete">
+                  <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
                   <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                   <button class="btn danger" type="submit">Eliminar</button>
                 </form>

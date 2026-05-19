@@ -203,7 +203,7 @@ input,select,textarea{
   top:calc(100% + 6px);
   left:0;
   right:0;
-  z-index:40;
+  z-index:1600;
   margin:0;
   padding:6px;
   list-style:none;
@@ -262,6 +262,44 @@ input,select,textarea{
   border-radius:16px;
   overflow:hidden;
   background:#0b1220;
+}
+.geo-marker-pin{
+  position:relative;
+  width:30px !important;
+  height:42px !important;
+  margin:0 !important;
+  background:transparent;
+}
+.geo-marker-pin span{
+  position:absolute;
+  left:50%;
+  top:1px;
+  width:26px;
+  height:26px;
+  border:3px solid #fff;
+  border-radius:50% 50% 50% 0;
+  background:#dc2626;
+  box-shadow:0 8px 18px rgba(15,23,42,.28);
+  transform:translateX(-50%) rotate(-45deg);
+}
+.geo-marker-pin span::before{
+  content:'';
+  position:absolute;
+  inset:6px;
+  border-radius:50%;
+  background:#fff;
+}
+.geo-marker-pin span::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  top:34px;
+  width:18px;
+  height:6px;
+  border-radius:999px;
+  background:rgba(15,23,42,.25);
+  transform:translateX(-50%) rotate(45deg);
+  filter:blur(1px);
 }
 .geo-coords-bar{
   margin-top:12px;

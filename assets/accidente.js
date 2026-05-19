@@ -348,6 +348,14 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     south: -12.35,
   };
 
+  const accidentMarkerIcon = L.divIcon({
+    className: 'geo-marker-pin',
+    html: '<span></span>',
+    iconSize: [30, 42],
+    iconAnchor: [15, 38],
+    popupAnchor: [0, -34],
+  });
+
   const tileLayers = {
     hybrid: () => L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
@@ -484,13 +492,38 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     if(/lima|per[uú]/i.test(trimmed)){
       return trimmed;
     }
-    return `${trimmed}, Lima, Perú`;
+    const district = selectedOptionText(qs('#dist'));
+    const province = selectedOptionText(qs('#prov'));
+    const context = [district, province].filter(Boolean).join(', ');
+    return [trimmed, context, 'Lima, Perú'].filter(Boolean).join(', ');
+  }
+
+  function selectedOptionText(select){
+    if(!select || !select.options || select.selectedIndex < 0){
+      return '';
+    }
+    const option = select.options[select.selectedIndex];
+    const text = option ? String(option.textContent || '').trim() : '';
+    if(!text || /^--|selecciona/i.test(text)){
+      return '';
+    }
+    return text;
+  }
+
+  function localContextQuery(query){
+    const parts = [
+      query,
+      selectedOptionText(qs('#dist')),
+      selectedOptionText(qs('#prov')),
+      selectedOptionText(qs('#dep')),
+    ].filter(Boolean);
+    return parts.length > 1 ? parts.join(', ') : query;
   }
 
   function buildLocalSearchUrl(query, limit = 6){
     const url = new URL(window.location.href);
     url.searchParams.set('ajax', 'geo_search');
-    url.searchParams.set('q', query);
+    url.searchParams.set('q', localContextQuery(query));
     url.searchParams.set('limit', String(limit));
     return url.toString();
   }
@@ -512,6 +545,12 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     if(item && item.provider === 'google'){
       return {
         primary: item.primary || item.description || 'Ubicación sugerida',
+        secondary: item.secondary || '',
+      };
+    }
+    if(item && (item.provider === 'photon' || item.provider === 'nominatim') && (item.primary || item.secondary)){
+      return {
+        primary: item.primary || 'Ubicación sugerida',
         secondary: item.secondary || '',
       };
     }
@@ -606,7 +645,7 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
 
     const point = {
       lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
+      lng: parseFloat(item.lng ?? item.lon),
       label: labelFromSuggestion(item).primary || '',
     };
     if(!Number.isFinite(point.lat) || !Number.isFinite(point.lng)){
@@ -649,7 +688,7 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
         }
       });
       const json = await response.json();
-      if(response.ok && json && json.ok && Array.isArray(json.data)){
+      if(response.ok && json && json.ok && Array.isArray(json.data) && json.data.length){
         return json.data;
       }
     }catch(error){
@@ -782,6 +821,7 @@ window.initAccidenteGeoMap = function initAccidenteGeoMap(){
     syncBaseLayer();
 
     marker = L.marker([defaultCenter.lat, defaultCenter.lng], {
+      icon: accidentMarkerIcon,
       draggable: true,
     });
 

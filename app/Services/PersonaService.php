@@ -127,9 +127,9 @@ final class PersonaService
     {
         $tipoDoc = strtoupper(trim((string) ($input['tipo_doc'] ?? 'DNI')));
         $numDoc = strtoupper(trim((string) ($input['num_doc'] ?? '')));
-        $apellidoPaterno = trim((string) ($input['apellido_paterno'] ?? ''));
-        $apellidoMaterno = trim((string) ($input['apellido_materno'] ?? ''));
-        $nombres = trim((string) ($input['nombres'] ?? ''));
+        $apellidoPaterno = $this->upperText($input['apellido_paterno'] ?? '');
+        $apellidoMaterno = $this->upperText($input['apellido_materno'] ?? '');
+        $nombres = $this->titleText($input['nombres'] ?? '');
         $sexo = strtoupper(trim((string) ($input['sexo'] ?? '')));
         $fechaNacimiento = trim((string) ($input['fecha_nacimiento'] ?? ''));
         $email = $this->nullableTrim($input['email'] ?? null);
@@ -178,19 +178,19 @@ final class PersonaService
             'sexo' => $sexo,
             'fecha_nacimiento' => $fechaNacimiento,
             'edad' => $edad,
-            'estado_civil' => $this->nullableTrim($input['estado_civil'] ?? null),
-            'nacionalidad' => $this->nullableTrim($input['nacionalidad'] ?? 'PERUANA') ?? 'PERUANA',
-            'departamento_nac' => $this->nullableTrim($input['departamento_nac'] ?? null),
-            'provincia_nac' => $this->nullableTrim($input['provincia_nac'] ?? null),
-            'distrito_nac' => $this->nullableTrim($input['distrito_nac'] ?? null),
-            'domicilio' => $this->nullableTrim($input['domicilio'] ?? null),
-            'domicilio_departamento' => $this->nullableTrim($input['domicilio_departamento'] ?? null),
-            'domicilio_provincia' => $this->nullableTrim($input['domicilio_provincia'] ?? null),
-            'domicilio_distrito' => $this->nullableTrim($input['domicilio_distrito'] ?? null),
-            'ocupacion' => $this->nullableTrim($input['ocupacion'] ?? null),
-            'grado_instruccion' => $this->nullableTrim($input['grado_instruccion'] ?? null),
-            'nombre_padre' => $this->nullableTrim($input['nombre_padre'] ?? null),
-            'nombre_madre' => $this->nullableTrim($input['nombre_madre'] ?? null),
+            'estado_civil' => $this->nullableTitleText($input['estado_civil'] ?? null),
+            'nacionalidad' => $this->nullableTitleText($input['nacionalidad'] ?? 'PERUANA') ?? 'Peruana',
+            'departamento_nac' => $this->nullableTitleText($input['departamento_nac'] ?? null),
+            'provincia_nac' => $this->nullableTitleText($input['provincia_nac'] ?? null),
+            'distrito_nac' => $this->nullableTitleText($input['distrito_nac'] ?? null),
+            'domicilio' => $this->nullableAddressText($input['domicilio'] ?? null),
+            'domicilio_departamento' => $this->nullableTitleText($input['domicilio_departamento'] ?? null),
+            'domicilio_provincia' => $this->nullableTitleText($input['domicilio_provincia'] ?? null),
+            'domicilio_distrito' => $this->nullableTitleText($input['domicilio_distrito'] ?? null),
+            'ocupacion' => $this->nullableTitleText($input['ocupacion'] ?? null),
+            'grado_instruccion' => $this->nullableTitleText($input['grado_instruccion'] ?? null),
+            'nombre_padre' => $this->nullableTitleText($input['nombre_padre'] ?? null),
+            'nombre_madre' => $this->nullableTitleText($input['nombre_madre'] ?? null),
             'celular' => $this->nullableTrim($input['celular'] ?? null),
             'email' => $email,
             'notas' => $this->nullableTrim($input['notas'] ?? null),
@@ -220,5 +220,68 @@ final class PersonaService
     {
         $text = trim((string) ($value ?? ''));
         return $text === '' ? null : $text;
+    }
+
+    private function cleanSpaces(mixed $value): string
+    {
+        $text = trim((string) ($value ?? ''));
+        return preg_replace('/\s+/u', ' ', $text) ?: $text;
+    }
+
+    private function upperText(mixed $value): string
+    {
+        $text = $this->cleanSpaces($value);
+        return function_exists('mb_strtoupper') ? mb_strtoupper($text, 'UTF-8') : strtoupper($text);
+    }
+
+    private function titleText(mixed $value): string
+    {
+        $text = $this->cleanSpaces($value);
+        $lower = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+        return function_exists('mb_convert_case')
+            ? mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8')
+            : ucwords($lower);
+    }
+
+    private function nullableTitleText(mixed $value): ?string
+    {
+        $text = $this->titleText($value);
+        return $text === '' ? null : $text;
+    }
+
+    private function nullableAddressText(mixed $value): ?string
+    {
+        $text = $this->titleText($value);
+        if ($text === '') {
+            return null;
+        }
+
+        $replacements = [
+            '/\bMza?\.?\b/iu' => 'MZ',
+            '/\bManzana\b/iu' => 'MZ',
+            '/\bLt\.?\b/iu' => 'Lote',
+            '/\bLote\b/iu' => 'Lote',
+            '/\bNro\.?\b/iu' => 'Nro.',
+            '/\bNumero\b/iu' => 'Nro.',
+            '/\bNúmero\b/iu' => 'Nro.',
+            '/\bN[°º]/iu' => 'Nro.',
+            '/\bAv\.?\b/iu' => 'Av.',
+            '/\bAvenida\b/iu' => 'Av.',
+            '/\bJr\.?\b/iu' => 'Jr.',
+            '/\bJiron\b/iu' => 'Jr.',
+            '/\bJirón\b/iu' => 'Jr.',
+            '/\bPsje\.?\b/iu' => 'Psje.',
+            '/\bPasaje\b/iu' => 'Psje.',
+            '/\bDpto\.?\b/iu' => 'Dpto.',
+            '/\bDepartamento\b/iu' => 'Dpto.',
+            '/\bInt\.?\b/iu' => 'Int.',
+            '/\bInterior\b/iu' => 'Int.',
+        ];
+
+        foreach ($replacements as $pattern => $replacement) {
+            $text = preg_replace($pattern, $replacement, $text) ?? $text;
+        }
+
+        return $this->cleanSpaces($text);
     }
 }

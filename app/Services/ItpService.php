@@ -14,6 +14,14 @@ final class ItpService
 
     public function defaultData(?array $row = null, ?int $accidenteId = null): array
     {
+        $accidenteGps = '';
+        if ($row !== null) {
+            $accidenteGps = $this->formatGps($row['accidente_latitud'] ?? null, $row['accidente_longitud'] ?? null);
+        } elseif ($accidenteId !== null && $accidenteId > 0) {
+            $accidente = $this->repository->accidenteHeader($accidenteId);
+            $accidenteGps = $this->formatGps($accidente['latitud'] ?? null, $accidente['longitud'] ?? null);
+        }
+
         return [
             'accidente_id' => $row['accidente_id'] ?? ($accidenteId ?: ''),
             'fecha_itp' => $row['fecha_itp'] ?? date('Y-m-d'),
@@ -23,7 +31,7 @@ final class ItpService
             'localizacion_unidades' => $row['localizacion_unidades'] ?? '',
             'forma_via' => $row['forma_via'] ?? '',
             'punto_referencia' => $row['punto_referencia'] ?? '',
-            'ubicacion_gps' => $row['ubicacion_gps'] ?? '',
+            'ubicacion_gps' => $this->nullableTrim($row['ubicacion_gps'] ?? null) ?? $accidenteGps,
             'descripcion_via1' => $row['descripcion_via1'] ?? '',
             'configuracion_via1' => $row['configuracion_via1'] ?? '',
             'material_via1' => $row['material_via1'] ?? '',
@@ -105,16 +113,22 @@ final class ItpService
     private function payload(array $input, ?int $id): array
     {
         $accidenteId = (int) ($input['accidente_id'] ?? 0);
+        $accidente = null;
         if ($id === null) {
             if ($accidenteId <= 0) {
                 throw new InvalidArgumentException('Debe seleccionar un accidente valido.');
             }
-            if ($this->repository->accidenteHeader($accidenteId) === null) {
+            $accidente = $this->repository->accidenteHeader($accidenteId);
+            if ($accidente === null) {
                 throw new InvalidArgumentException('El accidente indicado no existe.');
             }
+        } elseif ($accidenteId > 0) {
+            $accidente = $this->repository->accidenteHeader($accidenteId);
         }
 
         $via2Flag = (int) ($input['via2_flag'] ?? 0) === 1;
+        $ubicacionGps = $this->nullableTrim($input['ubicacion_gps'] ?? null)
+            ?? $this->formatGps($accidente['latitud'] ?? null, $accidente['longitud'] ?? null);
 
         return [
             ':accidente_id' => $accidenteId,
@@ -125,7 +139,7 @@ final class ItpService
             ':localizacion_unidades' => $this->nullableTrim($input['localizacion_unidades'] ?? null),
             ':forma_via' => $this->nullableTrim($input['forma_via'] ?? null),
             ':punto_referencia' => $this->nullableTrim($input['punto_referencia'] ?? null),
-            ':ubicacion_gps' => $this->nullableTrim($input['ubicacion_gps'] ?? null),
+            ':ubicacion_gps' => $ubicacionGps !== '' ? $ubicacionGps : null,
             ':descripcion_via1' => $this->nullableTrim($input['descripcion_via1'] ?? null),
             ':configuracion_via1' => $this->nullableTrim($input['configuracion_via1'] ?? null),
             ':material_via1' => $this->nullableTrim($input['material_via1'] ?? null),
@@ -198,5 +212,24 @@ final class ItpService
             }
         }
         return 0;
+    }
+
+    private function formatGps(mixed $latitud, mixed $longitud): string
+    {
+        $lat = $this->normalizeCoordinate($latitud);
+        $lng = $this->normalizeCoordinate($longitud);
+        if ($lat === null || $lng === null) {
+            return '';
+        }
+        return number_format($lat, 6, '.', '') . ', ' . number_format($lng, 6, '.', '');
+    }
+
+    private function normalizeCoordinate(mixed $value): ?float
+    {
+        $text = trim(str_replace(',', '.', (string) ($value ?? '')));
+        if ($text === '' || !is_numeric($text)) {
+            return null;
+        }
+        return (float) $text;
     }
 }

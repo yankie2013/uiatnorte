@@ -5439,7 +5439,7 @@ include __DIR__ . '/sidebar.php';
   .geo-inline-modal-sub{color:var(--muted);font-size:12px;font-weight:700}
   .geo-inline-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:10px;margin-bottom:12px}
   .geo-search-wrap{position:relative}
-  .geo-suggest-list{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;margin:0;padding:6px;list-style:none;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 16px 32px rgba(15,23,42,.18);max-height:260px;overflow:auto}
+  .geo-suggest-list{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:1600;margin:0;padding:6px;list-style:none;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 16px 32px rgba(15,23,42,.18);max-height:260px;overflow:auto}
   .geo-suggest-list[hidden]{display:none !important}
   .geo-suggest-item{width:100%;display:block;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--ink);text-align:left;cursor:pointer}
   .geo-suggest-item:hover,.geo-suggest-item.is-active{background:#f5f7fb}
@@ -5448,6 +5448,10 @@ include __DIR__ . '/sidebar.php';
   .geo-suggest-empty{padding:10px 12px;color:var(--muted);font-size:12px;font-weight:800}
   .pac-container{z-index:1400 !important;border-radius:14px;border:1px solid var(--line);box-shadow:0 16px 32px rgba(15,23,42,.18);overflow:hidden}
   .geo-inline-map{height:420px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#eef2f7}
+  .geo-marker-pin{position:relative;width:30px !important;height:42px !important;margin:0 !important;background:transparent}
+  .geo-marker-pin span{position:absolute;left:50%;top:1px;width:26px;height:26px;border:3px solid #fff;border-radius:50% 50% 50% 0;background:#dc2626;box-shadow:0 8px 18px rgba(15,23,42,.28);transform:translateX(-50%) rotate(-45deg)}
+  .geo-marker-pin span::before{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff}
+  .geo-marker-pin span::after{content:'';position:absolute;left:50%;top:34px;width:18px;height:6px;border-radius:999px;background:rgba(15,23,42,.25);transform:translateX(-50%) rotate(45deg);filter:blur(1px)}
   .geo-inline-coords{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f7f9fc;font-size:12px;font-weight:700;color:#314157}
   .geo-inline-modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}
   @media (max-width: 900px){
@@ -7252,6 +7256,7 @@ include __DIR__ . '/sidebar.php';
           <div class="tabs-toolbar">
             <a class="btn-shell" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo persona involucrada</a>
             <a class="btn-shell" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo vehículo involucrado</a>
+            <a class="btn-shell btn-citacion js-inline-open" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame" data-title="Citaciones del accidente">Citaciones</a>
           </div>
           <div class="inline-workbench" id="participantes-workbench" hidden>
             <div class="inline-head">
@@ -9091,6 +9096,14 @@ include __DIR__ . '/sidebar.php';
         south: -12.35,
       };
 
+      const accidentMarkerIcon = L.divIcon({
+        className: 'geo-marker-pin',
+        html: '<span></span>',
+        iconSize: [30, 42],
+        iconAnchor: [15, 38],
+        popupAnchor: [0, -34],
+      });
+
       const tileLayers = {
         hybrid: () => L.layerGroup([
           L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -9236,13 +9249,34 @@ include __DIR__ . '/sidebar.php';
         if (/lima|per[uú]/i.test(trimmed)) {
           return trimmed;
         }
-        return trimmed + ', Lima, Perú';
+        const district = selectedOptionText(form.querySelector('[name="cod_dist"]'));
+        const province = selectedOptionText(form.querySelector('[name="cod_prov"]'));
+        const context = [district, province].filter(Boolean).join(', ');
+        return [trimmed, context, 'Lima, Perú'].filter(Boolean).join(', ');
+      }
+
+      function selectedOptionText(select) {
+        if (!select || !select.options || select.selectedIndex < 0) return '';
+        const option = select.options[select.selectedIndex];
+        const text = option ? String(option.textContent || '').trim() : '';
+        if (!text || /^--|selecciona/i.test(text)) return '';
+        return text;
+      }
+
+      function localContextQuery(query) {
+        const parts = [
+          query,
+          selectedOptionText(form.querySelector('[name="cod_dist"]')),
+          selectedOptionText(form.querySelector('[name="cod_prov"]')),
+          selectedOptionText(form.querySelector('[name="cod_dep"]')),
+        ].filter(Boolean);
+        return parts.length > 1 ? parts.join(', ') : query;
       }
 
       function buildLocalSearchRequest(query, limit = 6) {
         const formData = new FormData();
         formData.append('action', 'geo_search');
-        formData.append('q', query);
+        formData.append('q', localContextQuery(query));
         formData.append('limit', String(limit));
         return formData;
       }
@@ -9264,6 +9298,12 @@ include __DIR__ . '/sidebar.php';
         if (item && item.provider === 'google') {
           return {
             primary: item.primary || item.description || 'Ubicación sugerida',
+            secondary: item.secondary || '',
+          };
+        }
+        if (item && (item.provider === 'photon' || item.provider === 'nominatim') && (item.primary || item.secondary)) {
+          return {
+            primary: item.primary || 'Ubicación sugerida',
             secondary: item.secondary || '',
           };
         }
@@ -9353,7 +9393,7 @@ include __DIR__ . '/sidebar.php';
 
         const point = {
           lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
+          lng: parseFloat(item.lng ?? item.lon),
           label: labelFromSuggestion(item).primary || '',
         };
         if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
@@ -9398,7 +9438,7 @@ include __DIR__ . '/sidebar.php';
             }
           });
           const json = await response.json();
-          if (response.ok && json && json.ok && Array.isArray(json.data)) {
+          if (response.ok && json && json.ok && Array.isArray(json.data) && json.data.length) {
             return json.data;
           }
         } catch (error) {
@@ -9526,6 +9566,7 @@ include __DIR__ . '/sidebar.php';
         syncBaseLayer();
 
         marker = L.marker([defaultCenter.lat, defaultCenter.lng], {
+          icon: accidentMarkerIcon,
           draggable: true,
         });
 

@@ -94,6 +94,10 @@ $via2Simple = [
     ['c6', 'Fluidez', (string) ($detail['fluidez_via2'] ?? '')],
 ];
 
+$gpsValue = trim((string) ($detail['ubicacion_gps'] ?? ''));
+$gpsMapsUrl = $gpsValue !== '' ? 'https://www.google.com/maps?q=' . urlencode($gpsValue) : '';
+$gpsEmbedUrl = $gpsValue !== '' ? 'https://maps.google.com/maps?q=' . urlencode($gpsValue) . '&z=17&output=embed' : '';
+
 include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
@@ -105,7 +109,7 @@ include __DIR__ . '/sidebar.php';
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#2563eb;--danger:#b91c1c;--gold:#b68b1f}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--danger:#fecaca;--gold:#e6c97d}}
-*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1120px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}h1,h2{color:var(--gold);margin:0}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.danger{color:var(--danger)}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.field{padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(148,163,184,.08)}.label{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px}.value{font-weight:700;word-break:break-word}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);padding:10px;border-radius:10px;margin-bottom:12px}.list{margin:0;padding-left:18px}@media(max-width:920px){.c6,.c4{grid-column:span 12}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1120px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}h1,h2{color:var(--gold);margin:0}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.danger{color:var(--danger)}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.field{padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(148,163,184,.08)}.label{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px}.value{font-weight:700;word-break:break-word}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);padding:10px;border-radius:10px;margin-bottom:12px}.list{margin:0;padding-left:18px}.gps-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.gps-frame{width:100%;height:320px;border:1px solid var(--border);border-radius:12px;margin-top:12px;background:#fff}@media(max-width:920px){.c6,.c4{grid-column:span 12}.gps-frame{height:260px}}
 </style>
 </head>
 <body>
@@ -141,7 +145,7 @@ include __DIR__ . '/sidebar.php';
       <?php render_field('c4', 'Hora ITP', (string) ($detail['hora_itp'] ?? '')); ?>
       <?php render_field('c4', 'Forma de la via', (string) ($detail['forma_via'] ?? '')); ?>
       <?php render_field('c12', 'Punto de referencia', (string) ($detail['punto_referencia'] ?? '')); ?>
-      <?php render_field('c12', 'Ubicacion GPS', !empty($detail['ubicacion_gps']) ? '<a href="https://www.google.com/maps?q=' . urlencode((string) $detail['ubicacion_gps']) . '" target="_blank" rel="noopener noreferrer">' . h((string) $detail['ubicacion_gps']) . '</a>' : '-', false, true); ?>
+      <?php render_field('c12', 'Ubicacion GPS', $gpsValue !== '' ? h($gpsValue) . '<div class="gps-actions"><a class="btn" href="' . h($gpsMapsUrl) . '" target="_blank" rel="noopener noreferrer">Ver Google Maps</a></div><iframe class="gps-frame" src="' . h($gpsEmbedUrl) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' : '-', false, true); ?>
       <?php render_field('c12', 'Localizacion de unidades', render_csv_list($detail['localizacion_unidades'] ?? ''), false, true); ?>
       <?php render_field('c12', 'Ocurrencia policial', (string) ($detail['ocurrencia_policial'] ?? ''), true); ?>
       <?php render_field('c12', 'Llegada al lugar', (string) ($detail['llegada_lugar'] ?? ''), true); ?>

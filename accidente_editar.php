@@ -246,7 +246,7 @@ include __DIR__ . '/sidebar.php';
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Editar Accidente | UIAT Norte</title>
-<link rel="stylesheet" href="assets/accidente.css">
+<link rel="stylesheet" href="assets/accidente.css?v=<?= (int) filemtime(__DIR__ . '/assets/accidente.css') ?>">
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 </head>
 <body>
@@ -601,7 +601,7 @@ include __DIR__ . '/sidebar.php';
   </div>
 </div>
 
-<script src="assets/accidente.js"></script>
+<script src="assets/accidente.js?v=<?= (int) filemtime(__DIR__ . '/assets/accidente.js') ?>"></script>
 <script src="assets/vendor/leaflet/leaflet.js"></script>
 <script>window.initAccidenteGeoMap && window.initAccidenteGeoMap();</script>
 
