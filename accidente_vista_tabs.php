@@ -5077,6 +5077,8 @@ include __DIR__ . '/sidebar.php';
   .btn-shell.btn-peritaje:hover{border-color:#ff7a00;background:#ffedd5;color:#9a3412;box-shadow:0 0 0 1px rgba(255,122,0,.32),0 0 18px rgba(255,122,0,.28),0 10px 20px rgba(255,122,0,.16)}
   .btn-shell.btn-necropsia{border-color:#14b8a6;background:linear-gradient(180deg,#f1fffd 0%,#dcfdf7 100%);box-shadow:0 0 0 1px rgba(20,184,166,.22),0 0 14px rgba(13,148,136,.18),0 8px 18px rgba(15,118,110,.12);color:#0f766e}
   .btn-shell.btn-necropsia:hover{border-color:#0d9488;background:#ccfbf1;color:#115e59;box-shadow:0 0 0 1px rgba(13,148,136,.3),0 0 18px rgba(13,148,136,.22),0 10px 20px rgba(15,118,110,.15)}
+  .btn-shell.danger{border-color:#ef4444;background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 100%);color:#b91c1c}
+  .btn-shell.danger:hover{border-color:#dc2626;background:#fecaca;color:#991b1b}
   .btn-shell.btn-docx{border-color:#a855f7;border-radius:8px;background:linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%);box-shadow:0 0 0 1px rgba(168,85,247,.34),0 0 16px rgba(168,85,247,.35),0 8px 18px rgba(109,40,217,.14);color:#6d28d9;text-shadow:0 0 10px rgba(168,85,247,.22)}
   .btn-shell.btn-docx:hover{border-color:#d946ef;background:linear-gradient(180deg,#f5d0fe 0%,#e9d5ff 100%);box-shadow:0 0 0 1px rgba(217,70,239,.44),0 0 22px rgba(217,70,239,.42),0 10px 22px rgba(109,40,217,.2);color:#581c87}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
@@ -5669,6 +5671,11 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(180deg,#0f1b33 0%,#13233f 100%);
     border-color:#3b82f6;
     color:#93c5fd;
+  }
+  html[data-theme-resolved="dark"] .btn-shell.danger{
+    background:linear-gradient(180deg,#37151c 0%,#45171f 100%);
+    border-color:#f43f5e;
+    color:#fecdd3;
   }
   html[data-theme-resolved="dark"] .btn-shell.btn-peritaje{
     background:linear-gradient(180deg,#2a1d12 0%,#352414 100%);
@@ -7840,6 +7847,7 @@ include __DIR__ . '/sidebar.php';
                                   <div class="record-actions">
                                     <a class="btn-shell" href="documento_occiso_ver.php?id=<?= (int) $occ['id'] ?>&return_to=<?= $occReturnTo ?>">Ver</a>
                                     <a class="btn-shell js-inline-open" href="documento_occiso_editar.php?id=<?= (int) $occ['id'] ?>&section=<?= h(urlencode($occSectionId)) ?>&embed=1&return_to=<?= $occReturnTo ?>" data-workbench="<?= h($occWorkbenchId) ?>" data-frame="<?= h($occFrameId) ?>" data-title="<?= h((string) $occSection['label']) ?>">Editar</a>
+                                    <a class="btn-shell danger" href="documento_occiso_eliminar.php?id=<?= (int) $occ['id'] ?>&return_to=<?= $occReturnTo ?>">Eliminar</a>
                                   </div>
                                 </article>
                               <?php endforeach; ?>
