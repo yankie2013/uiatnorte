@@ -4819,7 +4819,8 @@ $summaryAccidentSections = [
     'Fechas' => ['fecha_accidente', 'fecha_comunicacion', 'fecha_intervencion'],
     'Ubicación' => [['key' => 'lugar', 'class' => 'span-2'], ['key' => 'ubicacion_accidente', 'class' => 'span-2'], ['key' => 'referencia', 'class' => 'span-2']],
     'Autoridades' => [['key' => 'fiscalia_nombre', 'class' => 'span-2'], ['key' => 'fiscal_nombre', 'class' => 'span-2']],
-    'Comunicación' => ['comunicante_nombre', 'comunicante_telefono', 'comunicacion_decreto', ['key' => 'comunicacion_oficio', 'class' => 'span-2'], ['key' => 'comunicacion_carpeta_nro', 'class' => 'span-2']],
+    'Comunicación' => ['comunicante_nombre', 'comunicante_telefono'],
+    'Carpeta Fiscal' => ['comunicacion_decreto', 'comunicacion_oficio', 'comunicacion_carpeta_nro'],
     'Descripción' => [['key' => 'sentido', 'class' => 'span-2'], ['key' => 'secuencia', 'class' => 'span-4']],
 ];
 $summaryAccidentRecord = $A;
@@ -5081,23 +5082,66 @@ include __DIR__ . '/sidebar.php';
   .btn-shell.danger:hover{border-color:#dc2626;background:#fecaca;color:#991b1b}
   .btn-shell.btn-docx{border-color:#a855f7;border-radius:8px;background:linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%);box-shadow:0 0 0 1px rgba(168,85,247,.34),0 0 16px rgba(168,85,247,.35),0 8px 18px rgba(109,40,217,.14);color:#6d28d9;text-shadow:0 0 10px rgba(168,85,247,.22)}
   .btn-shell.btn-docx:hover{border-color:#d946ef;background:linear-gradient(180deg,#f5d0fe 0%,#e9d5ff 100%);box-shadow:0 0 0 1px rgba(217,70,239,.44),0 0 22px rgba(217,70,239,.42),0 10px 22px rgba(109,40,217,.2);color:#581c87}
-  .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
-  .summary-stack{display:grid;gap:5px;margin-bottom:6px}
-  .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:11px;padding:7px 10px;font-size:12px;font-weight:600;line-height:1.25;color:#425166}
-  .summary-pill strong{color:#8b6a12;display:inline-block;min-width:150px}
-  .section-title{margin:0 0 5px;color:var(--title-blue);font-weight:800;font-size:13px;letter-spacing:.01em}
-  .general-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
-  .ident-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:6px 8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
+  .summary-stack{display:grid;gap:4px;margin-bottom:5px}
+  .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;line-height:1.18;color:#425166}
+  .summary-pill strong{color:#8b6a12;display:inline-block;min-width:145px}
+  .section-block{margin-top:5px}
+  [data-edit-view="general-accidente"]{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:start}
+  [data-edit-view="general-accidente"] > .summary-stack{
+    grid-column:1 / span 8;
+    margin-bottom:0;
+    padding:9px;
+    border:1px solid #dbe4f2;
+    border-radius:12px;
+    background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(248,250,253,.95) 100%);
+    box-shadow:0 5px 14px rgba(17,24,39,.045);
+  }
+  [data-edit-view="general-accidente"] > .summary-stack::before{
+    content:"Clasificación";
+    color:var(--title-blue);
+    font-weight:800;
+    font-size:13px;
+    letter-spacing:.01em;
+    margin-bottom:3px;
+  }
+  [data-edit-view="general-accidente"] > .section-block{
+    margin-top:0;
+    padding:9px;
+    border:1px solid #dbe4f2;
+    border-radius:12px;
+    background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(248,250,253,.95) 100%);
+    box-shadow:0 5px 14px rgba(17,24,39,.045);
+  }
+  [data-edit-view="general-accidente"] > .general-block-fechas{grid-column:9 / span 4}
+  [data-edit-view="general-accidente"] > .general-block-ident{grid-column:span 12}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion{grid-column:span 12}
+  [data-edit-view="general-accidente"] > .general-block-autoridades{grid-column:span 4}
+  [data-edit-view="general-accidente"] > .general-block-comunicacion{grid-column:span 4}
+  [data-edit-view="general-accidente"] > .general-block-carpeta{grid-column:span 4}
+  [data-edit-view="general-accidente"] > .general-block-descripcion{grid-column:span 12}
+  [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:1fr}
+  [data-edit-view="general-accidente"] > .general-block-fechas .line-card{display:grid;grid-template-columns:82px 8px 1fr;align-items:center;column-gap:3px}
+  [data-edit-view="general-accidente"] > .general-block-fechas .line-card strong{text-align:left}
+  [data-edit-view="general-accidente"] > .general-block-fechas .line-card .date-sep{color:#8b6a12;font-weight:900;text-align:center}
+  [data-edit-view="general-accidente"] .data-card,
+  [data-edit-view="general-accidente"] .line-card{
+    background:#f5f7fb;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .section-title{margin:0 0 3px;color:var(--title-blue);font-weight:800;font-size:13px;letter-spacing:.01em}
+  .general-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px}
+  .ident-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
   .g-3{grid-column:span 3}.g-4{grid-column:span 4}.g-6{grid-column:span 6}.g-12{grid-column:span 12}
-  .data-card{background:#f7f8fb;border:1px solid var(--line);border-radius:11px;padding:6px 9px;min-height:54px}
+  .data-card{background:#f7f8fb;border:1px solid var(--line);border-radius:10px;padding:5px 9px;min-height:42px}
   .data-card.highlight{border-color:#dfb94d;background:linear-gradient(180deg,#fffdf7 0%,#fff7df 100%)}
   .data-card.centered{text-align:center;display:flex;flex-direction:column;justify-content:center}
-  .data-card .label{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:2px}
-  .data-card .value{font-size:12px;line-height:1.18;font-weight:700;word-break:break-word;color:#2d3c52}
+  .data-card .label{font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:1px}
+  .data-card .value{font-size:11.5px;line-height:1.14;font-weight:700;word-break:break-word;color:#2d3c52}
   .data-card .value.status-pendiente{color:#c81e1e}
   .data-card .value.status-resuelto{color:#19734d}
   .data-card .value.status-diligencias{color:#9a6a00}
-  .quick-status-select{width:100%;max-width:170px;margin:0 auto;border:1px solid #d5ddeb;border-radius:10px;background:#fff;padding:5px 9px;font-size:12px;font-weight:700;color:#314157;text-align:center;text-align-last:center}
+  .quick-status-select{width:100%;max-width:170px;margin:0 auto;border:1px solid #d5ddeb;border-radius:9px;background:#fff;padding:4px 9px;font-size:11.5px;font-weight:700;color:#314157;text-align:center;text-align-last:center}
   .quick-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
   .module-status-select{border:1px solid #d5ddeb;border-radius:999px;background:#fff;padding:5px 10px;font-size:11px;font-weight:700;line-height:1.1;color:#314157;min-width:126px;text-align:center;text-align-last:center}
   .module-status-select:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.14)}
@@ -5106,8 +5150,8 @@ include __DIR__ . '/sidebar.php';
   .module-status-select.status-enviado{border-color:#86efac;background:#ecfdf5;color:#166534}
   .module-status-select.status-anulado{border-color:#fca5a5;background:#fff1f2;color:#b91c1c}
   .module-status-select.status-archivado{border-color:#d8b4fe;background:#faf5ff;color:#7c3aed}
-  .line-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:11px;padding:6px 9px;font-size:12px;font-weight:700;line-height:1.2;color:#314157}
+  .line-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:11.5px;font-weight:700;line-height:1.15;color:#314157}
   .line-card strong{color:#8b6a12}
   .tabs-shell{margin-top:10px}
   .tabs-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
@@ -5395,8 +5439,8 @@ include __DIR__ . '/sidebar.php';
   .manifestation-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .manifestation-story-line{display:flex;align-items:flex-start;gap:8px}
   .manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
-  .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-  .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:7px 9px}
+  .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:5px 9px}
   .field-card.is-empty-field,
   .data-card.is-empty-field,
   .line-card.is-empty-field{
@@ -5406,26 +5450,26 @@ include __DIR__ . '/sidebar.php';
   }
   .field-card.span-2{grid-column:span 2}
   .field-card.span-4{grid-column:span 4}
-  .field-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:3px}
-  .edit-label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin-bottom:3px}
-  .field-value{font-size:12px;line-height:1.28;font-weight:700;word-break:break-word;color:#2b3950}
+  .field-label{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:2px}
+  .edit-label{display:block;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin-bottom:2px}
+  .field-value{font-size:11.5px;line-height:1.18;font-weight:700;word-break:break-word;color:#2b3950}
   .editable-shell{display:grid;gap:8px}
   .editable-toolbar{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
   .editable-actions{display:flex;gap:6px;flex-wrap:wrap}
   .editable-actions[hidden]{display:none}
   .btn-shell.btn-primary{background:linear-gradient(180deg,#fff1bc 0%,#ffd86e 100%);border-color:#e2ba47;color:#5f4700}
-  .general-edit-shell{display:grid;gap:8px}
-  .general-edit-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
-  .general-edit-card{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .general-edit-shell{display:grid;gap:5px}
+  .general-edit-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px}
+  .general-edit-card{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:6px 9px}
   .general-edit-card.g-3{grid-column:span 3}
   .general-edit-card.g-4{grid-column:span 4}
   .general-edit-card.g-6{grid-column:span 6}
   .general-edit-card.g-9{grid-column:span 9}
   .general-edit-card.g-12{grid-column:span 12}
-  .general-edit-card label{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin:0 0 4px}
-  .general-edit-card .edit-control{font-size:12px}
-  .general-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-  .general-checkbox{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:11px;font-weight:700;line-height:1.25;color:#36455b}
+  .general-edit-card label{display:block;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--title-blue-soft);margin:0 0 2px}
+  .general-edit-card .edit-control{font-size:11.5px}
+  .general-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .general-checkbox{display:flex;align-items:flex-start;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:10.5px;font-weight:700;line-height:1.18;color:#36455b}
   .general-checkbox input{margin-top:2px}
   .general-help{font-size:10px;color:var(--muted);font-weight:700}
   .general-inline-note{font-size:10px;color:var(--muted);font-weight:700}
@@ -5705,6 +5749,16 @@ include __DIR__ . '/sidebar.php';
     background:rgba(15,23,42,.92);
     border-color:#2a3852;
     box-shadow:0 14px 30px rgba(2,6,23,.34);
+  }
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .section-block{
+    background:linear-gradient(180deg,rgba(15,23,42,.98) 0%,rgba(19,29,51,.95) 100%);
+    border-color:#2f3d56;
+    box-shadow:0 8px 18px rgba(2,6,23,.24);
+  }
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .summary-stack{
+    background:linear-gradient(180deg,rgba(15,23,42,.98) 0%,rgba(19,29,51,.95) 100%);
+    border-color:#2f3d56;
+    box-shadow:0 8px 18px rgba(2,6,23,.24);
   }
   html[data-theme-resolved="dark"] .summary-pill,
   html[data-theme-resolved="dark"] .data-card,
@@ -6098,6 +6152,9 @@ include __DIR__ . '/sidebar.php';
   @media (max-width:980px){
     .g-3,.g-4,.g-6{grid-column:span 6}
     .ident-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    [data-edit-view="general-accidente"] > .summary-stack{grid-column:1 / -1}
+    [data-edit-view="general-accidente"] > .section-block{grid-column:1 / -1 !important}
+    [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9{grid-column:span 6}
     .line-grid{grid-template-columns:1fr}
     .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -6117,6 +6174,9 @@ include __DIR__ . '/sidebar.php';
     .summary-pill strong{display:block;min-width:0;margin-bottom:4px}
     .g-3,.g-4,.g-6,.g-12{grid-column:span 12}
     .ident-grid{grid-template-columns:1fr}
+    [data-edit-view="general-accidente"]{gap:7px}
+    [data-edit-view="general-accidente"] > .section-block{padding:7px}
+    [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:1fr}
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9,.general-edit-card.g-12{grid-column:span 12}
     .field-grid{grid-template-columns:1fr}
     .analysis-two-cols{grid-template-columns:1fr}
@@ -6196,7 +6256,16 @@ include __DIR__ . '/sidebar.php';
           <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
         </div>
 
-        <div class="section-block">
+        <div class="section-block general-block-fechas">
+          <h2 class="section-title">Fechas</h2>
+          <div class="line-grid">
+            <div class="line-card"><strong>Accidente</strong><span class="date-sep">:</span><span><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></span></div>
+            <div class="line-card"><strong>Comunicación</strong><span class="date-sep">:</span><span><?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></span></div>
+            <div class="line-card"><strong>Intervención</strong><span class="date-sep">:</span><span><?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></span></div>
+          </div>
+        </div>
+
+        <div class="section-block general-block-ident">
           <h2 class="section-title">Identificación</h2>
           <div class="ident-grid">
             <div class="data-card highlight centered">
@@ -6204,8 +6273,20 @@ include __DIR__ . '/sidebar.php';
               <div class="value"><?= fmt($A['registro_sidpol'] ?? '') ?></div>
             </div>
             <div class="data-card centered">
+              <div class="label">Comisaría</div>
+              <div class="value"><?= fmt($A['comisaria_nom'] ?? '') ?></div>
+            </div>
+            <div class="data-card centered">
+              <div class="label">N° informe policial</div>
+              <div class="value"><?= fmt($A['nro_informe_policial'] ?? '') ?></div>
+            </div>
+            <div class="data-card centered">
               <div class="label">Tipo de registro</div>
               <div class="value"><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></div>
+            </div>
+            <div class="data-card centered">
+              <div class="label">N° folder</div>
+              <div class="value"><?= fmt($A['folder'] ?? '') ?></div>
             </div>
             <?php
               $estadoKey = mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8');
@@ -6223,31 +6304,10 @@ include __DIR__ . '/sidebar.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="data-card centered">
-              <div class="label">N° informe policial</div>
-              <div class="value"><?= fmt($A['nro_informe_policial'] ?? '') ?></div>
-            </div>
-            <div class="data-card centered">
-              <div class="label">Comisaría</div>
-              <div class="value"><?= fmt($A['comisaria_nom'] ?? '') ?></div>
-            </div>
-            <div class="data-card centered">
-              <div class="label">N° folder</div>
-              <div class="value"><?= fmt($A['folder'] ?? '') ?></div>
-            </div>
           </div>
         </div>
 
-        <div class="section-block">
-          <h2 class="section-title">Fechas</h2>
-          <div class="line-grid">
-            <div class="line-card"><strong>Accidente:</strong> <?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></div>
-            <div class="line-card"><strong>Comunicación:</strong> <?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></div>
-            <div class="line-card"><strong>Intervención:</strong> <?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></div>
-          </div>
-        </div>
-
-        <div class="section-block">
+        <div class="section-block general-block-ubicacion">
           <h2 class="section-title">Ubicación</h2>
           <div class="general-grid">
             <div class="data-card g-4">
@@ -6281,7 +6341,7 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
 
-        <div class="section-block">
+        <div class="section-block general-block-autoridades">
           <h2 class="section-title">Autoridades</h2>
           <div class="general-grid">
             <div class="data-card g-6">
@@ -6295,33 +6355,39 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
 
-        <div class="section-block">
+        <div class="section-block general-block-comunicacion">
           <h2 class="section-title">Comunicación</h2>
           <div class="general-grid">
-            <div class="data-card g-4">
+            <div class="data-card g-6">
               <div class="label">Comunicante</div>
               <div class="value"><?= fmt($A['comunicante_nombre'] ?? '') ?></div>
             </div>
-            <div class="data-card g-4">
+            <div class="data-card g-6">
               <div class="label">Tel. comunicante</div>
               <div class="value"><?= fmt($A['comunicante_telefono'] ?? '') ?></div>
             </div>
+          </div>
+        </div>
+
+        <div class="section-block general-block-carpeta">
+          <h2 class="section-title">Carpeta Fiscal</h2>
+          <div class="general-grid">
             <div class="data-card g-4">
               <div class="label">Decreto</div>
               <div class="value"><?= fmt($A['comunicacion_decreto'] ?? '') ?></div>
             </div>
-            <div class="data-card g-6">
+            <div class="data-card g-4">
               <div class="label">Oficio</div>
               <div class="value"><?= fmt($A['comunicacion_oficio'] ?? '') ?></div>
             </div>
-            <div class="data-card g-6">
+            <div class="data-card g-4">
               <div class="label">Carpeta N°</div>
               <div class="value"><?= fmt($A['comunicacion_carpeta_nro'] ?? '') ?></div>
             </div>
           </div>
         </div>
 
-        <div class="section-block">
+        <div class="section-block general-block-descripcion">
           <h2 class="section-title">Descripción</h2>
           <div class="general-grid">
             <div class="data-card g-6">
@@ -6376,6 +6442,20 @@ include __DIR__ . '/sidebar.php';
               <input class="edit-control" id="acc-registro-sidpol" type="text" name="registro_sidpol" maxlength="50" value="<?= h((string) ($accidenteBase['registro_sidpol'] ?? '')) ?>">
             </div>
             <div class="general-edit-card g-3">
+              <label for="acc-comisaria">Comisaría</label>
+              <select class="edit-control" id="acc-comisaria" name="comisaria_id" data-current="<?= h((string) ($accidenteBase['comisaria_id'] ?? '')) ?>" <?= empty($comis) ? 'disabled' : '' ?>>
+                <option value="">-- Selecciona --</option>
+                <?php foreach ($comis as $item): ?>
+                  <?php $label = $item['nombre'] . (!empty($item['_fuera']) ? ' (fuera del distrito)' : ''); ?>
+                  <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['comisaria_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="general-edit-card g-3">
+              <label for="acc-nro-informe">N° informe policial</label>
+              <input class="edit-control" id="acc-nro-informe" type="text" name="nro_informe_policial" maxlength="40" value="<?= h((string) ($accidenteBase['nro_informe_policial'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-3">
               <label for="acc-tipo-registro">Tipo de registro</label>
               <?php $tipoRegistroActual = (string) ($accidenteBase['tipo_registro'] ?? ''); ?>
               <select class="edit-control" id="acc-tipo-registro" name="tipo_registro">
@@ -6391,38 +6471,6 @@ include __DIR__ . '/sidebar.php';
                   <option value="<?= h($estadoOpt) ?>" <?= (string) ($accidenteBase['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option>
                 <?php endforeach; ?>
               </select>
-            </div>
-            <div class="general-edit-card g-3">
-              <label for="acc-nro-informe">N° informe policial</label>
-              <input class="edit-control" id="acc-nro-informe" type="text" name="nro_informe_policial" maxlength="40" value="<?= h((string) ($accidenteBase['nro_informe_policial'] ?? '')) ?>">
-            </div>
-            <div class="general-edit-card g-3">
-              <label for="acc-comisaria">Comisaría</label>
-              <select class="edit-control" id="acc-comisaria" name="comisaria_id" data-current="<?= h((string) ($accidenteBase['comisaria_id'] ?? '')) ?>" <?= empty($comis) ? 'disabled' : '' ?>>
-                <option value="">-- Selecciona --</option>
-                <?php foreach ($comis as $item): ?>
-                  <?php $label = $item['nombre'] . (!empty($item['_fuera']) ? ' (fuera del distrito)' : ''); ?>
-                  <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['comisaria_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-block">
-          <h2 class="section-title">Fechas</h2>
-          <div class="general-edit-grid">
-            <div class="general-edit-card g-4">
-              <label for="acc-fecha-accidente">Fecha y hora del accidente</label>
-              <input class="edit-control" id="acc-fecha-accidente" type="datetime-local" name="fecha_accidente" value="<?= h((string) ($accidenteBase['fecha_accidente'] ?? '')) ?>" required>
-            </div>
-            <div class="general-edit-card g-4">
-              <label for="acc-fecha-comunicacion">Comunicación</label>
-              <input class="edit-control" id="acc-fecha-comunicacion" type="datetime-local" name="fecha_comunicacion" value="<?= h((string) ($accidenteBase['fecha_comunicacion'] ?? '')) ?>">
-            </div>
-            <div class="general-edit-card g-4">
-              <label for="acc-fecha-intervencion">Intervención</label>
-              <input class="edit-control" id="acc-fecha-intervencion" type="datetime-local" name="fecha_intervencion" value="<?= h((string) ($accidenteBase['fecha_intervencion'] ?? '')) ?>">
             </div>
           </div>
         </div>
@@ -6489,6 +6537,24 @@ include __DIR__ . '/sidebar.php';
         </div>
 
         <div class="section-block">
+          <h2 class="section-title">Fechas</h2>
+          <div class="general-edit-grid">
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-accidente">Fecha y hora del accidente</label>
+              <input class="edit-control" id="acc-fecha-accidente" type="datetime-local" name="fecha_accidente" value="<?= h((string) ($accidenteBase['fecha_accidente'] ?? '')) ?>" required>
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-comunicacion">Comunicación</label>
+              <input class="edit-control" id="acc-fecha-comunicacion" type="datetime-local" name="fecha_comunicacion" value="<?= h((string) ($accidenteBase['fecha_comunicacion'] ?? '')) ?>">
+            </div>
+            <div class="general-edit-card g-4">
+              <label for="acc-fecha-intervencion">Intervención</label>
+              <input class="edit-control" id="acc-fecha-intervencion" type="datetime-local" name="fecha_intervencion" value="<?= h((string) ($accidenteBase['fecha_intervencion'] ?? '')) ?>">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
           <h2 class="section-title">Autoridades</h2>
           <div class="general-edit-grid">
             <div class="general-edit-card g-4">
@@ -6519,14 +6585,20 @@ include __DIR__ . '/sidebar.php';
         <div class="section-block">
           <h2 class="section-title">Comunicación</h2>
           <div class="general-edit-grid">
-            <div class="general-edit-card g-4">
+            <div class="general-edit-card g-6">
               <label for="acc-comunicante">Comunicante</label>
               <input class="edit-control" id="acc-comunicante" type="text" name="comunicante_nombre" maxlength="120" value="<?= h((string) ($accidenteBase['comunicante_nombre'] ?? '')) ?>">
             </div>
-            <div class="general-edit-card g-4">
+            <div class="general-edit-card g-6">
               <label for="acc-comunicante-tel">Tel. comunicante</label>
               <input class="edit-control" id="acc-comunicante-tel" type="text" name="comunicante_telefono" maxlength="20" value="<?= h((string) ($accidenteBase['comunicante_telefono'] ?? '')) ?>">
             </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Carpeta Fiscal</h2>
+          <div class="general-edit-grid">
             <div class="general-edit-card g-4">
               <label for="acc-comunicacion-decreto">Decreto</label>
               <input class="edit-control" id="acc-comunicacion-decreto" type="text" name="comunicacion_decreto" maxlength="120" value="<?= h((string) ($accidenteBase['comunicacion_decreto'] ?? '')) ?>">
