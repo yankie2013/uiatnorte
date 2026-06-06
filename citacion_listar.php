@@ -20,6 +20,7 @@ $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 if ($accidenteId <= 0) {
     http_response_code(400);
     exit('Falta accidente_id');
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
             }
             $service->delete($id, $accidenteId);
         }
-        header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : ''));
+        header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : '') . ($returnTo !== '' ? '&return_to=' . urlencode($returnTo) : ''));
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -78,8 +79,8 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       <div class="small">Accidente ID: <?= (int) $accidenteId ?> · <?= count($rows) ?> registro(s)</div>
     </div>
     <div class="actions" style="margin:0;">
-      <?php if (!$embed): ?><a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">Volver al accidente</a><?php endif; ?>
-      <a class="btn primary" href="citacion_nuevo.php?accidente_id=<?= (int) $accidenteId ?>">Nueva citacion</a>
+      <?php if (!$embed): ?><a class="btn" href="<?= h($returnTo !== '' ? $returnTo : 'Dato_General_accidente.php?accidente_id=' . (int) $accidenteId) ?>">Volver al accidente</a><?php endif; ?>
+      <a class="btn primary" href="citacion_nuevo.php?accidente_id=<?= (int) $accidenteId ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . urlencode($returnTo) : '' ?>">Nueva citacion</a>
     </div>
   </div>
 
@@ -89,6 +90,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
     <form method="get" class="grid">
       <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
       <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+      <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>
       <div class="c3">
         <label class="small">Buscar</label>
         <input name="q" value="<?= h($filters['q']) ?>" placeholder="Nombre, documento, lugar, motivo">
@@ -103,7 +105,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       </div>
       <div class="c3" style="display:flex;align-items:end;gap:8px;">
         <button class="btn" type="submit">Filtrar</button>
-        <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?><?= $embed ? '&embed=1' : '' ?>">Limpiar</a>
+        <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . urlencode($returnTo) : '' ?>">Limpiar</a>
       </div>
     </form>
   </div>
@@ -183,6 +185,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                 <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
                   <input type="hidden" name="action" value="delete">
                   <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                  <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>
                   <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                   <button class="btn danger" type="submit">Eliminar</button>
                 </form>

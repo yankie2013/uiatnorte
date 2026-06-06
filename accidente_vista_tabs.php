@@ -5124,8 +5124,44 @@ include __DIR__ . '/sidebar.php';
   .title-wrap p{margin:0;color:var(--muted);font-size:11px}
   .top-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
-  .btn-shell.btn-nuevo{border-color:#0b9f98;background:linear-gradient(180deg,#0b8f8b 0%,#08a7a0 42%,#08cfc6 100%);box-shadow:0 0 0 1px rgba(11,159,152,.28),0 0 16px rgba(8,167,160,.24),0 8px 18px rgba(6,95,92,.18);color:#fff;font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;font-size:11.5px;letter-spacing:.02em;text-shadow:0 1px 0 rgba(0,0,0,.12)}
-  .btn-shell.btn-nuevo:hover{border-color:#087f79;background:linear-gradient(180deg,#087f79 0%,#09938d 42%,#06bbb3 100%);color:#fff;box-shadow:0 0 0 1px rgba(8,127,121,.34),0 0 18px rgba(8,167,160,.28),0 10px 20px rgba(6,95,92,.22)}
+  .btn-shell.btn-nuevo:not(.participant-create-btn){
+    gap:8px;
+    min-height:38px;
+    padding:8px 13px 8px 9px;
+    border-color:#0b9f98;
+    border-radius:12px;
+    background:linear-gradient(135deg,#087f76 0%,#0aa79a 55%,#22c7b6 100%);
+    box-shadow:0 9px 20px rgba(8,145,132,.20),0 0 0 1px rgba(15,159,145,.16);
+    color:#fff;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:0;
+    text-shadow:none;
+    transform:translateY(0);
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  }
+  .btn-shell.btn-nuevo:not(.participant-create-btn)::before{
+    content:"+";
+    display:grid;
+    place-items:center;
+    width:24px;
+    height:24px;
+    flex:0 0 24px;
+    border-radius:8px;
+    background:rgba(255,255,255,.22);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.30);
+    font-size:16px;
+    font-weight:800;
+    line-height:1;
+  }
+  .btn-shell.btn-nuevo:not(.participant-create-btn):hover{
+    transform:translateY(-2px);
+    border-color:#087f79;
+    background:linear-gradient(135deg,#076d66 0%,#088f85 55%,#14b8a6 100%);
+    color:#fff;
+    box-shadow:0 14px 26px rgba(8,127,121,.27),0 0 0 2px rgba(255,255,255,.28) inset;
+  }
   .btn-shell.btn-citacion{border-color:#60a5fa;background:linear-gradient(180deg,#f8fbff 0%,#edf5ff 100%);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 8px 18px rgba(59,130,246,.12);color:#1d4ed8}
   .btn-shell.btn-citacion:hover{border-color:#3b82f6;background:#e0efff;color:#1e40af}
   .btn-shell.btn-peritaje{border-color:#ff9f43;background:linear-gradient(180deg,#fffaf3 0%,#fff1df 100%);box-shadow:0 0 0 1px rgba(255,159,67,.24),0 0 14px rgba(255,140,0,.22),0 8px 18px rgba(255,140,0,.12);color:#c2410c}
@@ -5143,7 +5179,8 @@ include __DIR__ . '/sidebar.php';
   .section-block{margin-top:5px}
   [data-edit-view="general-accidente"]{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:start}
   [data-edit-view="general-accidente"] > .summary-stack{
-    grid-column:1 / span 8;
+    grid-column:1 / span 4;
+    grid-row:2;
     margin-bottom:0;
     padding:9px;
     border:1px solid #dbe4f2;
@@ -5162,22 +5199,32 @@ include __DIR__ . '/sidebar.php';
   [data-edit-view="general-accidente"] > .section-block{
     margin-top:0;
     padding:9px;
-    border:1px solid #dbe4f2;
+    border:2px solid #dbe4f2;
     border-radius:12px;
     background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(248,250,253,.95) 100%);
     box-shadow:0 5px 14px rgba(17,24,39,.045);
   }
-  [data-edit-view="general-accidente"] > .general-block-fechas{grid-column:9 / span 4}
-  [data-edit-view="general-accidente"] > .general-block-ident{grid-column:span 12}
-  [data-edit-view="general-accidente"] > .general-block-ubicacion{grid-column:span 12}
+  [data-edit-view="general-accidente"] > .general-block-fechas{grid-column:9 / span 4;grid-row:2}
+  [data-edit-view="general-accidente"] > .general-block-ident{grid-column:span 12;grid-row:1;order:-1}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion{grid-column:5 / span 4;grid-row:2}
   [data-edit-view="general-accidente"] > .general-block-autoridades{grid-column:span 4}
   [data-edit-view="general-accidente"] > .general-block-comunicacion{grid-column:span 4}
   [data-edit-view="general-accidente"] > .general-block-carpeta{grid-column:span 4}
   [data-edit-view="general-accidente"] > .general-block-descripcion{grid-column:span 12}
+  [data-edit-view="general-accidente"] > .summary-stack{border-width:2px;border-style:solid;border-color:#c4afe8;box-shadow:inset 4px 0 0 #b49add,0 6px 16px rgba(124,58,237,.09)}
+  [data-edit-view="general-accidente"] > .general-block-ident{border-color:#9fc6eb;box-shadow:inset 4px 0 0 #87b6e3,0 6px 16px rgba(37,99,235,.09)}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion{border-color:#95d2b4;box-shadow:inset 4px 0 0 #7bc59f,0 6px 16px rgba(22,163,74,.09)}
+  [data-edit-view="general-accidente"] > .general-block-fechas{border-color:#e3c278;box-shadow:inset 4px 0 0 #d8ad50,0 6px 16px rgba(217,119,6,.09)}
+  [data-edit-view="general-accidente"] > .general-block-autoridades{border-color:#adbce7;box-shadow:inset 4px 0 0 #96a8dc,0 6px 16px rgba(79,70,229,.08)}
+  [data-edit-view="general-accidente"] > .general-block-comunicacion{border-color:#9dcfd9;box-shadow:inset 4px 0 0 #83bdca,0 6px 16px rgba(8,145,178,.08)}
+  [data-edit-view="general-accidente"] > .general-block-carpeta{border-color:#d8acca;box-shadow:inset 4px 0 0 #ca91b8,0 6px 16px rgba(190,24,93,.075)}
+  [data-edit-view="general-accidente"] > .general-block-descripcion{border-color:#bdc5d2;box-shadow:inset 4px 0 0 #aab4c3,0 6px 16px rgba(71,85,105,.075)}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:1fr}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-card{display:grid;grid-template-columns:82px 8px 1fr;align-items:center;column-gap:3px}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-card strong{text-align:left}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-card .date-sep{color:#8b6a12;font-weight:900;text-align:center}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion .general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion .data-card{grid-column:span 1}
   [data-edit-view="general-accidente"] .data-card,
   [data-edit-view="general-accidente"] .line-card{
     background:#f5f7fb;
@@ -5208,7 +5255,55 @@ include __DIR__ . '/sidebar.php';
   .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:11.5px;font-weight:700;line-height:1.15;color:#314157}
   .line-card strong{color:#8b6a12}
   .tabs-shell{margin-top:10px}
+  .tabs-shell-main{display:flex;flex-direction:column}
+  .tabs-shell-main > .main-tabs{order:1}
+  .tabs-shell-main > .tab-content{order:2}
+  .tabs-shell-main > .general-tab-content{margin-top:0 !important}
   .tabs-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
+  .participant-primary-actions{gap:14px;padding:8px 4px 14px;margin-bottom:8px;border-bottom:1px solid rgba(188,198,216,.65)}
+  .btn-shell.participant-create-btn{
+    min-width:245px;
+    padding:12px 16px;
+    gap:11px;
+    border-width:1px;
+    border-radius:15px;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    text-shadow:none;
+    transform:translateY(0);
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  }
+  .participant-create-btn .participant-create-icon{
+    display:grid;
+    place-items:center;
+    flex:0 0 38px;
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    background:rgba(255,255,255,.22);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);
+    font-size:20px;
+  }
+  .participant-create-btn .participant-create-copy{display:grid;gap:2px;text-align:left}
+  .participant-create-btn .participant-create-title{font-size:14px;font-weight:850;letter-spacing:-.01em}
+  .participant-create-btn .participant-create-sub{font-size:10px;font-weight:700;letter-spacing:.02em;opacity:.82}
+  .btn-shell.participant-create-person{
+    border-color:#0f9f91;
+    background:linear-gradient(135deg,#087f76 0%,#0aa79a 54%,#22c7b6 100%);
+    color:#fff;
+    box-shadow:0 12px 24px rgba(8,145,132,.22),0 0 0 1px rgba(15,159,145,.18);
+  }
+  .btn-shell.participant-create-vehicle{
+    border-color:#3b82f6;
+    background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 54%,#60a5fa 100%);
+    color:#fff;
+    box-shadow:0 12px 24px rgba(37,99,235,.22),0 0 0 1px rgba(59,130,246,.18);
+  }
+  .btn-shell.participant-create-btn:hover{
+    transform:translateY(-2px);
+    color:#fff;
+    box-shadow:0 16px 30px rgba(17,24,39,.22),0 0 0 2px rgba(255,255,255,.36) inset;
+  }
+  .participant-primary-actions .btn-citacion{margin-left:4px;padding:10px 14px;border-radius:13px;font-size:12px}
   .tabs-header{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
   .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#4a5870;border-radius:10px;padding:7px 9px;font-weight:700;font-size:12px;line-height:1.1;white-space:nowrap}
   .tabs-header .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
@@ -5270,6 +5365,7 @@ include __DIR__ . '/sidebar.php';
     transform:scaleX(1);
   }
   .main-tabs .nav-link.tab-itp::before{background:linear-gradient(180deg,#0f766e 0%,#14b8a6 100%)}
+  .main-tabs .nav-link.tab-datos-generales::before{background:linear-gradient(180deg,#475569 0%,#94a3b8 100%)}
   .main-tabs .nav-link.tab-participantes::before{background:linear-gradient(180deg,#2563eb 0%,#60a5fa 100%)}
   .main-tabs .nav-link.tab-documentos::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
   .main-tabs .nav-link.tab-diligencias::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
@@ -5278,6 +5374,10 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-itp.active{
     background:linear-gradient(135deg,#f2fffc 0%,#dbfaf3 48%,#c8f4ec 100%);
     box-shadow:0 18px 38px rgba(20,184,166,.17), 0 0 0 1px rgba(255,255,255,.58) inset;
+  }
+  .main-tabs .nav-link.tab-datos-generales.active{
+    background:linear-gradient(135deg,#f8fafc 0%,#eef2f7 48%,#e2e8f0 100%);
+    box-shadow:0 18px 38px rgba(71,85,105,.16), 0 0 0 1px rgba(255,255,255,.58) inset;
   }
   .main-tabs .nav-link.tab-participantes.active{
     background:linear-gradient(135deg,#f5f9ff 0%,#e5f0ff 48%,#d8e8ff 100%);
@@ -5331,16 +5431,51 @@ include __DIR__ . '/sidebar.php';
   .tabs-header .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
   .tabs-header .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
   .tabs-header .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
-  .participant-tabs{margin-bottom:6px}
-  .participant-tabs .nav-link{border:1px solid var(--line);background:#eef2f8;color:#4a5870;border-radius:10px;padding:7px 9px;font-weight:700;font-size:12px;line-height:1.1;white-space:nowrap}
-  .participant-tabs .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
+  .participant-tabs{gap:10px;margin:0 0 10px;padding:4px 2px 10px;border-bottom:1px solid rgba(188,198,216,.65)}
+  .participant-tabs .nav-link{
+    position:relative;
+    overflow:hidden;
+    min-width:150px;
+    padding:11px 14px 10px 18px;
+    border:1px solid #d7dfec;
+    border-radius:15px;
+    background:linear-gradient(180deg,#fff 0%,#f1f5fb 100%);
+    color:#42526a;
+    box-shadow:0 8px 18px rgba(17,24,39,.07),inset 0 1px 0 rgba(255,255,255,.9);
+    font-weight:800;
+    font-size:12px;
+    line-height:1.12;
+    white-space:nowrap;
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease;
+  }
+  .participant-tabs .nav-link::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:5px;
+    border-radius:15px 0 0 15px;
+    background:linear-gradient(180deg,#64748b 0%,#94a3b8 100%);
+  }
+  .participant-tabs .nav-link:hover{transform:translateY(-2px);box-shadow:0 13px 24px rgba(17,24,39,.12)}
+  .participant-tabs .nav-link.active{transform:translateY(-2px);border-color:#9dbce8;background:linear-gradient(135deg,#f8fbff 0%,#e7f0ff 100%);color:#244d87;box-shadow:0 14px 28px rgba(37,99,235,.16),inset 0 0 0 1px rgba(255,255,255,.65)}
   .participant-tabs .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
   .participant-tabs .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
   .participant-tabs .nav-link.tab-herido{border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
   .participant-tabs .nav-link.tab-herido.active{background:linear-gradient(180deg,#fff1b8 0%,#ffe89a 100%);border-color:#e0ba36;color:#8a6500;box-shadow:0 0 0 1px rgba(224,186,54,.16) inset, 0 8px 18px rgba(224,186,54,.16)}
   .participant-tabs .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
   .participant-tabs .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
-  .participant-tabs .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
+  .participant-tabs .nav-link.tab-driver::before{background:linear-gradient(180deg,#059669 0%,#34d399 100%)}
+  .participant-tabs .nav-link.tab-herido::before{background:linear-gradient(180deg,#ca8a04 0%,#facc15 100%)}
+  .participant-tabs .nav-link.tab-occiso::before{background:linear-gradient(180deg,#dc2626 0%,#fb7185 100%)}
+  .participant-tabs .nav-link.tab-policial::before{background:linear-gradient(180deg,#0369a1 0%,#38bdf8 100%)}
+  .participant-tabs .nav-link.tab-propietario::before{background:linear-gradient(180deg,#4338ca 0%,#818cf8 100%)}
+  .participant-tabs .nav-link.tab-familiar::before{background:linear-gradient(180deg,#7e22ce 0%,#c084fc 100%)}
+  .participant-tabs .nav-link.tab-abogados::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
+  .participant-tabs .nav-link.tab-policial.active{border-color:#7dd3fc;background:linear-gradient(135deg,#f0f9ff 0%,#dbeafe 100%);color:#075985}
+  .participant-tabs .nav-link.tab-propietario.active{border-color:#a5b4fc;background:linear-gradient(135deg,#f5f3ff 0%,#e0e7ff 100%);color:#3730a3}
+  .participant-tabs .nav-link.tab-familiar.active{border-color:#d8b4fe;background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%);color:#7e22ce}
+  .participant-tabs .nav-link.tab-abogados.active{border-color:#f2cf72;background:linear-gradient(135deg,#fffaf0 0%,#ffefbd 100%);color:#805b08}
+  .participant-tabs .tab-sub{display:block;font-size:10px;font-weight:700;opacity:.72;margin-top:3px}
   .tab-panel{position:relative;overflow:hidden;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
   .tab-panel::before,.tab-panel::after{z-index:0}
   .tab-panel > *{position:relative;z-index:1}
@@ -5586,7 +5721,7 @@ include __DIR__ . '/sidebar.php';
   .module-toggle-btn[aria-expanded="true"]{background:#d6b44c;border-color:#d6b44c;color:#fff}
   .module-card-panel{margin-top:8px}
   .module-card-panel[hidden]{display:none}
-  .module-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .module-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:6px}
   .summary-sheet{display:grid;gap:10px}
   .summary-block-card{
     position:relative;
@@ -5743,11 +5878,52 @@ include __DIR__ . '/sidebar.php';
   .diligencias-ocr-status{min-height:20px;margin-top:8px;color:#64748b;font-size:12px;font-weight:700}
   .diligencias-ocr-text{width:100%;min-height:130px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#334155;font-size:12px;box-sizing:border-box}
   .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:700;font-size:12px}
-  .inner-tabs{display:flex;gap:5px;overflow:auto;padding-bottom:5px;margin:8px 0 6px}
-  .inner-tabs .nav-link{border:1px solid var(--line);background:#f4f7fb;color:#506078;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;line-height:1.05;white-space:nowrap}
-  .inner-tabs .nav-link.active{background:#fff7de;border-color:#e7c75c;color:#755811}
-  .inner-tabs .tab-mini{display:block;font-size:9px;font-weight:700;opacity:.72;margin-top:1px}
-  .inner-panel{border:1px solid var(--line);border-radius:13px;background:#fbfcfe;padding:8px}
+  .inner-tabs{display:flex;gap:8px;overflow:auto;padding:4px 2px 9px;margin:8px 0 7px;border-bottom:1px solid rgba(188,198,216,.58)}
+  .inner-tabs .nav-link{
+    position:relative;
+    overflow:hidden;
+    min-width:112px;
+    border:1px solid #d6dfec;
+    background:linear-gradient(180deg,#fff 0%,#f1f5fb 100%);
+    color:#506078;
+    border-radius:12px;
+    padding:8px 10px 7px 14px;
+    font-size:11px;
+    font-weight:800;
+    line-height:1.08;
+    white-space:nowrap;
+    box-shadow:0 6px 14px rgba(17,24,39,.06),inset 0 1px 0 rgba(255,255,255,.9);
+    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease;
+  }
+  .inner-tabs .nav-link::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:4px;
+    border-radius:12px 0 0 12px;
+    background:linear-gradient(180deg,#64748b 0%,#94a3b8 100%);
+  }
+  .inner-tabs .nav-link:hover{transform:translateY(-2px);border-color:#b8c9e2;box-shadow:0 10px 20px rgba(17,24,39,.10)}
+  .inner-tabs .nav-link.active{transform:translateY(-2px);background:linear-gradient(135deg,#f8fbff 0%,#e4efff 100%);border-color:#90b6e7;color:#24518c;box-shadow:0 12px 24px rgba(37,99,235,.14),inset 0 0 0 1px rgba(255,255,255,.65)}
+  .inner-tabs .nav-link[data-bs-target$="-persona"]::before{background:linear-gradient(180deg,#2563eb 0%,#60a5fa 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-participacion"]::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
+  .inner-tabs .nav-link[data-bs-target*="-vehiculo"]::before{background:linear-gradient(180deg,#d97706 0%,#fbbf24 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-lc"]::before{background:linear-gradient(180deg,#0891b2 0%,#22d3ee 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-rml"]::before{background:linear-gradient(180deg,#db2777 0%,#f472b6 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-dos"]::before{background:linear-gradient(180deg,#0f766e 0%,#2dd4bf 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-man"]::before{background:linear-gradient(180deg,#4f46e5 0%,#818cf8 100%)}
+  .inner-tabs .nav-link[data-bs-target$="-occ"]::before{background:linear-gradient(180deg,#dc2626 0%,#fb7185 100%)}
+  .inner-tabs .tab-mini{display:block;font-size:9px;font-weight:700;opacity:.70;margin-top:3px}
+  .inner-panel{
+    border:2px solid #b7cfea;
+    border-radius:15px;
+    background:linear-gradient(180deg,#fff 0%,#f9fbfe 100%);
+    padding:10px;
+    box-shadow:inset 4px 0 0 #8fb5df,0 8px 20px rgba(37,99,235,.07);
+  }
+  .tab-panel.driver-panel .inner-panel{border-color:#99dabe;box-shadow:inset 4px 0 0 #63c696,0 8px 20px rgba(5,150,105,.08)}
+  .tab-panel.herido-panel .inner-panel{border-color:#e8cf85;box-shadow:inset 4px 0 0 #d7ad38,0 8px 20px rgba(202,138,4,.08)}
+  .tab-panel.occiso-panel .inner-panel{border-color:#e7a5a5;box-shadow:inset 4px 0 0 #dc6b6b,0 8px 20px rgba(220,38,38,.08)}
   .record-stack{display:grid;gap:6px}
   .record-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:8px 9px}
   .record-card h5{margin:0 0 4px;font-size:12px;font-weight:800;line-height:1.2;color:#8b6a12}
@@ -5779,6 +5955,20 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(180deg,#0f1b33 0%,#13233f 100%);
     border-color:#3b82f6;
     color:#93c5fd;
+  }
+  html[data-theme-resolved="dark"] .btn-shell.btn-nuevo:not(.participant-create-btn){
+    border-color:#2dd4bf;
+    background:linear-gradient(135deg,#0f524b 0%,#087f76 55%,#0ea695 100%);
+    box-shadow:0 10px 22px rgba(2,6,23,.30),0 0 0 1px rgba(45,212,191,.18);
+  }
+  html[data-theme-resolved="dark"] .participant-primary-actions{border-bottom-color:#2a3852}
+  html[data-theme-resolved="dark"] .btn-shell.participant-create-person{
+    border-color:#2dd4bf;
+    background:linear-gradient(135deg,#0f524b 0%,#087f76 54%,#0ea695 100%);
+  }
+  html[data-theme-resolved="dark"] .btn-shell.participant-create-vehicle{
+    border-color:#60a5fa;
+    background:linear-gradient(135deg,#173f91 0%,#1d4ed8 54%,#2563eb 100%);
   }
   html[data-theme-resolved="dark"] .btn-shell.danger{
     background:linear-gradient(180deg,#37151c 0%,#45171f 100%);
@@ -5824,6 +6014,14 @@ include __DIR__ . '/sidebar.php';
     border-color:#2f3d56;
     box-shadow:0 8px 18px rgba(2,6,23,.24);
   }
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .summary-stack{border-color:#7966a1;box-shadow:inset 4px 0 0 #8b72bb,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-ident{border-color:#4778a9;box-shadow:inset 4px 0 0 #5590c8,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-ubicacion{border-color:#427c61;box-shadow:inset 4px 0 0 #4d9673,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-fechas{border-color:#8a713f;box-shadow:inset 4px 0 0 #a48647,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-autoridades{border-color:#5c6997;box-shadow:inset 4px 0 0 #6f7db0,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-comunicacion{border-color:#417986;box-shadow:inset 4px 0 0 #4c929f,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-carpeta{border-color:#865d76;box-shadow:inset 4px 0 0 #a06d8d,0 8px 18px rgba(2,6,23,.24)}
+  html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .general-block-descripcion{border-color:#59677b;box-shadow:inset 4px 0 0 #6b7a91,0 8px 18px rgba(2,6,23,.24)}
   html[data-theme-resolved="dark"] .summary-pill,
   html[data-theme-resolved="dark"] .data-card,
   html[data-theme-resolved="dark"] .line-card,
@@ -5887,6 +6085,27 @@ include __DIR__ . '/sidebar.php';
     color:#fff2bf;
     box-shadow:0 10px 22px rgba(240,198,84,.14), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
+  html[data-theme-resolved="dark"] .inner-tabs{border-bottom-color:#2a3852}
+  html[data-theme-resolved="dark"] .inner-tabs .nav-link{
+    background:linear-gradient(180deg,#17243b 0%,#111b30 100%);
+    border-color:#344763;
+    color:#c8d5e8;
+    box-shadow:0 8px 18px rgba(2,6,23,.24),inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  html[data-theme-resolved="dark"] .inner-tabs .nav-link.active{
+    background:linear-gradient(135deg,#18345a 0%,#214c80 100%);
+    border-color:#60a5fa;
+    color:#eff6ff;
+    box-shadow:0 12px 24px rgba(2,6,23,.34),inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+  html[data-theme-resolved="dark"] .inner-panel{
+    background:linear-gradient(180deg,#111b30 0%,#0f192b 100%);
+    border-color:#49698d;
+    box-shadow:inset 4px 0 0 #4d78a8,0 10px 24px rgba(2,6,23,.28);
+  }
+  html[data-theme-resolved="dark"] .tab-panel.driver-panel .inner-panel{border-color:#3f8064;box-shadow:inset 4px 0 0 #4b9c76,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.herido-panel .inner-panel{border-color:#88713d;box-shadow:inset 4px 0 0 #a48647,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.occiso-panel .inner-panel{border-color:#8b4b53;box-shadow:inset 4px 0 0 #aa5864,0 10px 24px rgba(2,6,23,.28)}
   html[data-theme-resolved="dark"] .tabs-header .nav-link.tab-driver.active,
   html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-driver.active{
     background:linear-gradient(180deg,#12342e 0%,#165247 100%);
@@ -5907,6 +6126,26 @@ include __DIR__ . '/sidebar.php';
     border-color:#f87171;
     color:#ffe2e2;
     box-shadow:0 10px 22px rgba(248,113,113,.16), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
+  html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-policial.active{
+    background:linear-gradient(135deg,#123b5a 0%,#15567d 100%);
+    border-color:#38bdf8;
+    color:#e0f2fe;
+  }
+  html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-propietario.active{
+    background:linear-gradient(135deg,#29265d 0%,#3d3a86 100%);
+    border-color:#818cf8;
+    color:#eef2ff;
+  }
+  html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-familiar.active{
+    background:linear-gradient(135deg,#42205e 0%,#642d8c 100%);
+    border-color:#c084fc;
+    color:#faf5ff;
+  }
+  html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-abogados.active{
+    background:linear-gradient(135deg,#4b3511 0%,#76551a 100%);
+    border-color:#f6c453;
+    color:#fff7d6;
   }
   html[data-theme-resolved="dark"] .main-tabs{
     border-bottom-color:#2a3852;
@@ -5930,6 +6169,11 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(135deg,#103b36 0%,#14554c 52%,#177265 100%);
     color:#e8fffb;
     box-shadow:0 18px 38px rgba(20,184,166,.18), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-datos-generales.active{
+    background:linear-gradient(135deg,#273449 0%,#34445d 52%,#475b78 100%);
+    color:#f1f5f9;
+    box-shadow:0 18px 38px rgba(100,116,139,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-participantes.active{
     background:linear-gradient(135deg,#18335f 0%,#214982 52%,#2f68ad 100%);
@@ -6217,6 +6461,8 @@ include __DIR__ . '/sidebar.php';
     .g-3,.g-4,.g-6{grid-column:span 6}
     .ident-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     [data-edit-view="general-accidente"] > .summary-stack{grid-column:1 / -1}
+    [data-edit-view="general-accidente"] > .summary-stack,
+    [data-edit-view="general-accidente"] > .section-block{grid-row:auto}
     [data-edit-view="general-accidente"] > .section-block{grid-column:1 / -1 !important}
     [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9{grid-column:span 6}
@@ -6299,8 +6545,11 @@ include __DIR__ . '/sidebar.php';
     </div>
   </div>
 
-  <div class="panel">
-    <div class="general-edit-shell" data-edit-shell="general-accidente">
+  <div class="tabs-shell tabs-shell-main">
+    <div class="tab-content mt-2 general-tab-content">
+      <div class="tab-pane fade show active" id="datos-generales" role="tabpanel">
+        <div class="panel">
+          <div class="general-edit-shell" data-edit-shell="general-accidente">
       <div class="editable-toolbar">
         <div class="general-inline-note">Dato general del accidente</div>
         <div class="editable-actions">
@@ -6719,20 +6968,22 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
       </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="tabs-shell">
     <div class="tabs-header main-tabs nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php
         $mainTabs = [
-            ['id' => 'resumen-integral', 'label' => 'RESUMEN', 'count' => $summaryBlocksCount],
-            ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
+            ['id' => 'datos-generales', 'label' => 'Datos Generales', 'sub' => 'Accidente'],
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
+            ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
             ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
+            ['id' => 'resumen-integral', 'label' => 'RESUMEN', 'count' => $summaryBlocksCount],
         ];
       ?>
       <?php foreach ($mainTabs as $index => $tab): ?>
@@ -6744,7 +6995,7 @@ include __DIR__ . '/sidebar.php';
     </div>
 
     <div class="tab-content mt-2">
-      <div class="tab-pane fade show active" id="resumen-integral" role="tabpanel">
+      <div class="tab-pane fade" id="resumen-integral" role="tabpanel">
         <div class="tab-panel">
           <div class="summary-sheet">
             <article class="module-card summary-block-card summary-block-card--intervention">
@@ -7167,10 +7418,6 @@ include __DIR__ . '/sidebar.php';
           ?>
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="itp_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo ITP</a>
-            <a class="btn-shell" href="itp_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
-            <a class="btn-shell" href="word_informe_datos_generales.php?accidente_id=<?= (int) $accidente_id ?>" target="_blank" rel="noopener">Word datos generales</a>
-            <a class="btn-shell" href="word_informe_datos_generales_marcadores.php" target="_blank" rel="noopener">Word marcadores</a>
-            <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Datos generales SIDPOL</a>
           </div>
           <?php if (!$itps): ?>
             <div class="empty-state">No hay registros ITP para este accidente.</div>
@@ -7396,24 +7643,23 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade" id="participantes" role="tabpanel">
         <div class="tab-panel">
-          <div class="tabs-toolbar">
-            <a class="btn-shell" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo persona involucrada</a>
-            <a class="btn-shell" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo vehículo involucrado</a>
-            <a class="btn-shell btn-citacion js-inline-open" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame" data-title="Citaciones del accidente">Citaciones</a>
-          </div>
-          <div class="inline-workbench" id="participantes-workbench" hidden>
-            <div class="inline-head">
-              <strong id="participantes-workbench-title">Formulario</strong>
-              <button type="button" class="btn-shell js-inline-close" data-workbench="participantes-workbench" data-frame="participantes-workbench-frame">Cerrar</button>
-            </div>
-            <iframe class="inline-frame" id="participantes-workbench-frame" src="about:blank" loading="lazy"></iframe>
+          <div class="tabs-toolbar participant-primary-actions">
+            <a class="btn-shell participant-create-btn participant-create-person" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>">
+              <span class="participant-create-icon" aria-hidden="true">+</span>
+              <span class="participant-create-copy"><span class="participant-create-title">Nueva persona involucrada</span><span class="participant-create-sub">Registrar participante</span></span>
+            </a>
+            <a class="btn-shell participant-create-btn participant-create-vehicle" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>">
+              <span class="participant-create-icon" aria-hidden="true">+</span>
+              <span class="participant-create-copy"><span class="participant-create-title">Nuevo vehículo involucrado</span><span class="participant-create-sub">Registrar unidad participante</span></span>
+            </a>
+            <a class="btn-shell btn-citacion" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>">Citaciones</a>
           </div>
           <?php
             $participantFixedTabs = [
-                ['id' => 'efectivo-policial', 'label' => '👮 Efectivo policial', 'count' => count($policias)],
-                ['id' => 'propietario-vehiculo', 'label' => '🚗 Propietario vehículo', 'count' => count($propietarios)],
-                ['id' => 'familiar-fallecido', 'label' => '💀 Familiar fallecido', 'count' => count($familiares)],
-                ['id' => 'abogados', 'label' => '⚖️ Abogados', 'count' => count($abogados)],
+                ['id' => 'efectivo-policial', 'class' => 'tab-policial', 'label' => '👮 Efectivo policial', 'count' => count($policias)],
+                ['id' => 'propietario-vehiculo', 'class' => 'tab-propietario', 'label' => '🚗 Propietario vehículo', 'count' => count($propietarios)],
+                ['id' => 'familiar-fallecido', 'class' => 'tab-familiar', 'label' => '💀 Familiar fallecido', 'count' => count($familiares)],
+                ['id' => 'abogados', 'class' => 'tab-abogados', 'label' => '⚖️ Abogados', 'count' => count($abogados)],
             ];
             $occLevantamientoFields = [
                 'fecha_levantamiento', 'hora_levantamiento', ['key' => 'lugar_levantamiento', 'class' => 'span-2'],
@@ -7447,7 +7693,7 @@ include __DIR__ . '/sidebar.php';
               <?php $participantTabIndex++; ?>
             <?php endforeach; ?>
             <?php foreach ($participantFixedTabs as $tab): ?>
-              <button class="nav-link <?= $participantTabIndex === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
+              <button class="nav-link <?= h((string) ($tab['class'] ?? '')) ?> <?= $participantTabIndex === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
                 <?= h($tab['label']) ?>
                 <span class="tab-sub"><?= h((string) $tab['count']) ?> registro(s)</span>
               </button>
@@ -10455,7 +10701,11 @@ include __DIR__ . '/sidebar.php';
           }
         });
       });
-      const saved = localStorage.getItem(storageKey);
+      const requestedTab = nav.id === 'accTabs'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : '';
+      const requestedTarget = requestedTab ? '#' + requestedTab : '';
+      const saved = requestedTarget || localStorage.getItem(storageKey);
       if (saved) {
         const trigger = nav.querySelector('[data-bs-target="' + saved + '"]');
         if (trigger) {
@@ -11071,6 +11321,13 @@ include __DIR__ . '/sidebar.php';
       (scope || document).querySelectorAll('a.btn-shell, button.btn-shell').forEach((button) => {
         const text = (button.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
         if (text.startsWith('nuevo ') || text.startsWith('+ nuevo ') || text.startsWith('nueva ') || text.startsWith('+ nueva ')) {
+          if (!button.classList.contains('participant-create-btn')) {
+            Array.from(button.childNodes).some((node) => {
+              if (node.nodeType !== Node.TEXT_NODE || !/^\s*\+\s*/.test(node.textContent || '')) return false;
+              node.textContent = (node.textContent || '').replace(/^\s*\+\s*/, '');
+              return true;
+            });
+          }
           button.classList.add('btn-nuevo');
         }
       });

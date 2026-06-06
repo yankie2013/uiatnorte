@@ -19,6 +19,11 @@ if (!function_exists('h')) {
 $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+if ($returnTo === '') {
+    $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes';
+}
 if ($accidenteId <= 0) {
     http_response_code(400);
     exit('Falta accidente_id');
@@ -77,7 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $hoy = date('Y-m-d');
-include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    include __DIR__ . '/sidebar.php';
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -89,24 +96,26 @@ include __DIR__ . '/sidebar.php';
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--ok:#166534;--danger:#b91c1c}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--ok:#bbf7d0;--danger:#fecaca}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c3{grid-column:span 3}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin:10px 0}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.small{color:var(--muted);font-size:12px}.hstack{display:flex;align-items:center;gap:8px}label{font-weight:700;color:var(--muted);font-size:13px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}textarea{min-height:110px;resize:vertical}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}@media(max-width:820px){.c6,.c3{grid-column:span 12}}
+body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c3{grid-column:span 3}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin:10px 0}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.small{color:var(--muted);font-size:12px}.hstack{display:flex;align-items:center;gap:8px}label{font-weight:700;color:var(--muted);font-size:13px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}textarea{min-height:110px;resize:vertical}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}body.is-embed{background:transparent}.is-embed .wrap{max-width:none;margin:0;padding:12px}.is-embed h1{font-size:22px}.is-embed .card{padding:14px}@media(max-width:820px){.c6,.c3{grid-column:span 12}}
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <h1 style="margin:0 0 10px">Citación <span class="badge">Nueva</span></h1>
   <div class="small">Accidente ID: <?= (int) $accidenteId ?></div>
 
   <div class="actions">
-    <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">← Volver</a>
-    <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?>">Ver citaciones</a>
+    <a class="btn" href="<?= h($returnTo) ?>">← Volver a Participantes</a>
+    <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?>&return_to=<?= urlencode($returnTo) ?>">Ver citaciones</a>
     <button class="btn primary" type="submit" form="frmCitacion">Guardar citación</button>
   </div>
 
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
-  <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?><?php if ($newId): ?> - <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $newId ?>" target="_blank" rel="noopener">Descargar DOCX</a><?php endif; ?></div><?php endif; ?>
+  <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?><?php if ($newId): ?> - <a class="btn js-download-return" href="citacion_diligencia.php?citacion_id=<?= (int) $newId ?>" data-return-to="<?= h($returnTo) ?>">Descargar Word y volver a Participantes</a><?php endif; ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmCitacion">
+    <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <div class="grid">
       <div class="c12">
         <label>Persona a citar*</label>
@@ -204,8 +213,22 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
   const motivoOtro = document.getElementById('motivo_otro');
   const motivoFinal = document.getElementById('motivo_final');
   const btnMotivo = document.getElementById('btnMotivoOtro');
+  const downloadReturn = document.querySelector('.js-download-return');
   let usandoLugarCustom = false;
   let usandoMotivoCustom = false;
+
+  if (downloadReturn) {
+    downloadReturn.addEventListener('click', (event) => {
+      event.preventDefault();
+      const downloadFrame = document.createElement('iframe');
+      downloadFrame.hidden = true;
+      downloadFrame.src = downloadReturn.href;
+      document.body.appendChild(downloadFrame);
+      window.setTimeout(() => {
+        window.location.href = downloadReturn.dataset.returnTo;
+      }, 900);
+    });
+  }
 
   function initPreset(select, other, hidden, toggleBtn, setFlag) {
     const preset = (hidden.value || '').trim();
