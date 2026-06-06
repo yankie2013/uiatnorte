@@ -134,11 +134,11 @@ select[multiple] { min-height: 140px; }
     <?php endif; ?>
 
     <form method="post" novalidate>
-      <label for="tipo_diligencia_id">Tipo de diligencia *</label>
+      <label for="tipo_diligencia_id">Tipo de diligencia</label>
       <div class="row">
         <div class="grow">
-          <select id="tipo_diligencia_id" name="tipo_diligencia_id" class="input" required>
-            <option value="">Selecciona un tipo</option>
+          <select id="tipo_diligencia_id" name="tipo_diligencia_id" class="input">
+            <option value="">Sin tipo por ahora</option>
             <?php foreach ($ctx['tipos'] as $tipo): ?>
               <?php $label = $tipo['nombre'] . (!empty($tipo['descripcion']) ? (' - ' . mb_strimwidth((string) $tipo['descripcion'], 0, 120, '...')) : ''); ?>
               <option value="<?= h($tipo['id']) ?>" <?= (string) $data['tipo_diligencia_id'] === (string) $tipo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>

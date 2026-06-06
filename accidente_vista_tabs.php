@@ -3326,6 +3326,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'bulk_create_diligencias_ocr') {
+        try {
+            $accidenteId = (int) ($_POST['accidente_id'] ?? 0);
+            if ($accidenteId <= 0) {
+                throw new InvalidArgumentException('Accidente no encontrado.');
+            }
+
+            $items = $_POST['items'] ?? [];
+            if (!is_array($items)) {
+                $items = [];
+            }
+
+            $contents = [];
+            foreach ($items as $item) {
+                $text = trim((string) $item);
+                if ($text !== '') {
+                    $contents[] = $text;
+                }
+            }
+            $contents = array_values(array_unique($contents));
+            if ($contents === []) {
+                throw new InvalidArgumentException('No se detectaron diligencias para registrar.');
+            }
+
+            $diligenciaService = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
+            $created = [];
+            $pdo->beginTransaction();
+            foreach ($contents as $contenido) {
+                $created[] = $diligenciaService->crear([
+                    'accidente_id' => $accidenteId,
+                    'tipo_diligencia_id' => '',
+                    'contenido' => $contenido,
+                    'estado' => 'Pendiente',
+                    'oficio_id' => '',
+                    'citacion_id' => [],
+                    'documento_realizado' => '',
+                    'documentos_recibidos' => '',
+                ]);
+            }
+            $pdo->commit();
+
+            json_response([
+                'ok' => true,
+                'created' => count($created),
+                'message' => count($created) === 1 ? '1 diligencia creada correctamente.' : count($created) . ' diligencias creadas correctamente.',
+            ]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            json_response(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
     if ($action === 'save_diligencia_estado_inline') {
         try {
             $diligenciaId = (int) ($_POST['diligencia_id'] ?? 0);
@@ -5678,6 +5732,16 @@ include __DIR__ . '/sidebar.php';
   .diligencia-inline-box{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:#fff}
   .diligencia-inline-box strong{display:block;margin:0 0 3px;color:#8b6a12;font-size:9px;line-height:1.15;text-transform:uppercase;letter-spacing:.05em}
   .diligencia-inline-box div{font-size:12px;font-weight:700;color:#2d3c52;line-height:1.35}
+  .diligencias-ocr-panel{margin:0 0 10px}
+  .diligencias-ocr-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px;box-shadow:0 10px 24px rgba(17,24,39,.08)}
+  .diligencias-ocr-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+  .diligencias-ocr-head strong{display:block;color:#24344d;font-size:13px}
+  .diligencias-ocr-head p{margin:3px 0 0;color:#6a7688;font-size:11px;font-weight:700}
+  .diligencias-ocr-paste{margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:12px;background:#f7faff;color:#64748b;font-size:12px;font-weight:700}
+  .diligencias-ocr-preview{margin-top:10px}
+  .diligencias-ocr-preview img{display:block;width:100%;max-height:220px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .diligencias-ocr-status{min-height:20px;margin-top:8px;color:#64748b;font-size:12px;font-weight:700}
+  .diligencias-ocr-text{width:100%;min-height:130px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#334155;font-size:12px;box-sizing:border-box}
   .empty-state{padding:18px 12px;text-align:center;color:var(--muted);font-weight:700;font-size:12px}
   .inner-tabs{display:flex;gap:5px;overflow:auto;padding-bottom:5px;margin:8px 0 6px}
   .inner-tabs .nav-link{border:1px solid var(--line);background:#f4f7fb;color:#506078;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;line-height:1.05;white-space:nowrap}
@@ -8697,8 +8761,25 @@ include __DIR__ . '/sidebar.php';
       <div class="tab-pane fade" id="diligencias-pendientes" role="tabpanel">
         <div class="tab-panel">
           <div class="module-actions" style="margin-bottom:8px;">
+            <button type="button" class="btn-shell btn-primary js-diligencias-ocr-open" data-accidente-id="<?= (int) $accidente_id ?>">Subir lista por imagen</button>
             <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
             <a class="btn-shell" href="diligenciapendiente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
+          </div>
+          <div class="diligencias-ocr-panel" id="diligencias-ocr-panel" hidden>
+            <div class="diligencias-ocr-card">
+              <div class="diligencias-ocr-head">
+                <div>
+                  <strong>Cargar diligencias desde imagen</strong>
+                  <p>Sube o pega una lista numerada. Se creara una diligencia pendiente por cada item detectado.</p>
+                </div>
+                <button type="button" class="btn-shell js-diligencias-ocr-close">Cerrar</button>
+              </div>
+              <input type="file" class="js-diligencias-ocr-file" accept="image/png,image/jpeg,image/jpg,image/webp">
+              <div class="diligencias-ocr-paste js-diligencias-ocr-paste" tabindex="0">Pega aqui una imagen con Ctrl+V o Cmd+V</div>
+              <div class="diligencias-ocr-preview" hidden><img class="js-diligencias-ocr-preview" alt="Vista previa OCR"></div>
+              <div class="diligencias-ocr-status js-diligencias-ocr-status">Sube o pega la imagen para crear las diligencias.</div>
+              <textarea class="diligencias-ocr-text js-diligencias-ocr-text" readonly hidden></textarea>
+            </div>
           </div>
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="diligencias-tabs" role="tablist">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#diligencias-todos" type="button" role="tab">
@@ -10575,6 +10656,193 @@ include __DIR__ . '/sidebar.php';
           select.disabled = false;
         }
       });
+    });
+
+    document.querySelectorAll('.js-diligencias-ocr-open').forEach((button) => {
+      const panel = document.getElementById('diligencias-ocr-panel');
+      if (!panel) return;
+
+      const accidenteId = String(button.dataset.accidenteId || '0');
+      const closeBtn = panel.querySelector('.js-diligencias-ocr-close');
+      const fileInput = panel.querySelector('.js-diligencias-ocr-file');
+      const pasteZone = panel.querySelector('.js-diligencias-ocr-paste');
+      const statusBox = panel.querySelector('.js-diligencias-ocr-status');
+      const preview = panel.querySelector('.js-diligencias-ocr-preview');
+      const previewWrap = preview ? preview.closest('.diligencias-ocr-preview') : null;
+      const textBox = panel.querySelector('.js-diligencias-ocr-text');
+      let busy = false;
+
+      const setStatus = (message, ok = null) => {
+        if (!statusBox) return;
+        statusBox.textContent = message || '';
+        statusBox.style.color = ok === true ? '#157347' : ok === false ? '#b42318' : '';
+      };
+
+      const showPreview = (file) => {
+        if (!preview || !previewWrap) return;
+        if (!file) {
+          preview.removeAttribute('src');
+          previewWrap.hidden = true;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          preview.src = String(reader.result || '');
+          previewWrap.hidden = false;
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const clipboardImage = (event) => {
+        const items = event.clipboardData?.items || [];
+        for (const item of items) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) return file;
+          }
+        }
+        return null;
+      };
+
+      const ensureTesseractLoaded = async () => {
+        if (window.Tesseract) return window.Tesseract;
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('No se pudo cargar el motor OCR.'));
+          document.head.appendChild(script);
+        });
+        if (!window.Tesseract) throw new Error('El motor OCR no quedo disponible.');
+        return window.Tesseract;
+      };
+
+      const normalizeOcrText = (text) => String(text || '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/\u00a0/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+      const splitDiligencias = (text) => {
+        const normalized = normalizeOcrText(text)
+          .replace(/(?:^|\n)\s*([0-9]{1,3}|[A-Za-z])\s*[\).\:-]\s+/g, '\n@@ITEM@@ ')
+          .replace(/\s+([0-9]{1,3})\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ')
+          .replace(/\s+([A-Za-z])\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ');
+        let items = normalized
+          .split(/\n@@ITEM@@\s*/)
+          .map((item) => item.replace(/^@@ITEM@@\s*/, '').replace(/\s+/g, ' ').trim())
+          .filter(Boolean);
+        if (!items.length && normalized !== '') {
+          items = normalized.split(/\r?\n+/).map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean);
+        }
+        return items
+          .map((item) => item.replace(/^[0-9]{1,3}\s*[\).\:-]\s*/, '').replace(/^[A-Za-z]\s*[\).\:-]\s*/, '').trim())
+          .filter(Boolean);
+      };
+
+      const saveItems = async (items) => {
+        const formData = new FormData();
+        formData.append('action', 'bulk_create_diligencias_ocr');
+        formData.append('accidente_id', accidenteId);
+        items.forEach((item) => formData.append('items[]', item));
+
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (error) {
+          data = null;
+        }
+
+        if (!response.ok || !data || !data.ok) {
+          throw new Error((data && data.message) ? data.message : 'No se pudieron crear las diligencias.');
+        }
+
+        return data;
+      };
+
+      const processFile = async (file, label) => {
+        if (!file || busy) return;
+        busy = true;
+        if (fileInput) fileInput.disabled = true;
+        if (textBox) {
+          textBox.hidden = true;
+          textBox.value = '';
+        }
+        showPreview(file);
+
+        try {
+          setStatus(`${label}. Leyendo imagen...`);
+          const Tesseract = await ensureTesseractLoaded();
+          const result = await Tesseract.recognize(file, 'spa', {
+            logger: (message) => {
+              if (!message.status) return;
+              const progress = typeof message.progress === 'number' ? ` ${Math.round(message.progress * 100)}%` : '';
+              setStatus(`${message.status}${progress}`);
+            }
+          });
+          const items = splitDiligencias(result?.data?.text || '');
+          if (!items.length) {
+            throw new Error('No se detectaron diligencias separadas por numero o letra.');
+          }
+          if (textBox) {
+            textBox.value = items.map((item, index) => `${index + 1}. ${item}`).join('\n\n');
+            textBox.hidden = false;
+          }
+          setStatus(`Se detectaron ${items.length} diligencias. Guardando...`);
+          const saved = await saveItems(items);
+          setStatus(saved.message || 'Diligencias creadas correctamente.', true);
+          setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : 'No se pudo procesar la imagen.', false);
+          busy = false;
+          if (fileInput) fileInput.disabled = false;
+        }
+      };
+
+      button.addEventListener('click', () => {
+        panel.hidden = false;
+        if (fileInput) fileInput.value = '';
+        if (textBox) {
+          textBox.hidden = true;
+          textBox.value = '';
+        }
+        showPreview(null);
+        setStatus('Sube o pega la imagen para crear las diligencias.');
+        setTimeout(() => pasteZone && pasteZone.focus(), 0);
+      });
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          if (busy) return;
+          panel.hidden = true;
+        });
+      }
+      if (fileInput) {
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (file) processFile(file, 'Imagen subida');
+        });
+      }
+      if (pasteZone) {
+        pasteZone.addEventListener('paste', (event) => {
+          const file = clipboardImage(event);
+          if (!file) return;
+          event.preventDefault();
+          if (fileInput) fileInput.value = '';
+          processFile(file, 'Imagen pegada');
+        });
+      }
     });
 
     document.querySelectorAll('.js-quick-diligencia-status').forEach((select) => {

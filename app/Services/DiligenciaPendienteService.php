@@ -126,8 +126,14 @@ final class DiligenciaPendienteService
         $errors = [];
 
         $accidenteId = (int) ($input['accidente_id'] ?? 0);
-        $tipoId = (int) ($input['tipo_diligencia_id'] ?? 0);
         $contenido = trim((string) ($input['contenido'] ?? ''));
+        $tipoId = (int) ($input['tipo_diligencia_id'] ?? 0);
+        if ($tipoId <= 0 && $contenido !== '') {
+            $inferredTipo = $this->inferTipoFromContenido($contenido);
+            if ($inferredTipo !== null) {
+                $tipoId = (int) $inferredTipo['id'];
+            }
+        }
         $estado = trim((string) ($input['estado'] ?? 'Pendiente'));
         $oficioId = (int) ($input['oficio_id'] ?? 0);
         $documentoRealizado = trim((string) ($input['documento_realizado'] ?? ''));
@@ -136,9 +142,6 @@ final class DiligenciaPendienteService
 
         if ($requireAccidente && $accidenteId <= 0) {
             $errors[] = 'No se indicó el accidente asociado.';
-        }
-        if ($tipoId <= 0) {
-            $errors[] = 'Debes seleccionar el tipo de diligencia.';
         }
         if (!in_array($estado, self::ESTADOS, true)) {
             $errors[] = 'Estado inválido.';
@@ -164,7 +167,7 @@ final class DiligenciaPendienteService
 
         return [[
             'accidente_id' => $accidenteId > 0 ? $accidenteId : null,
-            'tipo_diligencia_id' => $tipoId,
+            'tipo_diligencia_id' => $tipoId > 0 ? $tipoId : null,
             'tipo_diligencia' => $tipoNombre,
             'contenido' => $contenido !== '' ? $contenido : null,
             'estado' => $estado,
@@ -173,6 +176,82 @@ final class DiligenciaPendienteService
             'documento_realizado' => $documentoRealizado !== '' ? $documentoRealizado : null,
             'documentos_recibidos' => $documentosRecibidos !== '' ? $documentosRecibidos : null,
         ], $citacionIds];
+    }
+
+    private function inferTipoFromContenido(string $contenido): ?array
+    {
+        $text = $this->normalizeForMatch($contenido);
+        if ($text === '') {
+            return null;
+        }
+
+        $tipos = $this->repository->tipoOptions();
+        $best = null;
+        $bestScore = 0;
+
+        foreach ($tipos as $tipo) {
+            $name = $this->normalizeForMatch((string) ($tipo['nombre'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $score = 0;
+            foreach (preg_split('/\s+/', $name) ?: [] as $token) {
+                if (mb_strlen($token) >= 4 && str_contains($text, $token)) {
+                    $score += 2;
+                }
+            }
+
+            $score += $this->keywordScore($name, $text);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $tipo;
+            }
+        }
+
+        return $bestScore >= 3 ? $best : null;
+    }
+
+    private function keywordScore(string $tipoNombre, string $text): int
+    {
+        $rules = [
+            'protocolo de necropsia' => ['necropsia', 'morgue', 'cadaver', 'occiso', 'protocolo'],
+            'peritaje de constatacion de danos' => ['peritaje', 'constatacion', 'danos', 'vehiculo'],
+            'camaras de video' => ['camara', 'camaras', 'video vigilancia', 'vigilancia publica', 'vigilancia privada', 'recabado los videos'],
+            'manifestacion' => ['declaracion testimonial', 'declaracion', 'manifestacion', 'testigo', 'testigos'],
+            'informe policial' => ['informe policial', 'resultado de investigacion'],
+            'identificacion de cadaver' => ['identifiquese', 'identificacion', 'identifiquese plenamente', 'occiso', 'cadaver'],
+            'resultado de dosaje etilico' => ['dosaje', 'etilico', 'alcoholemia'],
+            'inspeccion tecnico policial' => ['inspeccion tecnico policial', 'inspeccion', 'lugar de los hechos'],
+            'visualizacion de video' => ['visualizacion', 'transcripcion', 'videos', 'camara de video vigilancia'],
+            'croquis demostrativo' => ['croquis', 'demostrativo'],
+            'oficio solicitar' => ['solicitar', 'oficio solicitar'],
+            'oficio remitir' => ['remitir', 'oficio remitir'],
+        ];
+
+        $score = 0;
+        foreach ($rules as $typeNeedle => $needles) {
+            if (!str_contains($tipoNombre, $typeNeedle)) {
+                continue;
+            }
+            foreach ($needles as $needle) {
+                if (str_contains($text, $needle)) {
+                    $score += str_contains($needle, ' ') ? 4 : 2;
+                }
+            }
+        }
+
+        return $score;
+    }
+
+    private function normalizeForMatch(string $value): string
+    {
+        $value = mb_strtolower(trim($value), 'UTF-8');
+        $from = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'];
+        $to = ['a', 'e', 'i', 'o', 'u', 'u', 'n'];
+        $value = str_replace($from, $to, $value);
+        $value = preg_replace('/[^a-z0-9\s]/u', ' ', $value) ?: '';
+        return preg_replace('/\s+/', ' ', $value) ?: '';
     }
 
     private function sanitizeCitacionIds(mixed $value): array

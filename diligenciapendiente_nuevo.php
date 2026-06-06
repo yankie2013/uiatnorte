@@ -19,6 +19,7 @@ $service = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo
 $errors = [];
 $success = '';
 $createdId = 0;
+$createdIds = [];
 
 $accidenteId = 0;
 if (isset($_REQUEST['accidente_id']) && $_REQUEST['accidente_id'] !== '') {
@@ -31,6 +32,17 @@ $data = $service->defaultData();
 $data['accidente_id'] = $accidenteId > 0 ? $accidenteId : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $bulkItems = [];
+    if (isset($_POST['diligencias_bulk']) && is_array($_POST['diligencias_bulk'])) {
+        foreach ($_POST['diligencias_bulk'] as $item) {
+            $text = trim((string) $item);
+            if ($text !== '') {
+                $bulkItems[] = $text;
+            }
+        }
+        $bulkItems = array_values(array_unique($bulkItems));
+    }
+
     $data = [
         'accidente_id' => $_POST['accidente_id'] ?? '',
         'tipo_diligencia_id' => $_POST['tipo_diligencia_id'] ?? '',
@@ -43,11 +55,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     try {
-        $createdId = $service->crear($data);
-        $success = 'Diligencia creada correctamente.';
+        if ($bulkItems !== []) {
+            $pdo->beginTransaction();
+            foreach ($bulkItems as $contenido) {
+                $itemData = $data;
+                $itemData['contenido'] = $contenido;
+                $createdIds[] = $service->crear($itemData);
+            }
+            $pdo->commit();
+            $success = count($createdIds) === 1
+                ? 'Diligencia creada correctamente.'
+                : count($createdIds) . ' diligencias creadas correctamente.';
+            $createdId = (int) ($createdIds[0] ?? 0);
+        } else {
+            $createdId = $service->crear($data);
+            $createdIds = [$createdId];
+            $success = 'Diligencia creada correctamente.';
+        }
         $data = $service->defaultData();
         $data['accidente_id'] = (int) ($_POST['accidente_id'] ?? 0);
     } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $errors = preg_split('/\r?\n/', trim($e->getMessage())) ?: ['No se pudo crear la diligencia.'];
     }
 }
@@ -124,6 +154,22 @@ select[multiple] { min-height: 130px; }
 .inline-msg { margin-top: 12px; padding: 10px; border-radius: 10px; display: none; }
 .inline-msg.ok { display: block; background: var(--success-bg); color: var(--success); }
 .inline-msg.error { display: block; background: var(--danger-bg); color: var(--danger); }
+.ocr-toolbar { display: flex; justify-content: flex-end; margin-top: 8px; }
+.bulk-wrap { display: none; margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(29,78,216,.04); }
+.bulk-wrap.is-visible { display: block; }
+.bulk-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.bulk-title { font-weight: 700; }
+.bulk-list { display: flex; flex-direction: column; gap: 8px; }
+.bulk-row { display: flex; align-items: flex-start; gap: 8px; }
+.bulk-row textarea { min-height: 58px; }
+.bulk-row .remove { flex: 0 0 auto; padding: 9px 12px; }
+.modal.large { max-width: 760px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; overflow: hidden; }
+.modal-scroll { min-height: 0; overflow-y: auto; padding-right: 4px; }
+.paste-zone { margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px dashed var(--border); background: rgba(148,163,184,.10); }
+.ocr-preview-wrap { display: none; margin-top: 12px; }
+.ocr-preview-wrap img { display: block; width: 100%; max-width: 100%; max-height: 240px; border-radius: 12px; border: 1px solid var(--border); object-fit: contain; }
+.ocr-status { min-height: 18px; margin-top: 10px; font-size: .9rem; color: var(--muted); }
+#diligenciasOcrTextBox { min-height: 160px; }
 @media (max-width: 720px) { body { padding: 14px; } .row { flex-direction: column; align-items: stretch; } }
 </style>
 </head>
@@ -147,7 +193,11 @@ select[multiple] { min-height: 130px; }
     <?php if ($success !== ''): ?>
       <div class="alert success">
         <?= h($success) ?>
-        <?php if ($createdId > 0): ?>
+        <?php if (count($createdIds) > 1): ?>
+          <div style="margin-top:8px;">
+            <a class="btn ghost" href="diligenciapendiente_listar.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : '' ?>">Ver diligencias creadas</a>
+          </div>
+        <?php elseif ($createdId > 0): ?>
           <div style="margin-top:8px;">
             <a class="btn ghost" href="diligenciapendiente_ver.php?id=<?= h($createdId) ?>">Ver diligencia #<?= h($createdId) ?></a>
           </div>
@@ -158,11 +208,11 @@ select[multiple] { min-height: 130px; }
     <form method="post" novalidate>
       <input type="hidden" name="accidente_id" value="<?= h($data['accidente_id']) ?>">
 
-      <label for="tipo_diligencia_id">Tipo de diligencia *</label>
+      <label for="tipo_diligencia_id">Tipo de diligencia</label>
       <div class="row">
         <div class="grow">
-          <select id="tipo_diligencia_id" name="tipo_diligencia_id" class="input" required>
-            <option value="">Selecciona un tipo</option>
+          <select id="tipo_diligencia_id" name="tipo_diligencia_id" class="input">
+            <option value="">Sin tipo por ahora</option>
             <?php foreach ($ctx['tipos'] as $tipo): ?>
               <?php $label = $tipo['nombre'] . (!empty($tipo['descripcion']) ? (' - ' . mb_strimwidth((string) $tipo['descripcion'], 0, 120, '...')) : ''); ?>
               <option value="<?= h($tipo['id']) ?>" <?= (string) $data['tipo_diligencia_id'] === (string) $tipo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
@@ -174,6 +224,20 @@ select[multiple] { min-height: 130px; }
 
       <label for="contenido">Contenido / observaciones</label>
       <textarea id="contenido" name="contenido" class="input"><?= h($data['contenido']) ?></textarea>
+      <div class="ocr-toolbar">
+        <button type="button" class="btn ghost" id="btn-open-diligencias-ocr">Subir/Pegar imagen con lista</button>
+      </div>
+      <div class="bulk-wrap" id="bulk-wrap">
+        <div class="bulk-head">
+          <div>
+            <div class="bulk-title">Diligencias detectadas</div>
+            <div class="help" id="bulk-count">0 diligencias listas para crear.</div>
+          </div>
+          <button type="button" class="btn ghost" id="btn-clear-bulk">Limpiar</button>
+        </div>
+        <div class="bulk-list" id="bulk-list"></div>
+        <div class="help">Al guardar, se creara una diligencia pendiente por cada item de esta lista usando el tipo seleccionado.</div>
+      </div>
 
       <label for="oficio_id">Oficio relacionado</label>
       <select id="oficio_id" name="oficio_id" class="input">
@@ -209,6 +273,27 @@ select[multiple] { min-height: 130px; }
   </div>
 </div>
 
+<div class="modal-backdrop" id="diligencias-ocr-backdrop" aria-hidden="true">
+  <div class="modal large" role="dialog" aria-modal="true" aria-labelledby="diligencias-ocr-title">
+    <h2 id="diligencias-ocr-title" style="margin-top:0;">Extraer diligencias desde imagen</h2>
+    <div class="modal-scroll">
+      <div class="help">Sube o pega una imagen con una lista numerada o por letras. Luego revisa el texto y aplica la separacion.</div>
+      <input type="file" id="diligenciasOcrImageInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-top:12px;">
+      <div class="paste-zone" id="diligenciasOcrPasteZone" tabindex="0">Pega aqui una imagen con Ctrl+V o Cmd+V</div>
+      <div class="ocr-preview-wrap" id="diligenciasOcrPreviewWrap">
+        <img id="diligenciasOcrPreview" alt="Vista previa OCR">
+      </div>
+      <div class="ocr-status" id="diligenciasOcrStatus"></div>
+      <textarea id="diligenciasOcrTextBox" class="input" rows="8" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="diligenciasOcrCancel">Cancelar</button>
+      <button type="button" class="btn ghost" id="diligenciasOcrProcess">Procesar imagen</button>
+      <button type="button" class="btn primary" id="diligenciasOcrApply" disabled>Aplicar lista</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <h2 id="modal-title" style="margin-top:0;">Nuevo tipo de diligencia</h2>
@@ -225,6 +310,244 @@ select[multiple] { min-height: 130px; }
 </div>
 
 <script>
+(function () {
+  const form = document.querySelector('form[method="post"]');
+  const contenido = document.getElementById('contenido');
+  const bulkWrap = document.getElementById('bulk-wrap');
+  const bulkList = document.getElementById('bulk-list');
+  const bulkCount = document.getElementById('bulk-count');
+  const clearBulkBtn = document.getElementById('btn-clear-bulk');
+  const openOcrBtn = document.getElementById('btn-open-diligencias-ocr');
+  const ocrBackdrop = document.getElementById('diligencias-ocr-backdrop');
+  const ocrImageInput = document.getElementById('diligenciasOcrImageInput');
+  const ocrPasteZone = document.getElementById('diligenciasOcrPasteZone');
+  const ocrPreviewWrap = document.getElementById('diligenciasOcrPreviewWrap');
+  const ocrPreview = document.getElementById('diligenciasOcrPreview');
+  const ocrStatus = document.getElementById('diligenciasOcrStatus');
+  const ocrTextBox = document.getElementById('diligenciasOcrTextBox');
+  const ocrCancel = document.getElementById('diligenciasOcrCancel');
+  const ocrProcess = document.getElementById('diligenciasOcrProcess');
+  const ocrApply = document.getElementById('diligenciasOcrApply');
+  let ocrClipboardFile = null;
+
+  function setOcrStatus(text, ok = null) {
+    ocrStatus.textContent = text || '';
+    ocrStatus.style.color = ok === true ? '#166534' : ok === false ? '#991b1b' : '';
+  }
+
+  function updateBulkState() {
+    const rows = Array.from(bulkList.querySelectorAll('textarea[name="diligencias_bulk[]"]'));
+    const total = rows.filter((item) => item.value.trim() !== '').length;
+    bulkWrap.classList.toggle('is-visible', rows.length > 0);
+    bulkCount.textContent = total === 1 ? '1 diligencia lista para crear.' : `${total} diligencias listas para crear.`;
+  }
+
+  function addBulkRow(value) {
+    const row = document.createElement('div');
+    row.className = 'bulk-row';
+    const textarea = document.createElement('textarea');
+    textarea.className = 'input';
+    textarea.name = 'diligencias_bulk[]';
+    textarea.value = value || '';
+    textarea.addEventListener('input', updateBulkState);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn ghost remove';
+    remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => {
+      row.remove();
+      updateBulkState();
+    });
+    row.appendChild(textarea);
+    row.appendChild(remove);
+    bulkList.appendChild(row);
+  }
+
+  function setBulkItems(items) {
+    bulkList.innerHTML = '';
+    items.forEach((item) => addBulkRow(item));
+    updateBulkState();
+  }
+
+  function clearBulkItems() {
+    bulkList.innerHTML = '';
+    updateBulkState();
+  }
+
+  function normalizeOcrText(text) {
+    return String(text || '')
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/\u00a0/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function splitDiligencias(text) {
+    const normalized = normalizeOcrText(text)
+      .replace(/(?:^|\n)\s*([0-9]{1,3}|[A-Za-z])\s*[\).\:-]\s+/g, '\n@@ITEM@@ ')
+      .replace(/\s+([0-9]{1,3})\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ')
+      .replace(/\s+([A-Za-z])\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ');
+    let items = normalized
+      .split(/\n@@ITEM@@\s*/)
+      .map((item) => item.replace(/^@@ITEM@@\s*/, '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    if (!items.length && normalized !== '') {
+      items = normalized.split(/\r?\n+/).map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    }
+    return items.map((item) => item.replace(/^[0-9]{1,3}\s*[\).\:-]\s*/, '').replace(/^[A-Za-z]\s*[\).\:-]\s*/, '').trim());
+  }
+
+  function openOcrModal() {
+    ocrClipboardFile = null;
+    ocrImageInput.value = '';
+    ocrTextBox.value = '';
+    ocrApply.disabled = true;
+    ocrPreviewWrap.style.display = 'none';
+    ocrPreview.removeAttribute('src');
+    setOcrStatus('Sube una imagen y luego procesa el OCR.');
+    ocrBackdrop.style.display = 'flex';
+    ocrBackdrop.setAttribute('aria-hidden', 'false');
+    setTimeout(() => ocrPasteZone.focus(), 0);
+  }
+
+  function closeOcrModal() {
+    ocrBackdrop.style.display = 'none';
+    ocrBackdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function loadOcrPreview(file) {
+    if (!file) {
+      ocrPreviewWrap.style.display = 'none';
+      ocrPreview.removeAttribute('src');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      ocrPreview.src = String(reader.result || '');
+      ocrPreviewWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function setOcrFile(file, label) {
+    ocrClipboardFile = file || null;
+    loadOcrPreview(file || null);
+    if (file) setOcrStatus(`${label} lista. Presiona "Procesar imagen".`);
+  }
+
+  function selectedOcrFile() {
+    return (ocrImageInput.files && ocrImageInput.files[0]) || ocrClipboardFile;
+  }
+
+  function clipboardImage(event) {
+    const items = event.clipboardData?.items || [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) return file;
+      }
+    }
+    return null;
+  }
+
+  async function ensureTesseractLoaded() {
+    if (window.Tesseract) return window.Tesseract;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('No se pudo cargar el motor OCR.'));
+      document.head.appendChild(script);
+    });
+    if (!window.Tesseract) throw new Error('El motor OCR no quedo disponible.');
+    return window.Tesseract;
+  }
+
+  clearBulkBtn.addEventListener('click', clearBulkItems);
+  openOcrBtn.addEventListener('click', openOcrModal);
+  ocrCancel.addEventListener('click', closeOcrModal);
+  ocrBackdrop.addEventListener('click', (event) => { if (event.target === ocrBackdrop) closeOcrModal(); });
+  ocrImageInput.addEventListener('change', () => {
+    const file = ocrImageInput.files && ocrImageInput.files[0];
+    if (!file) {
+      ocrClipboardFile = null;
+      loadOcrPreview(null);
+      return;
+    }
+    setOcrFile(file, 'Imagen subida');
+  });
+  ocrPasteZone.addEventListener('paste', (event) => {
+    const file = clipboardImage(event);
+    if (!file) return;
+    event.preventDefault();
+    ocrImageInput.value = '';
+    setOcrFile(file, 'Imagen pegada');
+  });
+  document.addEventListener('paste', (event) => {
+    if (ocrBackdrop.getAttribute('aria-hidden') !== 'false') return;
+    const tag = document.activeElement?.tagName || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const file = clipboardImage(event);
+    if (!file) return;
+    event.preventDefault();
+    ocrImageInput.value = '';
+    setOcrFile(file, 'Imagen pegada');
+  });
+  ocrProcess.addEventListener('click', async () => {
+    const file = selectedOcrFile();
+    if (!file) {
+      setOcrStatus('Selecciona o pega una imagen primero.', false);
+      return;
+    }
+    ocrProcess.disabled = true;
+    ocrApply.disabled = true;
+    ocrTextBox.value = '';
+    try {
+      const Tesseract = await ensureTesseractLoaded();
+      const result = await Tesseract.recognize(file, 'spa', {
+        logger: (message) => {
+          if (!message.status) return;
+          const progress = typeof message.progress === 'number' ? ` ${Math.round(message.progress * 100)}%` : '';
+          setOcrStatus(`${message.status}${progress}`);
+        }
+      });
+      const text = normalizeOcrText(result?.data?.text || '');
+      if (!text) throw new Error('No se pudo extraer texto de la imagen.');
+      ocrTextBox.value = text;
+      ocrApply.disabled = false;
+      setOcrStatus('Texto extraido. Revisa y aplica la lista.', true);
+    } catch (error) {
+      setOcrStatus(error.message || 'No se pudo procesar la imagen.', false);
+    } finally {
+      ocrProcess.disabled = false;
+    }
+  });
+  ocrTextBox.addEventListener('input', () => {
+    ocrApply.disabled = ocrTextBox.value.trim() === '';
+  });
+  ocrApply.addEventListener('click', () => {
+    const items = splitDiligencias(ocrTextBox.value);
+    if (!items.length) {
+      setOcrStatus('No se encontraron diligencias separadas por numero o letra.', false);
+      return;
+    }
+    setBulkItems(items);
+    if (contenido.value.trim() === '') {
+      contenido.value = items[0] || '';
+    }
+    closeOcrModal();
+  });
+  form.addEventListener('submit', () => {
+    Array.from(bulkList.querySelectorAll('textarea[name="diligencias_bulk[]"]')).forEach((item) => {
+      if (item.value.trim() === '') item.disabled = true;
+    });
+  });
+  updateBulkState();
+})();
+
 (function () {
   const backdrop = document.getElementById('modal-backdrop');
   const openBtn = document.getElementById('btn-new-tipo');
