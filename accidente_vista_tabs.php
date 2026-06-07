@@ -5173,6 +5173,38 @@ include __DIR__ . '/sidebar.php';
   .btn-shell.btn-docx{border-color:#a855f7;border-radius:8px;background:linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%);box-shadow:0 0 0 1px rgba(168,85,247,.34),0 0 16px rgba(168,85,247,.35),0 8px 18px rgba(109,40,217,.14);color:#6d28d9;text-shadow:0 0 10px rgba(168,85,247,.22)}
   .btn-shell.btn-docx:hover{border-color:#d946ef;background:linear-gradient(180deg,#f5d0fe 0%,#e9d5ff 100%);box-shadow:0 0 0 1px rgba(217,70,239,.44),0 0 22px rgba(217,70,239,.42),0 10px 22px rgba(109,40,217,.2);color:#581c87}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:6px 8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
+  .main-module-panel{
+    --module-accent:#2563eb;
+    --module-soft:#eef5ff;
+    --module-glow:rgba(37,99,235,.16);
+    border-color:color-mix(in srgb,var(--module-accent) 48%,#d7dfec) !important;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.97) 0%,color-mix(in srgb,var(--module-soft) 72%,#fff) 46%,rgba(255,255,255,.96) 100%) !important;
+    box-shadow:
+      0 16px 34px rgba(17,24,39,.08),
+      0 0 0 1px color-mix(in srgb,var(--module-accent) 14%,transparent) inset,
+      0 0 24px var(--module-glow) !important;
+  }
+  .main-module-panel::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height:4px;
+    border-radius:inherit;
+    background:linear-gradient(90deg,transparent 0%,var(--module-accent) 18%,color-mix(in srgb,var(--module-accent) 42%,#fff) 50%,var(--module-accent) 82%,transparent 100%);
+    opacity:.9;
+    pointer-events:none;
+  }
+  .panel.main-module-panel{position:relative;overflow:hidden}
+  .panel.main-module-panel > *{position:relative;z-index:1}
+  .main-panel-datos{--module-accent:#64748b;--module-soft:#eef2f7;--module-glow:rgba(100,116,139,.16)}
+  .main-panel-participantes{--module-accent:#3b82f6;--module-soft:#e5f0ff;--module-glow:rgba(59,130,246,.16)}
+  .main-panel-itp{--module-accent:#14b8a6;--module-soft:#dbfaf3;--module-glow:rgba(20,184,166,.17)}
+  .main-panel-documentos{--module-accent:#d6a130;--module-soft:#ffefc1;--module-glow:rgba(217,119,6,.18)}
+  .main-panel-diligencias{--module-accent:#8b5cf6;--module-soft:#f0e8ff;--module-glow:rgba(124,58,237,.16)}
+  .main-panel-analisis{--module-accent:#22c55e;--module-soft:#e0fbe8;--module-glow:rgba(34,197,94,.16)}
+  .main-panel-componentes{--module-accent:#0ea5e9;--module-soft:#e0f2fe;--module-glow:rgba(14,165,233,.16)}
+  .main-panel-resumen{--module-accent:#7c8fb8;--module-soft:#eef3ff;--module-glow:rgba(124,143,184,.16)}
   .summary-stack{display:grid;gap:4px;margin-bottom:5px}
   .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;line-height:1.18;color:#425166}
   .summary-pill strong{color:#8b6a12;display:inline-block;min-width:145px}
@@ -5307,12 +5339,13 @@ include __DIR__ . '/sidebar.php';
   .tabs-header{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
   .tabs-header .nav-link{border:1px solid var(--line);background:#eef2f8;color:#4a5870;border-radius:10px;padding:7px 9px;font-weight:700;font-size:12px;line-height:1.1;white-space:nowrap}
   .tabs-header .nav-link.active{background:linear-gradient(180deg,#fff5cf 0%,#ffe7a0 100%);border-color:#e7c75c;color:#6f5410}
-  .main-tabs{gap:10px;padding:8px 6px 10px;margin-bottom:8px;border-bottom:1px solid rgba(188,198,216,.7)}
+  .main-tabs{gap:10px;padding:8px 6px 12px;margin-bottom:8px;border-bottom:1px solid rgba(188,198,216,.7)}
   .main-tabs .nav-link{
+    --tab-accent:#2563eb;
     position:relative;
     overflow:hidden;
     min-width:140px;
-    border-radius:18px;
+    border-radius:14px;
     padding:13px 18px 12px;
     border:1px solid #d7dfec;
     background:
@@ -5328,23 +5361,28 @@ include __DIR__ . '/sidebar.php';
     position:absolute;
     inset:0 auto 0 0;
     width:5px;
-    border-radius:18px 0 0 18px;
-    background:linear-gradient(180deg,#7c93c6 0%,#516b9f 100%);
+    border-radius:14px 0 0 14px;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--tab-accent) 72%,#fff) 0%,var(--tab-accent) 100%);
     opacity:.72;
   }
   .main-tabs .nav-link::after{
     content:"";
     position:absolute;
-    inset:auto 16px 8px;
-    height:3px;
-    border-radius:999px;
-    background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.88) 50%,rgba(255,255,255,0) 100%);
+    left:18px;
+    right:18px;
+    bottom:6px;
+    height:4px;
+    border-radius:0 0 999px 999px;
+    background:
+      radial-gradient(circle at 50% 0,color-mix(in srgb,var(--tab-accent) 70%,#fff) 0 28%,transparent 30%),
+      linear-gradient(90deg,transparent 0%,var(--tab-accent) 18%,color-mix(in srgb,var(--tab-accent) 45%,#fff) 50%,var(--tab-accent) 82%,transparent 100%);
     opacity:0;
-    transform:scaleX(.55);
-    transition:opacity .18s ease, transform .18s ease;
+    transform:scaleX(.5) translateY(4px);
+    filter:drop-shadow(0 8px 10px color-mix(in srgb,var(--tab-accent) 34%,transparent));
+    transition:opacity .2s ease, transform .2s ease;
   }
   .main-tabs .nav-link:hover{
-    transform:translateY(-2px);
+    transform:translateY(-1px);
     border-color:#c5d2e5;
     color:#22344f;
     box-shadow:
@@ -5353,24 +5391,27 @@ include __DIR__ . '/sidebar.php';
   }
   .main-tabs .nav-link.active{
     color:#2c3b51;
-    border-color:transparent;
+    border-color:color-mix(in srgb,var(--tab-accent) 42%,#d7dfec);
     background:
       linear-gradient(135deg,rgba(255,255,255,.98) 0%,rgba(240,247,255,.96) 38%,rgba(230,241,255,.98) 100%);
     box-shadow:
-      0 18px 38px rgba(37,99,235,.14),
+      0 16px 32px color-mix(in srgb,var(--tab-accent) 18%,transparent),
+      0 5px 0 -2px color-mix(in srgb,var(--tab-accent) 64%,transparent),
       0 0 0 1px rgba(255,255,255,.55) inset;
   }
   .main-tabs .nav-link.active::after{
     opacity:1;
-    transform:scaleX(1);
+    transform:scaleX(1) translateY(0);
   }
-  .main-tabs .nav-link.tab-itp::before{background:linear-gradient(180deg,#0f766e 0%,#14b8a6 100%)}
-  .main-tabs .nav-link.tab-datos-generales::before{background:linear-gradient(180deg,#475569 0%,#94a3b8 100%)}
-  .main-tabs .nav-link.tab-participantes::before{background:linear-gradient(180deg,#2563eb 0%,#60a5fa 100%)}
-  .main-tabs .nav-link.tab-documentos::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
-  .main-tabs .nav-link.tab-diligencias::before{background:linear-gradient(180deg,#7c3aed 0%,#a78bfa 100%)}
-  .main-tabs .nav-link.tab-analisis::before{background:linear-gradient(180deg,#0f766e 0%,#22c55e 100%)}
-  .main-tabs .nav-link.tab-componentes-informe::before{background:linear-gradient(180deg,#0369a1 0%,#38bdf8 100%)}
+  .main-tabs .nav-link.tab-itp{--tab-accent:#14b8a6}
+  .main-tabs .nav-link.tab-datos-generales{--tab-accent:#64748b}
+  .main-tabs .nav-link.tab-participantes{--tab-accent:#3b82f6}
+  .main-tabs .nav-link.tab-documentos{--tab-accent:#d6a130}
+  .main-tabs .nav-link.tab-diligencias,
+  .main-tabs .nav-link.tab-diligencias-pendientes{--tab-accent:#8b5cf6}
+  .main-tabs .nav-link.tab-analisis{--tab-accent:#22c55e}
+  .main-tabs .nav-link.tab-componentes-informe{--tab-accent:#0ea5e9}
+  .main-tabs .nav-link.tab-resumen-integral{--tab-accent:#7c8fb8}
   .main-tabs .nav-link.tab-itp.active{
     background:linear-gradient(135deg,#f2fffc 0%,#dbfaf3 48%,#c8f4ec 100%);
     box-shadow:0 18px 38px rgba(20,184,166,.17), 0 0 0 1px rgba(255,255,255,.58) inset;
@@ -5387,7 +5428,8 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(135deg,#fffaf0 0%,#ffefc1 52%,#ffe39c 100%);
     box-shadow:0 18px 38px rgba(217,119,6,.18), 0 0 0 1px rgba(255,255,255,.52) inset;
   }
-  .main-tabs .nav-link.tab-diligencias.active{
+  .main-tabs .nav-link.tab-diligencias.active,
+  .main-tabs .nav-link.tab-diligencias-pendientes.active{
     background:linear-gradient(135deg,#faf5ff 0%,#f0e8ff 50%,#e5d8ff 100%);
     box-shadow:0 18px 38px rgba(124,58,237,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
   }
@@ -5398,6 +5440,10 @@ include __DIR__ . '/sidebar.php';
   .main-tabs .nav-link.tab-componentes-informe.active{
     background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#bae6fd 100%);
     box-shadow:0 18px 38px rgba(14,165,233,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
+  }
+  .main-tabs .nav-link.tab-resumen-integral.active{
+    background:linear-gradient(135deg,#f8fbff 0%,#eef3ff 50%,#dfe8ff 100%);
+    box-shadow:0 18px 38px rgba(124,143,184,.16), 0 0 0 1px rgba(255,255,255,.56) inset;
   }
   .main-tabs .main-tab-title{
     display:block;
@@ -5431,8 +5477,9 @@ include __DIR__ . '/sidebar.php';
   .tabs-header .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
   .tabs-header .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
   .tabs-header .tab-sub{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:1px}
-  .participant-tabs{gap:10px;margin:0 0 10px;padding:4px 2px 10px;border-bottom:1px solid rgba(188,198,216,.65)}
+  .participant-tabs{gap:10px;margin:0 0 10px;padding:4px 2px 12px;border-bottom:1px solid rgba(188,198,216,.65)}
   .participant-tabs .nav-link{
+    --tab-accent:#2563eb;
     position:relative;
     overflow:hidden;
     min-width:150px;
@@ -5454,23 +5501,37 @@ include __DIR__ . '/sidebar.php';
     inset:0 auto 0 0;
     width:5px;
     border-radius:15px 0 0 15px;
-    background:linear-gradient(180deg,#64748b 0%,#94a3b8 100%);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--tab-accent) 68%,#fff) 0%,var(--tab-accent) 100%);
+  }
+  .participant-tabs .nav-link::after{
+    content:"";
+    position:absolute;
+    left:16px;
+    right:16px;
+    bottom:5px;
+    height:4px;
+    border-radius:0 0 999px 999px;
+    background:
+      radial-gradient(circle at 50% 0,color-mix(in srgb,var(--tab-accent) 72%,#fff) 0 28%,transparent 30%),
+      linear-gradient(90deg,transparent 0%,var(--tab-accent) 16%,color-mix(in srgb,var(--tab-accent) 42%,#fff) 50%,var(--tab-accent) 84%,transparent 100%);
+    opacity:0;
+    transform:scaleX(.52) translateY(4px);
+    filter:drop-shadow(0 8px 10px color-mix(in srgb,var(--tab-accent) 32%,transparent));
+    transition:opacity .2s ease,transform .2s ease;
   }
   .participant-tabs .nav-link:hover{transform:translateY(-2px);box-shadow:0 13px 24px rgba(17,24,39,.12)}
-  .participant-tabs .nav-link.active{transform:translateY(-2px);border-color:#9dbce8;background:linear-gradient(135deg,#f8fbff 0%,#e7f0ff 100%);color:#244d87;box-shadow:0 14px 28px rgba(37,99,235,.16),inset 0 0 0 1px rgba(255,255,255,.65)}
-  .participant-tabs .nav-link.tab-driver{border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
+  .participant-tabs .nav-link.active{transform:translateY(-2px);border-color:color-mix(in srgb,var(--tab-accent) 46%,#d7dfec);background:linear-gradient(135deg,#f8fbff 0%,#e7f0ff 100%);color:#244d87;box-shadow:0 14px 28px color-mix(in srgb,var(--tab-accent) 18%,transparent),0 5px 0 -2px color-mix(in srgb,var(--tab-accent) 62%,transparent),inset 0 0 0 1px rgba(255,255,255,.65)}
+  .participant-tabs .nav-link.active::after{opacity:1;transform:scaleX(1) translateY(0)}
+  .participant-tabs .nav-link.tab-driver{--tab-accent:#22e39d;border-color:#44f7b2;background:linear-gradient(180deg,#f2fff9 0%,#ecfff7 100%);color:#0e7a5a;box-shadow:0 0 0 1px rgba(68,247,178,.08) inset}
   .participant-tabs .nav-link.tab-driver.active{background:linear-gradient(180deg,#dcfff0 0%,#c4ffe6 100%);border-color:#22e39d;color:#0a7f57;box-shadow:0 0 0 1px rgba(34,227,157,.18) inset, 0 8px 18px rgba(34,227,157,.16)}
-  .participant-tabs .nav-link.tab-herido{border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
+  .participant-tabs .nav-link.tab-herido{--tab-accent:#e0ba36;border-color:#f2d15e;background:linear-gradient(180deg,#fffdf1 0%,#fff9df 100%);color:#9a7300;box-shadow:0 0 0 1px rgba(242,209,94,.08) inset}
   .participant-tabs .nav-link.tab-herido.active{background:linear-gradient(180deg,#fff1b8 0%,#ffe89a 100%);border-color:#e0ba36;color:#8a6500;box-shadow:0 0 0 1px rgba(224,186,54,.16) inset, 0 8px 18px rgba(224,186,54,.16)}
-  .participant-tabs .nav-link.tab-occiso{border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
+  .participant-tabs .nav-link.tab-occiso{--tab-accent:#df6a6a;border-color:#efb0b0;background:linear-gradient(180deg,#fff6f6 0%,#fff0f0 100%);color:#8f2121}
   .participant-tabs .nav-link.tab-occiso.active{background:linear-gradient(180deg,#ffe3e3 0%,#ffcaca 100%);border-color:#df6a6a;color:#8f1111;box-shadow:0 0 0 1px rgba(223,106,106,.12) inset, 0 8px 18px rgba(185,28,28,.10)}
-  .participant-tabs .nav-link.tab-driver::before{background:linear-gradient(180deg,#059669 0%,#34d399 100%)}
-  .participant-tabs .nav-link.tab-herido::before{background:linear-gradient(180deg,#ca8a04 0%,#facc15 100%)}
-  .participant-tabs .nav-link.tab-occiso::before{background:linear-gradient(180deg,#dc2626 0%,#fb7185 100%)}
-  .participant-tabs .nav-link.tab-policial::before{background:linear-gradient(180deg,#0369a1 0%,#38bdf8 100%)}
-  .participant-tabs .nav-link.tab-propietario::before{background:linear-gradient(180deg,#4338ca 0%,#818cf8 100%)}
-  .participant-tabs .nav-link.tab-familiar::before{background:linear-gradient(180deg,#7e22ce 0%,#c084fc 100%)}
-  .participant-tabs .nav-link.tab-abogados::before{background:linear-gradient(180deg,#b7791f 0%,#f6c453 100%)}
+  .participant-tabs .nav-link.tab-policial{--tab-accent:#38bdf8}
+  .participant-tabs .nav-link.tab-propietario{--tab-accent:#818cf8}
+  .participant-tabs .nav-link.tab-familiar{--tab-accent:#c084fc}
+  .participant-tabs .nav-link.tab-abogados{--tab-accent:#f2cf72}
   .participant-tabs .nav-link.tab-policial.active{border-color:#7dd3fc;background:linear-gradient(135deg,#f0f9ff 0%,#dbeafe 100%);color:#075985}
   .participant-tabs .nav-link.tab-propietario.active{border-color:#a5b4fc;background:linear-gradient(135deg,#f5f3ff 0%,#e0e7ff 100%);color:#3730a3}
   .participant-tabs .nav-link.tab-familiar.active{border-color:#d8b4fe;background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%);color:#7e22ce}
@@ -5546,6 +5607,10 @@ include __DIR__ . '/sidebar.php';
     pointer-events:none;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.86), inset 0 -1px 0 rgba(220,38,38,.14);
   }
+  .tab-panel.policial-panel{border-color:#7dd3fc;background:linear-gradient(180deg,rgba(240,249,255,.98) 0%,rgba(255,255,255,.96) 45%,rgba(240,249,255,.96) 100%);box-shadow:0 12px 30px rgba(17,24,39,.08),0 0 0 1px rgba(56,189,248,.16) inset,0 0 20px rgba(56,189,248,.16)}
+  .tab-panel.propietario-panel{border-color:#a5b4fc;background:linear-gradient(180deg,rgba(245,243,255,.98) 0%,rgba(255,255,255,.96) 45%,rgba(238,242,255,.96) 100%);box-shadow:0 12px 30px rgba(17,24,39,.08),0 0 0 1px rgba(129,140,248,.16) inset,0 0 20px rgba(99,102,241,.14)}
+  .tab-panel.familiar-panel{border-color:#d8b4fe;background:linear-gradient(180deg,rgba(250,245,255,.98) 0%,rgba(255,255,255,.96) 45%,rgba(243,232,255,.96) 100%);box-shadow:0 12px 30px rgba(17,24,39,.08),0 0 0 1px rgba(192,132,252,.16) inset,0 0 20px rgba(168,85,247,.14)}
+  .tab-panel.abogados-panel{border-color:#f2cf72;background:linear-gradient(180deg,rgba(255,250,240,.98) 0%,rgba(255,255,255,.96) 45%,rgba(255,244,207,.96) 100%);box-shadow:0 12px 30px rgba(17,24,39,.08),0 0 0 1px rgba(242,207,114,.18) inset,0 0 20px rgba(183,121,31,.12)}
   @keyframes driverSheen{
     0%, 100%{transform:translateX(-18%) rotate(18deg);opacity:.52}
     50%{transform:translateX(138%) rotate(18deg);opacity:.82}
@@ -5724,10 +5789,13 @@ include __DIR__ . '/sidebar.php';
   .module-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:6px}
   .summary-sheet{display:grid;gap:10px}
   .summary-block-card{
+    --summary-accent:#8b5cf6;
+    --summary-soft:#fbf8ff;
+    --summary-glow:rgba(91,44,160,.08);
     position:relative;
-    border-color:#d7cae8;
-    background:linear-gradient(180deg,#ffffff 0%,#fbf8ff 100%);
-    box-shadow:0 14px 32px rgba(91,44,160,.08), 0 10px 22px rgba(181,138,24,.07);
+    border-color:color-mix(in srgb,var(--summary-accent) 42%,#d7dfec);
+    background:linear-gradient(180deg,#ffffff 0%,color-mix(in srgb,var(--summary-soft) 78%,#fff) 100%);
+    box-shadow:0 14px 32px var(--summary-glow), 0 10px 22px rgba(17,24,39,.05);
     overflow:hidden;
   }
   .summary-block-card::before{
@@ -5735,14 +5803,30 @@ include __DIR__ . '/sidebar.php';
     position:absolute;
     inset:0 0 auto 0;
     height:4px;
-    background:linear-gradient(90deg,#5b2ca0 0%,#8b5cf6 36%,#d4a93a 72%,#f0c654 100%);
+    background:linear-gradient(90deg,var(--summary-accent) 0%,color-mix(in srgb,var(--summary-accent) 42%,#fff) 52%,var(--summary-accent) 100%);
   }
   .summary-block-card > header{
     margin:-9px -11px 10px;
     padding:14px 14px 10px;
-    background:linear-gradient(180deg,rgba(107,58,198,.06) 0%,rgba(240,198,84,.05) 100%);
-    border-bottom:1px solid rgba(171,142,207,.28);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--summary-accent) 9%,#fff) 0%,color-mix(in srgb,var(--summary-soft) 62%,#fff) 100%);
+    border-bottom:1px solid color-mix(in srgb,var(--summary-accent) 22%,#d7dfec);
   }
+  .summary-block-card--intervention{--summary-accent:#8b5cf6;--summary-soft:#fff7dd;--summary-glow:rgba(91,44,160,.08)}
+  .summary-block-card--ut{--summary-accent:#f0b429;--summary-soft:#fff7db;--summary-glow:rgba(217,119,6,.12)}
+  .summary-block-card--peatones{--summary-accent:#ef4444;--summary-soft:#fff1f2;--summary-glow:rgba(220,38,38,.10)}
+  .summary-block-card--otros{--summary-accent:#64748b;--summary-soft:#f1f5f9;--summary-glow:rgba(100,116,139,.10)}
+  .summary-block-card--policial{--summary-accent:#0ea5e9;--summary-soft:#e0f2fe;--summary-glow:rgba(14,165,233,.12)}
+  .summary-block-card--familiar{--summary-accent:#a855f7;--summary-soft:#f3e8ff;--summary-glow:rgba(168,85,247,.11)}
+  .summary-block-card--propietario{--summary-accent:#6366f1;--summary-soft:#eef2ff;--summary-glow:rgba(99,102,241,.11)}
+  .summary-block-card--abogados{--summary-accent:#d6a130;--summary-soft:#fff4cf;--summary-glow:rgba(183,121,31,.11)}
+  .summary-block-card--oficios{--summary-accent:#14b8a6;--summary-soft:#dcfdf7;--summary-glow:rgba(20,184,166,.11)}
+  .summary-block-card--ut .summary-block-title{color:#8a5f00;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--peatones .summary-block-title{color:#b91c1c;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--policial .summary-block-title{color:#075985;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--familiar .summary-block-title{color:#7e22ce;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--propietario .summary-block-title{color:#3730a3;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--abogados .summary-block-title{color:#805b08;background:none;-webkit-background-clip:initial;background-clip:initial}
+  .summary-block-card--otros .summary-block-title,.summary-block-card--oficios .summary-block-title{color:#334155;background:none;-webkit-background-clip:initial;background-clip:initial}
   .summary-subcard{border:1px solid var(--line);border-radius:13px;background:#fbfcfe;padding:10px}
   .summary-block-title{
     margin:0;
@@ -5821,6 +5905,8 @@ include __DIR__ . '/sidebar.php';
     color:#7b1e3a !important;
   }
   .summary-header p{margin:3px 0 0;color:var(--muted);font-size:11px;font-weight:600}
+  .summary-oficio-inline{display:grid;gap:3px;margin-top:6px;color:#334155;font-size:11px;line-height:1.3;font-weight:650}
+  .summary-oficio-inline strong{color:#0f766e;font-weight:900}
   .summary-chipline{display:flex;gap:6px;flex-wrap:wrap}
   .summary-person-card{display:grid;gap:8px}
   .summary-doc-stack{display:grid;gap:8px}
@@ -5924,6 +6010,10 @@ include __DIR__ . '/sidebar.php';
   .tab-panel.driver-panel .inner-panel{border-color:#99dabe;box-shadow:inset 4px 0 0 #63c696,0 8px 20px rgba(5,150,105,.08)}
   .tab-panel.herido-panel .inner-panel{border-color:#e8cf85;box-shadow:inset 4px 0 0 #d7ad38,0 8px 20px rgba(202,138,4,.08)}
   .tab-panel.occiso-panel .inner-panel{border-color:#e7a5a5;box-shadow:inset 4px 0 0 #dc6b6b,0 8px 20px rgba(220,38,38,.08)}
+  .tab-panel.policial-panel .inner-panel{border-color:#9bd9f5;box-shadow:inset 4px 0 0 #38bdf8,0 8px 20px rgba(14,165,233,.08)}
+  .tab-panel.propietario-panel .inner-panel{border-color:#bfc7ff;box-shadow:inset 4px 0 0 #818cf8,0 8px 20px rgba(99,102,241,.08)}
+  .tab-panel.familiar-panel .inner-panel{border-color:#debdf6;box-shadow:inset 4px 0 0 #c084fc,0 8px 20px rgba(168,85,247,.08)}
+  .tab-panel.abogados-panel .inner-panel{border-color:#efd38c;box-shadow:inset 4px 0 0 #f2cf72,0 8px 20px rgba(183,121,31,.08)}
   .record-stack{display:grid;gap:6px}
   .record-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:8px 9px}
   .record-card h5{margin:0 0 4px;font-size:12px;font-weight:800;line-height:1.2;color:#8b6a12}
@@ -6106,6 +6196,10 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .tab-panel.driver-panel .inner-panel{border-color:#3f8064;box-shadow:inset 4px 0 0 #4b9c76,0 10px 24px rgba(2,6,23,.28)}
   html[data-theme-resolved="dark"] .tab-panel.herido-panel .inner-panel{border-color:#88713d;box-shadow:inset 4px 0 0 #a48647,0 10px 24px rgba(2,6,23,.28)}
   html[data-theme-resolved="dark"] .tab-panel.occiso-panel .inner-panel{border-color:#8b4b53;box-shadow:inset 4px 0 0 #aa5864,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.policial-panel .inner-panel{border-color:#2f6d88;box-shadow:inset 4px 0 0 #3283aa,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.propietario-panel .inner-panel{border-color:#555b9e;box-shadow:inset 4px 0 0 #6971c9,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.familiar-panel .inner-panel{border-color:#704798;box-shadow:inset 4px 0 0 #8d5fc0,0 10px 24px rgba(2,6,23,.28)}
+  html[data-theme-resolved="dark"] .tab-panel.abogados-panel .inner-panel{border-color:#806d3b;box-shadow:inset 4px 0 0 #a48948,0 10px 24px rgba(2,6,23,.28)}
   html[data-theme-resolved="dark"] .tabs-header .nav-link.tab-driver.active,
   html[data-theme-resolved="dark"] .participant-tabs .nav-link.tab-driver.active{
     background:linear-gradient(180deg,#12342e 0%,#165247 100%);
@@ -6147,6 +6241,19 @@ include __DIR__ . '/sidebar.php';
     border-color:#f6c453;
     color:#fff7d6;
   }
+  html[data-theme-resolved="dark"] .tab-panel.policial-panel{border-color:#2f6d88;background:linear-gradient(180deg,rgba(17,42,58,.96) 0%,rgba(19,26,38,.95) 100%)}
+  html[data-theme-resolved="dark"] .tab-panel.propietario-panel{border-color:#555b9e;background:linear-gradient(180deg,rgba(31,31,68,.96) 0%,rgba(19,26,38,.95) 100%)}
+  html[data-theme-resolved="dark"] .tab-panel.familiar-panel{border-color:#704798;background:linear-gradient(180deg,rgba(44,29,66,.96) 0%,rgba(19,26,38,.95) 100%)}
+  html[data-theme-resolved="dark"] .tab-panel.abogados-panel{border-color:#806d3b;background:linear-gradient(180deg,rgba(54,44,24,.96) 0%,rgba(19,26,38,.95) 100%)}
+  html[data-theme-resolved="dark"] .main-module-panel{
+    border-color:color-mix(in srgb,var(--module-accent) 46%,#31415c) !important;
+    background:
+      linear-gradient(180deg,color-mix(in srgb,var(--module-accent) 18%,#111827) 0%,rgba(15,23,42,.96) 54%,color-mix(in srgb,var(--module-accent) 10%,#111827) 100%) !important;
+    box-shadow:
+      0 18px 38px rgba(2,6,23,.34),
+      0 0 0 1px color-mix(in srgb,var(--module-accent) 16%,transparent) inset,
+      0 0 22px color-mix(in srgb,var(--module-accent) 18%,transparent) !important;
+  }
   html[data-theme-resolved="dark"] .main-tabs{
     border-bottom-color:#2a3852;
   }
@@ -6185,7 +6292,8 @@ include __DIR__ . '/sidebar.php';
     color:#fff5d1;
     box-shadow:0 18px 38px rgba(217,119,6,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
-  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias.active{
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias.active,
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias-pendientes.active{
     background:linear-gradient(135deg,#37205d 0%,#503084 52%,#6d47b3 100%);
     color:#f5eeff;
     box-shadow:0 18px 38px rgba(124,58,237,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
@@ -6199,6 +6307,11 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(135deg,#0b3551 0%,#0f5276 52%,#1476a8 100%);
     color:#e8f7ff;
     box-shadow:0 18px 38px rgba(14,165,233,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-resumen-integral.active{
+    background:linear-gradient(135deg,#273449 0%,#354562 52%,#4b638b 100%);
+    color:#eef4ff;
+    box-shadow:0 18px 38px rgba(124,143,184,.20), 0 0 0 1px rgba(255,255,255,.04) inset;
   }
   html[data-theme-resolved="dark"] .tab-panel.driver-panel{
     background:linear-gradient(180deg,rgba(10,44,37,.95) 0%,rgba(15,23,42,.96) 52%,rgba(11,35,31,.96) 100%);
@@ -6349,7 +6462,8 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-documentos.active{
     color:#f6e8bd;
   }
-  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias.active{
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias.active,
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-diligencias-pendientes.active{
     color:#e8dcf9;
   }
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-analisis.active{
@@ -6357,6 +6471,9 @@ include __DIR__ . '/sidebar.php';
   }
   html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-componentes-informe.active{
     color:#dff4ff;
+  }
+  html[data-theme-resolved="dark"] .main-tabs .nav-link.tab-resumen-integral.active{
+    color:#e6eefb;
   }
   html[data-theme-resolved="dark"] .tabs-header .nav-link,
   html[data-theme-resolved="dark"] .participant-tabs .nav-link,
@@ -6412,22 +6529,35 @@ include __DIR__ . '/sidebar.php';
     color:#9fb1ca;
   }
   html[data-theme-resolved="dark"] .summary-block-card{
-    border-color:#3c3252;
-    background:linear-gradient(180deg,#111827 0%,#161126 100%);
-    box-shadow:0 18px 38px rgba(7,10,20,.42), 0 0 0 1px rgba(124,58,237,.08) inset;
+    border-color:color-mix(in srgb,var(--summary-accent) 42%,#2a3852);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--summary-accent) 12%,#111827) 0%,#111827 100%);
+    box-shadow:0 18px 38px rgba(7,10,20,.42), 0 0 0 1px color-mix(in srgb,var(--summary-accent) 12%,transparent) inset;
   }
   html[data-theme-resolved="dark"] .summary-block-card::before{
-    background:linear-gradient(90deg,#7c3aed 0%,#a78bfa 34%,#d4a93a 74%,#f0c654 100%);
+    background:linear-gradient(90deg,var(--summary-accent) 0%,color-mix(in srgb,var(--summary-accent) 42%,#fff) 52%,var(--summary-accent) 100%);
   }
   html[data-theme-resolved="dark"] .summary-block-card > header{
-    background:linear-gradient(180deg,rgba(124,58,237,.12) 0%,rgba(240,198,84,.06) 100%);
-    border-bottom-color:rgba(98,82,135,.55);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--summary-accent) 16%,#111827) 0%,rgba(15,23,42,.96) 100%);
+    border-bottom-color:color-mix(in srgb,var(--summary-accent) 28%,#2a3852);
   }
   html[data-theme-resolved="dark"] .summary-block-title{
     background:linear-gradient(135deg,#b794ff 0%,#d6c4ff 30%,#e0b648 72%,#f7d97d 100%);
     -webkit-background-clip:text;
     background-clip:text;
     color:transparent;
+  }
+  html[data-theme-resolved="dark"] .summary-block-card--ut .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--peatones .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--policial .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--familiar .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--propietario .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--abogados .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--otros .summary-block-title,
+  html[data-theme-resolved="dark"] .summary-block-card--oficios .summary-block-title{
+    background:none;
+    -webkit-background-clip:initial;
+    background-clip:initial;
+    color:color-mix(in srgb,var(--summary-accent) 68%,#ffffff);
   }
   html[data-theme-resolved="dark"] .intervention-main-title,
   html[data-theme-resolved="dark"] .intervention-subtitle,
@@ -6445,6 +6575,8 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .summary-subcard .summary-person-name{
     color:#d9879e !important;
   }
+  html[data-theme-resolved="dark"] .summary-oficio-inline{color:#b8c6d8}
+  html[data-theme-resolved="dark"] .summary-oficio-inline strong{color:#5eead4}
   html[data-theme-resolved="dark"] .general-checkbox{
     background:#0f172a;
   }
@@ -6499,10 +6631,10 @@ include __DIR__ . '/sidebar.php';
     .tabs-header .nav-link{padding:6px 8px;font-size:11px}
     .tabs-header .tab-sub{font-size:9px}
     .main-tabs{gap:8px;padding:6px 2px 10px}
-    .main-tabs .nav-link{min-width:128px;padding:11px 14px 11px;border-radius:16px}
+    .main-tabs .nav-link{min-width:128px;padding:11px 14px 14px;border-radius:14px}
     .main-tabs .main-tab-title{font-size:14px}
     .main-tabs .tab-sub{font-size:10px}
-    .participant-tabs .nav-link{padding:6px 8px;font-size:11px}
+    .participant-tabs .nav-link{padding:7px 9px 13px;font-size:11px}
     .participant-tabs .tab-sub{font-size:9px}
     .inner-tabs .nav-link{padding:5px 7px;font-size:10px}
     .inline-frame{height:460px}
@@ -6548,7 +6680,7 @@ include __DIR__ . '/sidebar.php';
   <div class="tabs-shell tabs-shell-main">
     <div class="tab-content mt-2 general-tab-content">
       <div class="tab-pane fade show active" id="datos-generales" role="tabpanel">
-        <div class="panel">
+        <div class="panel main-module-panel main-panel-datos">
           <div class="general-edit-shell" data-edit-shell="general-accidente">
       <div class="editable-toolbar">
         <div class="general-inline-note">Dato general del accidente</div>
@@ -6996,7 +7128,7 @@ include __DIR__ . '/sidebar.php';
 
     <div class="tab-content mt-2">
       <div class="tab-pane fade" id="resumen-integral" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-resumen">
           <div class="summary-sheet">
             <article class="module-card summary-block-card summary-block-card--intervention">
               <header>
@@ -7028,7 +7160,7 @@ include __DIR__ . '/sidebar.php';
                 $unitDrivers = array_values(array_filter($unitPeople, static fn(array $row): bool => is_conductor($row)));
                 $unitCompanions = array_values(array_filter($unitPeople, static fn(array $row): bool => !is_conductor($row)));
               ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--ut">
                 <header>
                   <div>
                     <h4 class="summary-block-title"><?= h((string) $summaryUnit['ut']) ?></h4>
@@ -7104,7 +7236,7 @@ include __DIR__ . '/sidebar.php';
             <?php endforeach; ?>
 
             <?php if ($summaryPeatones !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--peatones">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Peatones</h4>
@@ -7134,7 +7266,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($summaryOtrosSinUnidad !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--otros">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Otros involucrados sin unidad</h4>
@@ -7164,7 +7296,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($policias !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--policial">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Efectivos policiales</h4>
@@ -7207,7 +7339,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($familiares !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--familiar">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Familiares de fallecidos</h4>
@@ -7255,7 +7387,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($propietarios !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--propietario">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Propietarios de vehículos</h4>
@@ -7312,7 +7444,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($abogados !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--abogados">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Abogados</h4>
@@ -7343,7 +7475,7 @@ include __DIR__ . '/sidebar.php';
             <?php endif; ?>
 
             <?php if ($oficios !== []): ?>
-              <article class="module-card summary-block-card">
+              <article class="module-card summary-block-card summary-block-card--oficios">
                 <header>
                   <div>
                     <h4 class="summary-block-title">Oficios realizados</h4>
@@ -7352,14 +7484,34 @@ include __DIR__ . '/sidebar.php';
                 </header>
                 <div class="summary-doc-stack">
                   <?php foreach ($oficios as $row): ?>
+                    <?php
+                      $summaryOficioAsunto = trim((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : ($row['asunto_detalle'] ?? '')));
+                      $summaryOficioMotivo = trim((string) ($row['motivo'] ?? ''));
+                      $summaryOficioText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '') . ' ' . ($row['motivo'] ?? '')), 'UTF-8');
+                      $summaryOficioTipo = strtoupper(trim((string) ($row['asunto_tipo'] ?? '')));
+                      $summaryEsCamara = (str_contains($summaryOficioText, 'camara') || str_contains($summaryOficioText, 'cámara') || str_contains($summaryOficioText, 'camaras') || str_contains($summaryOficioText, 'cámaras')) && (str_contains($summaryOficioText, 'video') || str_contains($summaryOficioText, 'vigilancia'));
+                      $summaryEsRemitir = $summaryOficioTipo === 'REMITIR' || str_contains($summaryOficioText, 'remitir diligencia');
+                      $summaryEsDosaje = str_contains($summaryOficioText, 'dosaje et') || str_contains($summaryOficioText, 'resultado dosaje') || preg_match('/resultado.*dosaje/u', $summaryOficioText);
+                      $summaryEsPeritaje = str_contains($summaryOficioText, 'peritaje de constat');
+                      $summaryEsNecropsia = str_contains($summaryOficioText, 'protocolo de necropsia') || str_contains($summaryOficioText, 'necropsia') || str_contains($summaryOficioText, 'autopsia');
+                    ?>
                     <div class="summary-subcard" data-collapsible-card>
                       <div class="summary-header">
                         <div>
                           <h4><?= h('Oficio N° ' . ($row['numero'] ?? '—') . '/' . ($row['anio'] ?? '—')) ?></h4>
                           <p><?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></p>
+                          <div class="summary-oficio-inline">
+                            <span><strong>Asunto:</strong> <?= h($summaryOficioAsunto !== '' ? $summaryOficioAsunto : 'Sin asunto') ?></span>
+                            <span><strong>Motivo:</strong> <?= h($summaryOficioMotivo !== '' ? $summaryOficioMotivo : 'Sin motivo') ?></span>
+                          </div>
                         </div>
                         <div class="summary-chipline">
                           <span class="chip-simple"><?= h((string) (($row['estado'] ?? '') !== '' ? $row['estado'] : 'Sin estado')) ?></span>
+                          <?php if ($summaryEsCamara): ?><a class="btn-shell btn-docx" href="word_oficio_camaras.php?oficio_id=<?= (int) $row['id'] ?>">Cámara</a><?php endif; ?>
+                          <?php if ($summaryEsRemitir): ?><a class="btn-shell btn-docx" href="oficio_remitir_diligencia.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['accid']) ? '&accidente_id=' . urlencode((string) $row['accid']) : '' ?>">Remitir</a><?php endif; ?>
+                          <?php if ($summaryEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Dosaje</a><?php endif; ?>
+                          <?php if ($summaryEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Peritaje</a><?php endif; ?>
+                          <?php if ($summaryEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Necropsia</a><?php endif; ?>
                           <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
                         </div>
                       </div>
@@ -7376,7 +7528,7 @@ include __DIR__ . '/sidebar.php';
       </div>
 
       <div class="tab-pane fade" id="itp" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-itp">
           <?php
             $itpGeneralFields = ['fecha_itp', 'hora_itp', 'forma_via', ['key' => 'punto_referencia', 'class' => 'span-2'], ['key' => 'ubicacion_gps', 'class' => 'span-2']];
             $itpViaSimpleFields = ['configuracion_via1', 'material_via1', 'senializacion_via1', 'ordenamiento_via1', 'iluminacion_via1', 'visibilidad_via1', 'intensidad_via1', 'fluidez_via1'];
@@ -7642,7 +7794,7 @@ include __DIR__ . '/sidebar.php';
       </div>
 
       <div class="tab-pane fade" id="participantes" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-participantes">
           <div class="tabs-toolbar participant-primary-actions">
             <a class="btn-shell participant-create-btn participant-create-person" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>">
               <span class="participant-create-icon" aria-hidden="true">+</span>
@@ -8248,7 +8400,7 @@ include __DIR__ . '/sidebar.php';
       <?php endforeach; ?>
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="efectivo-policial" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel policial-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo efectivo policial</a>
             <a class="btn-shell" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
@@ -8415,7 +8567,7 @@ include __DIR__ . '/sidebar.php';
       <?php $participantPaneIndex++; ?>
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="propietario-vehiculo" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel propietario-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo propietario</a>
             <a class="btn-shell" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
@@ -8632,7 +8784,7 @@ include __DIR__ . '/sidebar.php';
       <?php $participantPaneIndex++; ?>
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="familiar-fallecido" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel familiar-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo familiar</a>
             <a class="btn-shell" href="familiar_fallecido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
@@ -8776,7 +8928,7 @@ include __DIR__ . '/sidebar.php';
       <?php $participantPaneIndex++; ?>
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="abogados" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel abogados-panel">
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="abogado_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo abogado</a>
             <a class="btn-shell" href="abogado_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
@@ -8878,7 +9030,7 @@ include __DIR__ . '/sidebar.php';
       </div>
 
       <div class="tab-pane fade" id="documentos" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-documentos">
           <div class="inline-workbench" id="documentos-workbench" hidden>
             <div class="inline-head">
               <strong id="documentos-workbench-title">Formulario</strong>
@@ -8902,7 +9054,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo oficio">+ Nuevo oficio</a>
+	                  <a class="btn-shell" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>">+ Nuevo oficio</a>
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
 	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
@@ -8917,9 +9069,13 @@ include __DIR__ . '/sidebar.php';
                       <?php
                         $oficioIcon = oficio_icon($row);
                         $oficioEstadoClass = oficio_status_class((string) ($row['estado'] ?? ''));
-                        $oficioPeritajeText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '')), 'UTF-8');
-                        $oficioEsPeritaje = str_contains($oficioPeritajeText, 'peritaje de constat');
-                        $oficioEsNecropsia = str_contains($oficioPeritajeText, 'protocolo de necropsia') || str_contains($oficioPeritajeText, 'necropsia') || str_contains($oficioPeritajeText, 'autopsia');
+                        $oficioDownloadText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '') . ' ' . ($row['motivo'] ?? '')), 'UTF-8');
+                        $oficioTipo = strtoupper(trim((string) ($row['asunto_tipo'] ?? '')));
+                        $oficioEsCamara = (str_contains($oficioDownloadText, 'camara') || str_contains($oficioDownloadText, 'cámara') || str_contains($oficioDownloadText, 'camaras') || str_contains($oficioDownloadText, 'cámaras')) && (str_contains($oficioDownloadText, 'video') || str_contains($oficioDownloadText, 'vigilancia'));
+                        $oficioEsRemitir = $oficioTipo === 'REMITIR' || str_contains($oficioDownloadText, 'remitir diligencia');
+                        $oficioEsDosaje = str_contains($oficioDownloadText, 'dosaje et') || str_contains($oficioDownloadText, 'resultado dosaje') || preg_match('/resultado.*dosaje/u', $oficioDownloadText);
+                        $oficioEsPeritaje = str_contains($oficioDownloadText, 'peritaje de constat');
+                        $oficioEsNecropsia = str_contains($oficioDownloadText, 'protocolo de necropsia') || str_contains($oficioDownloadText, 'necropsia') || str_contains($oficioDownloadText, 'autopsia');
                       ?>
                       <article class="module-card">
                         <header>
@@ -8942,6 +9098,9 @@ include __DIR__ . '/sidebar.php';
                         <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
                         <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
                         <div class="module-actions">
+                          <?php if ($oficioEsCamara): ?><a class="btn-shell btn-docx" href="word_oficio_camaras.php?oficio_id=<?= (int) $row['id'] ?>">Descargar cámara</a><?php endif; ?>
+                          <?php if ($oficioEsRemitir): ?><a class="btn-shell btn-docx" href="oficio_remitir_diligencia.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['accid']) ? '&accidente_id=' . urlencode((string) $row['accid']) : '' ?>">Descargar remitir</a><?php endif; ?>
+                          <?php if ($oficioEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar dosaje</a><?php endif; ?>
                           <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar peritaje</a><?php endif; ?>
                           <?php if ($oficioEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Descargar necropsia</a><?php endif; ?>
                           <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
@@ -9005,7 +9164,7 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
       <div class="tab-pane fade" id="diligencias-pendientes" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-diligencias">
           <div class="module-actions" style="margin-bottom:8px;">
             <button type="button" class="btn-shell btn-primary js-diligencias-ocr-open" data-accidente-id="<?= (int) $accidente_id ?>">Subir lista por imagen</button>
             <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
@@ -9056,7 +9215,7 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
       <div class="tab-pane fade" id="analisis" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-analisis">
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#analisis-danos-lesiones" type="button" role="tab">
               analisis de daños y lesiones
@@ -9223,7 +9382,7 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
       <div class="tab-pane fade" id="componentes-informe" role="tabpanel">
-        <div class="tab-panel">
+        <div class="tab-panel main-module-panel main-panel-componentes">
           <iframe class="inline-frame componentes-informe-frame" id="componentes-informe-frame" src="word_informe_selector_vehiculo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" loading="lazy"></iframe>
         </div>
       </div>
@@ -11229,6 +11388,7 @@ include __DIR__ . '/sidebar.php';
       button.addEventListener('click', () => {
         const card = button.closest('[data-collapsible-card]');
         if (card) {
+          collapseResumenSiblingCards(card);
           setCollapsibleCardState(card, true);
         }
         openEditShell(button.dataset.shell || '');
@@ -11253,6 +11413,7 @@ include __DIR__ . '/sidebar.php';
 
         const card = shell.closest('[data-collapsible-card]');
         if (card) {
+          collapseResumenSiblingCards(card);
           setCollapsibleCardState(card, true);
         }
 
@@ -11303,9 +11464,23 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    function collapseResumenSiblingCards(card) {
+      const resumen = card ? card.closest('#resumen-integral') : null;
+      if (!resumen) return;
+
+      resumen.querySelectorAll('[data-collapsible-card]').forEach((otherCard) => {
+        if (otherCard === card || otherCard.contains(card)) return;
+        setCollapsibleCardState(otherCard, false);
+      });
+    }
+
     function setCollapsibleCardState(card, expanded) {
       const panel = card.querySelector('.js-card-panel');
       if (!panel) return;
+
+      if (expanded) {
+        collapseResumenSiblingCards(card);
+      }
 
       panel.hidden = !expanded;
 

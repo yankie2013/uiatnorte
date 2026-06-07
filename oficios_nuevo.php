@@ -22,6 +22,9 @@ $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $accidenteIdGet = isset($_GET['accidente_id']) ? (int) $_GET['accidente_id'] : 0;
 $sidpolGet = trim((string) ($_GET['sidpol'] ?? ''));
 $preselectedAccidenteId = $accidenteIdGet > 0 ? $accidenteIdGet : ($sidpolGet !== '' ? ($service->accidenteIdBySidpol($sidpolGet) ?? 0) : 0);
+if ($returnTo === '' && $preselectedAccidenteId > 0) {
+    $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $preselectedAccidenteId . '&tab=documentos';
+}
 
 if (isset($_GET['ajax'])) {
     $ajax = trim((string) $_GET['ajax']);
@@ -157,30 +160,84 @@ if (!$embed) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
 <style>
-:root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c;--ok:#166534}
-@media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca;--ok:#bbf7d0}}
-body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px auto;padding:16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);text-decoration:none;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.mini{width:40px;min-width:40px;min-height:48px;padding:0;font-size:20px;line-height:1}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}label{display:block;font-weight:700;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);line-height:1.3}select{min-height:48px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}input{min-height:48px}textarea{min-height:130px;resize:vertical}.field-row{display:flex;gap:8px;align-items:stretch}.field-row > *:first-child{flex:1 1 auto}.combo-wrap{display:grid;gap:6px}.combo-hint{color:var(--muted);font-size:.88rem}.combo-menu{position:relative}.combo-suggestions{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(760px,calc(100vw - 80px));max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 14px 28px rgba(15,23,42,.14);display:none;z-index:40}.combo-suggestions.open{display:block}.combo-suggestion{padding:9px 12px;font-size:.84rem;line-height:1.25;cursor:pointer;white-space:normal;word-break:break-word}.combo-suggestion:hover,.combo-suggestion.active{background:rgba(29,78,216,.10)}.combo-empty{padding:9px 12px;font-size:.82rem;color:var(--muted)}.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}.muted{color:var(--muted);font-size:.9rem}.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:rgba(148,163,184,.06)}.preview h4{margin:.1rem 0 .5rem}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}.modal iframe{width:100%;height:calc(100% - 52px);border:0}@media (max-width:900px){.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.combo-suggestions{max-width:calc(100vw - 48px)}}
+:root{--page:#f4f7fb;--card:#fff;--panel:#fbfdff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--primary-soft:#e8f0ff;--gold:#c88912;--danger:#b91c1c;--ok:#166534}
+@media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--panel:#101b2d;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--primary-soft:#172554;--gold:#facc15;--danger:#fecaca;--ok:#bbf7d0}}
+body{margin:0;background:radial-gradient(circle at 20% 0,rgba(29,78,216,.08),transparent 28%),var(--page);color:var(--text)}
+.wrap{max-width:1180px;margin:24px auto 34px;padding:16px}
+.office-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
+.office-title h1{margin:0;font-size:26px;letter-spacing:0;color:var(--text)}
+.office-title p{margin:5px 0 0;color:var(--muted);font-size:13px;font-weight:650}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06)}
+.btn.primary{background:linear-gradient(180deg,#2f68ff 0%,#1d4ed8 100%);color:#fff;border-color:transparent;box-shadow:0 12px 22px rgba(29,78,216,.22)}
+.btn.mini{width:40px;min-width:40px;min-height:46px;padding:0;font-size:20px;line-height:1}
+.btn:hover{transform:translateY(-1px);border-color:#b9c7dc}
+.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(251,253,255,.96) 100%);border:1px solid #d9e2f1;border-radius:14px;padding:0;box-shadow:0 18px 42px rgba(15,23,42,.10);overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#1d4ed8,#38bdf8,#d6a130)}
+.office-section{padding:18px 18px 16px;border-bottom:1px solid rgba(215,222,234,.78)}
+.office-section:last-child{border-bottom:0}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.section-mark{width:7px;height:24px;border-radius:99px;background:linear-gradient(180deg,#1d4ed8,#38bdf8);box-shadow:0 0 16px rgba(29,78,216,.24)}
+.section-head h2{margin:0;font-size:15px;color:#17315e}
+.section-head span{margin-left:auto;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.office-recipient-row{grid-column:span 12;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+label{display:block;font-weight:900;color:var(--gold);font-size:12px;margin-bottom:7px}
+input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #cfd9eb;background:#fff;color:var(--text);line-height:1.3;box-shadow:0 1px 0 rgba(15,23,42,.03)}
+select{min-height:46px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}
+input{min-height:46px}
+textarea{min-height:150px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.16),0 1px 0 rgba(15,23,42,.03)}
+.field-row{display:flex;gap:8px;align-items:stretch}
+.field-row > *:first-child{flex:1 1 auto}
+.combo-wrap{display:grid;gap:6px}
+.combo-hint,.muted{color:#4b6285;font-size:.88rem;line-height:1.35}
+.combo-menu{position:relative}
+.combo-suggestions{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(760px,calc(100vw - 80px));max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 14px 28px rgba(15,23,42,.14);display:none;z-index:40}
+.combo-suggestions.open{display:block}
+.combo-suggestion{padding:9px 12px;font-size:.84rem;line-height:1.25;cursor:pointer;white-space:normal;word-break:break-word}
+.combo-suggestion:hover,.combo-suggestion.active{background:rgba(29,78,216,.10)}
+.combo-empty{padding:9px 12px;font-size:.82rem;color:var(--muted)}
+.alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}
+.alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}
+.alert.err{background:rgba(220,38,38,.12);color:var(--danger)}
+.preview{border:1px dashed #b8c7dc;border-radius:12px;padding:12px;background:linear-gradient(180deg,#f8fbff 0%,#fff 100%)}
+.preview h4{margin:.1rem 0 .5rem}
+.office-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;background:rgba(255,255,255,.86);border-top:1px solid var(--border);backdrop-filter:blur(10px)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+.modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}
+.modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
+.modal iframe{width:100%;height:calc(100% - 52px);border:0}
+@media (max-width:900px){.wrap{padding:10px}.office-page-head{display:grid}.toolbar{justify-content:flex-start}.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.office-recipient-row{grid-template-columns:1fr}.office-actions{position:static;flex-wrap:wrap}.combo-suggestions{max-width:calc(100vw - 48px)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Nuevo Oficio</h1>
-  <div class="toolbar">
-    <?php if ($embed): ?>
-      <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
-    <?php else: ?>
-      <button class="btn" type="button" onclick="history.back()">← Atrás</button>
-      <a class="btn" href="index.php">Ir al panel</a>
-      <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
-    <?php endif; ?>
+  <div class="office-page-head">
+    <div class="office-title">
+      <h1>Nuevo Oficio</h1>
+      <p>Registro de oficio vinculado al accidente y su destinatario.</p>
+    </div>
+    <div class="toolbar">
+      <?php if ($embed): ?>
+        <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
+      <?php else: ?>
+        <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Volver a Documentos</a>
+        <a class="btn" href="index.php">Ir al panel</a>
+        <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
+      <?php endif; ?>
+    </div>
   </div>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
-  <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?></div><?php endif; ?>
+  <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>">Volver a Documentos</a><?php endif; ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmOficio">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+    <section class="office-section">
+      <div class="section-head"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span></div>
     <div class="grid">
       <div class="c12">
         <label>Accidente asociado*</label>
@@ -221,7 +278,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
           <button class="btn mini" type="button" onclick="openCreate('ano')">+</button>
         </div>
       </div>
+    </div>
+    </section>
 
+    <section class="office-section">
+      <div class="section-head"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad y persona</span></div>
+      <div class="grid">
       <div class="c6">
         <label>Entidad destino*</label>
         <div class="field-row">
@@ -235,51 +297,48 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
         </div>
       </div>
 
-      <div class="c6">
-        <label>Subentidad</label>
-        <div class="field-row">
-          <select name="subentidad_id" id="subentidad_id">
-            <option value="">Ninguna</option>
-            <?php foreach ($subentidadesActuales as $item): ?>
-              <option value="<?= h($item['id']) ?>" <?= (string) $data['subentidad_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <button class="btn mini" type="button" onclick="openCreate('subentidad')">+</button>
-        </div>
-      </div>
+      <input type="hidden" name="subentidad_id" value="">
 
-      <div class="c6">
-        <label>Grado y cargo</label>
-        <div class="field-row">
-          <select name="grado_cargo_id" id="grado_cargo_id">
-            <option value="">(Opcional)</option>
-            <?php foreach ($ctx['grado_cargo'] as $cargo): ?>
-              <?php $label = $cargo['nombre'] . ($cargo['abrev'] !== '' ? ' - ' . $cargo['abrev'] : '') . ' [' . $cargo['tipo'] . ']'; ?>
-              <option value="<?= h($cargo['id']) ?>" <?= (string) $data['grado_cargo_id'] === (string) $cargo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <button class="btn mini" type="button" onclick="openCreate('cargo')">+</button>
-        </div>
-      </div>
-
-      <div class="c6">
-        <label>Persona destino</label>
-        <div class="field-row">
-          <div class="combo-wrap">
-            <input type="hidden" name="persona_id" id="persona_id" value="<?= h((string) $data['persona_id']) ?>">
-            <input type="hidden" name="persona_destino_manual" id="persona_destino_manual" value="<?= h((string) ($data['persona_destino_manual'] ?? '')) ?>">
-            <input type="text" id="persona_id_text" list="persona_id_options" value="<?= h($personaDestinoTexto) ?>" placeholder="Selecciona o escribe manualmente">
-            <datalist id="persona_id_options">
-              <?php foreach ($personasActuales as $persona): ?>
-                <option value="<?= h(trim((string) $persona['nombre'])) ?>" data-id="<?= h((string) $persona['id']) ?>"></option>
+      <div class="office-recipient-row">
+        <div>
+          <label>Grado y cargo</label>
+          <div class="field-row">
+            <select name="grado_cargo_id" id="grado_cargo_id">
+              <option value="">(Opcional)</option>
+              <?php foreach ($ctx['grado_cargo'] as $cargo): ?>
+                <?php $label = $cargo['nombre'] . ($cargo['abrev'] !== '' ? ' - ' . $cargo['abrev'] : '') . ' [' . $cargo['tipo'] . ']'; ?>
+                <option value="<?= h($cargo['id']) ?>" <?= (string) $data['grado_cargo_id'] === (string) $cargo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
               <?php endforeach; ?>
-            </datalist>
-            <div class="combo-hint">Puedes elegir una persona registrada o escribirla manualmente. Si escribes aqui, solo se guardara en este oficio.</div>
+            </select>
+            <button class="btn mini" type="button" onclick="openCreate('cargo')">+</button>
           </div>
-          <button class="btn mini" type="button" onclick="openCreate('persona')">+</button>
+        </div>
+
+        <div>
+          <label>Persona destino</label>
+          <div class="field-row">
+            <div class="combo-wrap">
+              <input type="hidden" name="persona_id" id="persona_id" value="<?= h((string) $data['persona_id']) ?>">
+              <input type="hidden" name="persona_destino_manual" id="persona_destino_manual" value="<?= h((string) ($data['persona_destino_manual'] ?? '')) ?>">
+              <input type="text" id="persona_id_text" list="persona_id_options" value="<?= h($personaDestinoTexto) ?>" placeholder="Selecciona o escribe manualmente">
+              <datalist id="persona_id_options">
+                <?php foreach ($personasActuales as $persona): ?>
+                  <option value="<?= h(trim((string) $persona['nombre'])) ?>" data-id="<?= h((string) $persona['id']) ?>"></option>
+                <?php endforeach; ?>
+              </datalist>
+              <div class="combo-hint">Puedes elegir una persona registrada o escribirla manualmente. Si escribes aqui, solo se guardara en este oficio.</div>
+            </div>
+            <button class="btn mini" type="button" onclick="openCreate('persona')">+</button>
+          </div>
         </div>
       </div>
 
+      </div>
+    </section>
+
+    <section class="office-section">
+      <div class="section-head"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span></div>
+      <div class="grid">
       <div class="c4">
         <label>Tipo de asunto</label>
         <select name="tipo" id="tipo">
@@ -342,6 +401,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
         <input type="text" name="referencia_texto" value="<?= h($data['referencia_texto']) ?>" placeholder="Ej.: Informe Técnico N° 162-2025-UIATN">
       </div>
 
+      </div>
+    </section>
+
+    <section class="office-section" id="caseLinksSection" hidden>
+      <div class="section-head"><i class="section-mark"></i><h2>Vinculos del caso</h2><span>Opcional</span></div>
+      <div class="grid">
       <div class="c6" id="vehiculoBox" style="display:none;">
         <label>Vehículo involucrado</label>
         <select name="involucrado_vehiculo_id" id="involucrado_vehiculo_id">
@@ -362,15 +427,17 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
         </select>
       </div>
 
-      <div class="c12" style="display:flex;justify-content:flex-end;gap:10px;">
+      </div>
+    </section>
+
+      <div class="office-actions">
         <?php if ($embed): ?>
           <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
         <?php else: ?>
-          <a class="btn" href="<?= h($listarHref) ?>">Cancelar</a>
+          <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Cancelar</a>
         <?php endif; ?>
         <button class="btn primary" type="submit">Guardar oficio</button>
       </div>
-    </div>
   </form>
 </div>
 
@@ -461,6 +528,7 @@ async function fetchJSON(url) {
 }
 
 function fillSelect(select, items, selectedValue, placeholder, labelKey = 'nombre') {
+  if (!select || String(select.tagName || '').toUpperCase() !== 'SELECT') return;
   select.innerHTML = '';
   const base = new Option(placeholder, '');
   select.add(base);
@@ -725,6 +793,7 @@ async function loadFallecidosAccidente(selected = '') {
 async function toggleBoxesPorAsunto() {
   const vehBox = document.getElementById('vehiculoBox');
   const fallBox = document.getElementById('fallecidoBox');
+  const caseLinksSection = document.getElementById('caseLinksSection');
   if (asuntoEsPeritaje()) {
     vehBox.style.display = 'block';
     await loadVehiculosAccidente(document.getElementById('involucrado_vehiculo_id').value);
@@ -748,6 +817,9 @@ async function toggleBoxesPorAsunto() {
     } else if (motivoTxt) {
       motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
     }
+  }
+  if (caseLinksSection) {
+    caseLinksSection.hidden = vehBox.style.display === 'none' && fallBox.style.display === 'none';
   }
 }
 async function recalcularNumero() {
