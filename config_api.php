@@ -10,6 +10,7 @@ $token = trim((string) app_config('services.seeker.token', ''));
 $tokenDni = trim((string) app_config('services.seeker.token_dni', $token));
 $tokenPlaca = trim((string) app_config('services.seeker.token_vehiculo', $token));
 $dniUrl = trim((string) app_config('services.seeker.dni_url', $baseUrl . '/personas/apiPremium/dni'));
+$nombresUrl = trim((string) app_config('services.seeker.nombres_url', $baseUrl . '/personas/apiBasico/nombresApellidos'));
 $placaUrl = trim((string) app_config('services.seeker.placa_url', $baseUrl . '/vehiculos/api_newPlacas'));
 
 if (!defined('API_TOKEN')) {
@@ -26,6 +27,10 @@ if (!defined('API_PLACA_TOKEN')) {
 
 if (!defined('API_DNI_URL')) {
     define('API_DNI_URL', $dniUrl);
+}
+
+if (!defined('API_NOMBRES_URL')) {
+    define('API_NOMBRES_URL', $nombresUrl);
 }
 
 if (!defined('API_PLACA_URL')) {
@@ -118,6 +123,68 @@ function consultar_dni(string $dni): array
 
     if (!is_array($res['json'])) {
         throw new Exception('Respuesta invalida de la API DNI: ' . substr($res['raw'], 0, 300));
+    }
+
+    return $res['json'];
+}
+
+function consultar_personas_por_nombre(
+    string $nombres,
+    string $paterno = '',
+    string $materno = '',
+    string $edadMin = '',
+    string $edadMax = ''
+): array {
+    $nombres = trim($nombres);
+    $paterno = trim($paterno);
+    $materno = trim($materno);
+    $edadMin = trim($edadMin);
+    $edadMax = trim($edadMax);
+
+    if (strlen($nombres) < 2) {
+        throw new Exception('El nombre debe tener al menos 2 caracteres.');
+    }
+
+    if ($paterno === '' && $materno === '') {
+        throw new Exception('Ingresa apellido paterno o materno.');
+    }
+
+    assert_token((string) API_DNI_TOKEN, 'SEEKER_TOKEN_DNI');
+
+    $payload = [
+        'nombres' => $nombres,
+        'paterno' => $paterno,
+        'materno' => $materno,
+    ];
+
+    if ($edadMin !== '') {
+        $payload['edadMin'] = $edadMin;
+    }
+
+    if ($edadMax !== '') {
+        $payload['edadMax'] = $edadMax;
+    }
+
+    $res = curl_json(API_NOMBRES_URL, [
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . API_DNI_TOKEN,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+    ]);
+
+    if ($res['http'] >= 400) {
+        throw new Exception('Error HTTP ' . $res['http'] . ': ' . $res['raw']);
+    }
+
+    if ($res['is_html']) {
+        throw new Exception('API devolvio HTML (login). Revisa token o bloqueo.');
+    }
+
+    if (!is_array($res['json'])) {
+        throw new Exception('Respuesta invalida de la API NOMBRES: ' . substr($res['raw'], 0, 300));
     }
 
     return $res['json'];

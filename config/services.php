@@ -7,6 +7,7 @@ return [
         'token_dni' => getenv('SEEKER_TOKEN_DNI') ?: (getenv('SEEKER_TOKEN') ?: ''),
         'token_vehiculo' => getenv('SEEKER_TOKEN_VEHICULO') ?: (getenv('SEEKER_TOKEN') ?: ''),
         'dni_url' => getenv('SEEKER_DNI_URL') ?: 'https://seeker.red/personas/apiPremium/dni',
+        'nombres_url' => getenv('SEEKER_NOMBRES_URL') ?: 'https://seeker.red/personas/apiBasico/nombresApellidos',
         'placa_url' => getenv('SEEKER_PLACA_URL') ?: 'https://seeker.red/vehiculos/api_newPlacas',
     ],
     'google_maps' => [

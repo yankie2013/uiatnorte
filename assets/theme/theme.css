@@ -132,6 +132,20 @@ a,
   transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
+:where(input, select, textarea, [contenteditable="true"]).is-empty-field,
+:where(.field-card, .data-card, .field, .line-card).is-empty-field{
+  border-color: #ff3b64 !important;
+  box-shadow: 0 0 0 1px rgba(255,59,100,.58), 0 0 11px rgba(255,59,100,.45) !important;
+}
+
+:where(.field-card, .data-card, .field, .line-card).is-empty-field{
+  background: linear-gradient(180deg, rgba(255,59,100,.07), rgba(255,255,255,.94)) !important;
+}
+
+html[data-theme-resolved="dark"] :where(.field-card, .data-card, .field, .line-card).is-empty-field{
+  background: linear-gradient(180deg, rgba(255,59,100,.14), rgba(255,59,100,.04)) !important;
+}
+
 select{
   color-scheme: light;
 }

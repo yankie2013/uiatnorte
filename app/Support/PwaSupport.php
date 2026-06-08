@@ -157,7 +157,7 @@ final class PwaSupport
         $icon192 = self::assetUrl($basePath, 'assets/pwa/icon-192.png?v=' . self::ICON_VERSION);
         $icon512 = self::assetUrl($basePath, 'assets/pwa/icon-512.png?v=' . self::ICON_VERSION);
         $appleIcon = self::assetUrl($basePath, 'assets/pwa/apple-touch-icon.png?v=' . self::ICON_VERSION);
-        $themeCss = self::assetUrl($basePath, 'assets/theme/theme.css?v=20260412-theme-auto');
+        $themeCss = self::assetUrl($basePath, 'assets/theme/theme.css?v=20260608-empty-fields');
 
         return <<<HTML
 <meta name="theme-color" content="{$themeColor}">
@@ -352,7 +352,7 @@ HTML;
     private static function bodyMarkup(string $basePath): string
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
-        $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260412-theme-auto');
+        $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260608-empty-fields');
         $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260416');
         $keepaliveUrl = self::assetUrl($basePath, 'session_keepalive.php');
         $scope = self::assetUrl($basePath, '');
