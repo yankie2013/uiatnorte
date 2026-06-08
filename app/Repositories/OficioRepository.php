@@ -191,8 +191,8 @@ final class OficioRepository
             return [];
         }
         $key = $this->asuntoCatalogKey((string) ($base['nombre'] ?? ''));
-        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE tipo = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
-        $st->execute([(string) $base['tipo']]);
+        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE entidad_id = ? AND tipo = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
+        $st->execute([(int) $base['entidad_id'], (string) $base['tipo']]);
 
         $items = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {

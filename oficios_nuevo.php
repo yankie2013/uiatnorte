@@ -39,7 +39,7 @@ if (isset($_GET['ajax'])) {
                 echo json_encode(['ok' => true, 'items' => $service->personas((int) ($_GET['entidad_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
                 break;
             case 'asuntos':
-                echo json_encode(['ok' => true, 'items' => $service->asuntosCatalogo((int) ($_GET['selected_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => true, 'items' => $service->asuntos((int) ($_GET['entidad_id'] ?? 0), (string) ($_GET['tipo'] ?? 'SOLICITAR'))], JSON_UNESCAPED_UNICODE);
                 break;
             case 'asunto_info':
                 echo json_encode(['ok' => true, 'item' => $service->asuntoInfo((int) ($_GET['id'] ?? 0))], JSON_UNESCAPED_UNICODE);
@@ -118,7 +118,7 @@ $entidadActual = (int) ($data['entidad_id'] ?: 0);
 $tipoActual = (string) ($data['tipo'] ?: 'SOLICITAR');
 $subentidadesActuales = $entidadActual > 0 ? $service->subentidades($entidadActual) : [];
 $personasActuales = $entidadActual > 0 ? $service->personas($entidadActual) : [];
-$asuntosActuales = $service->asuntosCatalogo((int) ($data['asunto_id'] ?? 0));
+$asuntosActuales = $entidadActual > 0 ? $service->asuntos($entidadActual, $tipoActual) : [];
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
@@ -359,7 +359,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           </select>
           <button class="btn mini" type="button" onclick="openCreate('asunto')">+</button>
         </div>
-        <div class="muted">Este selector siempre muestra todos los asuntos guardados. El asunto no cambia la entidad destino; si existen varias plantillas con el mismo nombre, podrás elegir la variante.</div>
+        <div class="muted">Este selector muestra solo los asuntos registrados para la entidad destino seleccionada.</div>
       </div>
 
       <div class="c12">
@@ -703,7 +703,11 @@ async function loadPersonas(entidadId, selected = '') {
 }
 
 async function loadAsuntos(entidadId, tipo, selected = '') {
-  const data = await fetchJSON('?ajax=asuntos&selected_id=' + encodeURIComponent(selected || ''));
+  if (!entidadId) {
+    fillSelect(asuntoSel, [], '', 'Selecciona el asunto');
+    return;
+  }
+  const data = await fetchJSON('?ajax=asuntos&entidad_id=' + encodeURIComponent(entidadId) + '&tipo=' + encodeURIComponent(tipo || 'SOLICITAR'));
   fillSelect(asuntoSel, data.items || [], selected, 'Selecciona el asunto');
 }
 
@@ -778,6 +782,10 @@ function asuntoEsCamaraVideo() {
   const text = normalizeText(asuntoTexto());
   return text.includes('camara') && text.includes('video');
 }
+function asuntoEsSunarpHistorial() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('historial') && text.includes('transferenc');
+}
 async function loadVehiculosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_vehiculo_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
@@ -794,12 +802,18 @@ async function toggleBoxesPorAsunto() {
   const vehBox = document.getElementById('vehiculoBox');
   const fallBox = document.getElementById('fallecidoBox');
   const caseLinksSection = document.getElementById('caseLinksSection');
-  if (asuntoEsPeritaje()) {
+  const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial();
+  const vehSel = document.getElementById('involucrado_vehiculo_id');
+  if (requiresVehicle) {
     vehBox.style.display = 'block';
-    await loadVehiculosAccidente(document.getElementById('involucrado_vehiculo_id').value);
+    if (vehSel) vehSel.required = true;
+    await loadVehiculosAccidente(vehSel ? vehSel.value : '');
   } else {
     vehBox.style.display = 'none';
-    document.getElementById('involucrado_vehiculo_id').value = '';
+    if (vehSel) {
+      vehSel.required = false;
+      vehSel.value = '';
+    }
   }
   if (asuntoEsNecropsia()) {
     fallBox.style.display = 'block';
@@ -864,7 +878,7 @@ function closeModal() {
   const tipo = tipoSel.value || 'SOLICITAR';
   if (lastModal === 'subentidad' && entidadId) loadSubentidades(entidadId, subSel.value);
   else if (lastModal === 'persona' && entidadId) loadPersonas(entidadId, personaSel.value);
-  else if (lastModal === 'asunto') loadAsuntos('', '', asuntoSel.value).then(refreshAsuntoPreview).then(toggleBoxesPorAsunto);
+  else if (lastModal === 'asunto' && entidadId) loadAsuntos(entidadId, tipo, asuntoSel.value).then(refreshAsuntoPreview).then(toggleBoxesPorAsunto);
   else if (lastModal === 'cargo') loadGradoCargo(document.getElementById('grado_cargo_id').value);
   else if (lastModal === 'entidad' || lastModal === 'ano') location.reload();
   lastModal = null;

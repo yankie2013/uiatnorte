@@ -7494,6 +7494,7 @@ include __DIR__ . '/sidebar.php';
                       $summaryEsDosaje = str_contains($summaryOficioText, 'dosaje et') || str_contains($summaryOficioText, 'resultado dosaje') || preg_match('/resultado.*dosaje/u', $summaryOficioText);
                       $summaryEsPeritaje = str_contains($summaryOficioText, 'peritaje de constat');
                       $summaryEsNecropsia = str_contains($summaryOficioText, 'protocolo de necropsia') || str_contains($summaryOficioText, 'necropsia') || str_contains($summaryOficioText, 'autopsia');
+                      $summaryEsSunarpHistorial = str_contains($summaryOficioText, 'sunarp') || (str_contains($summaryOficioText, 'historial') && str_contains($summaryOficioText, 'transferenc'));
                     ?>
                     <div class="summary-subcard" data-collapsible-card>
                       <div class="summary-header">
@@ -7512,6 +7513,7 @@ include __DIR__ . '/sidebar.php';
                           <?php if ($summaryEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Dosaje</a><?php endif; ?>
                           <?php if ($summaryEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Peritaje</a><?php endif; ?>
                           <?php if ($summaryEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Necropsia</a><?php endif; ?>
+                          <?php if ($summaryEsSunarpHistorial): ?><a class="btn-shell btn-docx" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= (int) $row['id'] ?>">SUNARP</a><?php endif; ?>
                           <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
                         </div>
                       </div>
@@ -9076,6 +9078,7 @@ include __DIR__ . '/sidebar.php';
                         $oficioEsDosaje = str_contains($oficioDownloadText, 'dosaje et') || str_contains($oficioDownloadText, 'resultado dosaje') || preg_match('/resultado.*dosaje/u', $oficioDownloadText);
                         $oficioEsPeritaje = str_contains($oficioDownloadText, 'peritaje de constat');
                         $oficioEsNecropsia = str_contains($oficioDownloadText, 'protocolo de necropsia') || str_contains($oficioDownloadText, 'necropsia') || str_contains($oficioDownloadText, 'autopsia');
+                        $oficioEsSunarpHistorial = str_contains($oficioDownloadText, 'sunarp') || (str_contains($oficioDownloadText, 'historial') && str_contains($oficioDownloadText, 'transferenc'));
                       ?>
                       <article class="module-card">
                         <header>
@@ -9103,6 +9106,7 @@ include __DIR__ . '/sidebar.php';
                           <?php if ($oficioEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar dosaje</a><?php endif; ?>
                           <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar peritaje</a><?php endif; ?>
                           <?php if ($oficioEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Descargar necropsia</a><?php endif; ?>
+                          <?php if ($oficioEsSunarpHistorial): ?><a class="btn-shell btn-docx" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= (int) $row['id'] ?>">Descargar SUNARP</a><?php endif; ?>
                           <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
                           <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar oficio">Editar</a>
                           <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar oficio">Eliminar</a>

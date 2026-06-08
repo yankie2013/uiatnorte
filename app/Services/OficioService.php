@@ -477,6 +477,12 @@ final class OficioService
         if (strtoupper((string) ($asuntoInfo['tipo'] ?? '')) !== $tipo) {
             throw new InvalidArgumentException('El asunto no corresponde al tipo seleccionado.');
         }
+        if ((int) ($asuntoInfo['entidad_id'] ?? 0) !== $entidadId) {
+            throw new InvalidArgumentException('El asunto no corresponde a la entidad destino seleccionada.');
+        }
+        if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
+            throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
+        }
         if ($oficialAnoId <= 0) {
             throw new InvalidArgumentException('Selecciona el nombre oficial del año.');
         }
@@ -521,5 +527,23 @@ final class OficioService
             'estado' => $estado,
             'involucrado_persona_id' => $personaInvId,
         ];
+    }
+
+    private function asuntoRequiereVehiculo(string $nombre, string $detalle): bool
+    {
+        $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
+        return str_contains($text, 'historial')
+            && (str_contains($text, 'transferencia') || str_contains($text, 'transferencias'));
+    }
+
+    private function normalizeMatchText(string $text): string
+    {
+        $text = mb_strtolower($text, 'UTF-8');
+        $text = strtr($text, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ñ' => 'n',
+        ]);
+        $text = preg_replace('/[^a-z0-9]+/', ' ', $text) ?? $text;
+        return trim($text);
     }
 }

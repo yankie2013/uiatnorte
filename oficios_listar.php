@@ -497,6 +497,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 $isPeritaje = str_contains($txt, 'peritaje de constat');
                 $isNecropsia = str_contains($txt, 'protocolo de necropsia') || str_contains($txt, 'necropsia') || str_contains($txt, 'autopsia');
                 $isCamaraVideo = (str_contains($txt, 'camara') || str_contains($txt, 'camaras')) && (str_contains($txt, 'video') || str_contains($txt, 'vigilancia'));
+                $isSunarpHistorial = str_contains($txt, 'sunarp') || (str_contains($txt, 'historial') && str_contains($txt, 'transferenc'));
                 $referenciaFull = trim((string) ($row['detalle'] ?? ''));
                 $referenciaCorta = $referenciaFull !== '' ? mb_strimwidth($referenciaFull, 0, 110, '...') : '-';
                 $vehiculo = trim((string) (($row['veh_ut'] ?? '') . ' ' . ($row['veh_placa'] ?? '')));
@@ -536,6 +537,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                     <?php if ($isDosaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_resultado_dosaje.php?oficio_id=<?= h($row['id']) ?>">Dosaje</a><?php endif; ?>
                     <?php if ($isPeritaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_peritaje.php?oficio_id=<?= h($row['id']) ?>">Peritaje</a><?php endif; ?>
                     <?php if ($isNecropsia): ?><a class="tool" target="_blank" rel="noopener" href="oficio_protocolo.php?oficio_id=<?= h($row['id']) ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . h($row['inv_per_id']) : '' ?>">Necropsia</a><?php endif; ?>
+                    <?php if ($isSunarpHistorial): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= h($row['id']) ?>">SUNARP</a><?php endif; ?>
                   </div>
                   <div class="action-links">
                     <a class="btn sm" href="oficios_leer.php?id=<?= h($row['id']) ?>">Ver</a>
