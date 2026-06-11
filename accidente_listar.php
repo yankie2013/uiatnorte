@@ -273,13 +273,13 @@ if($vehiculo!==''){
   $params[] = "%$vehiculo%";
 }
 
-/* Orden: por registro o por fecha del accidente */
+/* Las prioridades siempre aparecen primero; dentro de cada grupo se respeta el orden elegido. */
 $orderBy = match ($orden) {
   'fecha_desc' => 'a.fecha_accidente DESC, a.id DESC',
   'fecha_asc' => 'a.fecha_accidente ASC, a.id ASC',
   default => 'a.id DESC',
 };
-$sql .= " ORDER BY $orderBy LIMIT 200";
+$sql .= " ORDER BY COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
@@ -641,6 +641,10 @@ html[data-theme-resolved="dark"]{
   border-color:rgba(37,99,235,.38);
   box-shadow:0 14px 30px rgba(15,23,42,.10), inset 4px 0 0 rgba(37,99,235,.42);
 }
+.acc-card[data-priority="1"]{
+  border-color:rgba(212,175,55,.62);
+  box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
+}
 .acc-card[data-url] .acc-card-main:hover{background:rgba(37,99,235,.035)}
 .acc-card button,
 .acc-card select,
@@ -748,6 +752,10 @@ html[data-theme-resolved="dark"] .acc-card{
 html[data-theme-resolved="dark"] .acc-card:hover{
   border-color:rgba(96,165,250,.5);
   box-shadow:0 14px 30px rgba(0,0,0,.32), inset 4px 0 0 rgba(96,165,250,.58);
+}
+html[data-theme-resolved="dark"] .acc-card[data-priority="1"]{
+  border-color:rgba(226,201,108,.68);
+  box-shadow:0 12px 28px rgba(212,175,55,.16), inset 4px 0 0 #e2c96c;
 }
 html[data-theme-resolved="dark"] .acc-place,
 html[data-theme-resolved="dark"] .vehicle-plate{color:#e5edf8}
@@ -906,7 +914,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>">
+        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -1336,7 +1344,9 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
       star.classList.remove('star-off');
       star.classList.add('star-on');
       this.setAttribute('aria-pressed','true');
+      this.title='Quitar prioridad';
       this.dataset.priority='1';
+      if (card) card.dataset.priority='1';
 
       // Mover a la parte superior de la lista visible
       if (card && list) list.prepend(card);
@@ -1348,7 +1358,9 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
       star.classList.remove('star-on');
       star.classList.add('star-off');
       this.setAttribute('aria-pressed','false');
+      this.title='Marcar prioridad';
       this.dataset.priority='0';
+      if (card) card.dataset.priority='0';
 
       // --- REUBICAR FILA SEGÃšN ORDEN (folder â†’ fecha) ---
       const folder = (card || tr)?.querySelector('.select-folder')?.value || '';
@@ -1404,11 +1416,12 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
       .then(j=>{
         if(!j.ok){
           alert(j.msg || 'No se pudo actualizar prioridad');
-          // No revertimos la posiciÃ³n por simplicidad, pero podrÃ­a revertirse si prefieres.
+          location.reload();
         }
       })
       .catch(()=>{
         alert('Error de red al guardar prioridad');
+        location.reload();
       });
   });
 });
