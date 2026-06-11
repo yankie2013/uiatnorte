@@ -106,9 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"oficio.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
             exit;
         }
-        $success = 'Oficio registrado correctamente.';
-        $data = $service->defaultData(null, (int) ($data['accidente_id'] ?: 0));
-        $data['tipo'] = $_POST['tipo'] ?? 'SOLICITAR';
+        $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
+        header('Location: accidente_vista_tabs.php?' . http_build_query([
+            'accidente_id' => $accidenteIdGuardado,
+            'tab' => 'documentos',
+        ]));
+        exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }
@@ -123,21 +126,34 @@ $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccident
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
 $entidadesAutocomplete = [];
+$categoriasEntidad = [];
 $entidadDestinoTexto = '';
 foreach ($ctx['entidades'] as $entidadItem) {
     $nombreEntidad = trim((string) ($entidadItem['nombre'] ?? ''));
     $siglasEntidad = trim((string) ($entidadItem['siglas'] ?? ''));
+    $categoriaEntidad = trim((string) ($entidadItem['categoria'] ?? ''));
     $labelEntidad = $nombreEntidad . ($siglasEntidad !== '' ? ' (' . $siglasEntidad . ')' : '');
     $entidadesAutocomplete[] = [
         'id' => $entidadItem['id'] ?? '',
         'nombre' => $nombreEntidad,
         'siglas' => $siglasEntidad,
+        'categoria' => $categoriaEntidad,
         'label' => $labelEntidad,
     ];
+    if ($categoriaEntidad !== '') {
+        $categoriasEntidad[$categoriaEntidad] = $categoriaEntidad;
+    }
     if ($entidadDestinoTexto === '' && (string) ($data['entidad_id'] ?? '') === (string) ($entidadItem['id'] ?? '')) {
         $entidadDestinoTexto = $labelEntidad;
     }
 }
+foreach (($ctx['entidad_categorias'] ?? []) as $categoriaItem) {
+    $codigoCategoria = trim((string) ($categoriaItem['codigo'] ?? ''));
+    if ($codigoCategoria !== '') {
+        $categoriasEntidad[$codigoCategoria] = trim((string) ($categoriaItem['nombre'] ?? '')) ?: str_replace('_', ' ', $codigoCategoria);
+    }
+}
+ksort($categoriasEntidad, SORT_NATURAL | SORT_FLAG_CASE);
 $personaDestinoTexto = trim((string) ($data['persona_destino_manual'] ?? ''));
 if ($personaDestinoTexto === '' && !empty($data['persona_id'])) {
     foreach ($personasActuales as $personaItem) {
@@ -160,33 +176,45 @@ if (!$embed) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
 <style>
-:root{--page:#f4f7fb;--card:#fff;--panel:#fbfdff;--text:#0f172a;--form-text:#0f172a;--form-muted:#4b6285;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--primary-soft:#e8f0ff;--gold:#c88912;--danger:#b91c1c;--ok:#166534}
-@media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#fff;--panel:#fbfdff;--text:#e5e7eb;--form-text:#0f172a;--form-muted:#4b6285;--muted:#94a3b8;--border:#d7deea;--primary:#3b82f6;--primary-soft:#e8f0ff;--gold:#d6a51f;--danger:#b91c1c;--ok:#166534}}
+:root{color-scheme:light;--page:#f4f7fb;--card:#fff;--panel:#fbfdff;--field:#fff;--button:#fff;--preview:#f8fbff;--actions:rgba(255,255,255,.86);--text:#0f172a;--form-text:#0f172a;--form-muted:#4b6285;--muted:#64748b;--border:#d7deea;--section-title:#17315e;--primary:#1d4ed8;--primary-soft:#e8f0ff;--gold:#c88912;--danger:#b91c1c;--ok:#166534}
+html[data-theme-resolved="dark"]{color-scheme:dark;--page:#0b1220;--card:#101a2c;--panel:#0d1728;--field:#111d31;--button:#16243b;--preview:#0d192b;--actions:rgba(15,25,43,.9);--text:#e5edf8;--form-text:#e5edf8;--form-muted:#9fb0c6;--muted:#94a3b8;--border:#30415f;--section-title:#dbeafe;--primary:#60a5fa;--primary-soft:#172554;--gold:#facc15;--danger:#fecaca;--ok:#bbf7d0}
 body{margin:0;background:radial-gradient(circle at 20% 0,rgba(29,78,216,.08),transparent 28%),var(--page);color:var(--text)}
 .wrap{max-width:1180px;margin:24px auto 34px;padding:16px}
 .office-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
 .office-title h1{margin:0;font-size:26px;letter-spacing:0;color:var(--text)}
 .office-title p{margin:5px 0 0;color:var(--muted);font-size:13px;font-weight:650}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;color-scheme:light}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--form-text);text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--button);color:var(--form-text);text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.06)}
 .btn.primary{background:linear-gradient(180deg,#2f68ff 0%,#1d4ed8 100%);color:#fff;border-color:transparent;box-shadow:0 12px 22px rgba(29,78,216,.22)}
 .btn.mini{width:40px;min-width:40px;min-height:46px;padding:0;font-size:20px;line-height:1}
 .btn:hover{transform:translateY(-1px);border-color:#b9c7dc}
-.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(251,253,255,.96) 100%);border:1px solid #d9e2f1;border-radius:14px;padding:0;color:var(--form-text);color-scheme:light;box-shadow:0 18px 42px rgba(15,23,42,.10);overflow:hidden}
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--form-text);box-shadow:0 18px 42px rgba(15,23,42,.10);overflow:visible}
 .card::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#1d4ed8,#38bdf8,#d6a130)}
-.office-section{padding:18px 18px 16px;border-bottom:1px solid rgba(215,222,234,.78)}
-.office-section:last-child{border-bottom:0}
-.section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.section-mark{width:7px;height:24px;border-radius:99px;background:linear-gradient(180deg,#1d4ed8,#38bdf8);box-shadow:0 0 16px rgba(29,78,216,.24)}
-.section-head h2{margin:0;font-size:15px;color:#17315e}
-.section-head span{margin-left:auto;color:var(--form-muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.office-section{--section-accent:#2563eb;--section-accent-rgb:37,99,235;position:relative;margin:12px 0;padding:20px 18px 18px;border:2px solid rgba(var(--section-accent-rgb),.64);border-radius:14px;background:linear-gradient(135deg,rgba(var(--section-accent-rgb),.10),transparent 24%),linear-gradient(180deg,var(--card),var(--panel));box-shadow:0 12px 26px rgba(15,23,42,.07),inset 5px 0 0 var(--section-accent);overflow:visible}
+.office-section:focus-within{z-index:30}
+.office-section::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,var(--section-accent),rgba(var(--section-accent-rgb),.18))}
+.office-section:first-of-type{--section-accent:#2563eb;--section-accent-rgb:37,99,235}
+.office-section:nth-of-type(2){--section-accent:#7c3aed;--section-accent-rgb:124,58,237}
+.office-section:nth-of-type(3){--section-accent:#d97706;--section-accent-rgb:217,119,6}
+.office-section:nth-of-type(4){--section-accent:#059669;--section-accent-rgb:5,150,105}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid rgba(var(--section-accent-rgb),.34)}
+.accordion-section>.section-head{cursor:pointer;user-select:none}
+.accordion-section>.section-head:focus-visible{outline:3px solid rgba(var(--section-accent-rgb),.28);outline-offset:5px;border-radius:8px}
+.accordion-section.is-collapsed{padding-bottom:10px;box-shadow:0 8px 18px rgba(15,23,42,.05),inset 5px 0 0 var(--section-accent)}
+.accordion-section.is-collapsed>.section-head{margin-bottom:0;padding-bottom:0;border-bottom-color:transparent}
+.accordion-section>.office-accordion-body{display:grid}
+.section-mark{width:8px;height:26px;border-radius:99px;background:var(--section-accent);box-shadow:0 0 16px rgba(var(--section-accent-rgb),.42)}
+.section-head h2{margin:0;font-size:15px;color:var(--section-title)}
+.section-head span{margin-left:auto;padding:4px 9px;border:1px solid rgba(var(--section-accent-rgb),.34);border-radius:999px;background:rgba(var(--section-accent-rgb),.10);color:var(--form-text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.section-toggle{display:grid;place-items:center;width:30px;height:30px;margin-left:2px;border:1px solid rgba(var(--section-accent-rgb),.38);border-radius:50%;background:rgba(var(--section-accent-rgb),.12);color:var(--form-text);font-size:18px;font-weight:900;transition:transform .18s ease}
+.accordion-section.is-collapsed .section-toggle{transform:rotate(-90deg)}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
 .c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
 .office-recipient-row{grid-column:span 12;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 label{display:block;font-weight:900;color:var(--gold);font-size:12px;margin-bottom:7px}
-input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #cfd9eb;background:#fff;color:var(--form-text);line-height:1.3;box-shadow:0 1px 0 rgba(15,23,42,.03)}
-input::placeholder,textarea::placeholder{color:#7b8798;opacity:1}
-select option{background:#fff;color:var(--form-text)}
+input,select,textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--field);color:var(--form-text);line-height:1.3;box-shadow:0 1px 0 rgba(15,23,42,.03)}
+input::placeholder,textarea::placeholder{color:var(--form-muted);opacity:.8}
+select option{background:var(--field);color:var(--form-text)}
 select{min-height:46px;appearance:auto;-webkit-appearance:menulist;padding-right:38px}
 input{min-height:46px}
 textarea{min-height:150px;resize:vertical}
@@ -196,7 +224,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 .combo-wrap{display:grid;gap:6px}
 .combo-hint,.muted{color:var(--form-muted);font-size:.88rem;line-height:1.35}
 .combo-menu{position:relative}
-.combo-suggestions{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(760px,calc(100vw - 80px));max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 14px 28px rgba(15,23,42,.14);display:none;z-index:40}
+.combo-suggestions{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(760px,calc(100vw - 80px));max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 14px 28px rgba(15,23,42,.28);display:none;z-index:100}
 .combo-suggestions.open{display:block}
 .combo-suggestion{padding:9px 12px;color:var(--form-text);font-size:.84rem;line-height:1.25;cursor:pointer;white-space:normal;word-break:break-word}
 .combo-suggestion:hover,.combo-suggestion.active{background:rgba(29,78,216,.10)}
@@ -204,15 +232,14 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 .alert{padding:12px 14px;border-radius:12px;margin-bottom:12px}
 .alert.ok{background:rgba(22,163,74,.12);color:var(--ok)}
 .alert.err{background:rgba(220,38,38,.12);color:var(--danger)}
-.preview{border:1px dashed #b8c7dc;border-radius:12px;padding:12px;background:linear-gradient(180deg,#f8fbff 0%,#fff 100%)}
-.preview{color:var(--form-text)}
+.preview{border:1px dashed var(--border);border-radius:12px;padding:12px;background:var(--preview);color:var(--form-text)}
 .preview h4{margin:.1rem 0 .5rem}
-.office-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;background:rgba(255,255,255,.86);border-top:1px solid var(--border);backdrop-filter:blur(10px)}
+.office-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;margin:12px -14px -14px;padding:14px 18px;background:var(--actions);border-top:1px solid var(--border);backdrop-filter:blur(10px)}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
 .modal{width:min(980px,96vw);height:min(680px,90vh);background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border)}
 .modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
 .modal iframe{width:100%;height:calc(100% - 52px);border:0}
-@media (max-width:900px){.wrap{padding:10px}.office-page-head{display:grid}.toolbar{justify-content:flex-start}.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.office-recipient-row{grid-template-columns:1fr}.office-actions{position:static;flex-wrap:wrap}.combo-suggestions{max-width:calc(100vw - 48px)}}
+@media (max-width:900px){.wrap{padding:10px}.office-page-head{display:grid}.toolbar{justify-content:flex-start}.card{padding:9px}.office-section{margin:9px 0;padding:17px 13px 15px}.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.office-recipient-row{grid-template-columns:1fr}.office-actions{position:static;flex-wrap:wrap;margin:9px -9px -9px}.combo-suggestions{max-width:calc(100vw - 48px)}}
 </style>
 </head>
 <body>
@@ -239,9 +266,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <form method="post" class="card" id="frmOficio">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
-    <section class="office-section">
-      <div class="section-head"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span></div>
-    <div class="grid">
+    <section class="office-section accordion-section is-expanded" data-accordion-section>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="true"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+    <div class="office-accordion-body grid">
       <div class="c12">
         <label>Accidente asociado*</label>
         <select name="accidente_id" id="accidente_id" required>
@@ -284,10 +311,23 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     </div>
     </section>
 
-    <section class="office-section">
-      <div class="section-head"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad y persona</span></div>
-      <div class="grid">
-      <div class="c6">
+    <section class="office-section accordion-section is-collapsed" data-accordion-section>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad, cargo y persona</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+      <div class="office-accordion-body grid">
+      <input type="hidden" name="subentidad_id" value="">
+
+      <div class="c4">
+        <label for="entidad_categoria">Categoría de entidad</label>
+        <select id="entidad_categoria">
+          <option value="">Todas las categorías</option>
+          <?php foreach ($categoriasEntidad as $codigoCategoria => $nombreCategoria): ?>
+            <option value="<?= h($codigoCategoria) ?>"><?= h($nombreCategoria) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="combo-hint">Filtra las entidades disponibles antes de buscar el destinatario.</div>
+      </div>
+
+      <div class="c8">
         <label>Entidad destino*</label>
         <div class="field-row">
           <div class="combo-wrap combo-menu">
@@ -299,8 +339,6 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <button class="btn mini" type="button" onclick="openCreate('entidad')">+</button>
         </div>
       </div>
-
-      <input type="hidden" name="subentidad_id" value="">
 
       <div class="office-recipient-row">
         <div>
@@ -339,9 +377,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       </div>
     </section>
 
-    <section class="office-section">
-      <div class="section-head"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span></div>
-      <div class="grid">
+    <section class="office-section accordion-section is-collapsed" data-accordion-section>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+      <div class="office-accordion-body grid">
       <div class="c4">
         <label>Tipo de asunto</label>
         <select name="tipo" id="tipo">
@@ -458,6 +496,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 const accSel = document.getElementById('accidente_id');
 const entidadSel = document.getElementById('entidad_id');
 const entidadTextInp = document.getElementById('entidad_id_text');
+const entidadCategoriaSel = document.getElementById('entidad_categoria');
 const subSel = document.getElementById('subentidad_id');
 const personaSel = document.getElementById('persona_id');
 const personaTextInp = document.getElementById('persona_id_text');
@@ -473,11 +512,47 @@ const anioInp = document.getElementById('anio_oficio');
 const numInp = document.getElementById('numero_oficio');
 const linkListado = document.getElementById('linkListado');
 const entidadOptionsBox = document.getElementById('entidad_id_options');
+const accordionSections = Array.from(document.querySelectorAll('[data-accordion-section]'));
 let lastModal = null;
 let entidadItemsCache = <?= json_encode($entidadesAutocomplete, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 let personaItemsCache = <?= json_encode($personasActuales, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 let lastEntidadLoaded = String(entidadSel ? (entidadSel.value || '') : '');
 let entidadSuggestions = [];
+let handlingInvalidField = false;
+
+function openAccordionSection(section) {
+  if (!section || !accordionSections.includes(section)) return;
+  accordionSections.forEach((item) => {
+    const expanded = item === section;
+    item.classList.toggle('is-collapsed', !expanded);
+    item.classList.toggle('is-expanded', expanded);
+    const body = item.querySelector('.office-accordion-body');
+    if (body) body.style.setProperty('display', expanded ? 'grid' : 'none', 'important');
+    const head = item.querySelector(':scope > .section-head');
+    if (head) head.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  });
+}
+
+accordionSections.forEach((section) => {
+  const head = section.querySelector(':scope > .section-head');
+  if (!head) return;
+  head.addEventListener('click', () => openAccordionSection(section));
+  head.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openAccordionSection(section);
+  });
+});
+openAccordionSection(accordionSections[0]);
+
+document.getElementById('frmOficio').addEventListener('invalid', (event) => {
+  if (handlingInvalidField) return;
+  const section = event.target.closest('[data-accordion-section]');
+  if (!section) return;
+  handlingInvalidField = true;
+  openAccordionSection(section);
+  setTimeout(() => { handlingInvalidField = false; }, 0);
+}, true);
 
 function normalizeText(value) {
   return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -565,7 +640,9 @@ function openEntidadSuggestions() {
 function renderEntidadSuggestions(filterValue = '') {
   if (!entidadOptionsBox) return;
   const normalizedFilter = normalizeText(filterValue).trim();
+  const categoria = entidadCategoriaSel ? String(entidadCategoriaSel.value || '') : '';
   entidadSuggestions = entidadItemsCache.filter((item) => {
+    if (categoria !== '' && String(item.categoria || '') !== categoria) return false;
     if (normalizedFilter === '') return true;
     return normalizeText(item.label || '').includes(normalizedFilter)
       || normalizeText(item.nombre || '').includes(normalizedFilter)
@@ -639,7 +716,9 @@ function syncEntidadDestino() {
   }
 
   const typedNormalized = normalizeText(typed);
+  const categoria = entidadCategoriaSel ? String(entidadCategoriaSel.value || '') : '';
   const matched = entidadItemsCache.find((item) => {
+    if (categoria !== '' && String(item.categoria || '') !== categoria) return false;
     const label = normalizeText(item.label || '');
     const nombre = normalizeText(item.nombre || '');
     const siglas = normalizeText(item.siglas || '');
@@ -923,6 +1002,20 @@ if (entidadTextInp) {
     renderEntidadSuggestions(entidadTextInp.value || '');
   });
 }
+if (entidadCategoriaSel) {
+  entidadCategoriaSel.addEventListener('change', async () => {
+    const categoria = String(entidadCategoriaSel.value || '');
+    const entidadActual = entidadItemsCache.find((item) => String(item.id || '') === String(entidadSel.value || ''));
+    if (entidadActual && categoria !== '' && String(entidadActual.categoria || '') !== categoria) {
+      entidadSel.value = '';
+      entidadTextInp.value = '';
+      lastEntidadLoaded = '';
+      clearEntidadDependents();
+    }
+    renderEntidadSuggestions(entidadTextInp ? entidadTextInp.value : '');
+    if (entidadTextInp) entidadTextInp.focus();
+  });
+}
 tipoSel.addEventListener('change', async () => {
   await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR', asuntoSel.value || '');
   await refreshAsuntoPreview();
@@ -943,6 +1036,7 @@ asuntoSel.addEventListener('change', async () => {
 document.getElementById('frmOficio').addEventListener('submit', (event) => {
   syncEntidadDestino();
   if (!entidadSel.value) {
+    openAccordionSection(entidadTextInp ? entidadTextInp.closest('[data-accordion-section]') : null);
     if (entidadTextInp) {
       entidadTextInp.setCustomValidity('Selecciona una entidad de la lista.');
       entidadTextInp.reportValidity();
@@ -956,6 +1050,7 @@ document.getElementById('frmOficio').addEventListener('submit', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  openAccordionSection(accordionSections[0]);
   syncListadoHref();
   syncEntidadDestino();
   syncPersonaDestinoManual();

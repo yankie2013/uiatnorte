@@ -32,6 +32,17 @@ $csrf = (string) $_SESSION['catalogos_csrf'];
 function catalogConfigs(): array
 {
     return [
+        'categorias_entidad' => [
+            'label' => 'Categorias de entidad',
+            'table' => 'oficio_categoria_entidad',
+            'description' => 'Categorias usadas para organizar y filtrar entidades destino.',
+            'order' => 'activo DESC, nombre ASC, codigo ASC',
+            'fields' => [
+                ['name' => 'codigo', 'label' => 'Codigo', 'type' => 'text', 'required' => true],
+                ['name' => 'nombre', 'label' => 'Nombre', 'type' => 'text', 'required' => true],
+                ['name' => 'activo', 'label' => 'Activo', 'type' => 'checkbox', 'default' => 1],
+            ],
+        ],
         'entidades' => [
             'label' => 'Entidades',
             'table' => 'oficio_entidad',
@@ -263,6 +274,31 @@ function availableCatalogs(?PDO $pdo, array $configs): array
     return array_filter($configs, static fn (array $config): bool => tableExists($pdo, $config['table']));
 }
 
+function entidadCategoryChoices(PDO $pdo): array
+{
+    if (!tableExists($pdo, 'oficio_categoria_entidad')) {
+        return [];
+    }
+    $st = $pdo->query("SELECT codigo, nombre FROM oficio_categoria_entidad WHERE COALESCE(activo,1)=1 ORDER BY nombre, codigo");
+    return $st->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+}
+
+function applyDynamicCatalogChoices(PDO $pdo, array $configs): array
+{
+    $choices = entidadCategoryChoices($pdo);
+    if ($choices === [] || !isset($configs['entidades']['fields'])) {
+        return $configs;
+    }
+    foreach ($configs['entidades']['fields'] as &$field) {
+        if (($field['name'] ?? '') === 'categoria') {
+            $field['choices'] = $choices;
+            break;
+        }
+    }
+    unset($field);
+    return $configs;
+}
+
 function fieldsFor(PDO $pdo, array $config): array
 {
     return array_values(array_filter(
@@ -423,6 +459,15 @@ function normalizePayload(PDO $pdo, array $config, array $fields, array $input, 
             $payload[$name] = $raw === '' ? null : $raw;
         }
     }
+    if ($config['table'] === 'oficio_categoria_entidad') {
+        $codigo = mb_strtoupper(trim((string) ($payload['codigo'] ?? '')), 'UTF-8');
+        $codigo = preg_replace('/[^A-Z0-9]+/u', '_', $codigo) ?? $codigo;
+        $codigo = trim($codigo, '_');
+        if ($codigo === '') {
+            throw new InvalidArgumentException('El codigo de categoria es obligatorio.');
+        }
+        $payload['codigo'] = $codigo;
+    }
     return $payload;
 }
 
@@ -431,9 +476,13 @@ function saveCatalogRow(PDO $pdo, array $config, array $fields, array $input, ?i
     $payload = normalizePayload($pdo, $config, $fields, $input, $id);
     $table = $config['table'];
     $setsVigente = $table === 'oficio_oficial_ano' && (int) ($payload['vigente'] ?? 0) === 1;
+    $oldCategoryCode = '';
+    if ($table === 'oficio_categoria_entidad' && $id !== null) {
+        $oldCategoryCode = trim((string) (findRow($pdo, $config, $id)['codigo'] ?? ''));
+    }
     $started = false;
 
-    if ($setsVigente && !$pdo->inTransaction()) {
+    if (($setsVigente || $table === 'oficio_categoria_entidad') && !$pdo->inTransaction()) {
         $pdo->beginTransaction();
         $started = true;
     }
@@ -456,6 +505,11 @@ function saveCatalogRow(PDO $pdo, array $config, array $fields, array $input, ?i
             $values[] = $id;
             $st = $pdo->prepare('UPDATE `' . $table . '` SET ' . implode(', ', $sets) . ' WHERE id = ?');
             $st->execute($values);
+            $newCategoryCode = trim((string) ($payload['codigo'] ?? ''));
+            if ($table === 'oficio_categoria_entidad' && $oldCategoryCode !== '' && $newCategoryCode !== '' && $oldCategoryCode !== $newCategoryCode) {
+                $st = $pdo->prepare('UPDATE oficio_entidad SET categoria = ? WHERE categoria = ?');
+                $st->execute([$newCategoryCode, $oldCategoryCode]);
+            }
         } else {
             $columns = array_keys($payload);
             $marks = array_fill(0, count($columns), '?');
@@ -539,6 +593,15 @@ function deleteCatalogRow(PDO $pdo, array $config, int $id): void
     if ($id <= 0 || !findRow($pdo, $config, $id)) {
         throw new InvalidArgumentException('Registro no encontrado.');
     }
+    if ($config['table'] === 'oficio_categoria_entidad') {
+        $row = findRow($pdo, $config, $id);
+        $codigo = trim((string) ($row['codigo'] ?? ''));
+        $st = $pdo->prepare('SELECT COUNT(*) FROM oficio_entidad WHERE categoria = ?');
+        $st->execute([$codigo]);
+        if ((int) $st->fetchColumn() > 0) {
+            throw new InvalidArgumentException('No se puede eliminar porque la categoria esta asignada a entidades.');
+        }
+    }
     $references = referenceCounts($pdo, $config['table'], $id);
     if ($references !== []) {
         throw new InvalidArgumentException('No se puede eliminar porque ya esta en uso: ' . implode(', ', $references) . '.');
@@ -548,6 +611,9 @@ function deleteCatalogRow(PDO $pdo, array $config, int $id): void
 }
 
 $configs = catalogConfigs();
+if ($pdo) {
+    $configs = applyDynamicCatalogChoices($pdo, $configs);
+}
 $available = availableCatalogs($pdo, $configs);
 $catalogKey = (string) ($_GET['catalog'] ?? ($_POST['catalog'] ?? array_key_first($available)));
 if (!isset($available[$catalogKey])) {
@@ -582,8 +648,57 @@ if ($pdo && $_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($action === 'inline_category') {
+            $isAjax = (string) ($_POST['ajax'] ?? '') === '1';
+            if ($catalogKey !== 'entidades' || $config['table'] !== 'oficio_entidad' || !columnExists($pdo, 'oficio_entidad', 'categoria')) {
+                throw new InvalidArgumentException('La categoria inline no esta disponible.');
+            }
+            if (!findRow($pdo, $config, $id)) {
+                throw new InvalidArgumentException('Entidad no encontrada.');
+            }
+
+            $categoriaField = null;
+            foreach ($fields as $field) {
+                if (($field['name'] ?? '') === 'categoria') {
+                    $categoriaField = $field;
+                    break;
+                }
+            }
+            if (!array_key_exists('categoria', $_POST)) {
+                throw new InvalidArgumentException('No se recibio la categoria seleccionada.');
+            }
+            $categoria = trim((string) $_POST['categoria']);
+            $choices = $categoriaField['choices'] ?? [];
+            if ($categoria !== '' && !array_key_exists($categoria, $choices)) {
+                throw new InvalidArgumentException('Categoria no valida.');
+            }
+
+            $st = $pdo->prepare('UPDATE oficio_entidad SET categoria = ? WHERE id = ? LIMIT 1');
+            $st->execute([$categoria !== '' ? $categoria : null, $id]);
+
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $redirect = ['catalog' => $catalogKey, 'msg' => 'category_saved'];
+            $returnQuery = trim((string) ($_POST['return_q'] ?? ''));
+            if ($returnQuery !== '') {
+                $redirect['q'] = $returnQuery;
+            }
+            header('Location: catalogos.php?' . http_build_query($redirect));
+            exit;
+        }
+
         throw new InvalidArgumentException('Accion no reconocida.');
     } catch (Throwable $e) {
+        if ((string) ($_POST['ajax'] ?? '') === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $error = $e->getMessage();
     }
 }
@@ -606,7 +721,7 @@ include __DIR__ . '/sidebar.php';
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#2563eb;--accent:#0f766e;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--accent:#2dd4bf;--danger:#fecaca;--ok:#bbf7d0}}
-*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1440px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}.small{font-size:12px;color:var(--muted)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#eff6ff;border-color:transparent}.btn.danger{color:var(--danger)}.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px}.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}.catalog-list{display:flex;flex-direction:column;gap:8px}.catalog-link{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;color:var(--text);text-decoration:none;background:rgba(148,163,184,.06)}.catalog-link.active{border-color:rgba(37,99,235,.45);background:rgba(37,99,235,.10);color:var(--primary)}.catalog-main{display:flex;flex-direction:column;gap:14px}.notice{padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card)}.notice.ok{border-color:rgba(22,101,52,.25);color:var(--ok);background:rgba(22,163,74,.10)}.notice.err{border-color:rgba(185,28,28,.25);color:var(--danger);background:rgba(220,38,38,.10)}.form-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.field{grid-column:span 6;display:flex;flex-direction:column;gap:6px}.field.full{grid-column:span 12}.label{font-size:12px;color:var(--muted);font-weight:800}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font:inherit}textarea{min-height:92px;resize:vertical}.check-row{flex-direction:row;align-items:center}.check-row input{width:auto}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}.filters{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}.filters label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:240px}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(37,99,235,.05)}.cell-muted{color:var(--muted)}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.row-actions form{margin:0}.empty{padding:24px;text-align:center;color:var(--muted)}@media(max-width:980px){.layout{grid-template-columns:1fr}.field{grid-column:span 12}.catalog-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.filters label{min-width:100%}.filters .btn{width:100%}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1440px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}.small{font-size:12px;color:var(--muted)}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#eff6ff;border-color:transparent}.btn.danger{color:var(--danger)}.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px}.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}.catalog-list{display:flex;flex-direction:column;gap:8px}.catalog-link{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;color:var(--text);text-decoration:none;background:rgba(148,163,184,.06)}.catalog-link.active{border-color:rgba(37,99,235,.45);background:rgba(37,99,235,.10);color:var(--primary)}.catalog-main{display:flex;flex-direction:column;gap:14px}.notice{padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card)}.notice.ok{border-color:rgba(22,101,52,.25);color:var(--ok);background:rgba(22,163,74,.10)}.notice.err{border-color:rgba(185,28,28,.25);color:var(--danger);background:rgba(220,38,38,.10)}.form-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.field{grid-column:span 6;display:flex;flex-direction:column;gap:6px}.field.full{grid-column:span 12}.label{font-size:12px;color:var(--muted);font-weight:800}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font:inherit}textarea{min-height:92px;resize:vertical}.check-row{flex-direction:row;align-items:center}.check-row input{width:auto}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}.filters{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}.filters label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:240px}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(37,99,235,.05)}.cell-muted{color:var(--muted)}.inline-select-form{min-width:180px}.inline-select-form select{padding:7px 32px 7px 9px;font-size:12px;font-weight:700;border-color:rgba(96,165,250,.38);background:rgba(37,99,235,.08);transition:border-color .15s ease,box-shadow .15s ease}.inline-select-form select.is-saving{opacity:.65}.inline-select-form select.is-saved{border-color:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.18)}.inline-select-form select.is-error{border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.18)}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.row-actions form{margin:0}.empty{padding:24px;text-align:center;color:var(--muted)}@media(max-width:980px){.layout{grid-template-columns:1fr}.field{grid-column:span 12}.catalog-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.filters label{min-width:100%}.filters .btn{width:100%}}
 </style>
 </head>
 <body>
@@ -626,6 +741,7 @@ include __DIR__ . '/sidebar.php';
     <div class="notice err">No se pudo conectar a la base de datos: <?= h($dbError) ?>.</div>
   <?php else: ?>
     <?php if ($flash === 'saved'): ?><div class="notice ok">Registro guardado correctamente.</div><?php endif; ?>
+    <?php if ($flash === 'category_saved'): ?><div class="notice ok">Categoria actualizada correctamente.</div><?php endif; ?>
     <?php if ($flash === 'deleted'): ?><div class="notice ok">Registro eliminado correctamente.</div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="notice err"><?= h($error) ?></div><?php endif; ?>
 
@@ -761,7 +877,26 @@ include __DIR__ . '/sidebar.php';
                             $display = (string) $value;
                         }
                         ?>
-                        <td><?= $display !== '' ? h($display) : '<span class="cell-muted">-</span>' ?></td>
+                        <td>
+                          <?php if ($catalogKey === 'entidades' && $field['name'] === 'categoria'): ?>
+                            <form method="post" class="inline-select-form">
+                              <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                              <input type="hidden" name="catalog" value="entidades">
+                              <input type="hidden" name="action" value="inline_category">
+                              <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                              <input type="hidden" name="return_q" value="<?= h($query) ?>">
+                              <input type="hidden" name="ajax" value="1">
+                              <select name="categoria" class="js-inline-category" aria-label="Categoria de <?= h((string) ($row['nombre'] ?? ('entidad #' . $row['id']))) ?>">
+                                <option value="" <?= (string) $value === '' ? 'selected' : '' ?>>Sin seleccionar</option>
+                                <?php foreach (($field['choices'] ?? []) as $optionValue => $optionLabel): ?>
+                                  <option value="<?= h($optionValue) ?>" <?= (string) $value === (string) $optionValue ? 'selected' : '' ?>><?= h($optionLabel) ?></option>
+                                <?php endforeach; ?>
+                              </select>
+                            </form>
+                          <?php else: ?>
+                            <?= $display !== '' ? h($display) : '<span class="cell-muted">-</span>' ?>
+                          <?php endif; ?>
+                        </td>
                       <?php endforeach; ?>
                       <td>
                         <div class="row-actions">
@@ -787,5 +922,38 @@ include __DIR__ . '/sidebar.php';
     </div>
   <?php endif; ?>
 </div>
+<script>
+document.querySelectorAll('.js-inline-category').forEach((select) => {
+  select.dataset.previous = select.value;
+  select.addEventListener('change', async () => {
+    const form = select.form;
+    const previous = select.dataset.previous || '';
+    const formData = new FormData(form);
+    formData.set('categoria', select.value);
+    select.disabled = true;
+    select.classList.remove('is-saved', 'is-error');
+    select.classList.add('is-saving');
+    try {
+      const response = await fetch(location.pathname + location.search, {
+        method: 'POST',
+        body: formData,
+        headers: {'Accept': 'application/json'}
+      });
+      const data = await response.json();
+      if (!response.ok || data.ok === false) throw new Error(data.msg || 'No se pudo guardar la categoria.');
+      select.dataset.previous = select.value;
+      select.classList.add('is-saved');
+      setTimeout(() => select.classList.remove('is-saved'), 1200);
+    } catch (error) {
+      select.value = previous;
+      select.classList.add('is-error');
+      alert(error.message || 'No se pudo guardar la categoria.');
+    } finally {
+      select.disabled = false;
+      select.classList.remove('is-saving');
+    }
+  });
+});
+</script>
 </body>
 </html>

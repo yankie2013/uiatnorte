@@ -31,6 +31,7 @@ final class OficioService
 
         return [
             'entidades' => $this->repository->entidades(),
+            'entidad_categorias' => $this->repository->entidadCategorias(),
             'oficial_anos' => $oficialAnos,
             'oficial_ano_default' => $defaultOficial,
             'grado_cargo' => $this->repository->gradoCargo(),

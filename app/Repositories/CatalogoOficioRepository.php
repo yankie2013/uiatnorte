@@ -142,21 +142,11 @@ final class CatalogoOficioRepository
 
     public function categoriasEntidad(): array
     {
-        return [
-            'COMISARIA',
-            'FISCALIA',
-            'MILITARES',
-            'POLICIALES',
-            'NECROPSIA',
-            'MUNICIPALIDAD',
-            'EMPRESA_PUBLICA',
-            'EMPRESA_PRIVADA',
-            'HOSPITAL',
-            'CLINICA',
-            'JUZGADO',
-            'ASEGURADORA',
-            'OTRA',
-        ];
+        if ($this->tableExists('oficio_categoria_entidad')) {
+            return $this->pdo->query("SELECT codigo FROM oficio_categoria_entidad WHERE COALESCE(activo,1)=1 ORDER BY nombre, codigo")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        }
+
+        return ['COMISARIA', 'FISCALIA', 'MILITARES', 'POLICIALES', 'NECROPSIA', 'MUNICIPALIDAD', 'EMPRESA_PUBLICA', 'EMPRESA_PRIVADA', 'HOSPITAL', 'CLINICA', 'JUZGADO', 'ASEGURADORA', 'OTRA'];
     }
 
     public function enlaceInteresCategorias(): array
@@ -348,6 +338,13 @@ final class CatalogoOficioRepository
     public function columnExists(string $table, string $column): bool
     {
         return in_array($column, $this->tableColumns($table), true);
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $st->execute([$table]);
+        return (int) $st->fetchColumn() > 0;
     }
 
     private function tableColumns(string $table): array

@@ -31,7 +31,15 @@ final class OficioRepository
 
     public function entidades(): array
     {
-        return $this->pdo->query('SELECT id, nombre, COALESCE(siglas,\'\') AS siglas FROM oficio_entidad ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC);
+        return $this->pdo->query("SELECT id, nombre, COALESCE(siglas,'') AS siglas, COALESCE(categoria,'') AS categoria FROM oficio_entidad ORDER BY categoria, nombre")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function entidadCategorias(): array
+    {
+        if (!$this->tableExists('oficio_categoria_entidad')) {
+            return [];
+        }
+        return $this->pdo->query("SELECT codigo, nombre FROM oficio_categoria_entidad WHERE COALESCE(activo,1)=1 ORDER BY nombre, codigo")->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     public function findEntidadByNameLike(string $term): ?array
