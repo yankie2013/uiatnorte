@@ -4146,6 +4146,11 @@ $documentosRecibidos = safe_query_all(
     [$accidente_id]
 );
 
+$actas = safe_table_exists($pdo, 'actas')
+    ? (new \App\Repositories\ActaRepository($pdo))->listByAccidente((int) $accidente_id)
+    : [];
+$actaEntregaTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_entrega_vehiculo.docx') || is_file(__DIR__ . '/acta_entrega_vehiculo.docx');
+
 $itps = safe_query_all(
     $pdo,
     "SELECT i.*,
@@ -7111,7 +7116,7 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'datos-generales', 'label' => 'Datos Generales', 'sub' => 'Accidente'],
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
-            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos)],
+            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos) + count($actas)],
             ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
@@ -9050,6 +9055,10 @@ include __DIR__ . '/sidebar.php';
               Documentos recibidos
               <span class="tab-mini"><?= count($documentosRecibidos) ?> registro(s)</span>
             </button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-actas" type="button" role="tab">
+              Actas
+              <span class="tab-mini"><?= count($actas) ?> registro(s)</span>
+            </button>
           </div>
 
           <div class="tab-content mt-2">
@@ -9157,6 +9166,58 @@ include __DIR__ . '/sidebar.php';
                           <a class="btn-shell" href="documento_recibido_ver.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar documento recibido">Editar</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar documento recibido">Eliminar</a>
+                        </div>
+                      </article>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="documentos-actas" role="tabpanel">
+              <div class="inner-panel">
+                <div class="module-actions" style="margin-bottom:8px;">
+                  <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_form.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nueva acta de entrega de vehiculo">+ Acta de entrega de vehiculo</a>
+                </div>
+                <?php if (!$actaEntregaTemplateAvailable): ?>
+                  <div class="empty-state" style="margin-bottom:10px;">Para habilitar la descarga, sube la plantilla como <strong>acta_entrega_vehiculo.docx</strong> en la raiz o dentro de <strong>plantillas/</strong>.</div>
+                <?php endif; ?>
+                <?php if (!$actas): ?>
+                  <div class="empty-state">No hay actas registradas para este accidente.</div>
+                <?php else: ?>
+                  <div class="module-grid">
+                    <?php foreach ($actas as $row): ?>
+                      <?php
+                        $actaEstado = trim((string) ($row['estado'] ?? 'Pendiente'));
+                        $actaEstadoClass = $actaEstado === 'Realizada' ? 'chip-status-ok' : ($actaEstado === 'Anulada' ? 'chip-testigo' : 'chip-status-warn');
+                        $conductorNombre = trim((string) (($row['conductor_nombres'] ?? '') . ' ' . ($row['conductor_apellido_paterno'] ?? '') . ' ' . ($row['conductor_apellido_materno'] ?? '')));
+                        $usaConductorComoPropietario = empty($row['propietario_vehiculo_id']);
+                        $propietarioNombre = $usaConductorComoPropietario
+                          ? $conductorNombre
+                          : ((($row['tipo_propietario'] ?? '') === 'JURIDICA')
+                            ? trim((string) ($row['razon_social'] ?? ''))
+                            : trim((string) (($row['propietario_nombres'] ?? '') . ' ' . ($row['propietario_apellido_paterno'] ?? '') . ' ' . ($row['propietario_apellido_materno'] ?? ''))));
+                        $representanteNombre = ($row['tipo_propietario'] ?? '') === 'JURIDICA'
+                          ? trim((string) (($row['representante_nombres'] ?? '') . ' ' . ($row['representante_apellido_paterno'] ?? '') . ' ' . ($row['representante_apellido_materno'] ?? '')))
+                          : '';
+                      ?>
+                      <article class="module-card">
+                        <header>
+                          <div><h4><?= h((string) ($row['tipo'] ?? 'Acta')) ?> #<?= (int) $row['id'] ?></h4><p><?= h((string) (($row['orden_participacion'] ?? '') . ' · Placa ' . ($row['placa'] ?? ''))) ?></p></div>
+                          <span class="chip-simple <?= h($actaEstadoClass) ?>"><?= h($actaEstado) ?></span>
+                        </header>
+                        <div class="module-meta">
+                          <span class="chip-simple">Entrega: <?= h(fecha_simple($row['fecha_entrega'] ?? null)) ?></span>
+                          <span class="chip-simple"><?= h(substr((string) ($row['hora_inicio'] ?? ''), 0, 5)) ?> a <?= h(substr((string) ($row['hora_culminacion'] ?? ''), 0, 5)) ?></span>
+                          <span class="chip-simple">Conductor: <?= h($conductorNombre !== '' ? $conductorNombre : 'Sin conductor') ?></span>
+                          <span class="chip-simple">Propietario: <?= h($propietarioNombre !== '' ? $propietarioNombre : 'Sin propietario') ?><?= $usaConductorComoPropietario ? ' (conductor)' : '' ?></span>
+                          <?php if (($row['tipo_propietario'] ?? '') === 'JURIDICA'): ?><span class="chip-simple">Representante: <?= h($representanteNombre !== '' ? $representanteNombre : 'Sin representante') ?></span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($row['observaciones'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['observaciones'])) ?></p><?php endif; ?>
+                        <div class="module-actions">
+                          <?php if ($actaEntregaTemplateAvailable): ?><a class="btn-shell btn-docx" href="acta_entrega_vehiculo_descargar.php?id=<?= (int) $row['id'] ?>">Descargar Word</a><?php endif; ?>
+                          <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_form.php?id=<?= (int) $row['id'] ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar acta de entrega de vehiculo">Editar</a>
+                          <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar acta">Eliminar</a>
                         </div>
                       </article>
                     <?php endforeach; ?>
@@ -11797,7 +11858,7 @@ include __DIR__ . '/sidebar.php';
 
     window.addEventListener('message', (event) => {
       const data = event.data || {};
-      if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close') {
+      if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close' || data.type === 'acta.close') {
         const workbench = visibleWorkbench();
         if (!workbench) return;
         const frame = workbench.querySelector('.inline-frame');
@@ -11805,7 +11866,7 @@ include __DIR__ . '/sidebar.php';
         closeWorkbenchImmediate(workbench, frame);
         return;
       }
-      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted'].includes(data.type)) {
+      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted', 'acta.saved', 'acta.deleted'].includes(data.type)) {
         window.location.reload();
       }
     });

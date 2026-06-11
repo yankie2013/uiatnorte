@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS actas (
+  id INT NOT NULL AUTO_INCREMENT,
+  accidente_id INT NOT NULL,
+  tipo VARCHAR(80) NOT NULL,
+  involucrado_vehiculo_id INT NOT NULL,
+  conductor_involucrado_persona_id INT NOT NULL,
+  propietario_vehiculo_id INT NULL,
+  fecha_entrega DATE NOT NULL,
+  hora_inicio TIME NOT NULL,
+  hora_culminacion TIME NOT NULL,
+  estado ENUM('Pendiente','Realizada','Anulada') NOT NULL DEFAULT 'Pendiente',
+  observaciones TEXT NULL,
+  creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_actas_accidente (accidente_id),
+  KEY idx_actas_vehiculo (involucrado_vehiculo_id),
+  KEY idx_actas_conductor (conductor_involucrado_persona_id),
+  KEY idx_actas_propietario (propietario_vehiculo_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
