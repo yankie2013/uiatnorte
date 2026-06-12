@@ -4126,6 +4126,7 @@ $oficios = safe_query_all(
             o.estado,
             o.referencia_texto,
             o.motivo,
+            COALESCE(o.persona_destino_manual, '') AS persona_destino_manual,
             COALESCE(e.siglas, e.nombre) AS entidad,
             COALESCE(a2.nombre, '') AS asunto_nombre,
             COALESCE(a2.detalle, '') AS asunto_detalle,
@@ -9092,12 +9093,20 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>">+ Nuevo oficio</a>
+	                  <a class="btn-shell js-inline-open" href="oficio_registro_rapido.php?accidente_id=<?= (int) $accidente_id ?>" data-workbench="oficio-rapido-workbench" data-frame="oficio-rapido-workbench-frame" data-title="Nuevo oficio - registro rapido">+ Nuevo oficio registro rapido</a>
+	                  <a class="btn-shell" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>">Nuevo oficio completo</a>
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
 	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
 	                  <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
 	                </div>
+                <div class="inline-workbench" id="oficio-rapido-workbench" hidden>
+                  <div class="inline-head">
+                    <strong>Nuevo oficio - registro rapido</strong>
+                    <button type="button" class="btn-shell js-inline-close" data-workbench="oficio-rapido-workbench" data-frame="oficio-rapido-workbench-frame">Cerrar</button>
+                  </div>
+                  <iframe class="inline-frame" id="oficio-rapido-workbench-frame" src="about:blank" loading="lazy"></iframe>
+                </div>
 
                 <?php if (!$oficios): ?>
                   <div class="empty-state">No hay oficios registrados para este accidente.</div>
@@ -9120,7 +9129,7 @@ include __DIR__ . '/sidebar.php';
                         <header>
                           <div>
                             <h4><?= h($oficioIcon) ?> Oficio <?= h((string) ($row['numero'] ?? '')) ?>/<?= h((string) ($row['anio'] ?? '')) ?></h4>
-                            <p><?= h((string) (($row['entidad'] ?? '') !== '' ? $row['entidad'] : 'Sin entidad')) ?></p>
+                            <p><?= h((string) (($row['entidad'] ?? '') !== '' ? $row['entidad'] : (($row['persona_destino_manual'] ?? '') !== '' ? $row['persona_destino_manual'] : 'Sin destino'))) ?></p>
                           </div>
                           <select class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
                             <?php foreach ($oficioEstados as $estadoOpt): ?>

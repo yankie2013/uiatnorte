@@ -42,6 +42,17 @@ final class OficioRepository
         return $this->pdo->query("SELECT codigo, nombre FROM oficio_categoria_entidad WHERE COALESCE(activo,1)=1 ORDER BY nombre, codigo")->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    public function entidadExists(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM oficio_entidad WHERE id = ?');
+        $st->execute([$id]);
+        return (int) $st->fetchColumn() > 0;
+    }
+
     public function findEntidadByNameLike(string $term): ?array
     {
         $term = trim($term);
@@ -294,6 +305,17 @@ final class OficioRepository
         return (int) $st->fetchColumn() > 0;
     }
 
+    public function accidenteExists(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM accidentes WHERE id = ?');
+        $st->execute([$id]);
+        return (int) $st->fetchColumn() > 0;
+    }
+
     public function vehiculosByAccidente(int $accidenteId): array
     {
         if ($accidenteId <= 0) {
@@ -426,6 +448,7 @@ final class OficioRepository
         $select = [
             'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
             'COALESCE(e.siglas, e.nombre) AS entidad',
+            'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
             'a.registro_sidpol',
             'a.id AS accid',
             'COALESCE(s.detalle,\'\') AS detalle',

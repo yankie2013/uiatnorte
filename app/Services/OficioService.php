@@ -125,6 +125,81 @@ final class OficioService
         return $this->repository->nextNumero($anio);
     }
 
+    public function quickRegistrationContext(int $accidenteId): array
+    {
+        if (!$this->repository->accidenteExists($accidenteId)) {
+            throw new InvalidArgumentException('El accidente indicado no existe.');
+        }
+
+        $context = $this->formContext($accidenteId);
+        $anio = (int) date('Y');
+
+        return [
+            'accidente_id' => $accidenteId,
+            'accidente_label' => $this->accidenteLabel($context['accidentes'], $accidenteId),
+            'fecha_emision' => date('Y-m-d'),
+            'numero_oficio' => $this->repository->nextNumero($anio),
+            'oficial_ano_id' => (int) $context['oficial_ano_default'],
+            'entidades' => $context['entidades'],
+            'entidad_categorias' => $context['entidad_categorias'],
+        ];
+    }
+
+    public function createQuick(array $input): array
+    {
+        $accidenteId = (int) ($input['accidente_id'] ?? 0);
+        $fecha = trim((string) ($input['fecha_emision'] ?? ''));
+        $numero = (int) ($input['numero_oficio'] ?? 0);
+        $motivo = trim((string) ($input['motivo'] ?? ''));
+        $entidadId = (int) ($input['entidad_id'] ?? 0);
+        $oficialAnoId = (int) ($input['oficial_ano_id'] ?? 0);
+
+        if (!$this->repository->accidenteExists($accidenteId)) {
+            throw new InvalidArgumentException('El accidente indicado no existe.');
+        }
+        if ($fecha === '' || strtotime($fecha) === false) {
+            throw new InvalidArgumentException('La fecha de emision es obligatoria.');
+        }
+        if ($numero <= 0) {
+            throw new InvalidArgumentException('El numero de oficio es obligatorio.');
+        }
+        if ($motivo === '') {
+            throw new InvalidArgumentException('El motivo / contexto es obligatorio.');
+        }
+        if (!$this->repository->entidadExists($entidadId)) {
+            throw new InvalidArgumentException('Selecciona una entidad de destino valida.');
+        }
+        if ($oficialAnoId <= 0) {
+            throw new InvalidArgumentException('No hay un nombre oficial del ano configurado.');
+        }
+
+        $anio = (int) date('Y', strtotime($fecha));
+        if ($this->repository->numeroExists($anio, $numero)) {
+            throw new InvalidArgumentException("El numero {$numero} para el ano {$anio} ya existe.");
+        }
+
+        $id = $this->repository->create([
+            'accidente_id' => $accidenteId,
+            'involucrado_vehiculo_id' => null,
+            'numero' => $numero,
+            'anio' => $anio,
+            'fecha_emision' => $fecha,
+            'entidad_id_destino' => $entidadId,
+            'subentidad_destino_id' => null,
+            'persona_destino_id' => null,
+            'persona_destino_manual' => null,
+            'grado_cargo_id' => null,
+            'asunto_id' => null,
+            'motivo' => $motivo,
+            'referencia_texto' => null,
+            'oficial_ano_id' => $oficialAnoId,
+            'estado' => 'BORRADOR',
+            'involucrado_persona_id' => null,
+        ]);
+
+        return ['id' => $id, 'numero' => $numero, 'anio' => $anio];
+    }
+
     public function subentidades(int $entidadId): array
     {
         return $this->repository->subentidadesByEntidad($entidadId);
