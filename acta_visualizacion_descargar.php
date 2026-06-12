@@ -34,6 +34,49 @@ function avv_names(array $rows): string
     return implode(', ', array_values(array_filter(array_map(static fn(array $row): string => trim((string) ($row['nombre'] ?? '')), $rows))));
 }
 
+function avv_normalize_description_spacing(string $docxPath): void
+{
+    $zip = new ZipArchive();
+    if ($zip->open($docxPath) !== true) return;
+    $xml = $zip->getFromName('word/document.xml');
+    if ($xml === false) {
+        $zip->close();
+        return;
+    }
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = false;
+    $dom->loadXML($xml);
+    $xpath = new DOMXPath($dom);
+    $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+    $remove = [];
+    foreach ($xpath->query('//w:p') as $paragraph) {
+        if (str_contains($paragraph->textContent, '__UIAT_QUITAR_PARRAFO__')) $remove[] = $paragraph;
+    }
+    foreach ($remove as $paragraph) $paragraph->parentNode->removeChild($paragraph);
+
+    foreach ($xpath->query('//w:p') as $timeParagraph) {
+        if (!str_starts_with(trim($timeParagraph->textContent), 'Tiempo observado:')) continue;
+        $previous = $timeParagraph->previousSibling;
+        $empty = [];
+        while (
+            $previous instanceof DOMElement
+            && $previous->localName === 'p'
+            && trim($previous->textContent) === ''
+            && $xpath->query('.//w:pict | .//w:drawing', $previous)->length === 0
+        ) {
+            $empty[] = $previous;
+            $previous = $previous->previousSibling;
+        }
+        foreach (array_slice($empty, 1) as $paragraph) {
+            $paragraph->parentNode->removeChild($paragraph);
+        }
+    }
+    $zip->addFromString('word/document.xml', $dom->saveXML());
+    $zip->close();
+}
+
 $id = (int) ($_GET['id'] ?? 0);
 $repo = new ActaVisualizacionRepository($pdo);
 $row = $repo->find($id);
@@ -182,8 +225,8 @@ foreach ($values as $key => $value) {
 }
 foreach ($videoDescriptions as $descriptionIndex => $description) {
     $i = $descriptionIndex + 1;
-    $tpl->setValue("disco_encabezado#{$i}", htmlspecialchars((string) $description['disco_encabezado'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
-    $tpl->setValue("archivo_encabezado#{$i}", htmlspecialchars((string) $description['archivo_encabezado'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+    $tpl->setValue("disco_encabezado#{$i}", $description['disco_encabezado'] !== '' ? htmlspecialchars((string) $description['disco_encabezado'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '__UIAT_QUITAR_PARRAFO__');
+    $tpl->setValue("archivo_encabezado#{$i}", $description['archivo_encabezado'] !== '' ? htmlspecialchars((string) $description['archivo_encabezado'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '__UIAT_QUITAR_PARRAFO__');
     $tpl->setValue("descripcion_tiempo#{$i}", $description['tiempo'] !== '' ? 'Tiempo observado: ' . htmlspecialchars((string) $description['tiempo'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '');
     $tpl->setValue("descripcion_detalle#{$i}", htmlspecialchars((string) $description['detalle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
     $path = trim((string) ($videoDescriptions[$i - 1]['captura_path'] ?? ''));
@@ -196,6 +239,7 @@ foreach ($videoDescriptions as $descriptionIndex => $description) {
 }
 $tmp = tempnam(sys_get_temp_dir(), 'acta_visualizacion_');
 $tpl->saveAs($tmp);
+avv_normalize_description_spacing($tmp);
 $filename = uiat_docx_filename(['acta_visualizacion_video', $row['id'], $actDate], 'acta_visualizacion_video');
 header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 header('Content-Disposition: attachment; filename="' . $filename . '"');

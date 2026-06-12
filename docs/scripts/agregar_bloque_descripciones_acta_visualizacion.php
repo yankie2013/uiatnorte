@@ -26,7 +26,9 @@ foreach ($xpath->query('//w:p') as $paragraph) {
         $target = $paragraph;
     }
 }
-if (!$target) exit("No se encontro diligencia_archivos_detalle\n");
+$parent = $target?->parentNode ?? ($oldBlock[0]->parentNode ?? null);
+$reference = $target?->nextSibling ?? ($oldBlock ? end($oldBlock)->nextSibling : null);
+if (!$parent) exit("No se encontro el bloque de descripciones ni su punto de insercion\n");
 foreach ($oldBlock as $paragraphToRemove) {
     $paragraphToRemove->parentNode->removeChild($paragraphToRemove);
 }
@@ -59,11 +61,11 @@ $nodes = [
     $paragraph('${descripcion_tiempo}', true),
     $paragraph('${descripcion_detalle}'),
     $paragraph('${descripcion_captura}'),
+    $paragraph(''),
     $paragraph('${/DESCRIPCIONES_VIDEO}'),
 ];
-$reference = $target->nextSibling;
 foreach ($nodes as $node) {
-    $target->parentNode->insertBefore($node, $reference);
+    $parent->insertBefore($node, $reference);
 }
 
 $zip->addFromString('word/document.xml', $dom->saveXML());
