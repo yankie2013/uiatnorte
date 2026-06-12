@@ -7581,6 +7581,8 @@ include __DIR__ . '/sidebar.php';
           ?>
           <div class="module-actions" style="margin-bottom:8px;">
             <a class="btn-shell" href="itp_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo ITP</a>
+            <a class="chip-simple" href="itp_plantilla_descargar.php?tipo=simple">Descargar Acta ITP simple</a>
+            <a class="chip-simple" href="itp_plantilla_descargar.php?tipo=interseccion">Descargar Acta ITP interseccion</a>
           </div>
           <?php if (!$itps): ?>
             <div class="empty-state">No hay registros ITP para este accidente.</div>
