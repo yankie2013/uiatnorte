@@ -66,6 +66,7 @@ final class ActaRepository
                 'anio' => implode('/', array_filter(array_map('strval', array_column($detail, 'anio')))),
                 'clase' => implode('/', array_filter(array_column($detail, 'clase'))),
                 'es_combinado' => count($detail) > 1,
+                'tiene_propietario' => $this->automaticOwner($accidenteId, (int) $primary['involucrado_vehiculo_id']) !== null,
             ];
         }
         return $options;
@@ -219,6 +220,53 @@ final class ActaRepository
               WHERE id=? AND (tipo_propietario<>'JURIDICA' OR representante_persona_id>0)",
             [$ownerId]
         );
+    }
+
+    public function automaticConductor(int $accidenteId, int $involucradoVehiculoId): ?int
+    {
+        $vehicleIds = array_column($this->deliveryVehicles($involucradoVehiculoId), 'vehiculo_id');
+        if ($vehicleIds === []) {
+            return null;
+        }
+        $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
+        $st = $this->pdo->prepare(
+            "SELECT ip.id
+               FROM involucrados_personas ip
+               JOIN participacion_persona pp ON pp.Id=ip.rol_id
+              WHERE ip.accidente_id=? AND ip.vehiculo_id IN ({$placeholders}) AND LOWER(pp.Nombre)='conductor'
+           ORDER BY FIELD(ip.vehiculo_id, {$placeholders}), ip.id ASC
+              LIMIT 1"
+        );
+        $st->execute([$accidenteId, ...$vehicleIds, ...$vehicleIds]);
+        $id = $st->fetchColumn();
+        return $id === false ? null : (int) $id;
+    }
+
+    public function automaticOwner(int $accidenteId, int $involucradoVehiculoId): ?int
+    {
+        $vehicleIds = array_column($this->deliveryVehicles($involucradoVehiculoId), 'involucrado_vehiculo_id');
+        if ($vehicleIds === []) {
+            return null;
+        }
+        $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
+        $st = $this->pdo->prepare(
+            "SELECT pv.id
+               FROM propietario_vehiculo pv
+              WHERE pv.accidente_id=? AND pv.vehiculo_inv_id IN ({$placeholders})
+           ORDER BY FIELD(pv.vehiculo_inv_id, {$placeholders}), pv.id ASC
+              LIMIT 1"
+        );
+        $st->execute([$accidenteId, ...$vehicleIds, ...$vehicleIds]);
+        $id = $st->fetchColumn();
+        return $id === false ? null : (int) $id;
+    }
+
+    public function actaVehicleResolution(int $accidenteId, int $involucradoVehiculoId): array
+    {
+        return [
+            'conductor_id' => $this->automaticConductor($accidenteId, $involucradoVehiculoId),
+            'propietario_id' => $this->automaticOwner($accidenteId, $involucradoVehiculoId),
+        ];
     }
 
     private function exists(string $sql, array $params): bool

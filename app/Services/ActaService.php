@@ -19,9 +19,6 @@ final class ActaService
     {
         return [
             'vehicles' => $this->repository->actaVehicleOptions($accidenteId),
-            'conductors' => $this->repository->conductors($accidenteId),
-            'owners' => $this->repository->owners($accidenteId),
-            'states' => self::ESTADOS,
         ];
     }
 
@@ -44,15 +41,16 @@ final class ActaService
 
     public function create(array $input): int
     {
-        return $this->repository->create($this->payload($input));
+        return $this->repository->create($this->payload($input, null));
     }
 
     public function update(int $id, array $input): void
     {
-        if ($this->repository->find($id) === null) {
+        $current = $this->repository->find($id);
+        if ($current === null) {
             throw new InvalidArgumentException('Acta no encontrada.');
         }
-        $this->repository->update($id, $this->payload($input));
+        $this->repository->update($id, $this->payload($input, $current));
     }
 
     public function delete(int $id): void
@@ -63,25 +61,29 @@ final class ActaService
         $this->repository->delete($id);
     }
 
-    private function payload(array $input): array
+    private function payload(array $input, ?array $current): array
     {
         $accidenteId = (int) ($input['accidente_id'] ?? 0);
         $vehicleId = (int) ($input['involucrado_vehiculo_id'] ?? 0);
-        $conductorId = (int) ($input['conductor_involucrado_persona_id'] ?? 0);
-        $ownerId = (int) ($input['propietario_vehiculo_id'] ?? 0);
-        $date = trim((string) ($input['fecha_entrega'] ?? ''));
+        $conductorId = $this->repository->automaticConductor($accidenteId, $vehicleId) ?? 0;
+        $ownerId = $this->repository->automaticOwner($accidenteId, $vehicleId) ?? 0;
+        $useConductorAsOwner = (int) ($input['usar_conductor_como_propietario'] ?? 0) === 1;
+        $date = (string) ($current['fecha_entrega'] ?? date('Y-m-d'));
         $start = trim((string) ($input['hora_inicio'] ?? ''));
-        $end = trim((string) ($input['hora_culminacion'] ?? ''));
-        $state = trim((string) ($input['estado'] ?? 'Pendiente'));
+        $end = $start !== '' ? date('H:i', strtotime($start . ' +20 minutes')) : '';
+        $state = (string) ($current['estado'] ?? 'Pendiente');
 
         if ($accidenteId <= 0 || $vehicleId <= 0 || $conductorId <= 0) {
-            throw new InvalidArgumentException('Selecciona el vehiculo y conductor.');
+            throw new InvalidArgumentException('El vehiculo seleccionado no tiene un conductor registrado.');
         }
         if (!$this->repository->vehicleBelongs($accidenteId, $vehicleId)) {
             throw new InvalidArgumentException('El vehiculo no pertenece al caso.');
         }
         if (!$this->repository->conductorBelongs($accidenteId, $conductorId, $vehicleId)) {
             throw new InvalidArgumentException('El conductor seleccionado no corresponde al vehiculo.');
+        }
+        if ($ownerId <= 0 && !$useConductorAsOwner) {
+            throw new InvalidArgumentException('El vehiculo no tiene propietario registrado. Confirma si deseas consignar al conductor como propietario.');
         }
         if ($ownerId > 0) {
             if (!$this->repository->ownerBelongs($accidenteId, $ownerId, $vehicleId)) {
@@ -111,7 +113,7 @@ final class ActaService
             'hora_inicio' => $start,
             'hora_culminacion' => $end,
             'estado' => $state,
-            'observaciones' => trim((string) ($input['observaciones'] ?? '')) ?: null,
+            'observaciones' => $current['observaciones'] ?? null,
         ];
     }
 }
