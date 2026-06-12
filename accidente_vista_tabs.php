@@ -1007,6 +1007,10 @@ function field_html(string $key, mixed $value): string
         return '—';
     }
 
+    if (in_array($key, ['danos_peritaje', 'lesiones_levantamiento', 'lesiones_protocolo'], true)) {
+        return render_hyphen_list_html((string) $value);
+    }
+
     if (str_ends_with($key, '_en') || str_starts_with($key, 'fecha_')) {
         $text = (string) $value;
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $text)) {
@@ -1027,6 +1031,22 @@ function field_html(string $key, mixed $value): string
     }
 
     return nl2br(h($text !== '' ? $text : '—'));
+}
+
+function render_hyphen_list_html(?string $value): string
+{
+    $items = narrative_lines($value);
+    if ($items === []) {
+        return '—';
+    }
+
+    $html = '<div class="hyphen-list">';
+    foreach ($items as $item) {
+        $html .= '<div>- ' . h($item) . '</div>';
+    }
+    $html .= '</div>';
+
+    return $html;
 }
 
 function render_field_cards(array $record, array $fields): string
@@ -1250,8 +1270,8 @@ function render_vehicle_peritaje_components_story(array $documents): string
             $rows[] = ['label' => $label, 'value' => $value];
         }
 
-        $damages = compact_text((string) ($document['danos_peritaje'] ?? ''));
-        if ($rows === [] && $damages === '') {
+        $damages = narrative_lines((string) ($document['danos_peritaje'] ?? ''));
+        if ($rows === [] && $damages === []) {
             continue;
         }
 
@@ -1280,11 +1300,11 @@ function render_vehicle_peritaje_components_story(array $documents): string
             }
             $html .= '</div>';
         }
-        if ($block['damages'] !== '') {
+        if ($block['damages'] !== []) {
             $html .= '<div class="vehicle-docs-story-list" style="margin-top:8px">';
             $html .= '<div class="vehicle-docs-story-item">';
-            $html .= '<span class="vehicle-docs-story-text">- Daños constatados: ' . h($block['damages']) . '</span>';
-            $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($block['damages']) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
+            $html .= '<div class="vehicle-docs-story-text"><strong>Daños constatados:</strong>' . render_hyphen_list_html(implode("\n", $block['damages'])) . '</div>';
+            $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h('- ' . implode("\n- ", $block['damages'])) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
             $html .= '</div></div>';
         }
         $html .= '</div>';
@@ -1313,8 +1333,8 @@ function render_analysis_peritaje_story(array $record): string
         $rows[] = ['label' => $label, 'value' => $value];
     }
 
-    $damages = compact_text((string) ($record['danos_peritaje'] ?? ''));
-    if ($rows === [] && $damages === '') {
+    $damages = narrative_lines((string) ($record['danos_peritaje'] ?? ''));
+    if ($rows === [] && $damages === []) {
         return '<div class="summary-empty">No hay peritaje registrado para este conductor.</div>';
     }
 
@@ -1334,11 +1354,11 @@ function render_analysis_peritaje_story(array $record): string
         }
         $html .= '</div>';
     }
-    if ($damages !== '') {
+    if ($damages !== []) {
         $html .= '<div class="vehicle-docs-story-list" style="margin-top:8px">';
         $html .= '<div class="vehicle-docs-story-item">';
-        $html .= '<span class="vehicle-docs-story-text">- Daños constatados: ' . h($damages) . '</span>';
-        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($damages) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
+        $html .= '<div class="vehicle-docs-story-text"><strong>Daños constatados:</strong>' . render_hyphen_list_html(implode("\n", $damages)) . '</div>';
+        $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h('- ' . implode("\n- ", $damages)) . '" aria-label="Copiar daños constatados" title="Copiar daños constatados">⧉</button>';
         $html .= '</div></div>';
     }
     $html .= '</div>';
@@ -1990,11 +2010,11 @@ function render_occiso_levantamiento_narrative_block(array $occisos, array $cont
         $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($copyText) . '" aria-label="Copiar levantamiento de cadáver" title="Copiar levantamiento de cadáver">⧉</button>';
         $html .= '</div>';
         if ($lesiones !== []) {
-            $html .= '<div class="occiso-story-section"><h5>Descripción de lesiones:</h5><ul>';
+            $html .= '<div class="occiso-story-section"><h5>Descripción de lesiones:</h5>';
             foreach ($lesiones as $lesion) {
-                $html .= '<li>' . h($lesion) . '</li>';
+                $html .= '<div>- ' . h($lesion) . '</div>';
             }
-            $html .= '</ul></div>';
+            $html .= '</div>';
         }
         if ($diagnostico !== '') {
             $html .= '<div class="occiso-story-section"><h5>Diagnóstico presuntivo de muerte</h5><p>' . h($diagnostico) . '</p></div>';
@@ -4850,7 +4870,7 @@ foreach ($personas as $persona) {
 
 $analysisFallecidoRows[] = [
         'nombre' => person_label($persona),
-        'lesiones' => $lesiones !== [] ? implode(' | ', $lesiones) : trim((string) ($persona['lesion'] ?? '')),
+        'lesiones' => $lesiones !== [] ? implode("\n", $lesiones) : trim((string) ($persona['lesion'] ?? '')),
     ];
 }
 
@@ -5673,6 +5693,7 @@ include __DIR__ . '/sidebar.php';
   .vehicle-docs-story-list{display:grid;gap:6px}
   .vehicle-docs-story-item{display:flex;align-items:flex-start;gap:8px}
   .vehicle-docs-story-text{margin:0;color:#111827;font-size:14px;line-height:1.45;font-weight:500;flex:1}
+  .hyphen-list{display:grid;gap:4px;margin-top:4px}
   .license-story-block{display:grid;gap:10px}
   .license-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
   .license-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
@@ -5696,7 +5717,7 @@ include __DIR__ . '/sidebar.php';
   .occiso-story-section{margin-top:14px;color:#e11d1d}
   .occiso-story-section h5{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:800;line-height:1.25;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
   .occiso-story-section ul{margin:0;padding-left:18px;display:grid;gap:4px}
-  .occiso-story-section li,.occiso-story-section p{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600}
+  .occiso-story-section li,.occiso-story-section p,.occiso-story-section > div{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600}
   .manifestation-story-block{display:grid;gap:10px}
   .manifestation-story-item{padding:10px 12px;border:1px solid #f2c7c7;border-radius:8px;background:linear-gradient(180deg,#fffdfd 0%,#fff6f6 100%)}
   .manifestation-story-title{margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
@@ -9414,7 +9435,7 @@ include __DIR__ . '/sidebar.php';
                             <div class="field-grid">
                               <div class="field-card span-4">
                                 <div class="field-label">Lesiones</div>
-                                <div class="field-value"><?= nl2br(h((string) (($fallecido['lesiones'] ?? '') !== '' ? $fallecido['lesiones'] : 'Sin lesiones registradas'))) ?></div>
+                                <div class="field-value"><?= ($fallecido['lesiones'] ?? '') !== '' ? render_hyphen_list_html((string) $fallecido['lesiones']) : 'Sin lesiones registradas' ?></div>
                               </div>
                             </div>
                           </div>

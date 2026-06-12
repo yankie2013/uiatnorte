@@ -14,6 +14,7 @@ require_login();
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/word_manifestaciones_helper.php';
 require_once __DIR__ . '/word_filename_helper.php';
+require_once __DIR__ . '/word_list_helper.php';
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -398,7 +399,7 @@ function fill_vehicle_template_markers(
         'docv_sistema_suspension_peritaje' => $vehicleDoc['sistema_suspension_peritaje'] ?? '',
         'docv_planta_motriz_peritaje' => $vehicleDoc['planta_motriz_peritaje'] ?? '',
         'docv_otros_peritaje' => $vehicleDoc['otros_peritaje'] ?? '',
-        'docv_danos_peritaje' => $vehicleDoc['danos_peritaje'] ?? '',
+        'docv_danos_peritaje' => word_hyphen_list($vehicleDoc['danos_peritaje'] ?? ''),
     ] as $suffix => $value) {
         set_marker_aliases($markers, $prefixes, $suffix, $value);
     }
