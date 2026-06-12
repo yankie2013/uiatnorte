@@ -4149,7 +4149,11 @@ $documentosRecibidos = safe_query_all(
 $actas = safe_table_exists($pdo, 'actas')
     ? (new \App\Repositories\ActaRepository($pdo))->listByAccidente((int) $accidente_id)
     : [];
+$actasVisualizacion = safe_table_exists($pdo, 'actas_visualizacion')
+    ? (new \App\Repositories\ActaVisualizacionRepository($pdo))->listByAccidente((int) $accidente_id)
+    : [];
 $actaEntregaTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_entrega_vehiculo.docx') || is_file(__DIR__ . '/acta_entrega_vehiculo.docx');
+$actaVisualizacionTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_visualizacion_video.docx') || is_file(__DIR__ . '/acta_visualizacion_video.docx');
 
 $itps = safe_query_all(
     $pdo,
@@ -7116,7 +7120,7 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'datos-generales', 'label' => 'Datos Generales', 'sub' => 'Accidente'],
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
-            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos) + count($actas)],
+            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos) + count($actas) + count($actasVisualizacion)],
             ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
@@ -9057,7 +9061,7 @@ include __DIR__ . '/sidebar.php';
             </button>
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-actas" type="button" role="tab">
               Actas
-              <span class="tab-mini"><?= count($actas) ?> registro(s)</span>
+              <span class="tab-mini"><?= count($actas) + count($actasVisualizacion) ?> registro(s)</span>
             </button>
           </div>
 
@@ -9178,14 +9182,34 @@ include __DIR__ . '/sidebar.php';
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_form.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nueva acta de entrega de vehiculo">+ Acta de entrega de vehiculo</a>
+                  <a class="btn-shell" href="acta_visualizacion_form.php?accidente_id=<?= (int) $accidente_id ?>" target="_blank" rel="noopener">+ Acta de visualizacion</a>
                 </div>
                 <?php if (!$actaEntregaTemplateAvailable): ?>
                   <div class="empty-state" style="margin-bottom:10px;">Para habilitar la descarga, sube la plantilla como <strong>acta_entrega_vehiculo.docx</strong> en la raiz o dentro de <strong>plantillas/</strong>.</div>
                 <?php endif; ?>
-                <?php if (!$actas): ?>
+                <?php if (!$actas && !$actasVisualizacion): ?>
                   <div class="empty-state">No hay actas registradas para este accidente.</div>
                 <?php else: ?>
                   <div class="module-grid">
+                    <?php foreach ($actasVisualizacion as $row): ?>
+                      <?php $actaVisualEstado=(string)($row['estado']??'Pendiente'); $actaVisualClass=$actaVisualEstado==='Realizada'?'chip-status-ok':($actaVisualEstado==='Anulada'?'chip-testigo':'chip-status-warn'); ?>
+                      <article class="module-card">
+                        <header><div><h4>Acta de visualizacion #<?= (int)$row['id'] ?></h4><p>Registro de visualizacion de archivos de videovigilancia</p></div><span class="chip-simple <?=h($actaVisualClass)?>"><?=h($actaVisualEstado)?></span></header>
+                        <div class="module-meta">
+                          <span class="chip-simple">Fecha: <?=h(fecha_simple($row['fecha_visualizacion']??null))?></span>
+                          <span class="chip-simple">Inicio: <?=h(substr((string)($row['hora_inicio']??''),0,5))?></span>
+                          <span class="chip-simple"><?= (int)$row['participantes_total'] ?> participante(s)</span>
+                          <span class="chip-simple"><?= (int)$row['documentos_total'] ?> oficio(s) / respuesta(s)</span>
+                          <span class="chip-simple"><?= (int)$row['discos_total'] ?> disco(s)</span>
+                        </div>
+                        <?php if(!empty($row['observaciones'])):?><p style="margin-top:10px"><?=nl2br(h((string)$row['observaciones']))?></p><?php endif?>
+                        <div class="module-actions">
+                          <a class="btn-shell" href="acta_visualizacion_form.php?id=<?=(int)$row['id']?>" target="_blank" rel="noopener">Editar</a>
+                          <?php if ($actaVisualizacionTemplateAvailable): ?><a class="btn-shell btn-docx" href="acta_visualizacion_descargar.php?id=<?=(int)$row['id']?>">Descargar Word</a><?php endif; ?>
+                          <a class="btn-shell js-inline-open" href="acta_visualizacion_eliminar.php?id=<?=(int)$row['id']?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar acta de visualizacion">Eliminar</a>
+                        </div>
+                      </article>
+                    <?php endforeach; ?>
                     <?php foreach ($actas as $row): ?>
                       <?php
                         $actaEstado = trim((string) ($row['estado'] ?? 'Pendiente'));
@@ -10925,10 +10949,12 @@ include __DIR__ . '/sidebar.php';
           }
         });
       });
-      const requestedTab = nav.id === 'accTabs'
-        ? new URLSearchParams(window.location.search).get('tab')
-        : '';
-      const requestedTarget = requestedTab ? '#' + requestedTab : '';
+      const params = new URLSearchParams(window.location.search);
+      const requestedTab = nav.id === 'accTabs' ? params.get('tab') : '';
+      const requestedSubtab = nav.id === 'documentos-tabs' ? params.get('subtab') : '';
+      const requestedTarget = requestedTab
+        ? '#' + requestedTab
+        : (requestedSubtab ? '#documentos-' + requestedSubtab : '');
       const saved = requestedTarget || localStorage.getItem(storageKey);
       if (saved) {
         const trigger = nav.querySelector('[data-bs-target="' + saved + '"]');

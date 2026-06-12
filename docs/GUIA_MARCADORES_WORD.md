@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 11/06/2026 15:43
+Generada: 12/06/2026 00:10
 
 ## Como usar los marcadores
 
@@ -12,9 +12,9 @@ Generada: 11/06/2026 15:43
 
 ## Resumen
 
-- Plantillas revisadas: 32
-- Marcadores unicos presentes: 1265
-- Marcadores unicos detectados en generadores relacionados: 688
+- Plantillas revisadas: 34
+- Marcadores unicos presentes: 1285
+- Marcadores unicos detectados en generadores relacionados: 790
 
 ## oficio_necropsia.docx
 
@@ -32,6 +32,69 @@ Generada: 11/06/2026 15:43
 **Disponibles en codigo pero no presentes (0):**
 
 - Ninguno detectado.
+
+## plantillas/acta_entrega_vehiculo.docx
+
+**Generadores relacionados:** `accidente_vista_tabs.php`, `acta_entrega_vehiculo_descargar.php`
+
+**Marcadores presentes (9):**
+
+- `acta_*`: `${acta_presentacion_propietario}`
+- `hora_*`: `${hora_culminacion}`
+- `propietario_*`: `${propietario_nombre}`
+- `vehiculo_*`: `${vehiculo_anio_compuesto}`, `${vehiculo_clase_compuesto}`, `${vehiculo_color_compuesto}`, `${vehiculo_marca_compuesto}`, `${vehiculo_modelo_compuesto}`, `${vehiculo_placa_compuesto}`
+
+**Disponibles en codigo pero no presentes (62):**
+
+- `accidente_*`: `${accidente_lugar}`, `${accidente_sidpol}`
+- `acta_*`: `${acta_distrito}`, `${acta_estado}`, `${acta_id}`, `${acta_intro_apertura}`, `${acta_intro_cierre}`, `${acta_intro_despues_persona}`, `${acta_intro_empresa}`, `${acta_intro_persona}`, `${acta_tipo}`
+- `conductor_*`: `${conductor_celular}`, `${conductor_domicilio}`, `${conductor_email}`, `${conductor_nombre}`, `${conductor_num_doc}`, `${conductor_tipo_doc}`
+- `fecha_*`: `${fecha_entrega}`, `${fecha_entrega_abrev}`, `${fecha_entrega_corta}`
+- `hora_*`: `${hora_inicio}`
+- `observaciones_*`: `${observaciones}`
+- `placa_*`: `${placa_rodaje}`
+- `propietario_*`: `${propietario_celular}`, `${propietario_domicilio}`, `${propietario_email}`, `${propietario_num_doc}`, `${propietario_origen}`, `${propietario_presentacion}`, `${propietario_razon_social}`, `${propietario_rol_legal}`, `${propietario_ruc}`, `${propietario_tipo}`, `${propietario_tipo_doc}`
+- `representante_*`: `${representante_celular}`, `${representante_domicilio}`, `${representante_email}`, `${representante_nombre}`, `${representante_num_doc}`, `${representante_rol_legal}`, `${representante_tipo_doc}`
+- `vehiculo_*`: `${vehiculo_anio}`, `${vehiculo_carroceria}`, `${vehiculo_carroceria_compuesto}`, `${vehiculo_categoria}`, `${vehiculo_categoria_compuesto}`, `${vehiculo_clase}`, `${vehiculo_color}`, `${vehiculo_dimensiones}`, `${vehiculo_dimensiones_compuesto}`, `${vehiculo_marca}`, `${vehiculo_modelo}`, `${vehiculo_motor}`, `${vehiculo_motor_compuesto}`, `${vehiculo_participacion_compuesto}`, `${vehiculo_placa}`, `${vehiculo_tipo}`, `${vehiculo_ut}`, `${vehiculo_ut_compuesto}`, `${vehiculo_vin}`, `${vehiculo_vin_compuesto}`
+- `vehiculos_*`: `${vehiculos_involucrados}`
+
+## plantillas/acta_visualizacion_video.docx
+
+**Generadores relacionados:** `accidente_vista_tabs.php`, `acta_visualizacion_descargar.php`, `docs/scripts/agregar_bloque_descripciones_acta_visualizacion.php`
+
+**Marcadores presentes (12):**
+
+- `/DESCRIPCIONES_*`: `${/DESCRIPCIONES_VIDEO}`
+- `acta_*`: `${acta_presentacion}`
+- `archivo_*`: `${archivo_encabezado}`
+- `descripcion_*`: `${descripcion_captura}`, `${descripcion_detalle}`, `${descripcion_tiempo}`
+- `DESCRIPCIONES_*`: `${DESCRIPCIONES_VIDEO}`
+- `diligencia_*`: `${diligencia_archivos_detalle}`, `${diligencia_discos_parrafo}`, `${diligencia_oficios_parrafo}`
+- `disco_*`: `${disco_encabezado}`
+- `ministerio_*`: `${ministerio_publico_parrafo}`
+
+**Disponibles en codigo pero no presentes (42):**
+
+- `abogados_*`: `${abogados_detalle}`
+- `accidente_*`: `${accidente_distrito}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_fecha_corta}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_referencia}`, `${accidente_sidpol}`
+- `acta_*`: `${acta_visualizacion_estado}`, `${acta_visualizacion_fecha}`, `${acta_visualizacion_fecha_abrev}`, `${acta_visualizacion_fecha_corta}`, `${acta_visualizacion_hora_inicio}`, `${acta_visualizacion_id}`, `${acta_visualizacion_observaciones}`
+- `archivos_*`: `${archivos_detalle}`
+- `cantidad_*`: `${cantidad_archivos}`, `${cantidad_descripciones_video}`, `${cantidad_discos}`
+- `desarrollo_*`: `${desarrollo_diligencia}`
+- `descripciones_*`: `${descripciones_video_detalle}`
+- `discos_*`: `${discos_detalle}`
+- `documentos_*`: `${documentos_camaras_detalle}`
+- `familiares_*`: `${familiares_detalle}`
+- `fiscal_*`: `${fiscal_cargo}`, `${fiscal_nombre}`, `${fiscal_telefono}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `instructor_*`: `${instructor_cip}`, `${instructor_grado}`, `${instructor_nombre}`
+- `lugar_*`: `${lugar_diligencia}`
+- `oficios_*`: `${oficios_camaras_detalle}`
+- `parte_*`: `${parte_agraviada}`, `${parte_investigada}`
+- `participantes_*`: `${participantes_detalle}`, `${participantes_nombres}`
+- `propietarios_*`: `${propietarios_detalle}`
+- `respuestas_*`: `${respuestas_camaras_detalle}`
+- `unidad_*`: `${unidad_nombre}`
 
 ## plantillas/analisis_del_informe.docx
 
@@ -756,4 +819,51 @@ Generada: 11/06/2026 15:43
 - `representante_*`: `${representante_celular}`, `${representante_domicilio}`, `${representante_email}`, `${representante_nombre}`, `${representante_num_doc}`, `${representante_rol_legal}`, `${representante_tipo_doc}`
 - `vehiculo_*`: `${vehiculo_anio}`, `${vehiculo_anio_compuesto}`, `${vehiculo_carroceria}`, `${vehiculo_carroceria_compuesto}`, `${vehiculo_categoria}`, `${vehiculo_categoria_compuesto}`, `${vehiculo_clase}`, `${vehiculo_clase_compuesto}`, `${vehiculo_color}`, `${vehiculo_color_compuesto}`, `${vehiculo_dimensiones}`, `${vehiculo_dimensiones_compuesto}`, `${vehiculo_marca}`, `${vehiculo_marca_compuesto}`, `${vehiculo_modelo}`, `${vehiculo_modelo_compuesto}`, `${vehiculo_motor}`, `${vehiculo_motor_compuesto}`, `${vehiculo_participacion_compuesto}`, `${vehiculo_placa}`, `${vehiculo_placa_compuesto}`, `${vehiculo_tipo}`, `${vehiculo_ut}`, `${vehiculo_ut_compuesto}`, `${vehiculo_vin}`, `${vehiculo_vin_compuesto}`
 - `vehiculos_*`: `${vehiculos_involucrados}`
+
+## Plantilla pendiente: plantillas/acta_visualizacion_video.docx
+
+**Generador:** `acta_visualizacion_descargar.php`
+
+**Uso recomendado para reproducir el formato de referencia:**
+
+- Primer parrafo completo: `${acta_presentacion}`.
+- Parrafo del fiscal: `${ministerio_publico_parrafo}`.
+- Item de oficios y respuestas de camaras: `${diligencia_oficios_parrafo}`.
+- Item de discos: `${diligencia_discos_parrafo}`.
+- Lista detallada de archivos: `${diligencia_archivos_detalle}`.
+- Todas las observaciones temporales en texto: `${descripciones_video_detalle}`.
+- Bloque dinamico repetible: `${DESCRIPCIONES_VIDEO}` ... `${/DESCRIPCIONES_VIDEO}`.
+- Dentro del bloque usa `${disco_encabezado}`, `${archivo_encabezado}`, `${descripcion_tiempo}`, `${descripcion_detalle}` y `${descripcion_captura}`.
+- El encabezado del disco y del archivo aparece solo una vez; los siguientes momentos muestran unicamente tiempo, detalle e imagen.
+- Para controlar cada dato por separado, usa los marcadores individuales listados debajo.
+
+**Marcadores disponibles (104):**
+
+- `/DESCRIPCIONES_*`: `${/DESCRIPCIONES_VIDEO}`
+- `abogados_*`: `${abogados_detalle}`
+- `accidente_*`: `${accidente_distrito}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_fecha_corta}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_referencia}`, `${accidente_sidpol}`
+- `acta_*`: `${acta_presentacion}`, `${acta_visualizacion_estado}`, `${acta_visualizacion_fecha}`, `${acta_visualizacion_fecha_abrev}`, `${acta_visualizacion_fecha_corta}`, `${acta_visualizacion_hora_inicio}`, `${acta_visualizacion_id}`, `${acta_visualizacion_observaciones}`
+- `archivo_*`: `${archivo_encabezado}`
+- `archivos_*`: `${archivos_detalle}`
+- `cantidad_*`: `${cantidad_archivos}`, `${cantidad_descripciones_video}`, `${cantidad_discos}`
+- `desarrollo_*`: `${desarrollo_diligencia}`
+- `descripcion_*`: `${descripcion_captura}`, `${descripcion_detalle}`, `${descripcion_tiempo}`
+- `DESCRIPCIONES_*`: `${DESCRIPCIONES_VIDEO}`
+- `descripciones_*`: `${descripciones_video_detalle}`
+- `diligencia_*`: `${diligencia_archivos_detalle}`, `${diligencia_discos_parrafo}`, `${diligencia_oficios_parrafo}`
+- `disco_*`: `${disco_1_archivos}`, `${disco_1_marca}`, `${disco_1_numero}`, `${disco_1_observaciones}`, `${disco_1_serie}`, `${disco_2_archivos}`, `${disco_2_marca}`, `${disco_2_numero}`, `${disco_2_observaciones}`, `${disco_2_serie}`, `${disco_3_archivos}`, `${disco_3_marca}`, `${disco_3_numero}`, `${disco_3_observaciones}`, `${disco_3_serie}`, `${disco_4_archivos}`, `${disco_4_marca}`, `${disco_4_numero}`, `${disco_4_observaciones}`, `${disco_4_serie}`, `${disco_5_archivos}`, `${disco_5_marca}`, `${disco_5_numero}`, `${disco_5_observaciones}`, `${disco_5_serie}`, `${disco_6_archivos}`, `${disco_6_marca}`, `${disco_6_numero}`, `${disco_6_observaciones}`, `${disco_6_serie}`, `${disco_7_archivos}`, `${disco_7_marca}`, `${disco_7_numero}`, `${disco_7_observaciones}`, `${disco_7_serie}`, `${disco_8_archivos}`, `${disco_8_marca}`, `${disco_8_numero}`, `${disco_8_observaciones}`, `${disco_8_serie}`, `${disco_9_archivos}`, `${disco_9_marca}`, `${disco_9_numero}`, `${disco_9_observaciones}`, `${disco_9_serie}`, `${disco_10_archivos}`, `${disco_10_marca}`, `${disco_10_numero}`, `${disco_10_observaciones}`, `${disco_10_serie}`, `${disco_encabezado}`
+- `discos_*`: `${discos_detalle}`
+- `documentos_*`: `${documentos_camaras_detalle}`
+- `familiares_*`: `${familiares_detalle}`
+- `fiscal_*`: `${fiscal_cargo}`, `${fiscal_nombre}`, `${fiscal_telefono}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `instructor_*`: `${instructor_cip}`, `${instructor_grado}`, `${instructor_nombre}`
+- `lugar_*`: `${lugar_diligencia}`
+- `ministerio_*`: `${ministerio_publico_parrafo}`
+- `oficios_*`: `${oficios_camaras_detalle}`
+- `parte_*`: `${parte_agraviada}`, `${parte_investigada}`
+- `participantes_*`: `${participantes_detalle}`, `${participantes_nombres}`
+- `propietarios_*`: `${propietarios_detalle}`
+- `respuestas_*`: `${respuestas_camaras_detalle}`
+- `unidad_*`: `${unidad_nombre}`
 

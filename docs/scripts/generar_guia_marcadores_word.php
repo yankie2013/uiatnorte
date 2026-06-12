@@ -148,6 +148,18 @@ $allCodeMarkers = array_values(array_unique($allCodeMarkers));
 sort($allTemplateMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 sort($allCodeMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $actaMarkers = code_markers($phpFiles['acta_entrega_vehiculo_descargar.php'] ?? '');
+$actaVisualizacionMarkers = code_markers($phpFiles['acta_visualizacion_descargar.php'] ?? '');
+for ($i = 1; $i <= 10; $i++) {
+    foreach (['numero', 'marca', 'serie', 'observaciones', 'archivos'] as $field) {
+        $actaVisualizacionMarkers[] = "disco_{$i}_{$field}";
+    }
+}
+$actaVisualizacionMarkers = array_merge($actaVisualizacionMarkers, [
+    'DESCRIPCIONES_VIDEO', '/DESCRIPCIONES_VIDEO', 'disco_encabezado',
+    'archivo_encabezado', 'descripcion_tiempo', 'descripcion_detalle', 'descripcion_captura',
+]);
+$actaVisualizacionMarkers = array_values(array_unique($actaVisualizacionMarkers));
+sort($actaVisualizacionMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 
 $jsonPath = $docsDir . '/inventario_marcadores_word.json';
 file_put_contents($jsonPath, json_encode([
@@ -164,6 +176,12 @@ file_put_contents($jsonPath, json_encode([
             'status' => 'Pendiente de subir',
             'generator' => 'acta_entrega_vehiculo_descargar.php',
             'markers_supported' => $actaMarkers,
+        ],
+        [
+            'template' => 'plantillas/acta_visualizacion_video.docx',
+            'status' => 'Pendiente de subir',
+            'generator' => 'acta_visualizacion_descargar.php',
+            'markers_supported' => $actaVisualizacionMarkers,
         ],
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -218,6 +236,29 @@ $md[] = '';
 $md[] = '**Marcadores disponibles (' . count($actaMarkers) . '):**';
 $md[] = '';
 foreach (marker_prefix_groups($actaMarkers) as $prefix => $markers) {
+    $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
+}
+$md[] = '';
+$md[] = '## Plantilla pendiente: plantillas/acta_visualizacion_video.docx';
+$md[] = '';
+$md[] = '**Generador:** `acta_visualizacion_descargar.php`';
+$md[] = '';
+$md[] = '**Uso recomendado para reproducir el formato de referencia:**';
+$md[] = '';
+$md[] = '- Primer parrafo completo: `${acta_presentacion}`.';
+$md[] = '- Parrafo del fiscal: `${ministerio_publico_parrafo}`.';
+$md[] = '- Item de oficios y respuestas de camaras: `${diligencia_oficios_parrafo}`.';
+$md[] = '- Item de discos: `${diligencia_discos_parrafo}`.';
+$md[] = '- Lista detallada de archivos: `${diligencia_archivos_detalle}`.';
+$md[] = '- Todas las observaciones temporales en texto: `${descripciones_video_detalle}`.';
+$md[] = '- Bloque dinamico repetible: `${DESCRIPCIONES_VIDEO}` ... `${/DESCRIPCIONES_VIDEO}`.';
+$md[] = '- Dentro del bloque usa `${disco_encabezado}`, `${archivo_encabezado}`, `${descripcion_tiempo}`, `${descripcion_detalle}` y `${descripcion_captura}`.';
+$md[] = '- El encabezado del disco y del archivo aparece solo una vez; los siguientes momentos muestran unicamente tiempo, detalle e imagen.';
+$md[] = '- Para controlar cada dato por separado, usa los marcadores individuales listados debajo.';
+$md[] = '';
+$md[] = '**Marcadores disponibles (' . count($actaVisualizacionMarkers) . '):**';
+$md[] = '';
+foreach (marker_prefix_groups($actaVisualizacionMarkers) as $prefix => $markers) {
     $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
 }
 $md[] = '';
@@ -322,6 +363,19 @@ $section->addPageBreak();
 $section->addTitle('Marcadores de Acta de entrega de vehiculo', 1);
 $section->addText('Esta plantilla aun no existe en el repositorio. Los siguientes marcadores ya estan soportados por acta_entrega_vehiculo_descargar.php y pueden insertarse en acta_entrega_vehiculo.docx.', ['size' => 9], 'Body');
 foreach (marker_prefix_groups($actaMarkers) as $prefix => $markers) {
+    $section->addTitle($prefix . '_*', 3);
+    $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
+    foreach ($markers as $marker) {
+        $table->addRow();
+        $table->addCell(3900)->addText('${' . $marker . '}', 'MarkerFont', 'Marker');
+        $table->addCell(5700)->addText(marker_description($marker), ['size' => 7.5], 'Marker');
+    }
+}
+
+$section->addPageBreak();
+$section->addTitle('Marcadores de Acta de visualizacion de video', 1);
+$section->addText('Uso recomendado: reemplaza los bloques completos del formato con ${acta_presentacion}, ${ministerio_publico_parrafo}, ${diligencia_oficios_parrafo} y ${diligencia_discos_parrafo}. El bloque DESCRIPCIONES_VIDEO genera la estructura jerarquica: A. DISCO 1, a) archivo y debajo sus momentos observados con detalle e imagen.', ['size' => 9], 'Body');
+foreach (marker_prefix_groups($actaVisualizacionMarkers) as $prefix => $markers) {
     $section->addTitle($prefix . '_*', 3);
     $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
     foreach ($markers as $marker) {
