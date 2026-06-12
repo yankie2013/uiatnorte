@@ -60,6 +60,18 @@ function url_estado_accidente(string $estado): string {
   return 'accidente_listar.php?' . http_build_query(['estado' => $estado]);
 }
 
+function url_filtro_accidente(array $changes): string {
+  $params = $_GET;
+  foreach ($changes as $key => $value) {
+    if ($value === null || $value === '') {
+      unset($params[$key]);
+      continue;
+    }
+    $params[$key] = $value;
+  }
+  return 'accidente_listar.php' . ($params !== [] ? ('?' . http_build_query($params)) : '');
+}
+
 function tipo_registro_label(?string $tipo): string {
   $tipo = trim((string)$tipo);
   if ($tipo === 'Intervencion') return 'Intervención';
@@ -180,6 +192,32 @@ if (!array_key_exists($orden, $ordenOpciones)) {
    LISTA DE ComisariaS
 ============================ */
 $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
+$comisariasPorDistrito = [];
+$sqlComisariasDistrito = "SELECT c.id, c.nombre AS comisaria, d.nombre AS distrito, COUNT(a.id) AS accidentes_total
+                            FROM comisarias c
+                       LEFT JOIN comisaria_distrito cd ON cd.comisaria_id = c.id
+                       LEFT JOIN ubigeo_distrito d
+                              ON d.cod_dep = cd.cod_dep
+                             AND d.cod_prov = cd.cod_prov
+                             AND d.cod_dist = cd.cod_dist
+                       LEFT JOIN accidentes a ON a.comisaria_id = c.id
+                        GROUP BY c.id, c.nombre, d.nombre
+                        ORDER BY COALESCE(d.nombre, 'Sin distrito asignado'), c.nombre";
+foreach ($pdo->query($sqlComisariasDistrito)->fetchAll(PDO::FETCH_ASSOC) as $comisariaDistrito) {
+  $distritoNombre = trim((string)($comisariaDistrito['distrito'] ?? ''));
+  if ($distritoNombre === '') {
+    $distritoNombre = 'Sin distrito asignado';
+  }
+  $comisariasPorDistrito[$distritoNombre][] = $comisariaDistrito;
+}
+$districtHues = [326, 266, 220, 190, 158, 42, 18, 350, 286, 205, 132, 62];
+$selectedDistrictHue = null;
+foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) {
+  if ($distrito !== '' && lower_u($distrito) === lower_u((string)$districtName)) {
+    $selectedDistrictHue = $districtHues[$districtIndex % count($districtHues)];
+    break;
+  }
+}
 
 /* ============================
    QUERY BASE
@@ -436,6 +474,82 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .neon-pending{--neon:#ff4fd8}
 .neon-resolved{--neon:#39ff88}
 .neon-dilig{--neon:#ffd166}
+.district-accident-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px;align-items:start}
+.district-sidebar{
+  position:sticky;top:14px;padding:13px;border:1px solid rgba(99,102,241,.26);border-radius:18px;
+  background:linear-gradient(155deg,rgba(255,255,255,.96),rgba(237,242,255,.82));
+  box-shadow:0 18px 42px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.95);
+  overflow:hidden;
+}
+.district-sidebar::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#6366f1,#22d3ee,transparent);opacity:.85}
+.district-sidebar-title{margin:0 0 11px;color:#475569;font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}
+.district-buttons{display:grid;gap:8px}
+.district-main{min-width:0}
+.station-clear{
+  display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:10px;padding:7px 10px;
+  border:1px solid rgba(100,116,139,.35);border-radius:11px;background:linear-gradient(145deg,#fff,#edf2f7);color:#334155;
+  font-size:10px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;box-shadow:0 6px 14px rgba(15,23,42,.10),inset 0 1px 0 #fff;
+}
+.station-clear:hover{border-color:#6366f1;color:#4338ca;box-shadow:0 0 16px rgba(99,102,241,.22)}
+.station-clear.active{background:linear-gradient(135deg,#111827,#334155);border-color:#64748b;color:#fff;box-shadow:0 0 18px rgba(99,102,241,.28)}
+.district-btn{
+  --district-hue:220;
+  position:relative;width:100%;display:flex;align-items:center;gap:9px;min-height:41px;padding:8px 11px;border-radius:12px;
+  border:1px solid hsl(var(--district-hue) 72% 58% / .55);
+  background:linear-gradient(135deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 96% / .88));
+  color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:950;text-align:left;text-transform:uppercase;
+  text-decoration:none;box-shadow:0 7px 16px hsl(var(--district-hue) 55% 30% / .12),inset 0 1px 0 rgba(255,255,255,.9);cursor:pointer;
+  overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+.district-btn::before{content:"";flex:0 0 auto;width:8px;height:8px;border-radius:999px;background:hsl(var(--district-hue) 90% 55%);box-shadow:0 0 0 4px hsl(var(--district-hue) 90% 55% / .13),0 0 12px hsl(var(--district-hue) 90% 50% / .65)}
+.district-btn::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:hsl(var(--district-hue) 90% 55%);box-shadow:0 0 12px hsl(var(--district-hue) 90% 50% / .7);opacity:.75}
+.district-btn:hover,.district-btn:focus-visible{
+  transform:translateX(3px);outline:none;border-color:hsl(var(--district-hue) 85% 52%);
+  box-shadow:0 10px 22px hsl(var(--district-hue) 60% 30% / .22),0 0 18px hsl(var(--district-hue) 85% 52% / .18);
+}
+.district-btn.active{
+  border-color:hsl(var(--district-hue) 92% 63%);
+  background:linear-gradient(135deg,hsl(var(--district-hue) 82% 54%),hsl(var(--district-hue) 88% 35%));
+  color:#fff;box-shadow:0 10px 24px hsl(var(--district-hue) 68% 30% / .38),0 0 22px hsl(var(--district-hue) 90% 55% / .32),inset 0 1px 0 rgba(255,255,255,.35);
+}
+.district-btn.active::before{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18),0 0 15px #fff}
+.station-row-shell{
+  --district-hue:220;position:relative;display:none;margin:0 0 12px;padding:13px 14px;border:1px solid hsl(var(--district-hue) 72% 58% / .42);
+  border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.98),hsl(var(--district-hue) 100% 97% / .92));
+  box-shadow:0 15px 34px hsl(var(--district-hue) 48% 28% / .14),inset 0 1px 0 #fff;overflow:hidden;
+}
+.station-row-shell::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,hsl(var(--district-hue) 90% 55%),#22d3ee,transparent);box-shadow:0 0 14px hsl(var(--district-hue) 90% 55% / .5)}
+.station-row-shell.active{display:block}
+.station-row-title{margin:0 0 10px;color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:950;text-transform:uppercase;letter-spacing:.12em}
+.station-panel{display:none}
+.station-panel.active{display:block}
+.station-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.station-btn{
+  position:relative;display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:39px;padding:8px 12px;border-radius:12px;
+  border:1px solid hsl(var(--district-hue) 70% 58% / .48);background:linear-gradient(145deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 97%));
+  color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:900;line-height:1.25;text-decoration:none;
+  box-shadow:0 7px 16px hsl(var(--district-hue) 50% 28% / .12),inset 0 1px 0 #fff;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+.station-btn::before{content:"";position:absolute;left:0;bottom:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,hsl(var(--district-hue) 90% 55%),transparent);opacity:.45}
+.station-count{flex:0 0 auto;min-width:25px;padding:3px 7px;border:1px solid hsl(var(--district-hue) 75% 55% / .2);border-radius:999px;background:hsl(var(--district-hue) 80% 50% / .12);color:inherit;font-size:10px;font-weight:950;text-align:center}
+.station-btn.active .station-count{background:rgba(255,255,255,.2)}
+.station-btn:hover,.station-btn:focus-visible{transform:translateY(-2px);outline:none;border-color:hsl(var(--district-hue) 88% 54%);box-shadow:0 11px 24px hsl(var(--district-hue) 58% 28% / .22),0 0 18px hsl(var(--district-hue) 85% 52% / .16)}
+.station-btn.active{background:linear-gradient(135deg,hsl(var(--district-hue) 82% 54%),hsl(var(--district-hue) 88% 35%));border-color:hsl(var(--district-hue) 92% 63%);color:#fff;box-shadow:0 10px 24px hsl(var(--district-hue) 68% 30% / .32),0 0 22px hsl(var(--district-hue) 90% 55% / .25)}
+html[data-theme-resolved="dark"] .district-sidebar{background:linear-gradient(160deg,rgba(8,15,31,.98),rgba(17,25,43,.94));border-color:rgba(99,102,241,.38);box-shadow:0 18px 46px rgba(0,0,0,.34),inset 0 1px 0 rgba(148,163,184,.12)}
+html[data-theme-resolved="dark"] .district-sidebar-title{color:#9fb0c6}
+html[data-theme-resolved="dark"] .station-clear{background:#172033;border-color:#334155;color:#dbe7f5}
+html[data-theme-resolved="dark"] .station-clear.active{background:#e2e8f0;border-color:#e2e8f0;color:#0f172a}
+html[data-theme-resolved="dark"] .district-btn{background:linear-gradient(145deg,rgba(8,15,31,.95),hsl(var(--district-hue) 42% 18% / .78));color:hsl(var(--district-hue) 82% 84%);border-color:hsl(var(--district-hue) 58% 55% / .52);box-shadow:0 8px 18px rgba(0,0,0,.28),0 0 14px hsl(var(--district-hue) 80% 50% / .08)}
+html[data-theme-resolved="dark"] .district-btn.active{color:#fff;background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%))}
+html[data-theme-resolved="dark"] .station-row-shell{background:linear-gradient(145deg,rgba(8,15,31,.97),hsl(var(--district-hue) 42% 17% / .84));border-color:hsl(var(--district-hue) 58% 55% / .42);box-shadow:0 16px 38px rgba(0,0,0,.3),0 0 22px hsl(var(--district-hue) 80% 50% / .08)}
+html[data-theme-resolved="dark"] .station-row-title{color:hsl(var(--district-hue) 78% 78%)}
+html[data-theme-resolved="dark"] .station-btn{background:linear-gradient(145deg,rgba(15,23,42,.9),hsl(var(--district-hue) 38% 19% / .72));color:hsl(var(--district-hue) 78% 84%);border-color:hsl(var(--district-hue) 52% 55% / .48);box-shadow:0 8px 18px rgba(0,0,0,.24),0 0 14px hsl(var(--district-hue) 80% 50% / .07)}
+html[data-theme-resolved="dark"] .station-btn.active{background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%));color:#fff}
+@media(max-width:850px){
+  .district-accident-layout{grid-template-columns:1fr}
+  .district-sidebar{position:static}
+  .district-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 .card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:14px;padding:14px;backdrop-filter:blur(8px)}
 
 label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
@@ -453,7 +567,20 @@ input,select{width:100%;padding:8px 10px;border:1px solid var(--field-bd);border
 /* ===== Caja de filtros ===== */
 .filters{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-bottom:10px}
 .col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}
+.filter-primary{grid-column:span 12;display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+.filter-advanced{grid-column:span 12;display:none;grid-template-columns:repeat(12,1fr);gap:10px;padding-top:10px;border-top:1px solid var(--panel-bd)}
+.filter-advanced.open{display:grid}
+.filter-actions{grid-column:span 12;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.filter-action-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.filter-toggle{
+  display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:6px 10px;border:1px solid #cbd5e1;
+  border-radius:10px;background:var(--pill-bg);color:var(--fg);font-size:11px;font-weight:850;cursor:pointer;
+}
+.filter-toggle-icon{font-size:14px;line-height:1;transition:transform .15s ease}
+.filter-toggle[aria-expanded="true"] .filter-toggle-icon{transform:rotate(180deg)}
+html[data-theme-resolved="dark"] .filter-toggle{border-color:#334155}
 @media(max-width:1000px){.col-6,.col-4,.col-3,.col-2{grid-column:span 12}}
+@media(max-width:1000px){.filter-primary .col-6{grid-column:span 12}}
 
 /* ===== Tabla ===== */
 .table-wrap{overflow:auto;border:1px solid var(--tbl-bd);border-radius:12px}
@@ -646,6 +773,20 @@ html[data-theme-resolved="dark"]{
   box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
 }
 .acc-card[data-url] .acc-card-main:hover{background:rgba(37,99,235,.035)}
+.acc-card-list.has-district-color .acc-card{
+  border-color:hsl(var(--district-hue) 72% 58% / .52);
+  box-shadow:0 10px 25px hsl(var(--district-hue) 48% 28% / .12),inset 4px 0 0 hsl(var(--district-hue) 88% 54% / .72);
+}
+.acc-card-list.has-district-color .acc-card:hover{
+  border-color:hsl(var(--district-hue) 88% 52% / .78);
+  box-shadow:0 15px 34px hsl(var(--district-hue) 58% 28% / .20),0 0 20px hsl(var(--district-hue) 88% 54% / .12),inset 4px 0 0 hsl(var(--district-hue) 92% 55%);
+}
+.acc-card-list.has-district-color .acc-card[data-priority="1"]{
+  border-color:hsl(var(--district-hue) 88% 52% / .78);
+  box-shadow:0 13px 30px hsl(var(--district-hue) 58% 28% / .18),0 0 18px hsl(var(--district-hue) 88% 54% / .12),inset 4px 0 0 hsl(var(--district-hue) 92% 55%);
+}
+.acc-card-list.has-district-color .acc-card[data-url] .acc-card-main:hover{background:hsl(var(--district-hue) 90% 55% / .035)}
+.acc-card-list.has-district-color .acc-detail{border-top-color:hsl(var(--district-hue) 60% 60% / .30)}
 .acc-card button,
 .acc-card select,
 .acc-card a,
@@ -757,6 +898,15 @@ html[data-theme-resolved="dark"] .acc-card[data-priority="1"]{
   border-color:rgba(226,201,108,.68);
   box-shadow:0 12px 28px rgba(212,175,55,.16), inset 4px 0 0 #e2c96c;
 }
+html[data-theme-resolved="dark"] .acc-card-list.has-district-color .acc-card,
+html[data-theme-resolved="dark"] .acc-card-list.has-district-color .acc-card[data-priority="1"]{
+  border-color:hsl(var(--district-hue) 72% 58% / .52);
+  box-shadow:0 11px 28px rgba(0,0,0,.30),0 0 18px hsl(var(--district-hue) 88% 54% / .10),inset 4px 0 0 hsl(var(--district-hue) 88% 58% / .82);
+}
+html[data-theme-resolved="dark"] .acc-card-list.has-district-color .acc-card:hover{
+  border-color:hsl(var(--district-hue) 88% 64% / .76);
+  box-shadow:0 15px 34px rgba(0,0,0,.36),0 0 24px hsl(var(--district-hue) 88% 54% / .18),inset 4px 0 0 hsl(var(--district-hue) 92% 65%);
+}
 html[data-theme-resolved="dark"] .acc-place,
 html[data-theme-resolved="dark"] .vehicle-plate{color:#e5edf8}
 html[data-theme-resolved="dark"] .acc-report{background:#1e293b;color:#cbd5e1}
@@ -827,74 +977,156 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     <a class="neon-state neon-dilig <?= $estadoFiltro === 'Con diligencias' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Con diligencias'))?>">Con diligencias</a>
   </nav>
 
+  <div class="district-accident-layout">
+    <aside class="district-sidebar" aria-label="Distritos">
+      <h2 class="district-sidebar-title">Distritos</h2>
+      <div class="district-buttons">
+        <?php $districtPosition = 0; ?>
+        <?php foreach ($comisariasPorDistrito as $districtName => $districtComisarias): ?>
+          <?php
+            $districtName = (string)$districtName;
+            $districtHue = $districtHues[$districtPosition % count($districtHues)];
+            $districtPosition++;
+            $districtActive = $distrito !== '' && lower_u($distrito) === lower_u($districtName);
+          ?>
+          <a
+            class="district-btn <?= $districtActive ? 'active' : '' ?>"
+            style="--district-hue:<?= (int)$districtHue ?>"
+            href="<?=h(url_filtro_accidente([
+              'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
+              'comisaria_id' => null,
+              'estado' => 'todos',
+              'q' => null,
+              'desde' => null,
+              'hasta' => null,
+              'persona' => null,
+              'vehiculo' => null,
+              'registro_sidpol' => null,
+              'nro_informe_policial' => null,
+              'tipo_registro' => null,
+            ]))?>"
+          ><?=h($districtName)?></a>
+        <?php endforeach; ?>
+      </div>
+      <a class="station-clear <?= $comisaria_id === '' && $distrito === '' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente(['comisaria_id' => null, 'distrito' => null]))?>">Todos los accidentes</a>
+    </aside>
+
+    <main class="district-main">
+      <section class="station-row-shell <?= $distrito !== '' ? 'active' : '' ?>" id="stationRow" aria-label="Comisarías disponibles">
+        <?php $districtPosition = 0; ?>
+        <?php foreach ($comisariasPorDistrito as $districtName => $districtComisarias): ?>
+          <?php
+            $districtName = (string)$districtName;
+            $districtHue = $districtHues[$districtPosition % count($districtHues)];
+            $districtPosition++;
+            $districtActive = $distrito !== '' && lower_u($distrito) === lower_u($districtName);
+          ?>
+          <section class="station-panel <?= $districtActive ? 'active' : '' ?>" data-district-panel="<?=h($districtName)?>" data-hue="<?= (int)$districtHue ?>">
+            <h2 class="station-row-title">Comisarías de <?=h($districtName)?></h2>
+            <div class="station-buttons">
+              <?php foreach ($districtComisarias as $station): ?>
+                <?php
+                  $stationId = (string)($station['id'] ?? '');
+                  $stationActive = $comisaria_id === $stationId && $districtActive;
+                ?>
+                <a
+                  class="station-btn <?= $stationActive ? 'active' : '' ?>"
+                  href="<?=h(url_filtro_accidente([
+                    'comisaria_id' => $stationId,
+                    'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
+                    'estado' => 'todos',
+                    'q' => null,
+                    'desde' => null,
+                    'hasta' => null,
+                    'persona' => null,
+                    'vehiculo' => null,
+                    'registro_sidpol' => null,
+                    'nro_informe_policial' => null,
+                    'tipo_registro' => null,
+                  ]))?>"
+                >
+                  <span><?=h((string)($station['comisaria'] ?? 'Comisaría'))?></span>
+                  <span class="station-count"><?= (int)($station['accidentes_total'] ?? 0) ?></span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          </section>
+        <?php endforeach; ?>
+      </section>
+
   <div class="card">
     <form method="get" class="filters" id="filterForm">
-        
-    <div class="col-3">
-  <label>Registro SIDPOL</label>
-  <input type="text" name="registro_sidpol" placeholder="Ej: 2025-ABC-123" value="<?=h($_GET['registro_sidpol']??'')?>">
-</div>    
-
-    <div class="col-3">
-      <label>N&deg; informe policial</label>
-      <input type="text" name="nro_informe_policial" placeholder="Ej: 105-2025" value="<?=h($_GET['nro_informe_policial']??'')?>">
-    </div>
-        
-      <div class="col-3">
-        <label>Persona</label>
-        <input type="text" name="persona" placeholder="Nombres o apellidos" value="<?=h($_GET['persona']??'')?>">
+      <div class="filter-primary">
+        <div class="col-6">
+          <label>Persona</label>
+          <input type="text" name="persona" placeholder="Nombres o apellidos" value="<?=h($_GET['persona']??'')?>">
+        </div>
+        <div class="col-6">
+          <label>Vehículo (placa)</label>
+          <input type="text" name="vehiculo" placeholder="Placa" value="<?=h($_GET['vehiculo']??'')?>">
+        </div>
       </div>
 
-      <div class="col-3">
-        <label>Distrito</label>
-        <input type="text" name="distrito" placeholder="Distrito" value="<?=h($_GET['distrito']??'')?>">
+      <div class="filter-actions">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="advancedFilters">
+          <span>Más filtros</span><span class="filter-toggle-icon">⌄</span>
+        </button>
+        <div class="filter-action-buttons">
+          <button class="btn small" type="submit">Filtrar</button>
+          <a class="btn small" href="accidente_listar.php">Limpiar</a>
+        </div>
       </div>
 
-      <div class="col-3">
-        <label>vehiculo (placa)</label>
-        <input type="text" name="vehiculo" placeholder="Placa" value="<?=h($_GET['vehiculo']??'')?>">
-      </div>
-      
-       <div class="col-3">
-        <label>Comisaria</label>
-        <select name="comisaria_id">
-          <option value="">-- Todas --</option>
-          <?php foreach($comisarias as $c): ?>
-            <option value="<?=$c['id']?>" <?=($comisaria_id==$c['id']?'selected':'')?>><?=h($c['nombre'])?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="col-3">
-        <label>Estado</label>
-        <select name="estado">
-          <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
-            <option value="<?=h($estadoValue)?>" <?=($estadoFiltro===$estadoValue?'selected':'')?>><?=h($estadoLabel)?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="col-3">
-        <label>Tipo de registro</label>
-        <select name="tipo_registro">
-          <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
-            <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="col-3">
-        <label>Ordenar por</label>
-        <select name="orden">
-          <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
-            <option value="<?=h($ordenValue)?>" <?=($orden===$ordenValue?'selected':'')?>><?=h($ordenLabel)?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="col-2" style="align-self:end;display:flex;gap:6px">
-        <button class="btn small" type="submit">Filtrar</button>
-        <a class="btn small" href="accidente_listar.php">Limpiar</a>
+      <div class="filter-advanced" id="advancedFilters">
+        <div class="col-3">
+          <label>Registro SIDPOL</label>
+          <input type="text" name="registro_sidpol" placeholder="Ej: 2025-ABC-123" value="<?=h($_GET['registro_sidpol']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>N&deg; informe policial</label>
+          <input type="text" name="nro_informe_policial" placeholder="Ej: 105-2025" value="<?=h($_GET['nro_informe_policial']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>Distrito</label>
+          <input type="text" name="distrito" placeholder="Distrito" value="<?=h($_GET['distrito']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>Comisaria</label>
+          <select name="comisaria_id">
+            <option value="">-- Todas --</option>
+            <?php foreach($comisarias as $c): ?>
+              <option value="<?=$c['id']?>" <?=($comisaria_id==$c['id']?'selected':'')?>><?=h($c['nombre'])?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Estado</label>
+          <select name="estado">
+            <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
+              <option value="<?=h($estadoValue)?>" <?=($estadoFiltro===$estadoValue?'selected':'')?>><?=h($estadoLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Tipo de registro</label>
+          <select name="tipo_registro">
+            <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
+              <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Ordenar por</label>
+          <select name="orden">
+            <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
+              <option value="<?=h($ordenValue)?>" <?=($orden===$ordenValue?'selected':'')?>><?=h($ordenLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
     </form>
 
-    <div class="acc-card-list" id="cards-list" role="list" aria-label="Lista de accidentes">
+    <div class="acc-card-list <?= $selectedDistrictHue !== null ? 'has-district-color' : '' ?>" id="cards-list" role="list" aria-label="Lista de accidentes"<?= $selectedDistrictHue !== null ? ' style="--district-hue:' . (int)$selectedDistrictHue . '"' : '' ?>>
       <?php if (!$rows): ?>
         <div class="empty">Sin resultados</div>
       <?php else: foreach($rows as $i=>$r):
@@ -1150,13 +1382,41 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
       </table>
     </div>
   </div>
+    </main>
+  </div>
 </div>
 
 <script>
+// Mantiene visible la fila de comisarias del distrito seleccionado.
+(function(){
+  const stationRow = document.getElementById('stationRow');
+  if (!stationRow) return;
+  const activePanel = stationRow.querySelector('.station-panel.active');
+  if (activePanel) {
+    stationRow.style.setProperty('--district-hue', activePanel.dataset.hue || '220');
+    stationRow.classList.add('active');
+  }
+})();
+
 // Busqueda progresiva: los textos filtran mientras se escriben; los selects filtran al cambiar.
 (function(){
   const form = document.getElementById('filterForm');
   if (!form) return;
+
+  const advancedFilters = document.getElementById('advancedFilters');
+  const filterToggle = document.getElementById('filterToggle');
+
+  const setAdvancedOpen = (open) => {
+    advancedFilters?.classList.toggle('open', open);
+    filterToggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const label = filterToggle?.querySelector('span');
+    if (label) label.textContent = open ? 'Menos filtros' : 'Más filtros';
+  };
+
+  filterToggle?.addEventListener('click', () => {
+    setAdvancedOpen(filterToggle.getAttribute('aria-expanded') !== 'true');
+  });
+  setAdvancedOpen(false);
 
   let submitTimer = null;
   const submitNow = () => form.submit();
