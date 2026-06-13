@@ -62,6 +62,7 @@ final class PwaSupport
             'word_informe_un_vehiculo_ileso.php',
             'word_oficio_camaras.php',
             'word_oficio_informacion_certificado_uper.php',
+            'word_oficio_informacion_diligencias_comisaria.php',
             'word_oficio_sunarp_historial_transferencias.php',
         ];
         if (\in_array($script, $skipScripts, true)) {

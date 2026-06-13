@@ -113,6 +113,7 @@ final class OficioService
             'tipo' => $this->asuntoTipo($row['asunto_id'] ?? null) ?: 'SOLICITAR',
             'asunto_id' => $row['asunto_id'] ?? '',
             'motivo' => $row['motivo'] ?? '',
+            'diligencias_solicitadas' => $row['diligencias_solicitadas'] ?? '',
             'referencia_texto' => $row['referencia_texto'] ?? '',
             'involucrado_vehiculo_id' => $row['involucrado_vehiculo_id'] ?? '',
             'involucrado_persona_id' => $row['involucrado_persona_id'] ?? '',
@@ -524,6 +525,7 @@ final class OficioService
         $tipo = strtoupper(trim((string) ($input['tipo'] ?? 'SOLICITAR')));
         $asuntoId = (int) ($input['asunto_id'] ?? 0);
         $motivo = trim((string) ($input['motivo'] ?? ''));
+        $diligenciasSolicitadas = trim((string) ($input['diligencias_solicitadas'] ?? ''));
         $referencia = trim((string) ($input['referencia_texto'] ?? ''));
         $personaDestinoManual = trim((string) ($input['persona_destino_manual'] ?? ''));
         $oficialAnoId = (int) ($input['oficial_ano_id'] ?? 0);
@@ -558,6 +560,9 @@ final class OficioService
         }
         if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
+        }
+        if ($this->asuntoEsInformacionDiligencias((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $diligenciasSolicitadas === '') {
+            throw new InvalidArgumentException('Indica una o varias diligencias cuya informacion se solicita.');
         }
         if ($oficialAnoId <= 0) {
             throw new InvalidArgumentException('Selecciona el nombre oficial del año.');
@@ -598,6 +603,7 @@ final class OficioService
             'grado_cargo_id' => $gradoCargoId,
             'asunto_id' => $asuntoId,
             'motivo' => $motivo,
+            'diligencias_solicitadas' => $diligenciasSolicitadas !== '' ? $diligenciasSolicitadas : null,
             'referencia_texto' => $referencia !== '' ? $referencia : null,
             'oficial_ano_id' => $oficialAnoId,
             'estado' => $estado,
@@ -613,6 +619,12 @@ final class OficioService
         $esInformacionCertificado = str_contains($text, 'informacion')
             && str_contains($text, 'certificado');
         return $esSunarpHistorial || $esInformacionCertificado;
+    }
+
+    private function asuntoEsInformacionDiligencias(string $nombre, string $detalle): bool
+    {
+        $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
+        return str_contains($text, 'informacion') && str_contains($text, 'diligenc');
     }
 
     private function normalizeMatchText(string $text): string

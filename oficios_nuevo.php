@@ -94,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'tipo' => $_POST['tipo'] ?? 'SOLICITAR',
         'asunto_id' => $_POST['asunto_id'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
+        'diligencias_solicitadas' => $_POST['diligencias_solicitadas'] ?? '',
         'referencia_texto' => $_POST['referencia_texto'] ?? '',
         'involucrado_vehiculo_id' => $_POST['involucrado_vehiculo_id'] ?? '',
         'involucrado_persona_id' => $_POST['involucrado_persona_id'] ?? '',
@@ -435,6 +436,15 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <div class="c12">
         <label>Motivo / contexto*</label>
         <textarea name="motivo" id="motivo" required><?= h($data['motivo']) ?></textarea>
+      </div>
+
+      <div class="c12" id="diligenciasSolicitadasBox" style="display:none;">
+        <div class="preview">
+          <h4>Informacion de diligencias solicitada</h4>
+          <label for="diligencias_solicitadas">Diligencias*</label>
+          <textarea name="diligencias_solicitadas" id="diligencias_solicitadas" placeholder="Escribe una diligencia por linea"><?= h($data['diligencias_solicitadas']) ?></textarea>
+          <div class="muted">Puedes solicitar una o varias diligencias. Escribe cada una en una linea distinta.</div>
+        </div>
       </div>
 
       <div class="c12">
@@ -872,6 +882,10 @@ function asuntoEsInformacionCertificado() {
   const text = normalizeText(asuntoTexto());
   return text.includes('informacion') && text.includes('certificado');
 }
+function asuntoEsInformacionDiligencias() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('informacion') && text.includes('diligenc');
+}
 async function loadVehiculosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_vehiculo_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
@@ -888,6 +902,8 @@ async function toggleBoxesPorAsunto() {
   const vehBox = document.getElementById('vehiculoBox');
   const fallBox = document.getElementById('fallecidoBox');
   const caseLinksSection = document.getElementById('caseLinksSection');
+  const diligenciasBox = document.getElementById('diligenciasSolicitadasBox');
+  const diligenciasInput = document.getElementById('diligencias_solicitadas');
   const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial() || asuntoEsInformacionCertificado();
   const vehSel = document.getElementById('involucrado_vehiculo_id');
   if (requiresVehicle) {
@@ -917,6 +933,11 @@ async function toggleBoxesPorAsunto() {
     } else if (motivoTxt) {
       motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
     }
+  }
+  if (diligenciasBox && diligenciasInput) {
+    const active = asuntoEsInformacionDiligencias();
+    diligenciasBox.style.display = active ? 'block' : 'none';
+    diligenciasInput.required = active;
   }
   if (caseLinksSection) {
     caseLinksSection.hidden = vehBox.style.display === 'none' && fallBox.style.display === 'none';

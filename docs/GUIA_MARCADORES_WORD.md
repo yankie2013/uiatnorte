@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 13/06/2026 00:08
+Generada: 13/06/2026 02:34
 
 ## Como usar los marcadores
 
@@ -12,9 +12,9 @@ Generada: 13/06/2026 00:08
 
 ## Resumen
 
-- Plantillas revisadas: 36
-- Marcadores unicos presentes: 1284
-- Marcadores unicos detectados en generadores relacionados: 790
+- Plantillas revisadas: 37
+- Marcadores unicos presentes: 1286
+- Marcadores unicos detectados en generadores relacionados: 831
 
 ## oficio_necropsia.docx
 
@@ -445,6 +445,27 @@ Generada: 13/06/2026 00:08
 - `NUM_*`: `${NUM_OFICIO}`
 - `oficio_*`: `${oficio_entidad_linea}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha_abrev}`, `${oficio_motivo}`, `${oficio_rango_camaras}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`, `${oficio_subentidad_tipo}`
 - `REFERENCIA_*`: `${REFERENCIA}`
+
+## plantillas/oficio_informacion_certificado_uper.docx
+
+**Generadores relacionados:** `word_oficio_informacion_certificado_uper.php`
+
+**Marcadores presentes (13):**
+
+- `accidente_*`: `${accidente_fecha_abrev}`, `${accidente_hora}`, `${accidente_lugar_completo}`, `${accidente_modalidades}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `nombre_*`: `${nombre_oficial_ano}`
+- `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_grado_cargo}`, `${oficio_numero}`, `${oficio_persona_destino}`
+- `veh_*`: `${veh_placa}`, `${veh_tipo}`
+
+**Disponibles en codigo pero no presentes (71):**
+
+- `accidente_*`: `${accidente_cod_dep}`, `${accidente_cod_dist}`, `${accidente_cod_prov}`, `${accidente_comunicacion_carpeta_nro}`, `${accidente_comunicacion_decreto}`, `${accidente_comunicacion_oficio}`, `${accidente_comunicante_nombre}`, `${accidente_comunicante_telefono}`, `${accidente_consecuencia}`, `${accidente_consecuencias}`, `${accidente_coordenadas}`, `${accidente_departamento}`, `${accidente_distrito}`, `${accidente_estado}`, `${accidente_fecha}`, `${accidente_fecha_comunicacion}`, `${accidente_fecha_comunicacion_abrev}`, `${accidente_fecha_intervencion}`, `${accidente_fecha_intervencion_abrev}`, `${accidente_folder}`, `${accidente_hora_comunicacion}`, `${accidente_hora_intervencion}`, `${accidente_id}`, `${accidente_latitud}`, `${accidente_longitud}`, `${accidente_lugar}`, `${accidente_modalidad}`, `${accidente_nro_informe_policial}`, `${accidente_prioridad}`, `${accidente_provincia}`, `${accidente_referencia}`, `${accidente_resumen}`, `${accidente_secuencia}`, `${accidente_sentido}`, `${accidente_sidpol}`, `${accidente_tipo_registro}`, `${accidente_ubicacion}`
+- `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `grado_*`: `${grado_cargo_abrev}`, `${grado_cargo_nombre}`, `${grado_cargo_tipo}`
+- `oficio_*`: `${oficio_entidad_linea}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_fecha_abrev}`, `${oficio_motivo}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`, `${oficio_subentidad_tipo}`
+- `veh_*`: `${veh_alto_mm}`, `${veh_ancho_mm}`, `${veh_anio}`, `${veh_carroceria}`, `${veh_carroceria_descripcion}`, `${veh_categoria}`, `${veh_categoria_descripcion}`, `${veh_color}`, `${veh_largo_mm}`, `${veh_marca}`, `${veh_medidas}`, `${veh_modelo}`, `${veh_notas}`, `${veh_nro_motor}`, `${veh_observaciones}`, `${veh_orden}`, `${veh_serie_vin}`, `${veh_tipo_codigo}`, `${veh_tipo_descripcion}`, `${veh_tipo_participacion}`
 
 ## plantillas/oficio_peritaje.docx
 
@@ -908,4 +929,37 @@ Generada: 13/06/2026 00:08
 - `nombre_*`: `${nombre_oficial_ano}`
 - `oficio_*`: `${oficio_anio}`, `${oficio_entidad_linea}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_fecha_abrev}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`, `${oficio_subentidad_tipo}`
 - `veh_*`: `${veh_alto_mm}`, `${veh_ancho_mm}`, `${veh_anio}`, `${veh_carroceria}`, `${veh_carroceria_descripcion}`, `${veh_categoria}`, `${veh_categoria_descripcion}`, `${veh_color}`, `${veh_largo_mm}`, `${veh_marca}`, `${veh_medidas}`, `${veh_modelo}`, `${veh_notas}`, `${veh_nro_motor}`, `${veh_observaciones}`, `${veh_orden}`, `${veh_placa}`, `${veh_serie_vin}`, `${veh_tipo}`, `${veh_tipo_codigo}`, `${veh_tipo_descripcion}`, `${veh_tipo_participacion}`
+
+## Plantilla pendiente: plantillas/oficio_informacion_diligencias_comisaria.docx
+
+**Generador:** `word_oficio_informacion_diligencias_comisaria.php`
+
+**Se descarga cuando el asunto contiene:** `Informacion` y `diligencias` (comparacion normalizada).
+
+**Marcadores multilínea recomendados:** `${diligencias_solicitadas_numeradas}`, `${vehiculos_involucrados}` y `${personas_involucradas}`.
+
+**Marcadores de diligencias solicitadas:**
+
+- `${diligencias_solicitadas}`: texto ingresado, conservando una diligencia por linea.
+- `${diligencias_solicitadas_numeradas}`: diligencias convertidas en lista numerada.
+- `${diligencias_cantidad}`: cantidad de diligencias solicitadas.
+
+**Marcadores de persona fallecida:**
+
+- Primer fallecido: marcadores `${fallecido_*}` para identidad, documento, nacimiento, edad, sexo, estado civil, domicilio, ocupacion, contacto y lesion.
+- Todos los fallecidos: `${fallecidos_involucrados}` y `${fallecidos_cantidad}`.
+
+**Marcadores disponibles (51):**
+
+- `accidente_*`: `${accidente_consecuencias}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_lugar_completo}`, `${accidente_modalidades}`, `${accidente_referencia}`, `${accidente_sentido}`, `${accidente_sidpol}`
+- `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `diligencias_*`: `${diligencias_cantidad}`, `${diligencias_solicitadas}`, `${diligencias_solicitadas_numeradas}`
+- `fallecido_*`: `${fallecido_apellidos}`, `${fallecido_celular}`, `${fallecido_documento}`, `${fallecido_domicilio}`, `${fallecido_edad}`, `${fallecido_email}`, `${fallecido_estado_civil}`, `${fallecido_fecha_nacimiento}`, `${fallecido_fecha_nacimiento_abrev}`, `${fallecido_lesion}`, `${fallecido_nombres}`, `${fallecido_nombre_completo}`, `${fallecido_num_doc}`, `${fallecido_ocupacion}`, `${fallecido_sexo}`, `${fallecido_tipo_doc}`
+- `fallecidos_*`: `${fallecidos_cantidad}`, `${fallecidos_involucrados}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `nombre_*`: `${nombre_oficial_ano}`
+- `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`
+- `personas_*`: `${personas_cantidad}`, `${personas_involucradas}`
+- `vehiculos_*`: `${vehiculos_cantidad}`, `${vehiculos_involucrados}`
 

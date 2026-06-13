@@ -75,6 +75,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:980px;margin:24px 
       <div class="label">Motivo / contexto</div>
       <div class="text-block"><?= h($detail['motivo'] ?? '') ?></div>
     </div>
+    <?php if (trim((string) ($detail['diligencias_solicitadas'] ?? '')) !== ''): ?>
+    <div style="margin-top:14px;">
+      <div class="label">Diligencias cuya informacion se solicita</div>
+      <div class="text-block"><?= nl2br(h($detail['diligencias_solicitadas'])) ?></div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 </body>

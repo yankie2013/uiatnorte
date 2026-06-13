@@ -538,6 +538,10 @@ final class OficioRepository
             $columns[] = 'persona_destino_manual';
             $values[] = $payload['persona_destino_manual'];
         }
+        if ($this->columnExists('oficios', 'diligencias_solicitadas')) {
+            $columns[] = 'diligencias_solicitadas';
+            $values[] = $payload['diligencias_solicitadas'] ?? null;
+        }
         $placeholders = implode(',', array_fill(0, count($columns), '?'));
         $sql = 'INSERT INTO oficios (' . implode(',', $columns) . ') VALUES (' . $placeholders . ')';
         $st = $this->pdo->prepare($sql);
@@ -575,6 +579,10 @@ final class OficioRepository
         if ($this->columnExists('oficios', 'persona_destino_manual')) {
             $sets[] = 'persona_destino_manual = ?';
             $values[] = $payload['persona_destino_manual'];
+        }
+        if ($this->columnExists('oficios', 'diligencias_solicitadas')) {
+            $sets[] = 'diligencias_solicitadas = ?';
+            $values[] = $payload['diligencias_solicitadas'] ?? null;
         }
         $values[] = $id;
         $sql = 'UPDATE oficios SET ' . implode(', ', $sets) . ' WHERE id = ? LIMIT 1';

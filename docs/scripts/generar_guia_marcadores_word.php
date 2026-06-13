@@ -150,6 +150,7 @@ sort($allCodeMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $actaMarkers = code_markers($phpFiles['acta_entrega_vehiculo_descargar.php'] ?? '');
 $actaVisualizacionMarkers = code_markers($phpFiles['acta_visualizacion_descargar.php'] ?? '');
 $uperMarkers = code_markers($phpFiles['word_oficio_informacion_certificado_uper.php'] ?? '');
+$informacionDiligenciasMarkers = code_markers($phpFiles['word_oficio_informacion_diligencias_comisaria.php'] ?? '');
 for ($i = 1; $i <= 10; $i++) {
     foreach (['numero', 'marca', 'serie', 'observaciones', 'archivos'] as $field) {
         $actaVisualizacionMarkers[] = "disco_{$i}_{$field}";
@@ -189,6 +190,12 @@ file_put_contents($jsonPath, json_encode([
             'status' => 'Pendiente de subir',
             'generator' => 'word_oficio_informacion_certificado_uper.php',
             'markers_supported' => $uperMarkers,
+        ],
+        [
+            'template' => 'plantillas/oficio_informacion_diligencias_comisaria.docx',
+            'status' => 'Pendiente de subir',
+            'generator' => 'word_oficio_informacion_diligencias_comisaria.php',
+            'markers_supported' => $informacionDiligenciasMarkers,
         ],
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -278,6 +285,31 @@ $md[] = '';
 $md[] = '**Marcadores disponibles (' . count($uperMarkers) . '):**';
 $md[] = '';
 foreach (marker_prefix_groups($uperMarkers) as $prefix => $markers) {
+    $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
+}
+$md[] = '';
+$md[] = '## Plantilla pendiente: plantillas/oficio_informacion_diligencias_comisaria.docx';
+$md[] = '';
+$md[] = '**Generador:** `word_oficio_informacion_diligencias_comisaria.php`';
+$md[] = '';
+$md[] = '**Se descarga cuando el asunto contiene:** `Informacion` y `diligencias` (comparacion normalizada).';
+$md[] = '';
+$md[] = '**Marcadores multilínea recomendados:** `${diligencias_solicitadas_numeradas}`, `${vehiculos_involucrados}` y `${personas_involucradas}`.';
+$md[] = '';
+$md[] = '**Marcadores de diligencias solicitadas:**';
+$md[] = '';
+$md[] = '- `${diligencias_solicitadas}`: texto ingresado, conservando una diligencia por linea.';
+$md[] = '- `${diligencias_solicitadas_numeradas}`: diligencias convertidas en lista numerada.';
+$md[] = '- `${diligencias_cantidad}`: cantidad de diligencias solicitadas.';
+$md[] = '';
+$md[] = '**Marcadores de persona fallecida:**';
+$md[] = '';
+$md[] = '- Primer fallecido: marcadores `${fallecido_*}` para identidad, documento, nacimiento, edad, sexo, estado civil, domicilio, ocupacion, contacto y lesion.';
+$md[] = '- Todos los fallecidos: `${fallecidos_involucrados}` y `${fallecidos_cantidad}`.';
+$md[] = '';
+$md[] = '**Marcadores disponibles (' . count($informacionDiligenciasMarkers) . '):**';
+$md[] = '';
+foreach (marker_prefix_groups($informacionDiligenciasMarkers) as $prefix => $markers) {
     $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
 }
 $md[] = '';
@@ -417,7 +449,26 @@ foreach (marker_prefix_groups($uperMarkers) as $prefix => $markers) {
     }
 }
 
-$docxPath = $docsDir . '/Guia_Marcadores_Plantillas_Word_Actualizada.docx';
+$section->addPageBreak();
+$section->addTitle('Marcadores de Oficio Informacion de diligencias', 1);
+$section->addText('Esta plantilla aun no existe en el repositorio. Se descargara para oficios cuyo asunto contenga Informacion y diligencias.', ['size' => 9], 'Body');
+$section->addTitle('Diligencias solicitadas', 2);
+$section->addText('${diligencias_solicitadas}: texto ingresado, conservando una diligencia por linea.', ['size' => 9], 'Body');
+$section->addText('${diligencias_solicitadas_numeradas}: diligencias convertidas en lista numerada.', ['size' => 9], 'Body');
+$section->addText('${diligencias_cantidad}: cantidad de diligencias solicitadas.', ['size' => 9], 'Body');
+$section->addTitle('Persona fallecida del accidente', 2);
+$section->addText('Para el primer fallecido usa los marcadores fallecido_*. Para incluir a todos usa ${fallecidos_involucrados} y ${fallecidos_cantidad}.', ['size' => 9], 'Body');
+foreach (marker_prefix_groups($informacionDiligenciasMarkers) as $prefix => $markers) {
+    $section->addTitle($prefix . '_*', 3);
+    $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
+    foreach ($markers as $marker) {
+        $table->addRow();
+        $table->addCell(3900)->addText('${' . $marker . '}', 'MarkerFont', 'Marker');
+        $table->addCell(5700)->addText(marker_description($marker), ['size' => 7.5], 'Marker');
+    }
+}
+
+$docxPath = getenv('GUIA_MARCADORES_DOCX_PATH') ?: ($docsDir . '/Guia_Marcadores_Plantillas_Word_Actualizada.docx');
 $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
 $writer->save($docxPath);
 
