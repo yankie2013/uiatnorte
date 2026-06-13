@@ -149,6 +149,7 @@ sort($allTemplateMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 sort($allCodeMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $actaMarkers = code_markers($phpFiles['acta_entrega_vehiculo_descargar.php'] ?? '');
 $actaVisualizacionMarkers = code_markers($phpFiles['acta_visualizacion_descargar.php'] ?? '');
+$uperMarkers = code_markers($phpFiles['word_oficio_informacion_certificado_uper.php'] ?? '');
 for ($i = 1; $i <= 10; $i++) {
     foreach (['numero', 'marca', 'serie', 'observaciones', 'archivos'] as $field) {
         $actaVisualizacionMarkers[] = "disco_{$i}_{$field}";
@@ -182,6 +183,12 @@ file_put_contents($jsonPath, json_encode([
             'status' => 'Pendiente de subir',
             'generator' => 'acta_visualizacion_descargar.php',
             'markers_supported' => $actaVisualizacionMarkers,
+        ],
+        [
+            'template' => 'plantillas/oficio_informacion_certificado_uper.docx',
+            'status' => 'Pendiente de subir',
+            'generator' => 'word_oficio_informacion_certificado_uper.php',
+            'markers_supported' => $uperMarkers,
         ],
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -259,6 +266,18 @@ $md[] = '';
 $md[] = '**Marcadores disponibles (' . count($actaVisualizacionMarkers) . '):**';
 $md[] = '';
 foreach (marker_prefix_groups($actaVisualizacionMarkers) as $prefix => $markers) {
+    $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
+}
+$md[] = '';
+$md[] = '## Plantilla pendiente: plantillas/oficio_informacion_certificado_uper.docx';
+$md[] = '';
+$md[] = '**Generador:** `word_oficio_informacion_certificado_uper.php`';
+$md[] = '';
+$md[] = '**Se descarga cuando el asunto contiene:** `Informacion certificado` (comparacion normalizada).';
+$md[] = '';
+$md[] = '**Marcadores disponibles (' . count($uperMarkers) . '):**';
+$md[] = '';
+foreach (marker_prefix_groups($uperMarkers) as $prefix => $markers) {
     $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
 }
 $md[] = '';
@@ -376,6 +395,19 @@ $section->addPageBreak();
 $section->addTitle('Marcadores de Acta de visualizacion de video', 1);
 $section->addText('Uso recomendado: reemplaza los bloques completos del formato con ${acta_presentacion}, ${ministerio_publico_parrafo}, ${diligencia_oficios_parrafo} y ${diligencia_discos_parrafo}. El bloque DESCRIPCIONES_VIDEO genera la estructura jerarquica: A. DISCO 1, a) archivo y debajo sus momentos observados con detalle e imagen.', ['size' => 9], 'Body');
 foreach (marker_prefix_groups($actaVisualizacionMarkers) as $prefix => $markers) {
+    $section->addTitle($prefix . '_*', 3);
+    $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
+    foreach ($markers as $marker) {
+        $table->addRow();
+        $table->addCell(3900)->addText('${' . $marker . '}', 'MarkerFont', 'Marker');
+        $table->addCell(5700)->addText(marker_description($marker), ['size' => 7.5], 'Marker');
+    }
+}
+
+$section->addPageBreak();
+$section->addTitle('Marcadores de Oficio Informacion certificado UPER', 1);
+$section->addText('Esta plantilla aun no existe en el repositorio. Se descargara para oficios cuyo asunto contenga Informacion certificado.', ['size' => 9], 'Body');
+foreach (marker_prefix_groups($uperMarkers) as $prefix => $markers) {
     $section->addTitle($prefix . '_*', 3);
     $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
     foreach ($markers as $marker) {

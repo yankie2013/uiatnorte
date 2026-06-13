@@ -868,6 +868,10 @@ function asuntoEsSunarpHistorial() {
   const text = normalizeText(asuntoTexto());
   return text.includes('historial') && text.includes('transferenc');
 }
+function asuntoEsInformacionCertificado() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('informacion') && text.includes('certificado');
+}
 async function loadVehiculosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_vehiculo_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
@@ -884,7 +888,7 @@ async function toggleBoxesPorAsunto() {
   const vehBox = document.getElementById('vehiculoBox');
   const fallBox = document.getElementById('fallecidoBox');
   const caseLinksSection = document.getElementById('caseLinksSection');
-  const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial();
+  const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial() || asuntoEsInformacionCertificado();
   const vehSel = document.getElementById('involucrado_vehiculo_id');
   if (requiresVehicle) {
     vehBox.style.display = 'block';

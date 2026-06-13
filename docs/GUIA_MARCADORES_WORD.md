@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 12/06/2026 00:10
+Generada: 13/06/2026 00:08
 
 ## Como usar los marcadores
 
@@ -12,8 +12,8 @@ Generada: 12/06/2026 00:10
 
 ## Resumen
 
-- Plantillas revisadas: 34
-- Marcadores unicos presentes: 1285
+- Plantillas revisadas: 36
+- Marcadores unicos presentes: 1284
 - Marcadores unicos detectados en generadores relacionados: 790
 
 ## oficio_necropsia.docx
@@ -58,22 +58,46 @@ Generada: 12/06/2026 00:10
 - `vehiculo_*`: `${vehiculo_anio}`, `${vehiculo_carroceria}`, `${vehiculo_carroceria_compuesto}`, `${vehiculo_categoria}`, `${vehiculo_categoria_compuesto}`, `${vehiculo_clase}`, `${vehiculo_color}`, `${vehiculo_dimensiones}`, `${vehiculo_dimensiones_compuesto}`, `${vehiculo_marca}`, `${vehiculo_modelo}`, `${vehiculo_motor}`, `${vehiculo_motor_compuesto}`, `${vehiculo_participacion_compuesto}`, `${vehiculo_placa}`, `${vehiculo_tipo}`, `${vehiculo_ut}`, `${vehiculo_ut_compuesto}`, `${vehiculo_vin}`, `${vehiculo_vin_compuesto}`
 - `vehiculos_*`: `${vehiculos_involucrados}`
 
+## plantillas/acta_itp_interseccion.docx
+
+**Generadores relacionados:** `itp_plantilla_descargar.php`
+
+**Marcadores presentes (0):**
+
+- Ninguno detectado.
+
+**Disponibles en codigo pero no presentes (0):**
+
+- Ninguno detectado.
+
+## plantillas/acta_itp_simple.docx
+
+**Generadores relacionados:** `itp_plantilla_descargar.php`
+
+**Marcadores presentes (0):**
+
+- Ninguno detectado.
+
+**Disponibles en codigo pero no presentes (0):**
+
+- Ninguno detectado.
+
 ## plantillas/acta_visualizacion_video.docx
 
 **Generadores relacionados:** `accidente_vista_tabs.php`, `acta_visualizacion_descargar.php`, `docs/scripts/agregar_bloque_descripciones_acta_visualizacion.php`
 
-**Marcadores presentes (12):**
+**Marcadores presentes (11):**
 
 - `/DESCRIPCIONES_*`: `${/DESCRIPCIONES_VIDEO}`
 - `acta_*`: `${acta_presentacion}`
 - `archivo_*`: `${archivo_encabezado}`
 - `descripcion_*`: `${descripcion_captura}`, `${descripcion_detalle}`, `${descripcion_tiempo}`
 - `DESCRIPCIONES_*`: `${DESCRIPCIONES_VIDEO}`
-- `diligencia_*`: `${diligencia_archivos_detalle}`, `${diligencia_discos_parrafo}`, `${diligencia_oficios_parrafo}`
+- `diligencia_*`: `${diligencia_discos_parrafo}`, `${diligencia_oficios_parrafo}`
 - `disco_*`: `${disco_encabezado}`
 - `ministerio_*`: `${ministerio_publico_parrafo}`
 
-**Disponibles en codigo pero no presentes (42):**
+**Disponibles en codigo pero no presentes (43):**
 
 - `abogados_*`: `${abogados_detalle}`
 - `accidente_*`: `${accidente_distrito}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_fecha_corta}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_referencia}`, `${accidente_sidpol}`
@@ -82,6 +106,7 @@ Generada: 12/06/2026 00:10
 - `cantidad_*`: `${cantidad_archivos}`, `${cantidad_descripciones_video}`, `${cantidad_discos}`
 - `desarrollo_*`: `${desarrollo_diligencia}`
 - `descripciones_*`: `${descripciones_video_detalle}`
+- `diligencia_*`: `${diligencia_archivos_detalle}`
 - `discos_*`: `${discos_detalle}`
 - `documentos_*`: `${documentos_camaras_detalle}`
 - `familiares_*`: `${familiares_detalle}`
@@ -866,4 +891,21 @@ Generada: 12/06/2026 00:10
 - `propietarios_*`: `${propietarios_detalle}`
 - `respuestas_*`: `${respuestas_camaras_detalle}`
 - `unidad_*`: `${unidad_nombre}`
+
+## Plantilla pendiente: plantillas/oficio_informacion_certificado_uper.docx
+
+**Generador:** `word_oficio_informacion_certificado_uper.php`
+
+**Se descarga cuando el asunto contiene:** `Informacion certificado` (comparacion normalizada).
+
+**Marcadores disponibles (84):**
+
+- `accidente_*`: `${accidente_cod_dep}`, `${accidente_cod_dist}`, `${accidente_cod_prov}`, `${accidente_comunicacion_carpeta_nro}`, `${accidente_comunicacion_decreto}`, `${accidente_comunicacion_oficio}`, `${accidente_comunicante_nombre}`, `${accidente_comunicante_telefono}`, `${accidente_consecuencia}`, `${accidente_consecuencias}`, `${accidente_coordenadas}`, `${accidente_departamento}`, `${accidente_distrito}`, `${accidente_estado}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_fecha_comunicacion}`, `${accidente_fecha_comunicacion_abrev}`, `${accidente_fecha_intervencion}`, `${accidente_fecha_intervencion_abrev}`, `${accidente_folder}`, `${accidente_hora}`, `${accidente_hora_comunicacion}`, `${accidente_hora_intervencion}`, `${accidente_id}`, `${accidente_latitud}`, `${accidente_longitud}`, `${accidente_lugar}`, `${accidente_lugar_completo}`, `${accidente_modalidad}`, `${accidente_modalidades}`, `${accidente_nro_informe_policial}`, `${accidente_prioridad}`, `${accidente_provincia}`, `${accidente_referencia}`, `${accidente_resumen}`, `${accidente_secuencia}`, `${accidente_sentido}`, `${accidente_sidpol}`, `${accidente_tipo_registro}`, `${accidente_ubicacion}`
+- `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `grado_*`: `${grado_cargo_abrev}`, `${grado_cargo_nombre}`, `${grado_cargo_tipo}`
+- `nombre_*`: `${nombre_oficial_ano}`
+- `oficio_*`: `${oficio_anio}`, `${oficio_entidad_linea}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_fecha_abrev}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`, `${oficio_subentidad_tipo}`
+- `veh_*`: `${veh_alto_mm}`, `${veh_ancho_mm}`, `${veh_anio}`, `${veh_carroceria}`, `${veh_carroceria_descripcion}`, `${veh_categoria}`, `${veh_categoria_descripcion}`, `${veh_color}`, `${veh_largo_mm}`, `${veh_marca}`, `${veh_medidas}`, `${veh_modelo}`, `${veh_notas}`, `${veh_nro_motor}`, `${veh_observaciones}`, `${veh_orden}`, `${veh_placa}`, `${veh_serie_vin}`, `${veh_tipo}`, `${veh_tipo_codigo}`, `${veh_tipo_descripcion}`, `${veh_tipo_participacion}`
 

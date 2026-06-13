@@ -608,8 +608,11 @@ final class OficioService
     private function asuntoRequiereVehiculo(string $nombre, string $detalle): bool
     {
         $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
-        return str_contains($text, 'historial')
+        $esSunarpHistorial = str_contains($text, 'historial')
             && (str_contains($text, 'transferencia') || str_contains($text, 'transferencias'));
+        $esInformacionCertificado = str_contains($text, 'informacion')
+            && str_contains($text, 'certificado');
+        return $esSunarpHistorial || $esInformacionCertificado;
     }
 
     private function normalizeMatchText(string $text): string
