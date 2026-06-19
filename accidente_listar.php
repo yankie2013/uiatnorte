@@ -763,7 +763,7 @@ html[data-theme-resolved="dark"]{
   overflow:hidden;
   transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
-.acc-card[data-url] .acc-card-main{cursor:pointer}
+.acc-card .acc-card-main{cursor:pointer}
 .acc-card:hover{
   border-color:rgba(37,99,235,.38);
   box-shadow:0 14px 30px rgba(15,23,42,.10), inset 4px 0 0 rgba(37,99,235,.42);
@@ -772,7 +772,7 @@ html[data-theme-resolved="dark"]{
   border-color:rgba(212,175,55,.62);
   box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
 }
-.acc-card[data-url] .acc-card-main:hover{background:rgba(37,99,235,.035)}
+.acc-card .acc-card-main:hover{background:rgba(37,99,235,.035)}
 .acc-card-list.has-district-color .acc-card{
   border-color:hsl(var(--district-hue) 72% 58% / .52);
   box-shadow:0 10px 25px hsl(var(--district-hue) 48% 28% / .12),inset 4px 0 0 hsl(var(--district-hue) 88% 54% / .72);
@@ -785,7 +785,7 @@ html[data-theme-resolved="dark"]{
   border-color:hsl(var(--district-hue) 88% 52% / .78);
   box-shadow:0 13px 30px hsl(var(--district-hue) 58% 28% / .18),0 0 18px hsl(var(--district-hue) 88% 54% / .12),inset 4px 0 0 hsl(var(--district-hue) 92% 55%);
 }
-.acc-card-list.has-district-color .acc-card[data-url] .acc-card-main:hover{background:hsl(var(--district-hue) 90% 55% / .035)}
+.acc-card-list.has-district-color .acc-card .acc-card-main:hover{background:hsl(var(--district-hue) 90% 55% / .035)}
 .acc-card-list.has-district-color .acc-detail{border-top-color:hsl(var(--district-hue) 60% 60% / .30)}
 .acc-card button,
 .acc-card select,
@@ -864,12 +864,12 @@ html[data-theme-resolved="dark"]{
 .acc-detail{
   border-top:1px solid var(--tbl-bd);
   padding:14px 16px 16px;
-  background:rgba(248,250,252,.85);
+  background:linear-gradient(180deg,#f3e8ff 0%,#eef7ff 100%);
 }
 .acc-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .acc-panel{
   border:1px solid rgba(148,163,184,.18);
-  background:#fff;
+  background:linear-gradient(180deg,#fff7ed 0%,#fffbeb 100%);
   border-radius:12px;
   padding:12px;
 }
@@ -915,7 +915,7 @@ html[data-theme-resolved="dark"] .tipo-reg-intervencion{background:rgba(6,182,21
 html[data-theme-resolved="dark"] .acc-meta-value,
 html[data-theme-resolved="dark"] .vehicle-extra{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-hint{color:#9fb0c6}
-html[data-theme-resolved="dark"] .acc-detail{background:rgba(15,23,42,.72)}
+html[data-theme-resolved="dark"] .acc-detail{background:linear-gradient(180deg,rgba(88,28,135,.32),rgba(14,116,144,.20))}
 html[data-theme-resolved="dark"] .acc-gps-btn{
   background:rgba(22,101,52,.28);
   border-color:rgba(134,239,172,.42);
@@ -927,8 +927,8 @@ html[data-theme-resolved="dark"] .acc-gps-btn:hover{
   color:#dcfce7;
 }
 html[data-theme-resolved="dark"] .acc-panel{
-  background:rgba(15,23,42,.78);
-  border-color:rgba(148,163,184,.2);
+  background:linear-gradient(180deg,rgba(69,26,3,.42),rgba(66,32,6,.34));
+  border-color:rgba(251,191,36,.22);
 }
 html[data-theme-resolved="dark"] .vehicle-type{background:#1e3a8a;color:#dbeafe}
 html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
@@ -1146,7 +1146,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>">
+        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -1176,7 +1176,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                 <span class="chip chip-more"><?=count($personasDetalle)?> persona(s)</span>
                 <span class="chip chip-more"><?=count($vehiculosResumen)?> vehiculo(s)</span>
               </div>
-              <div class="acc-hint">Pulsa + para ver personas y vehiculos</div>
+              <div class="acc-hint">Pulsa la caja o + para ver personas y vehiculos</div>
             </div>
 
             <div class="acc-card-right">
@@ -1457,23 +1457,35 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
   });
 })();
 
+function toggleAccidentCard(btn){
+  const detail = document.getElementById(btn.getAttribute('aria-controls'));
+  if(!detail) return;
+  const expanded = btn.getAttribute('aria-expanded') === 'true';
+  if(!expanded){
+    document.querySelectorAll('.js-toggle-card[aria-expanded="true"]').forEach(openBtn=>{
+      if(openBtn === btn) return;
+      const openDetail = document.getElementById(openBtn.getAttribute('aria-controls'));
+      openBtn.setAttribute('aria-expanded', 'false');
+      openBtn.textContent = '+';
+      if(openDetail) openDetail.hidden = true;
+    });
+  }
+  btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  btn.textContent = expanded ? '+' : '-';
+  detail.hidden = expanded;
+}
+
 document.querySelectorAll('.js-toggle-card').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    const detail = document.getElementById(btn.getAttribute('aria-controls'));
-    if(!detail) return;
-    const expanded = btn.getAttribute('aria-expanded') === 'true';
-    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-    btn.textContent = expanded ? '+' : '-';
-    detail.hidden = expanded;
+    toggleAccidentCard(btn);
   });
 });
 
-document.querySelectorAll('.acc-card[data-url] .acc-card-main').forEach(cardMain=>{
+document.querySelectorAll('.acc-card .acc-card-main').forEach(cardMain=>{
   cardMain.addEventListener('click', (e)=>{
     if(e.target.closest('a, button, select, input, textarea, label, form, .estado-badge')) return;
-    const card = cardMain.closest('.acc-card');
-    const url = card?.dataset.url || '';
-    if(url) window.location.href = url;
+    const btn = cardMain.closest('.acc-card')?.querySelector('.js-toggle-card');
+    if(btn) toggleAccidentCard(btn);
   });
 });
 

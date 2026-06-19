@@ -464,6 +464,63 @@ function summary_unit_heading(array $summaryUnit): string
     return trim($ut . ' ' . $type . ($plate !== '' ? ' con placa ' . $plate : '')) . ':';
 }
 
+function summary_person_compact_status(array $person): string
+{
+    $name = compact_text(person_label($person));
+    $lesion = title_text((string) ($person['lesion'] ?? ''));
+
+    if ($name === '') {
+        $name = 'Persona sin identificar';
+    }
+
+    return $lesion !== '' ? $name . ' (' . $lesion . ')' : $name;
+}
+
+function summary_unit_card_subtitle(array $summaryUnit, array $unitDrivers, array $unitCompanions = []): string
+{
+    $parts = [];
+
+    if ($unitDrivers !== []) {
+        $driverNames = array_values(array_filter(array_map(
+            static fn(array $driver): string => compact_text(person_label($driver)),
+            $unitDrivers
+        )));
+        if ($driverNames !== []) {
+            $parts[] = (count($driverNames) > 1 ? 'Conductores: ' : 'Conductor: ') . implode(' / ', $driverNames);
+        }
+
+        $driverInjuries = array_values(array_unique(array_filter(array_map(
+            static fn(array $driver): string => title_text((string) ($driver['lesion'] ?? '')),
+            $unitDrivers
+        ))));
+        if ($driverInjuries !== []) {
+            $parts[] = implode(' / ', $driverInjuries);
+        }
+    } else {
+        $parts[] = 'Sin conductor registrado';
+    }
+
+    if ($unitCompanions !== []) {
+        $companionLabels = array_values(array_filter(array_map(
+            static fn(array $person): string => summary_person_compact_status($person),
+            $unitCompanions
+        )));
+        if ($companionLabels !== []) {
+            $parts[] = (count($companionLabels) > 1 ? 'Ocupantes/Pasajeros: ' : 'Ocupante/Pasajero: ') . implode(' / ', $companionLabels);
+        }
+    }
+
+    $plates = array_values(array_unique(array_filter(array_map(
+        static fn(array $vehicle): string => compact_text((string) ($vehicle['veh_placa'] ?? '')),
+        $summaryUnit['vehiculos'] ?? []
+    ))));
+    if ($plates !== []) {
+        $parts[] = 'Placa ' . implode(' / ', $plates);
+    }
+
+    return implode(' · ', $parts);
+}
+
 function summary_role_heading(array $row): string
 {
     $role = title_text((string) ($row['rol_nombre'] ?? 'Participante'));
@@ -636,6 +693,12 @@ function is_conductor(array $row): bool
         return false;
     }
     return str_contains($role, 'conductor') || str_contains($role, 'chofer');
+}
+
+function is_pasajero_ocupante(array $row): bool
+{
+    $role = role_key($row);
+    return str_contains($role, 'pasaj') || str_contains($role, 'ocup');
 }
 
 function role_key(array $row): string
@@ -5002,12 +5065,12 @@ foreach ($personas as $persona) {
     $ut = trim((string) ($persona['orden_participacion'] ?? ''));
     $hasVehicle = (int) ($persona['vehiculo_id'] ?? 0) > 0;
 
-    if ($ut !== '' && $hasVehicle) {
+    if ($ut !== '' && ($hasVehicle || is_conductor($persona) || is_pasajero_ocupante($persona))) {
         $summaryUnits[$ut] ??= ['ut' => $ut, 'vehiculos' => [], 'personas' => []];
         $summaryUnits[$ut]['personas'][] = $persona;
 
         $invVehiculoId = (int) ($persona['inv_vehiculo_id'] ?? 0);
-        if ($invVehiculoId > 0 && !isset($summaryUnits[$ut]['vehiculos'][$invVehiculoId])) {
+        if ($hasVehicle && $invVehiculoId > 0 && !isset($summaryUnits[$ut]['vehiculos'][$invVehiculoId])) {
             $summaryUnits[$ut]['vehiculos'][$invVehiculoId] = vehicle_summary_record($persona);
         }
     }
@@ -5030,16 +5093,22 @@ foreach ($summaryUnits as &$summaryUnit) {
 unset($summaryUnit);
 
 $summaryPeatones = [];
+$summaryPasajerosOcupantesSinUnidad = [];
 $summaryOtrosSinUnidad = [];
 foreach ($personas as $persona) {
     $ut = trim((string) ($persona['orden_participacion'] ?? ''));
     $hasVehicle = (int) ($persona['vehiculo_id'] ?? 0) > 0;
-    if ($ut !== '' && $hasVehicle) {
+    if ($ut !== '' && ($hasVehicle || is_conductor($persona) || is_pasajero_ocupante($persona))) {
         continue;
     }
 
     if (str_contains(role_key($persona), 'peat')) {
         $summaryPeatones[] = $persona;
+        continue;
+    }
+
+    if (is_pasajero_ocupante($persona)) {
+        $summaryPasajerosOcupantesSinUnidad[] = $persona;
         continue;
     }
 
@@ -5056,11 +5125,13 @@ $sortSummaryPeople = static function (array &$rows): void {
     });
 };
 $sortSummaryPeople($summaryPeatones);
+$sortSummaryPeople($summaryPasajerosOcupantesSinUnidad);
 $sortSummaryPeople($summaryOtrosSinUnidad);
 
 $summaryBlocksCount = 1
     + count($summaryUnits)
     + (count($summaryPeatones) > 0 ? 1 : 0)
+    + (count($summaryPasajerosOcupantesSinUnidad) > 0 ? 1 : 0)
     + (count($summaryOtrosSinUnidad) > 0 ? 1 : 0)
     + (count($policias) > 0 ? 1 : 0)
     + (count($familiares) > 0 ? 1 : 0)
@@ -5236,12 +5307,13 @@ include __DIR__ . '/sidebar.php';
   .main-panel-componentes{--module-accent:#0ea5e9;--module-soft:#e0f2fe;--module-glow:rgba(14,165,233,.16)}
   .main-panel-resumen{--module-accent:#7c8fb8;--module-soft:#eef3ff;--module-glow:rgba(124,143,184,.16)}
   .summary-stack{display:grid;gap:4px;margin-bottom:5px}
-  .summary-pill{background:#f2f4f8;border:1px dashed var(--line);border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;line-height:1.18;color:#425166}
-  .summary-pill strong{color:#8b6a12;display:inline-block;min-width:145px}
+  .summary-pill{display:grid;grid-template-columns:150px 10px minmax(0,1fr);align-items:center;column-gap:4px;background:#f2f4f8;border:1px dashed var(--line);border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;line-height:1.18;color:#425166}
+  .summary-pill strong{color:#8b6a12;text-align:left}
+  .summary-pill .summary-sep{color:#8b6a12;font-weight:900;text-align:center}
   .section-block{margin-top:5px}
   [data-edit-view="general-accidente"]{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:start}
   [data-edit-view="general-accidente"] > .summary-stack{
-    grid-column:1 / span 4;
+    grid-column:1 / span 6;
     grid-row:2;
     margin-bottom:0;
     padding:9px;
@@ -5266,9 +5338,9 @@ include __DIR__ . '/sidebar.php';
     background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(248,250,253,.95) 100%);
     box-shadow:0 5px 14px rgba(17,24,39,.045);
   }
-  [data-edit-view="general-accidente"] > .general-block-fechas{grid-column:9 / span 4;grid-row:2}
+  [data-edit-view="general-accidente"] > .general-block-fechas{grid-column:1 / span 6;grid-row:3}
   [data-edit-view="general-accidente"] > .general-block-ident{grid-column:span 12;grid-row:1;order:-1}
-  [data-edit-view="general-accidente"] > .general-block-ubicacion{grid-column:5 / span 4;grid-row:2}
+  [data-edit-view="general-accidente"] > .general-block-ubicacion{grid-column:7 / span 6;grid-row:2 / span 2;align-self:stretch}
   [data-edit-view="general-accidente"] > .general-block-autoridades{grid-column:span 4}
   [data-edit-view="general-accidente"] > .general-block-comunicacion{grid-column:span 4}
   [data-edit-view="general-accidente"] > .general-block-carpeta{grid-column:span 4}
@@ -5282,7 +5354,7 @@ include __DIR__ . '/sidebar.php';
   [data-edit-view="general-accidente"] > .general-block-carpeta{border-color:#d8acca;box-shadow:inset 4px 0 0 #ca91b8,0 6px 16px rgba(190,24,93,.075)}
   [data-edit-view="general-accidente"] > .general-block-descripcion{border-color:#bdc5d2;box-shadow:inset 4px 0 0 #aab4c3,0 6px 16px rgba(71,85,105,.075)}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:1fr}
-  [data-edit-view="general-accidente"] > .general-block-fechas .line-card{display:grid;grid-template-columns:82px 8px 1fr;align-items:center;column-gap:3px}
+  [data-edit-view="general-accidente"] > .general-block-fechas .line-card{display:grid;grid-template-columns:150px 10px minmax(0,1fr);align-items:center;column-gap:4px}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-card strong{text-align:left}
   [data-edit-view="general-accidente"] > .general-block-fechas .line-card .date-sep{color:#8b6a12;font-weight:900;text-align:center}
   [data-edit-view="general-accidente"] > .general-block-ubicacion .general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -5841,6 +5913,42 @@ include __DIR__ . '/sidebar.php';
     padding:14px 14px 10px;
     background:linear-gradient(180deg,color-mix(in srgb,var(--summary-accent) 9%,#fff) 0%,color-mix(in srgb,var(--summary-soft) 62%,#fff) 100%);
     border-bottom:1px solid color-mix(in srgb,var(--summary-accent) 22%,#d7dfec);
+  }
+  .summary-block-card.is-summary-accordion > header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:0;
+    cursor:pointer;
+    user-select:none;
+  }
+  .summary-block-card.is-summary-accordion.is-open > header{margin-bottom:10px}
+  .summary-block-card.is-summary-accordion > header:focus{
+    outline:none;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--summary-accent) 24%,transparent) inset;
+  }
+  .summary-block-panel[hidden]{display:none !important}
+  .summary-block-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 30px;
+    width:30px;
+    height:30px;
+    border-radius:999px;
+    border:1px solid color-mix(in srgb,var(--summary-accent) 40%,#d7dfec);
+    background:#fff;
+    color:var(--summary-accent);
+    font-size:18px;
+    font-weight:900;
+    line-height:1;
+    box-shadow:0 6px 14px rgba(17,24,39,.08);
+  }
+  .summary-block-card.is-summary-accordion.is-open .summary-block-toggle{
+    background:var(--summary-accent);
+    border-color:var(--summary-accent);
+    color:#fff;
   }
   .summary-block-card--intervention{--summary-accent:#8b5cf6;--summary-soft:#fff7dd;--summary-glow:rgba(91,44,160,.08)}
   .summary-block-card--ut{--summary-accent:#f0b429;--summary-soft:#fff7db;--summary-glow:rgba(217,119,6,.12)}
@@ -6643,8 +6751,8 @@ include __DIR__ . '/sidebar.php';
     .top-actions{gap:6px}
     .btn-shell{padding:6px 8px;font-size:11px}
     .panel,.tab-panel{padding:8px}
-    .summary-pill{padding:8px 9px;font-size:12px}
-    .summary-pill strong{display:block;min-width:0;margin-bottom:4px}
+    .summary-pill{grid-template-columns:118px 10px minmax(0,1fr);padding:8px 9px;font-size:12px}
+    .summary-pill strong{margin-bottom:0}
     .g-3,.g-4,.g-6,.g-12{grid-column:span 12}
     .ident-grid{grid-template-columns:1fr}
     [data-edit-view="general-accidente"]{gap:7px}
@@ -6727,12 +6835,12 @@ include __DIR__ . '/sidebar.php';
       <div class="inline-edit-error" id="accidente-inline-error"></div>
 
       <div class="editable-view" data-edit-view="general-accidente">
-        <div class="summary-stack">
-          <div class="summary-pill"><strong>Modalidades:</strong> <?= $modsConcat ?></div>
-          <div class="summary-pill"><strong>Consecuencias:</strong> <?= $consConcat ?></div>
+        <div class="summary-stack" style="grid-column:1 / span 6;grid-row:2">
+          <div class="summary-pill"><strong>Modalidades</strong><span class="summary-sep">:</span><span><?= $modsConcat ?></span></div>
+          <div class="summary-pill"><strong>Consecuencias</strong><span class="summary-sep">:</span><span><?= $consConcat ?></span></div>
         </div>
 
-        <div class="section-block general-block-fechas">
+        <div class="section-block general-block-fechas" style="grid-column:1 / span 6;grid-row:3">
           <h2 class="section-title">Fechas</h2>
           <div class="line-grid">
             <div class="line-card"><strong>Accidente</strong><span class="date-sep">:</span><span><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></span></div>
@@ -6783,7 +6891,7 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
 
-        <div class="section-block general-block-ubicacion">
+        <div class="section-block general-block-ubicacion" style="grid-column:7 / span 6;grid-row:2 / span 2;align-self:stretch">
           <h2 class="section-title">Ubicación</h2>
           <div class="general-grid">
             <div class="data-card g-4">
@@ -7190,12 +7298,13 @@ include __DIR__ . '/sidebar.php';
                 $unitPeople = $summaryUnit['personas'];
                 $unitDrivers = array_values(array_filter($unitPeople, static fn(array $row): bool => is_conductor($row)));
                 $unitCompanions = array_values(array_filter($unitPeople, static fn(array $row): bool => !is_conductor($row)));
+                $unitHeaderSubtitle = summary_unit_card_subtitle($summaryUnit, $unitDrivers, $unitCompanions);
               ?>
               <article class="module-card summary-block-card summary-block-card--ut">
                 <header>
                   <div>
                     <h4 class="summary-block-title"><?= h((string) $summaryUnit['ut']) ?></h4>
-                    <p><?= h(count($summaryUnit['vehiculos']) . ' vehículo(s) · ' . count($unitPeople) . ' participante(s)') ?></p>
+                    <p><?= h($unitHeaderSubtitle !== '' ? $unitHeaderSubtitle : (count($summaryUnit['vehiculos']) . ' vehículo(s) · ' . count($unitPeople) . ' participante(s)')) ?></p>
                   </div>
                   <div class="module-card-controls">
                     <span class="chip-simple"><?= h((string) $summaryUnit['ut']) ?></span>
@@ -7281,6 +7390,40 @@ include __DIR__ . '/sidebar.php';
                         $summaryPerson,
                         $summaryExtras,
                         'Peatón ' . summary_letter($peatonIndex),
+                        $summaryPersonSections,
+                        $summaryLcFields,
+                        $summaryRmlFields,
+                        $summaryDosajeFields,
+                        $summaryManifestacionFields,
+                        $summaryOccLevantamientoFields,
+                        $summaryOccPericialFields,
+                        $summaryOccProtocoloFields,
+                        $summaryOccEpicrisisFields
+                    ) ?>
+                  <?php endforeach; ?>
+                </div>
+              </article>
+            <?php endif; ?>
+
+            <?php if ($summaryPasajerosOcupantesSinUnidad !== []): ?>
+              <article class="module-card summary-block-card summary-block-card--otros">
+                <header>
+                  <div>
+                    <h4 class="summary-block-title">Pasajeros / ocupantes sin unidad</h4>
+                    <p><?= h(count($summaryPasajerosOcupantesSinUnidad)) ?> registro(s) ilesos, heridos o fallecidos sin UT vinculada.</p>
+                  </div>
+                </header>
+                <div class="summary-doc-stack">
+                  <?php foreach ($summaryPasajerosOcupantesSinUnidad as $passengerIndex => $summaryPerson): ?>
+                    <?php
+                      $summaryExtras = $personaExtras[(int) ($summaryPerson['involucrado_id'] ?? 0)] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[]];
+                      $passengerRole = trim((string) ($summaryPerson['rol_nombre'] ?? 'Participante'));
+                      $passengerTitle = ($passengerRole !== '' ? $passengerRole : 'Pasajero / ocupante') . ' ' . summary_letter($passengerIndex);
+                    ?>
+                    <?= render_summary_person_block(
+                        $summaryPerson,
+                        $summaryExtras,
+                        $passengerTitle,
                         $summaryPersonSections,
                         $summaryLcFields,
                         $summaryRmlFields,
@@ -11645,6 +11788,77 @@ include __DIR__ . '/sidebar.php';
       });
     }
 
+    function setSummaryBlockAccordionState(card, expanded) {
+      const panel = card.querySelector(':scope > .summary-block-panel');
+      const header = card.querySelector(':scope > header');
+      const toggle = header ? header.querySelector(':scope > .summary-block-toggle') : null;
+      if (!panel || !header) return;
+
+      if (expanded) {
+        card.parentElement?.querySelectorAll(':scope > .summary-block-card.is-summary-accordion').forEach((otherCard) => {
+          if (otherCard !== card) {
+            setSummaryBlockAccordionState(otherCard, false);
+          }
+        });
+      }
+
+      card.classList.toggle('is-open', expanded);
+      panel.hidden = !expanded;
+      header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      if (toggle) {
+        toggle.textContent = expanded ? '-' : '+';
+        toggle.setAttribute('aria-label', expanded ? 'Contraer sección' : 'Expandir sección');
+        toggle.title = expanded ? 'Contraer sección' : 'Expandir sección';
+      }
+    }
+
+    function initSummaryBlockAccordions(scope) {
+      const root = scope || document;
+      root.querySelectorAll('.summary-sheet > .summary-block-card').forEach((card) => {
+        if (card.classList.contains('is-summary-accordion')) return;
+
+        const header = card.querySelector(':scope > header');
+        if (!header) return;
+
+        const contentNodes = Array.from(card.childNodes).filter((node) => node !== header);
+        if (contentNodes.length === 0) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'summary-block-panel';
+        contentNodes.forEach((node) => panel.appendChild(node));
+        card.appendChild(panel);
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'summary-block-toggle';
+        toggle.textContent = '+';
+        toggle.setAttribute('aria-label', 'Expandir sección');
+        toggle.title = 'Expandir sección';
+        header.appendChild(toggle);
+
+        card.classList.add('is-summary-accordion');
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', 'false');
+
+        const toggleCard = () => setSummaryBlockAccordionState(card, !card.classList.contains('is-open'));
+        header.addEventListener('click', (event) => {
+          const interactive = event.target instanceof Element
+            ? event.target.closest('a, button, select, input, textarea, label')
+            : null;
+          if (interactive && interactive !== toggle) return;
+          toggleCard();
+        });
+        header.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          toggleCard();
+        });
+
+        setSummaryBlockAccordionState(card, false);
+      });
+    }
+
     function initAnalysisImagePreview(input) {
       if (!input || input.dataset.previewBound === '1') return;
       input.dataset.previewBound = '1';
@@ -11903,6 +12117,7 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    initSummaryBlockAccordions(document);
     applyNuevoButtonStyles(document);
 
     document.addEventListener('keydown', (event) => {
