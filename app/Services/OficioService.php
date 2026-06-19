@@ -35,6 +35,7 @@ final class OficioService
             'oficial_anos' => $oficialAnos,
             'oficial_ano_default' => $defaultOficial,
             'grado_cargo' => $this->repository->gradoCargo(),
+            'tipos_diligencia' => $this->repository->tiposDiligencia(),
             'accidentes' => $this->repository->accidentes(),
             'tipos' => self::TIPOS,
             'estados' => self::ESTADOS,
@@ -233,6 +234,75 @@ final class OficioService
     public function asuntoVariantes(int $id): array
     {
         return $this->repository->asuntoVariantes($id);
+    }
+
+    public function plantillaInfo(int $asuntoId): array
+    {
+        $asunto = $this->repository->asuntoInfo($asuntoId);
+        if ($asunto === null) {
+            throw new InvalidArgumentException('La plantilla/asunto seleccionado no existe.');
+        }
+
+        $latest = $this->repository->latestPresetForAsunto($asuntoId);
+        $source = $latest ?: [
+            'entidad_id_destino' => (int) ($asunto['entidad_id'] ?? 0),
+            'subentidad_destino_id' => null,
+            'persona_destino_id' => null,
+            'persona_destino_manual' => '',
+            'grado_cargo_id' => null,
+            'asunto_id' => (int) ($asunto['id'] ?? 0),
+            'motivo' => (string) ($asunto['detalle'] ?? ''),
+            'referencia_texto' => '',
+            'diligencias_solicitadas' => '',
+            'asunto_nombre' => (string) ($asunto['nombre'] ?? ''),
+            'asunto_tipo' => (string) ($asunto['tipo'] ?? 'SOLICITAR'),
+            'asunto_detalle' => (string) ($asunto['detalle'] ?? ''),
+        ];
+
+        $entidadId = (int) ($source['entidad_id_destino'] ?? $asunto['entidad_id'] ?? 0);
+        $asuntoInfo = $this->repository->asuntoInfo((int) ($source['asunto_id'] ?? $asuntoId)) ?: $asunto;
+        $rules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+
+        return [
+            'source' => $latest ? 'latest' : 'catalog',
+            'entidad_id' => $entidadId,
+            'subentidad_id' => ($source['subentidad_destino_id'] ?? null) !== null ? (int) $source['subentidad_destino_id'] : '',
+            'persona_id' => ($source['persona_destino_id'] ?? null) !== null ? (int) $source['persona_destino_id'] : '',
+            'persona_destino_manual' => (string) ($source['persona_destino_manual'] ?? ''),
+            'grado_cargo_id' => ($source['grado_cargo_id'] ?? null) !== null ? (int) $source['grado_cargo_id'] : '',
+            'asunto_id' => (int) ($asuntoInfo['id'] ?? $asuntoId),
+            'tipo' => (string) ($asuntoInfo['tipo'] ?? 'SOLICITAR'),
+            'motivo' => trim((string) ($source['motivo'] ?? '')) !== '' ? trim((string) $source['motivo']) : trim((string) ($asuntoInfo['detalle'] ?? '')),
+            'referencia_texto' => (string) ($source['referencia_texto'] ?? ''),
+            'diligencias_solicitadas' => (string) ($source['diligencias_solicitadas'] ?? ''),
+            'download' => $this->downloadMetaForAsunto((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''), (string) ($asuntoInfo['tipo'] ?? '')),
+            'rules' => $rules,
+        ];
+    }
+
+    public function downloadUrlForOficio(int $oficioId): string
+    {
+        $row = $this->repository->detail($oficioId);
+        if ($row === null) {
+            return '';
+        }
+        $meta = $this->downloadMetaForAsunto(
+            (string) ($row['asunto_nombre'] ?? ''),
+            (string) ($row['motivo'] ?? ''),
+            (string) ($row['asunto_tipo'] ?? '')
+        );
+        if (($meta['url'] ?? '') === '') {
+            return '';
+        }
+
+        $url = str_replace('{id}', (string) $oficioId, (string) $meta['url']);
+        if (($meta['key'] ?? '') === 'necropsia' && !empty($row['involucrado_persona_id'])) {
+            $url .= '&inv_id=' . urlencode((string) $row['involucrado_persona_id']);
+        }
+        if (($meta['key'] ?? '') === 'remitir' && !empty($row['accidente_id'])) {
+            $url .= '&accidente_id=' . urlencode((string) $row['accidente_id']);
+        }
+        return $url;
     }
 
     public function gradoCargo(): array
@@ -561,6 +631,9 @@ final class OficioService
         if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
+        if ($this->asuntoRequiereFallecido((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $personaInvId === null) {
+            throw new InvalidArgumentException('Selecciona la persona fallecida para este asunto.');
+        }
         if ($this->asuntoEsInformacionDiligencias((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $diligenciasSolicitadas === '') {
             throw new InvalidArgumentException('Indica una o varias diligencias cuya informacion se solicita.');
         }
@@ -613,18 +686,82 @@ final class OficioService
 
     private function asuntoRequiereVehiculo(string $nombre, string $detalle): bool
     {
-        $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
-        $esSunarpHistorial = str_contains($text, 'historial')
-            && (str_contains($text, 'transferencia') || str_contains($text, 'transferencias'));
-        $esInformacionCertificado = str_contains($text, 'informacion')
-            && str_contains($text, 'certificado');
-        return $esSunarpHistorial || $esInformacionCertificado;
+        return $this->asuntoRules($nombre, $detalle)['requires_vehicle'];
     }
 
     private function asuntoEsInformacionDiligencias(string $nombre, string $detalle): bool
     {
+        return $this->asuntoRules($nombre, $detalle)['requires_diligencias'];
+    }
+
+    private function asuntoRequiereFallecido(string $nombre, string $detalle): bool
+    {
+        return $this->asuntoRules($nombre, $detalle)['requires_fallecido'];
+    }
+
+    private function asuntoRules(string $nombre, string $detalle): array
+    {
         $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
-        return str_contains($text, 'informacion') && str_contains($text, 'diligenc');
+        $isPeritaje = str_contains($text, 'peritaje') && str_contains($text, 'constat');
+        $isSunarpHistorial = str_contains($text, 'sunarp') || (str_contains($text, 'historial') && str_contains($text, 'transferenc'));
+        $isInformacionCertificado = str_contains($text, 'informacion') && str_contains($text, 'certificado');
+        $isNecropsia = str_contains($text, 'necropsia') || str_contains($text, 'autopsia');
+        $isCamara = str_contains($text, 'camara') && (str_contains($text, 'video') || str_contains($text, 'vigilancia'));
+        $isInformacionDiligencias = str_contains($text, 'informacion') && str_contains($text, 'diligenc');
+        $isIdentificacionCadaver = str_contains($text, 'identificacion') && str_contains($text, 'cadaver');
+        $isIdentificacionVehiculo = str_contains($text, 'identificacion') && str_contains($text, 'vehiculo');
+
+        return [
+            'requires_vehicle' => $isPeritaje || $isSunarpHistorial || $isInformacionCertificado || $isIdentificacionVehiculo,
+            'requires_fallecido' => $isNecropsia || $isIdentificacionCadaver,
+            'requires_diligencias' => $isInformacionDiligencias,
+            'requires_camara_range' => $isCamara,
+        ];
+    }
+
+    private function downloadMetaForAsunto(string $nombre, string $detalle, string $tipo = ''): array
+    {
+        $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
+        $tipo = strtoupper(trim($tipo));
+
+        if (str_contains($text, 'camara') && (str_contains($text, 'video') || str_contains($text, 'vigilancia'))) {
+            return ['key' => 'camara', 'label' => 'Cámara', 'url' => 'word_oficio_camaras.php?oficio_id={id}'];
+        }
+        if ($tipo === 'REMITIR' || (str_contains($text, 'remitir') && str_contains($text, 'diligenc'))) {
+            return ['key' => 'remitir', 'label' => 'Remitir', 'url' => 'oficio_remitir_diligencia.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'dosaje') && (str_contains($text, 'resultado') || str_contains($text, 'etil'))) {
+            return ['key' => 'dosaje', 'label' => 'Dosaje', 'url' => 'oficio_resultado_dosaje.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'peritaje') && str_contains($text, 'constat')) {
+            return ['key' => 'peritaje', 'label' => 'Peritaje', 'url' => 'oficio_peritaje.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'necropsia') || str_contains($text, 'autopsia')) {
+            return ['key' => 'necropsia', 'label' => 'Necropsia', 'url' => 'oficio_protocolo.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'identificacion') && str_contains($text, 'cadaver')) {
+            if (is_file(dirname(__DIR__, 2) . '/plantillas/identificacion_cadaver_UTANFOR.docx')) {
+                return ['key' => 'identificacion_cadaver', 'label' => 'Identificacion de cadaver', 'url' => 'word_oficio_identificacion_cadaver.php?oficio_id={id}'];
+            }
+            return ['key' => 'identificacion_cadaver', 'label' => '', 'url' => ''];
+        }
+        if (str_contains($text, 'identificacion') && str_contains($text, 'vehiculo')) {
+            if (is_file(dirname(__DIR__, 2) . '/plantillas/oficio_identificacion_vehiculo-DEPPIRV.docx')) {
+                return ['key' => 'identificacion_vehiculo', 'label' => 'Identificacion de vehiculo', 'url' => 'word_oficio_identificacion_vehiculo.php?oficio_id={id}'];
+            }
+            return ['key' => 'identificacion_vehiculo', 'label' => '', 'url' => ''];
+        }
+        if (str_contains($text, 'sunarp') || (str_contains($text, 'historial') && str_contains($text, 'transferenc'))) {
+            return ['key' => 'sunarp', 'label' => 'SUNARP', 'url' => 'word_oficio_sunarp_historial_transferencias.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'informacion') && str_contains($text, 'certificado')) {
+            return ['key' => 'uper', 'label' => 'UPER', 'url' => 'word_oficio_informacion_certificado_uper.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'informacion') && str_contains($text, 'diligenc')) {
+            return ['key' => 'diligencias', 'label' => 'Diligencias', 'url' => 'word_oficio_informacion_diligencias_comisaria.php?oficio_id={id}'];
+        }
+
+        return ['key' => '', 'label' => '', 'url' => ''];
     }
 
     private function normalizeMatchText(string $text): string

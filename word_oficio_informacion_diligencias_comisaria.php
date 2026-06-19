@@ -69,6 +69,38 @@ function dilig_numbered_lines(string $text): string
     return implode("\n", $result);
 }
 
+function dilig_inline_lines(string $text): string
+{
+    $lines = preg_split('/\R/u', dilig_clean($text, true)) ?: [];
+    $lines = array_map(
+        static fn(string $line): string => rtrim(trim($line), " \t\n\r\0\x0B,;"),
+        $lines
+    );
+    $lines = array_values(array_filter($lines, static fn(string $line): bool => $line !== ''));
+
+    return implode(', ', $lines);
+}
+
+function dilig_extract_from_motivo(string $motivo, string $detalle): string
+{
+    $lines = preg_split('/\R/u', trim($motivo)) ?: [];
+    $detalleNorm = dilig_normalize($detalle);
+    $result = [];
+
+    foreach ($lines as $line) {
+        $clean = dilig_clean($line);
+        if ($clean === '') {
+            continue;
+        }
+        if ($detalleNorm !== '' && dilig_normalize($clean) === $detalleNorm) {
+            continue;
+        }
+        $result[] = $clean;
+    }
+
+    return implode("\n", $result);
+}
+
 $oficioId = (int) ($_GET['oficio_id'] ?? 0);
 if ($oficioId <= 0) {
     http_response_code(400);
@@ -109,11 +141,19 @@ if (!$oficio) {
 }
 
 $match = dilig_normalize(($oficio['asunto_nombre'] ?? '') . ' ' . ($oficio['asunto_detalle'] ?? ''));
-if (!str_contains($match, 'informacion') || !str_contains($match, 'diligenc')) {
+$isInformacionDiligencias = str_contains($match, 'informacion') && str_contains($match, 'diligenc');
+if (!$isInformacionDiligencias) {
     http_response_code(422);
     exit('Este oficio no corresponde al asunto Informacion de diligencias.');
 }
-if (dilig_clean($oficio['diligencias_solicitadas'] ?? '', true) === '') {
+$diligenciasTexto = dilig_clean($oficio['diligencias_solicitadas'] ?? '', true);
+if ($diligenciasTexto === '') {
+    $diligenciasTexto = dilig_extract_from_motivo(
+        (string) ($oficio['motivo'] ?? ''),
+        (string) ($oficio['asunto_detalle'] ?? '')
+    );
+}
+if ($diligenciasTexto === '') {
     http_response_code(422);
     exit('El oficio no tiene diligencias solicitadas registradas.');
 }
@@ -197,7 +237,6 @@ if ($destinoPersona === '') {
 }
 $fechaAccidente = $oficio['fecha_accidente'] ?? null;
 $lugarCompleto = dilig_clean(($oficio['lugar'] ?? '') . (($oficio['accidente_referencia'] ?? '') !== '' ? ' - ' . $oficio['accidente_referencia'] : ''));
-$diligenciasTexto = dilig_clean($oficio['diligencias_solicitadas'] ?? '', true);
 
 $values = [
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?? '',
@@ -214,7 +253,7 @@ $values = [
     'grado_cargo_nombre' => $oficio['grado_cargo_nombre'] ?? '',
     'asunto_nombre' => $oficio['asunto_nombre'] ?? '',
     'asunto_detalle' => $oficio['asunto_detalle'] ?? '',
-    'diligencias_solicitadas' => $diligenciasTexto,
+    'diligencias_solicitadas' => dilig_inline_lines($diligenciasTexto),
     'diligencias_solicitadas_numeradas' => dilig_numbered_lines($diligenciasTexto),
     'diligencias_cantidad' => count(preg_split('/\R/u', $diligenciasTexto) ?: []),
     'accidente_id' => $oficio['accidente_id'] ?? '',
@@ -256,7 +295,7 @@ $values = [
 
 $tpl = new TemplateProcessor($template);
 foreach ($values as $key => $value) {
-    $tpl->setValue($key, dilig_clean($value, in_array($key, ['diligencias_solicitadas', 'diligencias_solicitadas_numeradas', 'vehiculos_involucrados', 'personas_involucradas', 'fallecidos_involucrados'], true)));
+    $tpl->setValue($key, dilig_clean($value, in_array($key, ['diligencias_solicitadas_numeradas', 'vehiculos_involucrados', 'personas_involucradas', 'fallecidos_involucrados'], true)));
 }
 if (isset($_GET['vars']) && method_exists($tpl, 'getVariables')) {
     header('Content-Type: text/plain; charset=utf-8');

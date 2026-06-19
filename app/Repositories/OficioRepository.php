@@ -79,6 +79,15 @@ final class OficioRepository
         return $this->pdo->query("SELECT id, tipo, nombre, COALESCE(abreviatura,'') AS abrev FROM grado_cargo WHERE COALESCE(activo,1)=1 ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function tiposDiligencia(): array
+    {
+        if (!$this->tableExists('tipo_diligencia')) {
+            return [];
+        }
+
+        return $this->pdo->query("SELECT id, nombre, COALESCE(descripcion,'') AS descripcion FROM tipo_diligencia ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function subentidadesByEntidad(int $entidadId): array
     {
         if ($entidadId <= 0 || !$this->tableExists('oficio_subentidad')) {
@@ -224,6 +233,51 @@ final class OficioRepository
         }
 
         return $items;
+    }
+
+    public function latestPresetForAsunto(int $asuntoId): ?array
+    {
+        $base = $this->asuntoInfo($asuntoId);
+        if ($base === null) {
+            return null;
+        }
+
+        $key = $this->asuntoCatalogKey((string) ($base['nombre'] ?? ''));
+        $diligenciasSelect = $this->columnExists('oficios', 'diligencias_solicitadas')
+            ? "COALESCE(o.diligencias_solicitadas,'') AS diligencias_solicitadas"
+            : "'' AS diligencias_solicitadas";
+        $personaManualSelect = $this->columnExists('oficios', 'persona_destino_manual')
+            ? "COALESCE(o.persona_destino_manual,'') AS persona_destino_manual"
+            : "'' AS persona_destino_manual";
+
+        $sql = "SELECT o.entidad_id_destino,
+                       o.subentidad_destino_id,
+                       o.persona_destino_id,
+                       {$personaManualSelect},
+                       o.grado_cargo_id,
+                       o.asunto_id,
+                       o.involucrado_vehiculo_id,
+                       o.involucrado_persona_id,
+                       COALESCE(o.motivo,'') AS motivo,
+                       COALESCE(o.referencia_texto,'') AS referencia_texto,
+                       {$diligenciasSelect},
+                       oa.nombre AS asunto_nombre,
+                       oa.tipo AS asunto_tipo,
+                       COALESCE(oa.detalle,'') AS asunto_detalle
+                FROM oficios o
+                LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
+                WHERE o.asunto_id IS NOT NULL
+                ORDER BY o.id DESC
+                LIMIT 300";
+        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        foreach ($rows as $row) {
+            if ($this->asuntoCatalogKey((string) ($row['asunto_nombre'] ?? '')) === $key) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     public function accidentes(): array

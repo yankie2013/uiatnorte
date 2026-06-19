@@ -47,6 +47,9 @@ if (isset($_GET['ajax'])) {
             case 'asunto_variantes':
                 echo json_encode(['ok' => true, 'items' => $service->asuntoVariantes((int) ($_GET['id'] ?? 0))], JSON_UNESCAPED_UNICODE);
                 break;
+            case 'plantilla_info':
+                echo json_encode(['ok' => true, 'item' => $service->plantillaInfo((int) ($_GET['asunto_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
+                break;
             case 'grado_cargo':
                 echo json_encode(['ok' => true, 'items' => $service->gradoCargo()], JSON_UNESCAPED_UNICODE);
                 break;
@@ -103,16 +106,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $asignado = $service->create($data);
+        $downloadAfterSave = !$embed && (string) ($_POST['save_action'] ?? '') === 'download';
+        if ($downloadAfterSave) {
+            $downloadUrl = $service->downloadUrlForOficio((int) $asignado['id']);
+            if ($downloadUrl !== '') {
+                header('Location: ' . $downloadUrl);
+                exit;
+            }
+            $success = 'Oficio guardado, pero este asunto no tiene una descarga Word configurada.';
+        }
         if ($embed) {
             echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"oficio.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
             exit;
         }
-        $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
-        header('Location: accidente_vista_tabs.php?' . http_build_query([
-            'accidente_id' => $accidenteIdGuardado,
-            'tab' => 'documentos',
-        ]));
-        exit;
+        if ($downloadAfterSave) {
+            $data = $service->defaultData($service->oficio((int) $asignado['id']), $preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
+            $data['anio_oficio'] = $asignado['anio'] ?? $data['anio_oficio'];
+            $data['numero_oficio'] = $asignado['numero'] ?? $data['numero_oficio'];
+        } else {
+            $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
+            header('Location: accidente_vista_tabs.php?' . http_build_query([
+                'accidente_id' => $accidenteIdGuardado,
+                'tab' => 'documentos',
+            ]));
+            exit;
+        }
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }
@@ -125,6 +143,18 @@ $personasActuales = $entidadActual > 0 ? $service->personas($entidadActual) : []
 $asuntosActuales = $entidadActual > 0 ? $service->asuntos($entidadActual, $tipoActual) : [];
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
+$plantillasAsunto = $service->asuntosCatalogo(!empty($data['asunto_id']) ? (int) $data['asunto_id'] : null);
+$asuntoActualInfo = !empty($data['asunto_id']) ? $service->asuntoInfo((int) $data['asunto_id']) : null;
+$asuntoActualMatch = mb_strtolower((string) (($asuntoActualInfo['nombre'] ?? '') . ' ' . ($asuntoActualInfo['detalle'] ?? '')), 'UTF-8');
+$asuntoActualMatch = strtr($asuntoActualMatch, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n']);
+$showVehiculoInicial = (str_contains($asuntoActualMatch, 'peritaje') && str_contains($asuntoActualMatch, 'constat'))
+    || str_contains($asuntoActualMatch, 'sunarp')
+    || (str_contains($asuntoActualMatch, 'historial') && str_contains($asuntoActualMatch, 'transferenc'))
+    || (str_contains($asuntoActualMatch, 'informacion') && str_contains($asuntoActualMatch, 'certificado'))
+    || (str_contains($asuntoActualMatch, 'identificacion') && str_contains($asuntoActualMatch, 'vehiculo'));
+$showFallecidoInicial = str_contains($asuntoActualMatch, 'necropsia')
+    || str_contains($asuntoActualMatch, 'autopsia')
+    || (str_contains($asuntoActualMatch, 'identificacion') && str_contains($asuntoActualMatch, 'cadaver'));
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
 $entidadesAutocomplete = [];
 $categoriasEntidad = [];
@@ -279,6 +309,17 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <?php endforeach; ?>
         </select>
         <?php if ($sidpolGet !== ''): ?><div class="muted">Preseleccionado por SIDPOL: <?= h($sidpolGet) ?></div><?php endif; ?>
+      </div>
+
+      <div class="c12">
+        <label for="plantilla_asunto_id">Plantilla / asunto base</label>
+        <select id="plantilla_asunto_id">
+          <option value="">Selecciona una plantilla para cargar la ultima configuracion usada</option>
+          <?php foreach ($plantillasAsunto as $plantilla): ?>
+            <option value="<?= h($plantilla['id']) ?>" <?= (string) $data['asunto_id'] === (string) $plantilla['id'] ? 'selected' : '' ?>><?= h($plantilla['nombre']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="combo-hint" id="plantillaHint">Al elegir una plantilla se rellenan entidad, cargo y persona con el ultimo uso del mismo asunto. Puedes cambiar cualquier campo antes de guardar.</div>
       </div>
 
       <div class="c2">
@@ -441,6 +482,25 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <div class="c12" id="diligenciasSolicitadasBox" style="display:none;">
         <div class="preview">
           <h4>Informacion de diligencias solicitada</h4>
+          <div class="field-row" style="margin-bottom:10px; flex-wrap:wrap;">
+            <div style="flex:1 1 260px;">
+              <label for="tipo_diligencia_selector">Tipo de diligencia</label>
+              <select id="tipo_diligencia_selector">
+                <option value="">Selecciona una diligencia frecuente</option>
+                <?php foreach (($ctx['tipos_diligencia'] ?? []) as $tipoDiligencia): ?>
+                  <?php
+                    $descripcionDiligencia = trim((string) ($tipoDiligencia['descripcion'] ?? ''));
+                    $labelDiligencia = trim((string) ($tipoDiligencia['nombre'] ?? ''));
+                    if ($descripcionDiligencia !== '') {
+                        $labelDiligencia .= ' - ' . $descripcionDiligencia;
+                    }
+                  ?>
+                  <option value="<?= h((string) ($tipoDiligencia['nombre'] ?? '')) ?>"><?= h($labelDiligencia) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <button class="btn" type="button" id="btnAgregarDiligencia">Agregar</button>
+          </div>
           <label for="diligencias_solicitadas">Diligencias*</label>
           <textarea name="diligencias_solicitadas" id="diligencias_solicitadas" placeholder="Escribe una diligencia por linea"><?= h($data['diligencias_solicitadas']) ?></textarea>
           <div class="muted">Puedes solicitar una o varias diligencias. Escribe cada una en una linea distinta.</div>
@@ -449,18 +509,18 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
       <div class="c12">
         <label>Referencia</label>
-        <input type="text" name="referencia_texto" value="<?= h($data['referencia_texto']) ?>" placeholder="Ej.: Informe Técnico N° 162-2025-UIATN">
+        <input type="text" name="referencia_texto" id="referencia_texto" value="<?= h($data['referencia_texto']) ?>" placeholder="Ej.: Informe Técnico N° 162-2025-UIATN">
       </div>
 
       </div>
     </section>
 
-    <section class="office-section" id="caseLinksSection" hidden>
+    <section class="office-section" id="caseLinksSection" <?= ($showVehiculoInicial || $showFallecidoInicial) ? '' : 'hidden' ?>>
       <div class="section-head"><i class="section-mark"></i><h2>Vinculos del caso</h2><span>Opcional</span></div>
       <div class="grid">
-      <div class="c6" id="vehiculoBox" style="display:none;">
+      <div class="c6" id="vehiculoBox" style="<?= $showVehiculoInicial ? 'display:block;' : 'display:none;' ?>">
         <label>Vehículo involucrado</label>
-        <select name="involucrado_vehiculo_id" id="involucrado_vehiculo_id">
+        <select name="involucrado_vehiculo_id" id="involucrado_vehiculo_id" <?= $showVehiculoInicial ? 'required' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($vehiculosActuales as $item): ?>
             <option value="<?= h($item['id']) ?>" <?= (string) $data['involucrado_vehiculo_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option>
@@ -468,9 +528,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         </select>
       </div>
 
-      <div class="c6" id="fallecidoBox" style="display:none;">
+      <div class="c6" id="fallecidoBox" style="<?= $showFallecidoInicial ? 'display:block;' : 'display:none;' ?>">
         <label>Persona fallecida</label>
-        <select name="involucrado_persona_id" id="involucrado_persona_id">
+        <select name="involucrado_persona_id" id="involucrado_persona_id" <?= $showFallecidoInicial ? 'required' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($fallecidosActuales as $item): ?>
             <option value="<?= h($item['id']) ?>" <?= (string) $data['involucrado_persona_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option>
@@ -487,6 +547,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <?php else: ?>
           <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Cancelar</a>
         <?php endif; ?>
+        <button class="btn" type="submit" name="save_action" value="download">Guardar y descargar</button>
         <button class="btn primary" type="submit">Guardar oficio</button>
       </div>
   </form>
@@ -504,6 +565,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
 <script>
 const accSel = document.getElementById('accidente_id');
+const plantillaSel = document.getElementById('plantilla_asunto_id');
+const plantillaHint = document.getElementById('plantillaHint');
 const entidadSel = document.getElementById('entidad_id');
 const entidadTextInp = document.getElementById('entidad_id_text');
 const entidadCategoriaSel = document.getElementById('entidad_categoria');
@@ -520,6 +583,9 @@ const camaraRangoHastaInp = document.getElementById('camara_rango_hasta');
 const fechaInp = document.getElementById('fecha_emision');
 const anioInp = document.getElementById('anio_oficio');
 const numInp = document.getElementById('numero_oficio');
+const referenciaInp = document.getElementById('referencia_texto');
+const tipoDiligenciaSelector = document.getElementById('tipo_diligencia_selector');
+const btnAgregarDiligencia = document.getElementById('btnAgregarDiligencia');
 const linkListado = document.getElementById('linkListado');
 const entidadOptionsBox = document.getElementById('entidad_id_options');
 const accordionSections = Array.from(document.querySelectorAll('[data-accordion-section]'));
@@ -529,6 +595,7 @@ let personaItemsCache = <?= json_encode($personasActuales, JSON_UNESCAPED_UNICOD
 let lastEntidadLoaded = String(entidadSel ? (entidadSel.value || '') : '');
 let entidadSuggestions = [];
 let handlingInvalidField = false;
+let applyingPlantilla = false;
 
 function openAccordionSection(section) {
   if (!section || !accordionSections.includes(section)) return;
@@ -597,6 +664,20 @@ function syncCamaraRangeIntoMotivo() {
   const base = stripCamaraRangeLine(motivoTxt.value);
   const line = camaraRangeLine();
   motivoTxt.value = line ? (base ? (base + '\n' + line) : line) : base;
+}
+
+function addDiligenciaSolicitada(value) {
+  const input = document.getElementById('diligencias_solicitadas');
+  const text = String(value || '').trim();
+  if (!input || text === '') return;
+  const lines = String(input.value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  if (!lines.some((line) => normalizeText(line) === normalizeText(text))) {
+    lines.push(text);
+  }
+  input.value = lines.join('\n');
 }
 
 function hydrateCamaraRangeFromMotivo() {
@@ -690,6 +771,58 @@ async function selectEntidadSuggestion(item) {
   entidadTextInp.setCustomValidity('');
   closeEntidadSuggestions();
   await handleEntidadSelectionChange();
+}
+
+async function applyPlantillaPreset(asuntoId) {
+  if (!asuntoId || applyingPlantilla) return;
+  applyingPlantilla = true;
+  try {
+    const data = await fetchJSON('?ajax=plantilla_info&asunto_id=' + encodeURIComponent(asuntoId));
+    const item = data.item || {};
+    if (!item.entidad_id) return;
+
+    if (plantillaHint) {
+      const downloadLabel = item.download && item.download.label ? ' Descarga habilitada: ' + item.download.label + '.' : ' Este asunto aun no tiene descarga Word configurada.';
+      plantillaHint.textContent = (item.source === 'latest' ? 'Se cargo la ultima configuracion usada para este asunto.' : 'Se cargo la configuracion base del catalogo.') + downloadLabel;
+    }
+
+    if (tipoSel && item.tipo) tipoSel.value = item.tipo;
+    if (entidadSel) entidadSel.value = String(item.entidad_id || '');
+    setEntidadTextById(item.entidad_id || '');
+    lastEntidadLoaded = '';
+    await loadSubentidades(item.entidad_id || '', item.subentidad_id || '');
+    await loadPersonas(item.entidad_id || '', item.persona_id || '');
+    await loadAsuntos(item.entidad_id || '', item.tipo || 'SOLICITAR', item.asunto_id || asuntoId);
+    if (asuntoSel) asuntoSel.value = String(item.asunto_id || asuntoId);
+    lastEntidadLoaded = String(item.entidad_id || '');
+
+    const cargoSel = document.getElementById('grado_cargo_id');
+    if (cargoSel) cargoSel.value = item.grado_cargo_id ? String(item.grado_cargo_id) : '';
+    if (personaSel) personaSel.value = item.persona_id ? String(item.persona_id) : '';
+    if (personaTextInp) {
+      if (item.persona_id) {
+        const matched = personaItemsCache.find((persona) => String(persona.id || '') === String(item.persona_id));
+        personaTextInp.value = matched ? String(matched.nombre || '').trim() : '';
+      } else {
+        personaTextInp.value = String(item.persona_destino_manual || '');
+      }
+    }
+    if (personaManualInp) personaManualInp.value = item.persona_id ? '' : String(item.persona_destino_manual || '');
+    if (motivoTxt) motivoTxt.value = String(item.motivo || '');
+    if (referenciaInp) referenciaInp.value = String(item.referencia_texto || '');
+    const diligenciasInput = document.getElementById('diligencias_solicitadas');
+    if (diligenciasInput) diligenciasInput.value = String(item.diligencias_solicitadas || '');
+
+    syncPersonaDestinoManual();
+    await refreshAsuntoPreview();
+    await toggleBoxesPorAsunto();
+    openAccordionSection(accordionSections[1] || accordionSections[0]);
+  } catch (error) {
+    if (plantillaHint) plantillaHint.textContent = error.message || 'No se pudo cargar la configuracion de la plantilla.';
+    console.error(error);
+  } finally {
+    applyingPlantilla = false;
+  }
 }
 
 function setEntidadTextById(entidadId) {
@@ -868,7 +1001,11 @@ function asuntoEsPeritaje() {
 }
 function asuntoEsNecropsia() {
   const text = asuntoTexto();
-  return text.includes('protocolo de necropsia') || text.includes('protocolo de autopsia') || text.includes('necropsia');
+  const normalized = normalizeText(text);
+  return text.includes('protocolo de necropsia')
+    || text.includes('protocolo de autopsia')
+    || text.includes('necropsia')
+    || (normalized.includes('identificacion') && normalized.includes('cadaver'));
 }
 function asuntoEsCamaraVideo() {
   const text = normalizeText(asuntoTexto());
@@ -881,6 +1018,10 @@ function asuntoEsSunarpHistorial() {
 function asuntoEsInformacionCertificado() {
   const text = normalizeText(asuntoTexto());
   return text.includes('informacion') && text.includes('certificado');
+}
+function asuntoEsIdentificacionVehiculo() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('identificacion') && text.includes('vehiculo');
 }
 function asuntoEsInformacionDiligencias() {
   const text = normalizeText(asuntoTexto());
@@ -904,7 +1045,7 @@ async function toggleBoxesPorAsunto() {
   const caseLinksSection = document.getElementById('caseLinksSection');
   const diligenciasBox = document.getElementById('diligenciasSolicitadasBox');
   const diligenciasInput = document.getElementById('diligencias_solicitadas');
-  const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial() || asuntoEsInformacionCertificado();
+  const requiresVehicle = asuntoEsPeritaje() || asuntoEsSunarpHistorial() || asuntoEsInformacionCertificado() || asuntoEsIdentificacionVehiculo();
   const vehSel = document.getElementById('involucrado_vehiculo_id');
   if (requiresVehicle) {
     vehBox.style.display = 'block';
@@ -1046,6 +1187,16 @@ tipoSel.addEventListener('change', async () => {
   await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 });
+if (plantillaSel) {
+  plantillaSel.addEventListener('change', () => {
+    applyPlantillaPreset(plantillaSel.value).catch(console.error);
+  });
+}
+if (btnAgregarDiligencia && tipoDiligenciaSelector) {
+  btnAgregarDiligencia.addEventListener('click', () => {
+    addDiligenciaSolicitada(tipoDiligenciaSelector.value);
+  });
+}
 if (personaTextInp) {
   personaTextInp.addEventListener('input', syncPersonaDestinoManual);
   personaTextInp.addEventListener('change', syncPersonaDestinoManual);
