@@ -125,7 +125,11 @@ final class Auth
         }
 
         $lifetime = max(86400, (int) app_config('session.lifetime', 31536000));
-        setcookie(session_name(), session_id(), self::cookieOptions($lifetime));
+        $options = self::cookieOptions($lifetime);
+        $options['expires'] = time() + $lifetime;
+        unset($options['lifetime']);
+
+        setcookie(session_name(), session_id(), $options);
     }
 
     private static function isHttps(): bool
