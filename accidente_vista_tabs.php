@@ -3548,6 +3548,7 @@ if (!$accidente) {
 }
 
 $accidente_id = (int) $accidente['id'];
+$_SESSION['accidente_ultimo_abierto'] = $accidente_id;
 $abogadoInlineService = new AbogadoService(new AbogadoRepository($pdo));
 $abogadoInlineContext = $abogadoInlineService->formContext($accidente_id);
 $accidenteBase = $accidenteRepo->accidenteById($accidente_id) ?: $accidente;

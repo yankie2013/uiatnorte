@@ -150,6 +150,43 @@ if (($_POST['ajax'] ?? '') === 'priority') {
 /* ============================
    FILTROS
 ============================ */
+$filterKeys = [
+  'q',
+  'desde',
+  'hasta',
+  'comisaria_id',
+  'persona',
+  'distrito',
+  'vehiculo',
+  'registro_sidpol',
+  'nro_informe_policial',
+  'tipo_registro',
+  'estado',
+  'orden',
+];
+
+if (isset($_GET['limpiar_recuerdo'])) {
+  unset($_SESSION['accidente_listar_ultimo_filtro'], $_SESSION['accidente_ultimo_abierto']);
+  header('Location: accidente_listar.php');
+  exit;
+}
+
+$hasIncomingFilters = false;
+foreach ($filterKeys as $filterKey) {
+  if (array_key_exists($filterKey, $_GET)) {
+    $hasIncomingFilters = true;
+    break;
+  }
+}
+
+$restoredLastFilters = false;
+if (!$hasIncomingFilters && !empty($_SESSION['accidente_listar_ultimo_filtro']) && is_array($_SESSION['accidente_listar_ultimo_filtro'])) {
+  $_GET = array_merge($_GET, $_SESSION['accidente_listar_ultimo_filtro']);
+  $restoredLastFilters = true;
+}
+
+$ultimoAccidenteAbiertoId = (int)($_SESSION['accidente_ultimo_abierto'] ?? 0);
+
 $q        = trim($_GET['q'] ?? '');
 $desde    = trim($_GET['desde'] ?? '');
 $hasta    = trim($_GET['hasta'] ?? '');
@@ -186,6 +223,28 @@ $ordenOpciones = [
 $orden = trim($_GET['orden'] ?? 'registro_desc');
 if (!array_key_exists($orden, $ordenOpciones)) {
   $orden = 'registro_desc';
+}
+
+$currentFilters = [
+  'q' => $q,
+  'desde' => $desde,
+  'hasta' => $hasta,
+  'comisaria_id' => $comisaria_id,
+  'persona' => $persona,
+  'distrito' => $distrito,
+  'vehiculo' => $vehiculo,
+  'registro_sidpol' => $registro_sidpol,
+  'nro_informe_policial' => $nro_informe_policial,
+  'tipo_registro' => $tipo_registro,
+  'estado' => $estadoFiltro,
+  'orden' => $orden,
+];
+
+if ($hasIncomingFilters) {
+  $_SESSION['accidente_listar_ultimo_filtro'] = array_filter(
+    $currentFilters,
+    static fn($value): bool => trim((string)$value) !== ''
+  );
 }
 
 /* ============================
@@ -317,7 +376,10 @@ $orderBy = match ($orden) {
   'fecha_asc' => 'a.fecha_accidente ASC, a.id ASC',
   default => 'a.id DESC',
 };
-$sql .= " ORDER BY COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
+$lastOpenedOrder = (!$hasIncomingFilters && !$restoredLastFilters && $ultimoAccidenteAbiertoId > 0)
+  ? "CASE WHEN a.id = $ultimoAccidenteAbiertoId THEN 1 ELSE 0 END DESC, "
+  : '';
+$sql .= " ORDER BY {$lastOpenedOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
@@ -579,6 +641,20 @@ input,select{width:100%;padding:8px 10px;border:1px solid var(--field-bd);border
 .filter-toggle-icon{font-size:14px;line-height:1;transition:transform .15s ease}
 .filter-toggle[aria-expanded="true"] .filter-toggle-icon{transform:rotate(180deg)}
 html[data-theme-resolved="dark"] .filter-toggle{border-color:#334155}
+.memory-note{
+  margin:0 0 10px;
+  padding:9px 12px;
+  border:1px solid rgba(212,175,55,.38);
+  border-radius:12px;
+  background:rgba(212,175,55,.10);
+  color:#7c5a08;
+  font-weight:800;
+  font-size:12px;
+}
+html[data-theme-resolved="dark"] .memory-note{
+  background:rgba(212,175,55,.14);
+  color:#facc15;
+}
 @media(max-width:1000px){.col-6,.col-4,.col-3,.col-2{grid-column:span 12}}
 @media(max-width:1000px){.filter-primary .col-6{grid-column:span 12}}
 
@@ -594,6 +670,10 @@ tbody td{padding:8px 10px;border-bottom:1px solid var(--tbl-bd); font-size:13px}
 tbody tr:nth-child(odd){background:var(--tbl-row-bg)}
 tbody tr:nth-child(even){background:var(--tbl-row-alt)}
 tbody tr:hover{background:var(--tbl-row-hover)}
+tbody tr.last-opened-row{
+  box-shadow:inset 4px 0 0 #d4af37;
+  background:rgba(212,175,55,.10);
+}
 th:first-child, td:first-child{padding-left:14px}
 th:last-child, td:last-child{padding-right:14px}
 .td-actions{white-space:nowrap}
@@ -771,6 +851,10 @@ html[data-theme-resolved="dark"]{
 .acc-card[data-priority="1"]{
   border-color:rgba(212,175,55,.62);
   box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
+}
+.acc-card.last-opened{
+  border-color:rgba(212,175,55,.70);
+  box-shadow:0 14px 32px rgba(212,175,55,.18), inset 4px 0 0 #d4af37;
 }
 .acc-card .acc-card-main:hover{background:rgba(37,99,235,.035)}
 .acc-card-list.has-district-color .acc-card{
@@ -1073,7 +1157,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
         </button>
         <div class="filter-action-buttons">
           <button class="btn small" type="submit">Filtrar</button>
-          <a class="btn small" href="accidente_listar.php">Limpiar</a>
+          <a class="btn small" href="accidente_listar.php?limpiar_recuerdo=1">Limpiar</a>
         </div>
       </div>
 
@@ -1126,6 +1210,12 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
       </div>
     </form>
 
+    <?php if ($restoredLastFilters): ?>
+      <div class="memory-note">Mostrando la última búsqueda realizada.</div>
+    <?php elseif (!$hasIncomingFilters && $ultimoAccidenteAbiertoId > 0): ?>
+      <div class="memory-note">Último accidente abierto resaltado arriba.</div>
+    <?php endif; ?>
+
     <div class="acc-card-list <?= $selectedDistrictHue !== null ? 'has-district-color' : '' ?>" id="cards-list" role="list" aria-label="Lista de accidentes"<?= $selectedDistrictHue !== null ? ' style="--district-hue:' . (int)$selectedDistrictHue . '"' : '' ?>>
       <?php if (!$rows): ?>
         <div class="empty">Sin resultados</div>
@@ -1146,7 +1236,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -1294,7 +1384,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
               $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
               $tipoRegistroClass = ($r['tipo_registro'] ?? '') === 'Intervencion' ? 'tipo-reg-intervencion' : 'tipo-reg-carpeta';
           ?>
-            <tr data-id="<?= (int)$r['id'] ?>" role="row">
+            <tr class="<?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened-row' : '' ?>" data-id="<?= (int)$r['id'] ?>" role="row">
   <td role="cell">
     <a class="sidpol-link" href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>" title="Ver detalles">
       <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
