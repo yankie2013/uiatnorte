@@ -950,6 +950,23 @@ html[data-theme-resolved="dark"]{
   box-shadow:0 8px 18px rgba(22,101,52,.12);
 }
 .acc-gps-btn:hover{background:#bbf7d0;border-color:#86efac;color:#14532d}
+.acc-docx-btn{
+  min-width:72px;
+  height:34px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid #bfdbfe;
+  background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%);
+  color:#1d4ed8;
+  font-size:11px;
+  font-weight:900;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 8px 18px rgba(37,99,235,.12);
+}
+.acc-docx-btn:hover{background:#bfdbfe;border-color:#93c5fd;color:#1e3a8a}
 .acc-card .col-folder{min-width:auto}
 .acc-inline-form{display:inline}
 .acc-toggle{
@@ -1021,6 +1038,16 @@ html[data-theme-resolved="dark"] .acc-gps-btn:hover{
   background:rgba(22,163,74,.38);
   border-color:rgba(134,239,172,.62);
   color:#dcfce7;
+}
+html[data-theme-resolved="dark"] .acc-docx-btn{
+  background:rgba(30,64,175,.28);
+  border-color:rgba(147,197,253,.42);
+  color:#bfdbfe;
+}
+html[data-theme-resolved="dark"] .acc-docx-btn:hover{
+  background:rgba(37,99,235,.38);
+  border-color:rgba(147,197,253,.62);
+  color:#dbeafe;
 }
 html[data-theme-resolved="dark"] .acc-panel{
   background:linear-gradient(180deg,rgba(69,26,3,.42),rgba(66,32,6,.34));
@@ -1305,6 +1332,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                 <?php if ($hasGps): ?>
                   <a class="acc-gps-btn" href="<?= h($gpsUrl) ?>" target="_blank" rel="noopener noreferrer" title="Ver ubicación GPS en Google Maps" aria-label="Ver ubicación GPS en Google Maps">GPS</a>
                 <?php endif; ?>
+                <a class="acc-docx-btn" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>
                 <div class="col-folder folder-cell">
                   <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
                           data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
@@ -1491,6 +1519,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     </span>
   </td>
   <td class="td-actions" role="cell">
+    <a class="btn small" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>
     <form action="accidente_eliminar.php" method="post" style="display:inline"
           onsubmit="return confirm('Eliminar este accidente de forma permanente?');">
       <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">

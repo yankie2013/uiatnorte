@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 13/06/2026 02:34
+Generada: 21/06/2026 00:46
 
 ## Como usar los marcadores
 
@@ -12,9 +12,9 @@ Generada: 13/06/2026 02:34
 
 ## Resumen
 
-- Plantillas revisadas: 37
-- Marcadores unicos presentes: 1286
-- Marcadores unicos detectados en generadores relacionados: 831
+- Plantillas revisadas: 38
+- Marcadores unicos presentes: 1290
+- Marcadores unicos detectados en generadores relacionados: 848
 
 ## oficio_necropsia.docx
 
@@ -467,6 +467,32 @@ Generada: 13/06/2026 02:34
 - `oficio_*`: `${oficio_entidad_linea}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_fecha_abrev}`, `${oficio_motivo}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`, `${oficio_subentidad_tipo}`
 - `veh_*`: `${veh_alto_mm}`, `${veh_ancho_mm}`, `${veh_anio}`, `${veh_carroceria}`, `${veh_carroceria_descripcion}`, `${veh_categoria}`, `${veh_categoria_descripcion}`, `${veh_color}`, `${veh_largo_mm}`, `${veh_marca}`, `${veh_medidas}`, `${veh_modelo}`, `${veh_notas}`, `${veh_nro_motor}`, `${veh_observaciones}`, `${veh_orden}`, `${veh_serie_vin}`, `${veh_tipo_codigo}`, `${veh_tipo_descripcion}`, `${veh_tipo_participacion}`
 
+## plantillas/oficio_informacion_diligencias_comisaria.docx
+
+**Generadores relacionados:** `word_oficio_informacion_diligencias_comisaria.php`
+
+**Marcadores presentes (12):**
+
+- `accidente_*`: `${accidente_fecha_abrev}`, `${accidente_lugar_completo}`, `${accidente_modalidades}`, `${accidente_sidpol}`
+- `diligencias_*`: `${diligencias_solicitadas}`
+- `fallecido_*`: `${fallecido_nombre_completo}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `grado_*`: `${grado_cargo_nombre}`
+- `nombre_*`: `${nombre_oficial_ano}`
+- `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_numero}`
+
+**Disponibles en codigo pero no presentes (40):**
+
+- `accidente_*`: `${accidente_consecuencias}`, `${accidente_fecha}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_referencia}`, `${accidente_sentido}`
+- `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `diligencias_*`: `${diligencias_cantidad}`, `${diligencias_solicitadas_numeradas}`
+- `fallecido_*`: `${fallecido_apellidos}`, `${fallecido_celular}`, `${fallecido_documento}`, `${fallecido_domicilio}`, `${fallecido_edad}`, `${fallecido_email}`, `${fallecido_estado_civil}`, `${fallecido_fecha_nacimiento}`, `${fallecido_fecha_nacimiento_abrev}`, `${fallecido_lesion}`, `${fallecido_nombres}`, `${fallecido_num_doc}`, `${fallecido_ocupacion}`, `${fallecido_sexo}`, `${fallecido_tipo_doc}`
+- `fallecidos_*`: `${fallecidos_cantidad}`, `${fallecidos_involucrados}`
+- `oficio_*`: `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`
+- `personas_*`: `${personas_cantidad}`, `${personas_involucradas}`
+- `vehiculos_*`: `${vehiculos_cantidad}`, `${vehiculos_involucrados}`
+
 ## plantillas/oficio_peritaje.docx
 
 **Generadores relacionados:** `oficio_peritaje.php`, `oficio_peritaje_diag.php`
@@ -848,6 +874,67 @@ Generada: 13/06/2026 02:34
 - `subentidad_*`: `${subentidad_destino}`
 - `vehiculo_*`: `${vehiculo_list}`
 
+## Plantilla pendiente: plantillas/caratula.docx
+
+**Generador:** `word_caratula_accidente.php`
+
+**Uso recomendado para el formato de caratula:**
+
+- Titulo: `${informe_numero}` o `${accidente_informe_numero}`.
+- SIDPOL resaltado: `${sidpol}` o `${accidente_sidpol}`.
+- Lugar, fecha, hora y anio: `${accidente_lugar}`, `${accidente_fecha}`, `${accidente_hora}`, `${accidente_anio}`.
+- Bloques multilinea: `${conductores_resumen}`, `${peatones_resumen}`, `${pasajeros_resumen}`, `${ocupantes_resumen}`.
+- Bloque con etiquetas como el modelo de caratula: `${participantes_bloque_caratula}`.
+- Estado de lesiones: `${fallecidos_resumen}`, `${heridos_resumen}`, `${ilesos_resumen}`.
+- Fiscalia y fiscal: `${fiscalia_nombre}` y `${fiscal_nombre}`.
+
+**Marcadores disponibles (70):**
+
+- `/CONDUCTORES_*`: `${/CONDUCTORES}`
+- `/FALLECIDOS_*`: `${/FALLECIDOS}`
+- `/FAMILIARES_*`: `${/FAMILIARES}`
+- `/HERIDOS_*`: `${/HERIDOS}`
+- `/ILESOS_*`: `${/ILESOS}`
+- `/OCUPANTES_*`: `${/OCUPANTES}`
+- `/OTROS_*`: `${/OTROS_INVOLUCRADOS}`
+- `/PASAJEROS_*`: `${/PASAJEROS}`
+- `/PEATONES_*`: `${/PEATONES}`
+- `accidente_*`: `${accidente_anio}`, `${accidente_fecha}`, `${accidente_fecha_larga}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_informe_numero}`, `${accidente_lugar}`, `${accidente_sidpol}`, `${accidente_ubicacion}`
+- `anio_*`: `${anio}`
+- `caratula_*`: `${caratula_participantes_bloque}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `conductor_*`: `${conductor_resumen}`
+- `CONDUCTORES_*`: `${CONDUCTORES}`
+- `conductores_*`: `${conductores_cantidad}`, `${conductores_linea}`, `${conductores_resumen}`
+- `FALLECIDOS_*`: `${FALLECIDOS}`
+- `fallecidos_*`: `${fallecidos_cantidad}`, `${fallecidos_linea}`, `${fallecidos_resumen}`
+- `familiar_*`: `${familiar_resumen}`
+- `FAMILIARES_*`: `${FAMILIARES}`
+- `familiares_*`: `${familiares_cantidad}`, `${familiares_linea}`, `${familiares_resumen}`
+- `fecha_*`: `${fecha}`
+- `fiscal_*`: `${fiscal_cargo}`, `${fiscal_nombre}`, `${fiscal_telefono}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `HERIDOS_*`: `${HERIDOS}`
+- `heridos_*`: `${heridos_cantidad}`, `${heridos_linea}`, `${heridos_resumen}`
+- `hora_*`: `${hora}`
+- `ILESOS_*`: `${ILESOS}`
+- `ilesos_*`: `${ilesos_cantidad}`, `${ilesos_linea}`, `${ilesos_resumen}`
+- `informe_*`: `${informe_numero}`
+- `involucrados_*`: `${involucrados_resumen}`
+- `lugar_*`: `${lugar}`
+- `OCUPANTES_*`: `${OCUPANTES}`
+- `ocupantes_*`: `${ocupantes_cantidad}`, `${ocupantes_linea}`, `${ocupantes_resumen}`
+- `OTROS_*`: `${OTROS_INVOLUCRADOS}`
+- `otros_*`: `${otros_involucrados_linea}`, `${otros_involucrados_resumen}`
+- `participantes_*`: `${participantes_bloque_caratula}`
+- `PASAJEROS_*`: `${PASAJEROS}`
+- `pasajeros_*`: `${pasajeros_cantidad}`, `${pasajeros_linea}`, `${pasajeros_resumen}`
+- `peaton_*`: `${peaton_resumen}`
+- `PEATONES_*`: `${PEATONES}`
+- `peatones_*`: `${peatones_cantidad}`, `${peatones_linea}`, `${peatones_resumen}`
+- `sidpol_*`: `${sidpol}`
+
+
 ## Plantilla pendiente: plantillas/acta_entrega_vehiculo.docx
 
 **Generador:** `acta_entrega_vehiculo_descargar.php`
@@ -949,7 +1036,7 @@ Generada: 13/06/2026 02:34
 - Primer fallecido: marcadores `${fallecido_*}` para identidad, documento, nacimiento, edad, sexo, estado civil, domicilio, ocupacion, contacto y lesion.
 - Todos los fallecidos: `${fallecidos_involucrados}` y `${fallecidos_cantidad}`.
 
-**Marcadores disponibles (51):**
+**Marcadores disponibles (52):**
 
 - `accidente_*`: `${accidente_consecuencias}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_lugar_completo}`, `${accidente_modalidades}`, `${accidente_referencia}`, `${accidente_sentido}`, `${accidente_sidpol}`
 - `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
@@ -958,6 +1045,7 @@ Generada: 13/06/2026 02:34
 - `fallecido_*`: `${fallecido_apellidos}`, `${fallecido_celular}`, `${fallecido_documento}`, `${fallecido_domicilio}`, `${fallecido_edad}`, `${fallecido_email}`, `${fallecido_estado_civil}`, `${fallecido_fecha_nacimiento}`, `${fallecido_fecha_nacimiento_abrev}`, `${fallecido_lesion}`, `${fallecido_nombres}`, `${fallecido_nombre_completo}`, `${fallecido_num_doc}`, `${fallecido_ocupacion}`, `${fallecido_sexo}`, `${fallecido_tipo_doc}`
 - `fallecidos_*`: `${fallecidos_cantidad}`, `${fallecidos_involucrados}`
 - `fiscalia_*`: `${fiscalia_nombre}`
+- `grado_*`: `${grado_cargo_nombre}`
 - `nombre_*`: `${nombre_oficial_ano}`
 - `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`
 - `personas_*`: `${personas_cantidad}`, `${personas_involucradas}`

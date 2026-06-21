@@ -39,6 +39,7 @@ final class PwaSupport
             'exportar_accidente_debug.php',
             'exportar_word.php',
             'informe_policial2.php',
+            'word_caratula_accidente.php',
             'marcador_abogado.php',
             'marcador_manifestacion_familiar.php',
             'marcador_manifestacion_investigado.php',

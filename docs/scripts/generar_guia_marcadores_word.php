@@ -149,6 +149,19 @@ sort($allTemplateMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 sort($allCodeMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $actaMarkers = code_markers($phpFiles['acta_entrega_vehiculo_descargar.php'] ?? '');
 $actaVisualizacionMarkers = code_markers($phpFiles['acta_visualizacion_descargar.php'] ?? '');
+$caratulaMarkers = code_markers($phpFiles['word_caratula_accidente.php'] ?? '');
+$caratulaMarkers = array_values(array_unique(array_merge($caratulaMarkers, [
+    'CONDUCTORES', '/CONDUCTORES', 'conductores_linea',
+    'PEATONES', '/PEATONES', 'peatones_linea',
+    'PASAJEROS', '/PASAJEROS', 'pasajeros_linea',
+    'OCUPANTES', '/OCUPANTES', 'ocupantes_linea',
+    'OTROS_INVOLUCRADOS', '/OTROS_INVOLUCRADOS', 'otros_involucrados_linea',
+    'FAMILIARES', '/FAMILIARES', 'familiares_linea',
+    'FALLECIDOS', '/FALLECIDOS', 'fallecidos_linea',
+    'HERIDOS', '/HERIDOS', 'heridos_linea',
+    'ILESOS', '/ILESOS', 'ilesos_linea',
+])));
+sort($caratulaMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $uperMarkers = code_markers($phpFiles['word_oficio_informacion_certificado_uper.php'] ?? '');
 $informacionDiligenciasMarkers = code_markers($phpFiles['word_oficio_informacion_diligencias_comisaria.php'] ?? '');
 for ($i = 1; $i <= 10; $i++) {
@@ -173,6 +186,12 @@ file_put_contents($jsonPath, json_encode([
     ],
     'templates' => $inventory,
     'planned_templates' => [
+        [
+            'template' => 'plantillas/caratula.docx',
+            'status' => 'Pendiente de subir',
+            'generator' => 'word_caratula_accidente.php',
+            'markers_supported' => $caratulaMarkers,
+        ],
         [
             'template' => 'plantillas/acta_entrega_vehiculo.docx',
             'status' => 'Pendiente de subir',
@@ -243,6 +262,27 @@ foreach ($inventory as $item) {
     }
     $md[] = '';
 }
+$md[] = '## Plantilla pendiente: plantillas/caratula.docx';
+$md[] = '';
+$md[] = '**Generador:** `word_caratula_accidente.php`';
+$md[] = '';
+$md[] = '**Uso recomendado para el formato de caratula:**';
+$md[] = '';
+$md[] = '- Titulo: `${informe_numero}` o `${accidente_informe_numero}`.';
+$md[] = '- SIDPOL resaltado: `${sidpol}` o `${accidente_sidpol}`.';
+$md[] = '- Lugar, fecha, hora y anio: `${accidente_lugar}`, `${accidente_fecha}`, `${accidente_hora}`, `${accidente_anio}`.';
+$md[] = '- Bloques multilinea: `${conductores_resumen}`, `${peatones_resumen}`, `${pasajeros_resumen}`, `${ocupantes_resumen}`.';
+$md[] = '- Bloque con etiquetas como el modelo de caratula: `${participantes_bloque_caratula}`.';
+$md[] = '- Estado de lesiones: `${fallecidos_resumen}`, `${heridos_resumen}`, `${ilesos_resumen}`.';
+$md[] = '- Fiscalia y fiscal: `${fiscalia_nombre}` y `${fiscal_nombre}`.';
+$md[] = '';
+$md[] = '**Marcadores disponibles (' . count($caratulaMarkers) . '):**';
+$md[] = '';
+foreach (marker_prefix_groups($caratulaMarkers) as $prefix => $markers) {
+    $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
+}
+$md[] = '';
+$md[] = '';
 $md[] = '## Plantilla pendiente: plantillas/acta_entrega_vehiculo.docx';
 $md[] = '';
 $md[] = '**Generador:** `acta_entrega_vehiculo_descargar.php`';
