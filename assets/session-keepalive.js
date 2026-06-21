@@ -1,17 +1,13 @@
 (function () {
   var currentScript = document.currentScript;
   var endpoint = currentScript && currentScript.dataset ? currentScript.dataset.sessionUrl : "";
-  var intervalMs = 5 * 60 * 1000;
+  var intervalMs = 4 * 60 * 1000;
 
   if (!endpoint || !window.fetch) {
     return;
   }
 
   function shouldPing() {
-    if (document.hidden) {
-      return false;
-    }
-
     return navigator.onLine !== false;
   }
 
@@ -33,9 +29,9 @@
 
   window.setInterval(ping, intervalMs);
   window.addEventListener("pageshow", ping);
+  window.addEventListener("focus", ping);
+  window.addEventListener("online", ping);
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) {
-      ping();
-    }
+    ping();
   });
 })();

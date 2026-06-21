@@ -1,6 +1,6 @@
 <?php
 
-$lifetimeDays = (int) (getenv('SESSION_LIFETIME_DAYS') ?: 365);
+$lifetimeDays = (int) (getenv('SESSION_LIFETIME_DAYS') ?: 3650);
 $lifetimeDays = max(1, $lifetimeDays);
 
 $secureCookie = getenv('SESSION_SECURE_COOKIE');

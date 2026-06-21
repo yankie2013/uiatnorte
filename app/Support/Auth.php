@@ -14,6 +14,8 @@ final class Auth
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
+        self::refreshSessionCookie();
     }
 
     public static function user(): ?array
@@ -114,6 +116,16 @@ final class Auth
             'httponly' => (bool) app_config('session.http_only', true),
             'samesite' => (string) app_config('session.same_site', 'Lax'),
         ];
+    }
+
+    private static function refreshSessionCookie(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE || headers_sent() || session_id() === '') {
+            return;
+        }
+
+        $lifetime = max(86400, (int) app_config('session.lifetime', 31536000));
+        setcookie(session_name(), session_id(), self::cookieOptions($lifetime));
     }
 
     private static function isHttps(): bool

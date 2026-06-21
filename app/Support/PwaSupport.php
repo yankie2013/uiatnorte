@@ -356,7 +356,7 @@ HTML;
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
         $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260608-empty-fields');
-        $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260416');
+        $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260620-persistent-session');
         $keepaliveUrl = self::assetUrl($basePath, 'session_keepalive.php');
         $scope = self::assetUrl($basePath, '');
         $escapedAppName = \htmlspecialchars(self::APP_NAME, ENT_QUOTES, 'UTF-8');
