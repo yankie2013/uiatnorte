@@ -251,6 +251,34 @@ function caratula_join_lines(array $lines): string
     return implode("\n", $lines);
 }
 
+function caratula_unique_text_values(array $values): array
+{
+    $unique = [];
+    $seen = [];
+    foreach ($values as $value) {
+        $text = caratula_clean($value);
+        if ($text === '') {
+            continue;
+        }
+
+        $hash = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+        if (isset($seen[$hash])) {
+            continue;
+        }
+
+        $seen[$hash] = true;
+        $unique[] = $text;
+    }
+
+    return $unique;
+}
+
+function caratula_join_location_parts(array $values): string
+{
+    $parts = caratula_unique_text_values($values);
+    return $parts !== [] ? implode(', ', $parts) : '';
+}
+
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 if ($accidenteId <= 0) {
     http_response_code(400);
@@ -417,11 +445,23 @@ $participantesBloque = implode("\n\n", array_filter([
     $otrosBloque !== [] ? caratula_bloque_etiquetado('OTROS', $otrosBloque) : '',
 ], static fn(string $block): bool => trim($block) !== ''));
 
-$lugarCompleto = caratula_clean(($accidente['lugar'] ?? '') . (($accidente['referencia'] ?? '') !== '' ? ' - ' . $accidente['referencia'] : ''));
+$comisariaNombre = caratula_clean($accidente['comisaria_nombre'] ?? '');
+if ($comisariaNombre !== '' && stripos($comisariaNombre, 'comisar') === false) {
+    $comisariaNombre = 'Comisaria PNP ' . $comisariaNombre;
+}
+$lugarBase = caratula_clean($accidente['lugar'] ?? '');
+$referencia = caratula_clean($accidente['referencia'] ?? '');
+$distritoNombre = caratula_clean($accidente['distrito_nombre'] ?? '');
+$lugarCompleto = caratula_join_location_parts([
+    $lugarBase,
+    $referencia,
+    $distritoNombre,
+    $comisariaNombre,
+]);
 $ubicacion = caratula_clean(implode(' / ', array_filter([
     $accidente['departamento_nombre'] ?? '',
     $accidente['provincia_nombre'] ?? '',
-    $accidente['distrito_nombre'] ?? '',
+    $distritoNombre,
 ])));
 $fiscalNombre = caratula_clean($accidente['fiscal_nombre'] ?? '');
 $fiscalCargo = caratula_clean($accidente['fiscal_cargo'] ?? '');
@@ -437,6 +477,11 @@ $values = [
     'sidpol' => $accidente['registro_sidpol'] ?: ($accidente['sidpol'] ?? ''),
     'accidente_lugar' => $lugarCompleto,
     'lugar' => $lugarCompleto,
+    'accidente_lugar_base' => $lugarBase,
+    'accidente_referencia' => $referencia,
+    'accidente_distrito' => $distritoNombre,
+    'accidente_jurisdiccion' => $comisariaNombre,
+    'accidente_lugar_jurisdiccion_policial' => $lugarCompleto,
     'accidente_fecha' => caratula_fecha_abrev($fechaAccidente),
     'accidente_fecha_larga' => caratula_fecha_larga($fechaAccidente),
     'fecha' => caratula_fecha_abrev($fechaAccidente),
@@ -445,7 +490,7 @@ $values = [
     'accidente_anio' => caratula_anio($fechaAccidente),
     'anio' => caratula_anio($fechaAccidente),
     'accidente_ubicacion' => $ubicacion,
-    'comisaria_nombre' => $accidente['comisaria_nombre'] ?? '',
+    'comisaria_nombre' => $comisariaNombre,
     'fiscalia_nombre' => $accidente['fiscalia_nombre'] ?? '',
     'fiscal_nombre' => $fiscalNombre,
     'fiscal_cargo' => $accidente['fiscal_cargo'] ?? '',

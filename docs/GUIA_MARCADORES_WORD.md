@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 21/06/2026 00:46
+Generada: 21/06/2026 01:26
 
 ## Como usar los marcadores
 
@@ -12,9 +12,9 @@ Generada: 21/06/2026 00:46
 
 ## Resumen
 
-- Plantillas revisadas: 38
-- Marcadores unicos presentes: 1290
-- Marcadores unicos detectados en generadores relacionados: 848
+- Plantillas revisadas: 39
+- Marcadores unicos presentes: 1294
+- Marcadores unicos detectados en generadores relacionados: 881
 
 ## oficio_necropsia.docx
 
@@ -132,6 +132,43 @@ Generada: 21/06/2026 00:46
 **Disponibles en codigo pero no presentes (0):**
 
 - Ninguno detectado.
+
+## plantillas/caratula.docx
+
+**Generadores relacionados:** `word_caratula_accidente.php`
+
+**Marcadores presentes (9):**
+
+- `accidente_*`: `${accidente_anio}`, `${accidente_fecha}`, `${accidente_hora}`, `${accidente_lugar}`
+- `caratula_*`: `${caratula_participantes_bloque}`
+- `fiscal_*`: `${fiscal_nombre}`
+- `fiscalia_*`: `${fiscalia_nombre}`
+- `informe_*`: `${informe_numero}`
+- `sidpol_*`: `${sidpol}`
+
+**Disponibles en codigo pero no presentes (39):**
+
+- `accidente_*`: `${accidente_distrito}`, `${accidente_fecha_larga}`, `${accidente_id}`, `${accidente_informe_numero}`, `${accidente_jurisdiccion}`, `${accidente_lugar_base}`, `${accidente_lugar_jurisdiccion_policial}`, `${accidente_referencia}`, `${accidente_sidpol}`, `${accidente_ubicacion}`
+- `anio_*`: `${anio}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `conductor_*`: `${conductor_resumen}`
+- `conductores_*`: `${conductores_cantidad}`, `${conductores_resumen}`
+- `fallecidos_*`: `${fallecidos_cantidad}`, `${fallecidos_resumen}`
+- `familiar_*`: `${familiar_resumen}`
+- `familiares_*`: `${familiares_cantidad}`, `${familiares_resumen}`
+- `fecha_*`: `${fecha}`
+- `fiscal_*`: `${fiscal_cargo}`, `${fiscal_telefono}`
+- `heridos_*`: `${heridos_cantidad}`, `${heridos_resumen}`
+- `hora_*`: `${hora}`
+- `ilesos_*`: `${ilesos_cantidad}`, `${ilesos_resumen}`
+- `involucrados_*`: `${involucrados_resumen}`
+- `lugar_*`: `${lugar}`
+- `ocupantes_*`: `${ocupantes_cantidad}`, `${ocupantes_resumen}`
+- `otros_*`: `${otros_involucrados_resumen}`
+- `participantes_*`: `${participantes_bloque_caratula}`
+- `pasajeros_*`: `${pasajeros_cantidad}`, `${pasajeros_resumen}`
+- `peaton_*`: `${peaton_resumen}`
+- `peatones_*`: `${peatones_cantidad}`, `${peatones_resumen}`
 
 ## plantillas/citacion_diligencia.docx
 
@@ -888,7 +925,7 @@ Generada: 21/06/2026 00:46
 - Estado de lesiones: `${fallecidos_resumen}`, `${heridos_resumen}`, `${ilesos_resumen}`.
 - Fiscalia y fiscal: `${fiscalia_nombre}` y `${fiscal_nombre}`.
 
-**Marcadores disponibles (70):**
+**Marcadores disponibles (75):**
 
 - `/CONDUCTORES_*`: `${/CONDUCTORES}`
 - `/FALLECIDOS_*`: `${/FALLECIDOS}`
@@ -899,7 +936,7 @@ Generada: 21/06/2026 00:46
 - `/OTROS_*`: `${/OTROS_INVOLUCRADOS}`
 - `/PASAJEROS_*`: `${/PASAJEROS}`
 - `/PEATONES_*`: `${/PEATONES}`
-- `accidente_*`: `${accidente_anio}`, `${accidente_fecha}`, `${accidente_fecha_larga}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_informe_numero}`, `${accidente_lugar}`, `${accidente_sidpol}`, `${accidente_ubicacion}`
+- `accidente_*`: `${accidente_anio}`, `${accidente_distrito}`, `${accidente_fecha}`, `${accidente_fecha_larga}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_informe_numero}`, `${accidente_jurisdiccion}`, `${accidente_lugar}`, `${accidente_lugar_base}`, `${accidente_lugar_jurisdiccion_policial}`, `${accidente_referencia}`, `${accidente_sidpol}`, `${accidente_ubicacion}`
 - `anio_*`: `${anio}`
 - `caratula_*`: `${caratula_participantes_bloque}`
 - `comisaria_*`: `${comisaria_nombre}`
