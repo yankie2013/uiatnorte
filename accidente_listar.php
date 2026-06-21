@@ -163,6 +163,7 @@ $filterKeys = [
   'tipo_registro',
   'estado',
   'orden',
+  'favoritos',
 ];
 
 if (isset($_GET['limpiar_recuerdo'])) {
@@ -186,6 +187,7 @@ if (!$hasIncomingFilters && !empty($_SESSION['accidente_listar_ultimo_filtro']) 
 }
 
 $ultimoAccidenteAbiertoId = (int)($_SESSION['accidente_ultimo_abierto'] ?? 0);
+$favoritos = trim((string)($_GET['favoritos'] ?? '')) === '1' ? '1' : '';
 
 $q        = trim($_GET['q'] ?? '');
 $desde    = trim($_GET['desde'] ?? '');
@@ -238,6 +240,7 @@ $currentFilters = [
   'tipo_registro' => $tipo_registro,
   'estado' => $estadoFiltro,
   'orden' => $orden,
+  'favoritos' => $favoritos,
 ];
 
 if ($hasIncomingFilters) {
@@ -323,6 +326,9 @@ if($comisaria_id!==''){
 if($estadoFiltro !== 'todos'){
   $sql .= " AND COALESCE(NULLIF(TRIM(a.estado), ''), 'Pendiente') = ?";
   $params[] = $estadoFiltro;
+}
+if($favoritos === '1'){
+  $sql .= " AND COALESCE(a.priority, 0) = 1";
 }
 
 /* PERSONA: nombres o apellidos */
@@ -554,6 +560,10 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 }
 .station-clear:hover{border-color:#6366f1;color:#4338ca;box-shadow:0 0 16px rgba(99,102,241,.22)}
 .station-clear.active{background:linear-gradient(135deg,#111827,#334155);border-color:#64748b;color:#fff;box-shadow:0 0 18px rgba(99,102,241,.28)}
+.station-favorites{border-color:rgba(212,175,55,.46);color:#8a6300;background:linear-gradient(135deg,#fff7db,#fff)}
+.station-favorites::before{content:"\2605";margin-right:7px;color:#d4af37}
+.station-favorites:hover{border-color:#d4af37;color:#6f4b00;box-shadow:0 0 16px rgba(212,175,55,.24)}
+.station-favorites.active{background:linear-gradient(135deg,#d4af37,#facc15);border-color:#facc15;color:#111827;box-shadow:0 0 18px rgba(212,175,55,.32)}
 .district-btn{
   --district-hue:220;
   position:relative;width:100%;display:flex;align-items:center;gap:9px;min-height:41px;padding:8px 11px;border-radius:12px;
@@ -601,6 +611,8 @@ html[data-theme-resolved="dark"] .district-sidebar{background:linear-gradient(16
 html[data-theme-resolved="dark"] .district-sidebar-title{color:#9fb0c6}
 html[data-theme-resolved="dark"] .station-clear{background:#172033;border-color:#334155;color:#dbe7f5}
 html[data-theme-resolved="dark"] .station-clear.active{background:#e2e8f0;border-color:#e2e8f0;color:#0f172a}
+html[data-theme-resolved="dark"] .station-favorites{background:rgba(212,175,55,.12);border-color:rgba(212,175,55,.46);color:#facc15}
+html[data-theme-resolved="dark"] .station-favorites.active{background:linear-gradient(135deg,#e2c96c,#facc15);border-color:#facc15;color:#111827}
 html[data-theme-resolved="dark"] .district-btn{background:linear-gradient(145deg,rgba(8,15,31,.95),hsl(var(--district-hue) 42% 18% / .78));color:hsl(var(--district-hue) 82% 84%);border-color:hsl(var(--district-hue) 58% 55% / .52);box-shadow:0 8px 18px rgba(0,0,0,.28),0 0 14px hsl(var(--district-hue) 80% 50% / .08)}
 html[data-theme-resolved="dark"] .district-btn.active{color:#fff;background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%))}
 html[data-theme-resolved="dark"] .station-row-shell{background:linear-gradient(145deg,rgba(8,15,31,.97),hsl(var(--district-hue) 42% 17% / .84));border-color:hsl(var(--district-hue) 58% 55% / .42);box-shadow:0 16px 38px rgba(0,0,0,.3),0 0 22px hsl(var(--district-hue) 80% 50% / .08)}
@@ -1080,6 +1092,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
               'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
               'comisaria_id' => null,
               'estado' => 'todos',
+              'favoritos' => null,
               'q' => null,
               'desde' => null,
               'hasta' => null,
@@ -1092,7 +1105,21 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           ><?=h($districtName)?></a>
         <?php endforeach; ?>
       </div>
-      <a class="station-clear <?= $comisaria_id === '' && $distrito === '' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente(['comisaria_id' => null, 'distrito' => null]))?>">Todos los accidentes</a>
+      <a class="station-clear <?= $comisaria_id === '' && $distrito === '' && $favoritos !== '1' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente(['comisaria_id' => null, 'distrito' => null, 'favoritos' => null]))?>">Todos los accidentes</a>
+      <a class="station-clear station-favorites <?= $favoritos === '1' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente([
+        'favoritos' => '1',
+        'comisaria_id' => null,
+        'distrito' => null,
+        'estado' => 'todos',
+        'q' => null,
+        'desde' => null,
+        'hasta' => null,
+        'persona' => null,
+        'vehiculo' => null,
+        'registro_sidpol' => null,
+        'nro_informe_policial' => null,
+        'tipo_registro' => null,
+      ]))?>">Favoritos</a>
     </aside>
 
     <main class="district-main">
@@ -1119,6 +1146,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                     'comisaria_id' => $stationId,
                     'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
                     'estado' => 'todos',
+                    'favoritos' => null,
                     'q' => null,
                     'desde' => null,
                     'hasta' => null,
@@ -1208,6 +1236,9 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           </select>
         </div>
       </div>
+      <?php if ($favoritos === '1'): ?>
+        <input type="hidden" name="favoritos" value="1">
+      <?php endif; ?>
     </form>
 
     <?php if ($restoredLastFilters): ?>
