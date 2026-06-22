@@ -5,6 +5,10 @@ require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
 
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+ini_set('log_errors', '1');
+
 if (is_file(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
@@ -124,6 +128,28 @@ function exp_ai_safe_filename(string $value, string $fallback): string
     return $value !== '' ? $value : $fallback;
 }
 
+function exp_ai_tmp_dir(): string
+{
+    $candidates = [
+        __DIR__ . '/tmp',
+        sys_get_temp_dir(),
+    ];
+
+    foreach ($candidates as $dir) {
+        if ($dir === '') {
+            continue;
+        }
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        if (is_dir($dir) && is_writable($dir)) {
+            return $dir;
+        }
+    }
+
+    return sys_get_temp_dir();
+}
+
 function exp_ai_clean($value)
 {
     if (is_array($value)) {
@@ -222,10 +248,7 @@ function exp_ai_download_word(array $export, string $baseFilename): void
         exit('PhpWord no esta disponible para generar el Word.');
     }
 
-    $tmpDir = __DIR__ . '/tmp';
-    if (!is_dir($tmpDir)) {
-        @mkdir($tmpDir, 0775, true);
-    }
+    $tmpDir = exp_ai_tmp_dir();
 
     \PhpOffice\PhpWord\Settings::setTempDir($tmpDir);
     \PhpOffice\PhpWord\Settings::setOutputEscapingEnabled(true);
@@ -966,13 +989,18 @@ if (!class_exists('ZipArchive')) {
     exit;
 }
 
-$tmpDir = __DIR__ . '/tmp';
-if (!is_dir($tmpDir)) {
-    @mkdir($tmpDir, 0775, true);
+$tmpDir = exp_ai_tmp_dir();
+$zipTmp = tempnam($tmpDir, 'paquete_ia_');
+if ($zipTmp === false) {
+    http_response_code(500);
+    exit('No se pudo crear archivo temporal para el ZIP.');
 }
-$zipPath = $tmpDir . '/' . $baseFilename . '.zip';
+$zipPath = $zipTmp . '.zip';
+@rename($zipTmp, $zipPath);
 $zip = new ZipArchive();
 if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+    @unlink($zipTmp);
+    @unlink($zipPath);
     http_response_code(500);
     exit('No se pudo crear el ZIP.');
 }
@@ -1014,13 +1042,18 @@ foreach ($candidateFiles as $file) {
     $zip->addFile($path, 'archivos/' . basename($path));
 }
 
-$zip->close();
+$closed = $zip->close();
+if (!$closed || !is_file($zipPath) || filesize($zipPath) <= 0) {
+    @unlink($zipPath);
+    http_response_code(500);
+    exit('No se pudo finalizar el ZIP del paquete IA.');
+}
 
 while (ob_get_level()) {
     @ob_end_clean();
 }
 header('Content-Type: application/zip');
-header('Content-Disposition: attachment; filename="' . basename($zipPath) . '"');
+header('Content-Disposition: attachment; filename="' . $baseFilename . '.zip"');
 header('Content-Length: ' . filesize($zipPath));
 readfile($zipPath);
 @unlink($zipPath);
