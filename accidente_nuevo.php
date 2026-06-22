@@ -268,7 +268,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         'estado' => $estado,
       ]);
 
-      header("Location: accidente_vista_tabs.php?accidente_id=".(int)$result['id']);
+      header("Location: accidente_creado.php?accidente_id=".(int)$result['id']);
       exit;
 
       $pdo->beginTransaction();
