@@ -1097,6 +1097,22 @@ include __DIR__ . '/sidebar.php';
    <span class="led on" title="Descargar documento Word con lista de marcadores"></span>
 </a>
 
+<a href="exportar_accidente_ia.php?accidente_id=<?=h($accidente_id)?>"
+   class="btn-informe"
+   title="Descargar paquete completo para Proyecto o GPT">
+   Paquete IA
+   <span class="led <?= ($cntPer>0 || $cntVeh>0 || $cntItp>0 || $cntOfi>0) ? 'on' : '' ?>"
+         title="Descargar JSON, resumen TXT y archivos disponibles del accidente"></span>
+</a>
+
+<a href="exportar_accidente_ia.php?accidente_id=<?=h($accidente_id)?>&format=word"
+   class="btn-informe"
+   title="Descargar resumen Word completo del accidente">
+   Resumen Word IA
+   <span class="led <?= ($cntPer>0 || $cntVeh>0 || $cntItp>0 || $cntOfi>0) ? 'on' : '' ?>"
+         title="Descargar Word con resumen integral del accidente"></span>
+</a>
+
 <a href="word_informe_choque_dos_vehiculos.php?accidente_id=<?=h($accidente_id)?>"
    class="btn-informe"
    title="Descargar informe de choque entre dos vehículos">

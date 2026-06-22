@@ -9246,6 +9246,8 @@ include __DIR__ . '/sidebar.php';
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
 	                  <a class="btn-shell btn-docx" href="word_caratula_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Carátula resumen</a>
+	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>">Paquete IA</a>
+	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>&format=word">Resumen Word IA</a>
 	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
 	                  <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
 	                </div>
