@@ -497,6 +497,46 @@ final class OficioRepository
         return (int) $st->fetchColumn() > 0;
     }
 
+    public function personasInformeMedicoByAccidente(int $accidenteId): array
+    {
+        if ($accidenteId <= 0 || !$this->columnExists('involucrados_personas', 'lesion')) {
+            return [];
+        }
+
+        $sql = "SELECT ip.id,
+                       CONCAT(
+                           TRIM(CONCAT(COALESCE(pe.nombres,''), ' ', COALESCE(pe.apellido_paterno,''), ' ', COALESCE(pe.apellido_materno,''))),
+                           CASE WHEN COALESCE(ip.lesion,'') <> '' THEN CONCAT(' - ', ip.lesion) ELSE '' END
+                       ) AS nombre
+                FROM involucrados_personas ip
+                LEFT JOIN personas pe ON pe.id = ip.persona_id
+                WHERE ip.accidente_id = ?
+                  AND (LOWER(COALESCE(ip.lesion,'')) LIKE '%herid%'
+                       OR LOWER(COALESCE(ip.lesion,'')) LIKE '%lesion%'
+                       OR LOWER(COALESCE(ip.lesion,'')) LIKE '%fallec%')
+                ORDER BY pe.apellido_paterno, pe.apellido_materno, pe.nombres";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$accidenteId]);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function personaInformeMedicoBelongsAccidente(int $accidenteId, int $involucradoPersonaId): bool
+    {
+        if ($accidenteId <= 0 || $involucradoPersonaId <= 0 || !$this->columnExists('involucrados_personas', 'lesion')) {
+            return false;
+        }
+
+        $sql = "SELECT COUNT(*)
+                FROM involucrados_personas ip
+                WHERE ip.id = ? AND ip.accidente_id = ?
+                  AND (LOWER(COALESCE(ip.lesion,'')) LIKE '%herid%'
+                       OR LOWER(COALESCE(ip.lesion,'')) LIKE '%lesion%'
+                       OR LOWER(COALESCE(ip.lesion,'')) LIKE '%fallec%')";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$involucradoPersonaId, $accidenteId]);
+        return (int) $st->fetchColumn() > 0;
+    }
+
     public function search(array $filters): array
     {
         $select = [

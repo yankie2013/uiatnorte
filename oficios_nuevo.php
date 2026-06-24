@@ -66,6 +66,9 @@ if (isset($_GET['ajax'])) {
             case 'fallecidos_accidente':
                 echo json_encode(['ok' => true, 'items' => $service->fallecidosAccidente((int) ($_GET['accidente_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
                 break;
+            case 'personas_informe_medico':
+                echo json_encode(['ok' => true, 'items' => $service->personasInformeMedicoAccidente((int) ($_GET['accidente_id'] ?? 0))], JSON_UNESCAPED_UNICODE);
+                break;
             default:
                 throw new InvalidArgumentException('ajax inválido.');
         }
@@ -155,6 +158,9 @@ $showVehiculoInicial = (str_contains($asuntoActualMatch, 'peritaje') && str_cont
 $showFallecidoInicial = str_contains($asuntoActualMatch, 'necropsia')
     || str_contains($asuntoActualMatch, 'autopsia')
     || (str_contains($asuntoActualMatch, 'identificacion') && str_contains($asuntoActualMatch, 'cadaver'));
+$showInformeMedicoInicial = str_contains($asuntoActualMatch, 'informe') && str_contains($asuntoActualMatch, 'medico');
+$personasInformeMedicoActuales = !empty($data['accidente_id']) ? $service->personasInformeMedicoAccidente((int) $data['accidente_id']) : [];
+$personasCasoActuales = $showInformeMedicoInicial ? $personasInformeMedicoActuales : $fallecidosActuales;
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
 $entidadesAutocomplete = [];
 $categoriasEntidad = [];
@@ -516,7 +522,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       </div>
     </section>
 
-    <section class="office-section" id="caseLinksSection" <?= ($showVehiculoInicial || $showFallecidoInicial) ? '' : 'hidden' ?>>
+    <section class="office-section" id="caseLinksSection" <?= ($showVehiculoInicial || $showFallecidoInicial || $showInformeMedicoInicial) ? '' : 'hidden' ?>>
       <div class="section-head"><i class="section-mark"></i><h2>Vinculos del caso</h2><span>Opcional</span></div>
       <div class="grid">
       <div class="c6" id="vehiculoBox" style="<?= $showVehiculoInicial ? 'display:block;' : 'display:none;' ?>">
@@ -529,11 +535,11 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         </select>
       </div>
 
-      <div class="c6" id="fallecidoBox" style="<?= $showFallecidoInicial ? 'display:block;' : 'display:none;' ?>">
-        <label>Persona fallecida</label>
-        <select name="involucrado_persona_id" id="involucrado_persona_id" <?= $showFallecidoInicial ? 'required' : '' ?>>
+      <div class="c6" id="fallecidoBox" style="<?= ($showFallecidoInicial || $showInformeMedicoInicial) ? 'display:block;' : 'display:none;' ?>">
+        <label id="personaInvolucradaLabel"><?= $showInformeMedicoInicial ? 'Persona herida, lesionada o fallecida' : 'Persona fallecida' ?></label>
+        <select name="involucrado_persona_id" id="involucrado_persona_id" <?= ($showFallecidoInicial || $showInformeMedicoInicial) ? 'required' : '' ?>>
           <option value="">Selecciona</option>
-          <?php foreach ($fallecidosActuales as $item): ?>
+          <?php foreach ($personasCasoActuales as $item): ?>
             <option value="<?= h($item['id']) ?>" <?= (string) $data['involucrado_persona_id'] === (string) $item['id'] ? 'selected' : '' ?>><?= h($item['nombre']) ?></option>
           <?php endforeach; ?>
         </select>
@@ -1028,6 +1034,10 @@ function asuntoEsInformacionDiligencias() {
   const text = normalizeText(asuntoTexto());
   return text.includes('informacion') && text.includes('diligenc');
 }
+function asuntoEsInformeMedico() {
+  const text = normalizeText(asuntoTexto());
+  return text.includes('informe') && text.includes('medico');
+}
 async function loadVehiculosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_vehiculo_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
@@ -1038,6 +1048,12 @@ async function loadFallecidosAccidente(selected = '') {
   const sel = document.getElementById('involucrado_persona_id');
   if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
   const data = await fetchJSON('?ajax=fallecidos_accidente&accidente_id=' + encodeURIComponent(accSel.value));
+  fillSelect(sel, data.items || [], selected, 'Selecciona');
+}
+async function loadPersonasInformeMedico(selected = '') {
+  const sel = document.getElementById('involucrado_persona_id');
+  if (!accSel.value) { fillSelect(sel, [], '', 'Selecciona'); return; }
+  const data = await fetchJSON('?ajax=personas_informe_medico&accidente_id=' + encodeURIComponent(accSel.value));
   fillSelect(sel, data.items || [], selected, 'Selecciona');
 }
 async function toggleBoxesPorAsunto() {
@@ -1059,12 +1075,22 @@ async function toggleBoxesPorAsunto() {
       vehSel.value = '';
     }
   }
-  if (asuntoEsNecropsia()) {
+  const personaSel = document.getElementById('involucrado_persona_id');
+  const personaLabel = document.getElementById('personaInvolucradaLabel');
+  if (asuntoEsInformeMedico()) {
     fallBox.style.display = 'block';
-    await loadFallecidosAccidente(document.getElementById('involucrado_persona_id').value);
+    personaSel.required = true;
+    if (personaLabel) personaLabel.textContent = 'Persona herida, lesionada o fallecida';
+    await loadPersonasInformeMedico(personaSel.value);
+  } else if (asuntoEsNecropsia()) {
+    fallBox.style.display = 'block';
+    personaSel.required = true;
+    if (personaLabel) personaLabel.textContent = 'Persona fallecida';
+    await loadFallecidosAccidente(personaSel.value);
   } else {
     fallBox.style.display = 'none';
-    document.getElementById('involucrado_persona_id').value = '';
+    personaSel.required = false;
+    personaSel.value = '';
   }
   if (camaraRangoBox) {
     const isCamara = asuntoEsCamaraVideo();

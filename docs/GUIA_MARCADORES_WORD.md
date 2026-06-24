@@ -1,6 +1,6 @@
 # Guia de marcadores para plantillas Word
 
-Generada: 21/06/2026 01:26
+Generada: 24/06/2026 01:26
 
 ## Como usar los marcadores
 
@@ -1087,4 +1087,26 @@ Generada: 21/06/2026 01:26
 - `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`
 - `personas_*`: `${personas_cantidad}`, `${personas_involucradas}`
 - `vehiculos_*`: `${vehiculos_cantidad}`, `${vehiculos_involucrados}`
+
+## Plantilla pendiente: plantillas/oficio_informe_medico.docx
+
+**Generador:** `word_oficio_informe_medico.php`
+
+**Se descarga cuando el asunto contiene:** `Informe medico` (comparacion normalizada).
+
+**Persona requerida:** una persona del accidente que figure como herida, lesionada o fallecida.
+
+**Grupos principales:** `${accidente_*}`, `${oficio_*}`, `${fiscal_*}`, `${fiscalia_*}` y `${persona_*}`.
+
+**Marcadores disponibles (64):**
+
+- `accidente_*`: `${accidente_consecuencias}`, `${accidente_distrito}`, `${accidente_fecha}`, `${accidente_fecha_abrev}`, `${accidente_hora}`, `${accidente_id}`, `${accidente_lugar}`, `${accidente_lugar_completo}`, `${accidente_modalidades}`, `${accidente_referencia}`, `${accidente_sentido}`, `${accidente_sidpol}`
+- `asunto_*`: `${asunto_detalle}`, `${asunto_nombre}`
+- `comisaria_*`: `${comisaria_nombre}`
+- `fiscal_*`: `${fiscal_apellidos}`, `${fiscal_cargo}`, `${fiscal_correo}`, `${fiscal_dni}`, `${fiscal_nombre}`, `${fiscal_nombres}`, `${fiscal_telefono}`
+- `fiscalia_*`: `${fiscalia_correo}`, `${fiscalia_direccion}`, `${fiscalia_nombre}`, `${fiscalia_telefono}`
+- `grado_*`: `${grado_cargo_nombre}`
+- `nombre_*`: `${nombre_oficial_ano}`
+- `oficio_*`: `${oficio_anio}`, `${oficio_entidad_nombre}`, `${oficio_entidad_siglas}`, `${oficio_fecha}`, `${oficio_fecha_abrev}`, `${oficio_grado_cargo}`, `${oficio_motivo}`, `${oficio_numero}`, `${oficio_numero_completo}`, `${oficio_persona_destino}`, `${oficio_referencia}`, `${oficio_subentidad_nombre}`
+- `persona_*`: `${persona_apellidos}`, `${persona_apellido_materno}`, `${persona_apellido_paterno}`, `${persona_celular}`, `${persona_documento}`, `${persona_domicilio}`, `${persona_edad}`, `${persona_email}`, `${persona_estado_civil}`, `${persona_fecha_nacimiento}`, `${persona_fecha_nacimiento_abrev}`, `${persona_grado_instruccion}`, `${persona_involucrada_id}`, `${persona_lesion}`, `${persona_nacionalidad}`, `${persona_nombres}`, `${persona_nombre_completo}`, `${persona_num_doc}`, `${persona_observaciones}`, `${persona_ocupacion}`, `${persona_orden}`, `${persona_rol}`, `${persona_sexo}`, `${persona_tipo_doc}`
 

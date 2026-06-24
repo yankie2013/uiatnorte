@@ -164,6 +164,7 @@ $caratulaMarkers = array_values(array_unique(array_merge($caratulaMarkers, [
 sort($caratulaMarkers, SORT_NATURAL | SORT_FLAG_CASE);
 $uperMarkers = code_markers($phpFiles['word_oficio_informacion_certificado_uper.php'] ?? '');
 $informacionDiligenciasMarkers = code_markers($phpFiles['word_oficio_informacion_diligencias_comisaria.php'] ?? '');
+$informeMedicoMarkers = code_markers($phpFiles['word_oficio_informe_medico.php'] ?? '');
 for ($i = 1; $i <= 10; $i++) {
     foreach (['numero', 'marca', 'serie', 'observaciones', 'archivos'] as $field) {
         $actaVisualizacionMarkers[] = "disco_{$i}_{$field}";
@@ -215,6 +216,12 @@ file_put_contents($jsonPath, json_encode([
             'status' => 'Pendiente de subir',
             'generator' => 'word_oficio_informacion_diligencias_comisaria.php',
             'markers_supported' => $informacionDiligenciasMarkers,
+        ],
+        [
+            'template' => 'plantillas/oficio_informe_medico.docx',
+            'status' => 'Pendiente de subir',
+            'generator' => 'word_oficio_informe_medico.php',
+            'markers_supported' => $informeMedicoMarkers,
         ],
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -350,6 +357,22 @@ $md[] = '';
 $md[] = '**Marcadores disponibles (' . count($informacionDiligenciasMarkers) . '):**';
 $md[] = '';
 foreach (marker_prefix_groups($informacionDiligenciasMarkers) as $prefix => $markers) {
+    $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
+}
+$md[] = '';
+$md[] = '## Plantilla pendiente: plantillas/oficio_informe_medico.docx';
+$md[] = '';
+$md[] = '**Generador:** `word_oficio_informe_medico.php`';
+$md[] = '';
+$md[] = '**Se descarga cuando el asunto contiene:** `Informe medico` (comparacion normalizada).';
+$md[] = '';
+$md[] = '**Persona requerida:** una persona del accidente que figure como herida, lesionada o fallecida.';
+$md[] = '';
+$md[] = '**Grupos principales:** `${accidente_*}`, `${oficio_*}`, `${fiscal_*}`, `${fiscalia_*}` y `${persona_*}`.';
+$md[] = '';
+$md[] = '**Marcadores disponibles (' . count($informeMedicoMarkers) . '):**';
+$md[] = '';
+foreach (marker_prefix_groups($informeMedicoMarkers) as $prefix => $markers) {
     $md[] = '- `' . $prefix . '_*`: ' . implode(', ', array_map(static fn($v) => '`${' . $v . '}`', $markers));
 }
 $md[] = '';
@@ -499,6 +522,20 @@ $section->addText('${diligencias_cantidad}: cantidad de diligencias solicitadas.
 $section->addTitle('Persona fallecida del accidente', 2);
 $section->addText('Para el primer fallecido usa los marcadores fallecido_*. Para incluir a todos usa ${fallecidos_involucrados} y ${fallecidos_cantidad}.', ['size' => 9], 'Body');
 foreach (marker_prefix_groups($informacionDiligenciasMarkers) as $prefix => $markers) {
+    $section->addTitle($prefix . '_*', 3);
+    $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
+    foreach ($markers as $marker) {
+        $table->addRow();
+        $table->addCell(3900)->addText('${' . $marker . '}', 'MarkerFont', 'Marker');
+        $table->addCell(5700)->addText(marker_description($marker), ['size' => 7.5], 'Marker');
+    }
+}
+
+$section->addPageBreak();
+$section->addTitle('Marcadores de Oficio Informe medico', 1);
+$section->addText('Esta plantilla aun no existe en el repositorio. Se descargara para oficios cuyo asunto contenga Informe medico. Requiere seleccionar una persona herida, lesionada o fallecida del accidente.', ['size' => 9], 'Body');
+$section->addText('Incluye datos del accidente, oficio, fiscal, fiscalia y de la persona seleccionada.', ['size' => 9], 'Body');
+foreach (marker_prefix_groups($informeMedicoMarkers) as $prefix => $markers) {
     $section->addTitle($prefix . '_*', 3);
     $table = $section->addTable(['borderSize' => 3, 'borderColor' => 'D0D5DD', 'cellMargin' => 55]);
     foreach ($markers as $marker) {

@@ -320,6 +320,11 @@ final class OficioService
         return $this->repository->fallecidosByAccidente($accidenteId);
     }
 
+    public function personasInformeMedicoAccidente(int $accidenteId): array
+    {
+        return $this->repository->personasInformeMedicoByAccidente($accidenteId);
+    }
+
     public function accidenteIdBySidpol(string $sidpol): ?int
     {
         return $this->repository->accidenteIdBySidpol(trim($sidpol));
@@ -631,8 +636,12 @@ final class OficioService
         if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
-        if ($this->asuntoRequiereFallecido((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $personaInvId === null) {
+        $asuntoRules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+        if ($asuntoRules['requires_fallecido'] && $personaInvId === null) {
             throw new InvalidArgumentException('Selecciona la persona fallecida para este asunto.');
+        }
+        if ($asuntoRules['requires_persona_medica'] && $personaInvId === null) {
+            throw new InvalidArgumentException('Selecciona la persona herida, lesionada o fallecida para el informe medico.');
         }
         if ($this->asuntoEsInformacionDiligencias((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $diligenciasSolicitadas === '') {
             throw new InvalidArgumentException('Indica una o varias diligencias cuya informacion se solicita.');
@@ -646,7 +655,10 @@ final class OficioService
         if ($vehiculoId !== null && !$this->repository->vehiculoBelongsAccidente($accidenteId, $vehiculoId)) {
             throw new InvalidArgumentException('El vehículo involucrado no pertenece al accidente seleccionado.');
         }
-        if ($personaInvId !== null && !$this->repository->fallecidoBelongsAccidente($accidenteId, $personaInvId)) {
+        if ($personaInvId !== null && $asuntoRules['requires_persona_medica'] && !$this->repository->personaInformeMedicoBelongsAccidente($accidenteId, $personaInvId)) {
+            throw new InvalidArgumentException('La persona seleccionada no figura como herida, lesionada o fallecida en el accidente.');
+        }
+        if ($personaInvId !== null && !$asuntoRules['requires_persona_medica'] && !$this->repository->fallecidoBelongsAccidente($accidenteId, $personaInvId)) {
             throw new InvalidArgumentException('La persona fallecida no pertenece al accidente seleccionado.');
         }
         if ($anio <= 0) {
@@ -710,10 +722,12 @@ final class OficioService
         $isInformacionDiligencias = str_contains($text, 'informacion') && str_contains($text, 'diligenc');
         $isIdentificacionCadaver = str_contains($text, 'identificacion') && str_contains($text, 'cadaver');
         $isIdentificacionVehiculo = str_contains($text, 'identificacion') && str_contains($text, 'vehiculo');
+        $isInformeMedico = str_contains($text, 'informe') && str_contains($text, 'medico');
 
         return [
             'requires_vehicle' => $isPeritaje || $isSunarpHistorial || $isInformacionCertificado || $isIdentificacionVehiculo,
             'requires_fallecido' => $isNecropsia || $isIdentificacionCadaver,
+            'requires_persona_medica' => $isInformeMedico,
             'requires_diligencias' => $isInformacionDiligencias,
             'requires_camara_range' => $isCamara,
         ];
@@ -759,6 +773,9 @@ final class OficioService
         }
         if (str_contains($text, 'informacion') && str_contains($text, 'diligenc')) {
             return ['key' => 'diligencias', 'label' => 'Diligencias', 'url' => 'word_oficio_informacion_diligencias_comisaria.php?oficio_id={id}'];
+        }
+        if (str_contains($text, 'informe') && str_contains($text, 'medico')) {
+            return ['key' => 'informe_medico', 'label' => 'Informe medico', 'url' => 'word_oficio_informe_medico.php?oficio_id={id}'];
         }
 
         return ['key' => '', 'label' => '', 'url' => ''];
