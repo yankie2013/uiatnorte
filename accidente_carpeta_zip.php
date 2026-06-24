@@ -108,7 +108,7 @@ $st = $pdo->prepare(
        FROM accidente_modalidad am
        JOIN modalidad_accidente m ON m.id = am.modalidad_id
       WHERE am.accidente_id = ?
-      ORDER BY am.id, am.modalidad_id'
+      ORDER BY am.modalidad_id'
 );
 $st->execute([$accidenteId]);
 $modalidades = $st->fetchAll(PDO::FETCH_ASSOC);
