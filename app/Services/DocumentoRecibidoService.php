@@ -99,6 +99,16 @@ final class DocumentoRecibidoService
         $fechaDocumento = $row['fecha_documento'] ?? $row['fecha_documento_resuelta'] ?? null;
         $fechaLegacy = $row['fecha'] ?? null;
 
+        $anexos = $row['anexos'] ?? [];
+        if (is_array($anexos)) {
+            $anexos = array_map(
+                static fn($anexo): string => trim((string) (is_array($anexo) ? ($anexo['descripcion'] ?? '') : $anexo)),
+                $anexos
+            );
+        } else {
+            $anexos = [];
+        }
+
         return [
             'accidente_id' => $row['accidente_id'] ?? '',
             'asunto' => $row['asunto'] ?? '',
@@ -110,6 +120,7 @@ final class DocumentoRecibidoService
             'contenido' => $row['contenido'] ?? '',
             'referencia_oficio_id' => $row['referencia_oficio_id'] ?? '',
             'estado' => $row['estado'] ?? '',
+            'anexos' => $anexos !== [] ? array_values($anexos) : [''],
         ];
     }
 
@@ -121,6 +132,18 @@ final class DocumentoRecibidoService
 
         if ($estado !== '' && !in_array($estado, self::ESTADOS, true)) {
             throw new InvalidArgumentException('Estado invalido.');
+        }
+
+        $anexos = [];
+        foreach ((array) ($input['anexos'] ?? []) as $anexo) {
+            $anexo = trim((string) $anexo);
+            if ($anexo === '') {
+                continue;
+            }
+            if (mb_strlen($anexo) > 1000) {
+                throw new InvalidArgumentException('Cada anexo remitido admite hasta 1000 caracteres.');
+            }
+            $anexos[] = $anexo;
         }
 
         return [
@@ -135,6 +158,7 @@ final class DocumentoRecibidoService
             'contenido' => $this->nullable($input['contenido'] ?? null),
             'referencia_oficio_id' => ($input['referencia_oficio_id'] ?? '') !== '' ? (int) $input['referencia_oficio_id'] : null,
             'estado' => $estado !== '' ? $estado : null,
+            'anexos' => $anexos,
         ];
     }
 

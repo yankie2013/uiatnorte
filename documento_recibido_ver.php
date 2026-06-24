@@ -39,7 +39,7 @@ if ($returnTo === '') {
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:18px;background:var(--bg);color:var(--text)}body.is-embed{padding:14px;background:var(--soft)}
 .wrap{max-width:900px;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}body.is-embed .wrap{border:0;padding:10px 12px;background:transparent}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}.eyebrow{margin:0 0 4px;color:var(--primary-dark);font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}h1{margin:0;font-size:1.25rem}.state{padding:6px 10px;border-radius:999px;background:rgba(15,159,145,.12);color:var(--primary-dark);font-size:12px;font-weight:800}
-.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--panel)}.card.full{grid-column:1/-1}.lbl{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}.val{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--panel)}.card.full{grid-column:1/-1}.lbl{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}.val{font-size:14px;line-height:1.5;overflow-wrap:anywhere}.annex-list{margin:4px 0 0;padding-left:22px}.annex-list li+li{margin-top:6px}
 .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border-radius:9px;border:1px solid var(--border);text-decoration:none;color:var(--text);background:var(--panel);font:inherit;font-weight:750;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-color:transparent}.btn.danger{color:#b42318}
 @media(max-width:620px){body,body.is-embed{padding:8px}.wrap,body.is-embed .wrap{padding:8px}.detail-grid{grid-template-columns:1fr}.card.full{grid-column:auto}.head{align-items:center}.actions .btn{flex:1}}
 </style>
@@ -57,6 +57,7 @@ if ($returnTo === '') {
   <div class="card"><div class="lbl">Accidente</div><div class="val"><?= !empty($row['accidente_id']) ? ('#' . (int)$row['accidente_id']) : '-' ?></div></div>
   <div class="card"><div class="lbl">Oficio relacionado</div><div class="val"><?= !empty($row['referencia_oficio_id']) ? ('#' . (int)$row['referencia_oficio_id']) : '-' ?></div></div>
   <div class="card full"><div class="lbl">Contenido</div><div class="val"><?= !empty($row['contenido']) ? nl2br(h($row['contenido'])) : '-' ?></div></div>
+  <div class="card full"><div class="lbl">Anexos remitidos</div><div class="val"><?php if (!empty($row['anexos'])): ?><ol class="annex-list"><?php foreach ($row['anexos'] as $anexo): ?><li><?= nl2br(h($anexo['descripcion'] ?? '')) ?></li><?php endforeach; ?></ol><?php else: ?>-<?php endif; ?></div></div>
 </div>
 <div class="actions">
 <?php if ($embed): ?>

@@ -54,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .form-stack{display:grid;gap:14px}.form-section{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:15px}.section-head{margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}.section-head h2{margin:0;font-size:.96rem}.section-head p{margin:3px 0 0;font-size:.82rem;color:var(--muted)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}.full{grid-column:1/-1}
   label{display:block;font-size:.86rem;font-weight:750;margin-bottom:6px}input[type="text"],input[type="date"],select,textarea{width:100%;min-height:42px;padding:10px 11px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:.92rem;outline:none;transition:border-color .15s,box-shadow .15s}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}input[readonly]{background:var(--soft);color:var(--muted)}textarea{min-height:105px;resize:vertical;line-height:1.45}
   .help{font-size:.78rem;color:var(--muted);margin-top:5px;line-height:1.35}.error{background:#fff1f1;padding:11px 13px;border-radius:10px;border:1px solid #f2b8b8;color:#8a1f1f;margin-bottom:14px}.form-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px}
+  .annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{min-height:38px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);background:rgba(15,159,145,.11);color:var(--primary-dark);box-shadow:0 0 0 2px rgba(15,159,145,.08)}.annex-add{white-space:nowrap}.annex-panels{margin-top:12px}.annex-panel{padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--soft)}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.annex-panel-title{font-size:.84rem;font-weight:850}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;padding:5px}.annex-remove:disabled{display:none}
   .ai-section{border-color:rgba(15,159,145,.38);background:linear-gradient(145deg,rgba(15,159,145,.07),var(--panel) 58%)}.ai-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ai-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(15,159,145,.13);color:var(--primary-dark);font-size:.7rem;font-weight:850;letter-spacing:.04em}.scan-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:14px}.scan-upload{display:grid;gap:9px}.scan-file{width:100%;padding:11px;border:1px dashed var(--primary);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;font-size:.83rem}.scan-paste{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;outline:none}.scan-paste:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}.scan-preview{display:none;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.scan-preview.is-visible{display:block}.scan-controls{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px}.scan-status{min-height:20px;color:var(--muted);font-size:.82rem;line-height:1.4}.scan-status.is-success{color:#087d55}.scan-status.is-error{color:#b42318}.scan-result{display:none;width:100%;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--border);font-size:.78rem;color:var(--muted);line-height:1.45}.scan-result.is-visible{display:block}.scan-result strong{color:var(--text)}
   @media (prefers-color-scheme:dark){.error{background:#37191f;border-color:#73333e;color:#fecaca}.scan-status.is-success{color:#5eead4}.scan-status.is-error{color:#fca5a5}}@media (max-width:680px){body,body.is-embed{padding:8px}.wrap,body.is-embed .wrap{padding:8px}.form-grid,.scan-grid{grid-template-columns:1fr}.full{grid-column:auto}.form-actions{align-items:stretch}.form-actions .btn{flex:1}}
 </style>
@@ -176,6 +177,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
       </div>
     </section>
+    <section class="form-section">
+      <div class="section-head"><h2>Anexos remitidos</h2><p>Registra cada anexo por separado. Puedes agregar uno o varios mediante las pestañas.</p></div>
+      <div class="annex-editor" id="anexos_editor">
+        <div class="annex-toolbar">
+          <div class="annex-tabs" id="anexos_tabs" role="tablist" aria-label="Anexos remitidos">
+            <?php foreach ($data['anexos'] as $index => $anexo): ?>
+              <button type="button" class="annex-tab <?= $index === 0 ? 'is-active' : '' ?>" role="tab" aria-selected="<?= $index === 0 ? 'true' : 'false' ?>">Anexo <?= $index + 1 ?></button>
+            <?php endforeach; ?>
+          </div>
+          <button type="button" class="btn secondary annex-add" id="anexo_agregar">+ Agregar anexo</button>
+        </div>
+        <div class="annex-panels" id="anexos_panels">
+          <?php foreach ($data['anexos'] as $index => $anexo): ?>
+            <div class="annex-panel" role="tabpanel" <?= $index === 0 ? '' : 'hidden' ?>>
+              <div class="annex-panel-head"><span class="annex-panel-title">Anexo remitido <?= $index + 1 ?></span><button type="button" class="annex-remove">Quitar anexo</button></div>
+              <label>Descripción del anexo</label>
+              <textarea name="anexos[]" maxlength="1000" placeholder="Ej.: Un CD que contiene grabaciones de videovigilancia"><?= h($anexo) ?></textarea>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </section>
     <div class="form-actions">
         <?php if ($embed): ?>
           <button type="button" class="btn secondary" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cancelar</button>
@@ -187,6 +210,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </form>
 </div>
 <script>
+(function () {
+  const tabs = document.getElementById('anexos_tabs');
+  const panels = document.getElementById('anexos_panels');
+  const addButton = document.getElementById('anexo_agregar');
+  if (!tabs || !panels || !addButton) return;
+
+  function items() {
+    return {
+      tabs: Array.from(tabs.querySelectorAll('.annex-tab')),
+      panels: Array.from(panels.querySelectorAll('.annex-panel'))
+    };
+  }
+
+  function activate(index, focusTab) {
+    const current = items();
+    const safeIndex = Math.max(0, Math.min(index, current.tabs.length - 1));
+    current.tabs.forEach((tab, itemIndex) => {
+      const active = itemIndex === safeIndex;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+      current.panels[itemIndex].hidden = !active;
+    });
+    if (focusTab) current.tabs[safeIndex]?.focus();
+  }
+
+  function refresh() {
+    const current = items();
+    current.tabs.forEach((tab, index) => {
+      const tabId = 'anexo_tab_' + index;
+      const panelId = 'anexo_panel_' + index;
+      tab.textContent = 'Anexo ' + (index + 1);
+      tab.id = tabId;
+      tab.setAttribute('aria-controls', panelId);
+      current.panels[index].id = panelId;
+      current.panels[index].setAttribute('aria-labelledby', tabId);
+      current.panels[index].querySelector('.annex-panel-title').textContent = 'Anexo remitido ' + (index + 1);
+      current.panels[index].querySelector('.annex-remove').disabled = current.panels.length === 1;
+    });
+  }
+
+  tabs.addEventListener('click', (event) => {
+    const tab = event.target.closest('.annex-tab');
+    if (!tab) return;
+    activate(items().tabs.indexOf(tab), false);
+  });
+
+  tabs.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const current = items();
+    const active = current.tabs.indexOf(event.target.closest('.annex-tab'));
+    const next = (active + (event.key === 'ArrowRight' ? 1 : -1) + current.tabs.length) % current.tabs.length;
+    activate(next, true);
+  });
+
+  addButton.addEventListener('click', () => {
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'annex-tab';
+    tab.setAttribute('role', 'tab');
+    tabs.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'annex-panel';
+    panel.setAttribute('role', 'tabpanel');
+    panel.innerHTML = '<div class="annex-panel-head"><span class="annex-panel-title"></span><button type="button" class="annex-remove">Quitar anexo</button></div><label>Descripción del anexo</label><textarea name="anexos[]" maxlength="1000" placeholder="Ej.: Un CD que contiene grabaciones de videovigilancia"></textarea>';
+    panels.appendChild(panel);
+    refresh();
+    const newIndex = items().tabs.length - 1;
+    activate(newIndex, false);
+    panel.querySelector('textarea').focus();
+  });
+
+  panels.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('.annex-remove');
+    if (!removeButton || removeButton.disabled) return;
+    const current = items();
+    const panel = removeButton.closest('.annex-panel');
+    const index = current.panels.indexOf(panel);
+    current.tabs[index].remove();
+    panel.remove();
+    refresh();
+    activate(Math.min(index, items().tabs.length - 1), true);
+  });
+
+  refresh();
+  activate(0, false);
+})();
+
 (function () {
   const imageInput = document.getElementById('documento_scan_imagen');
   const pasteZone = document.getElementById('documento_scan_pegar');

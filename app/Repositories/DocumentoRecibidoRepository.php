@@ -133,31 +133,57 @@ final class DocumentoRecibidoRepository
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        if (!$row) {
+            return null;
+        }
+
+        $row['anexos'] = $this->anexosByDocumento($id);
+        return $row;
     }
 
     public function create(array $payload): int
     {
-        $data = $this->persistenceData($payload);
-        $columns = array_keys($data);
-        $placeholders = implode(',', array_fill(0, count($columns), '?'));
-        $sql = 'INSERT INTO documentos_recibidos (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')';
-        $st = $this->pdo->prepare($sql);
-        $st->execute(array_values($data));
-        return (int) $this->pdo->lastInsertId();
+        $this->pdo->beginTransaction();
+        try {
+            $data = $this->persistenceData($payload);
+            $columns = array_keys($data);
+            $placeholders = implode(',', array_fill(0, count($columns), '?'));
+            $sql = 'INSERT INTO documentos_recibidos (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')';
+            $st = $this->pdo->prepare($sql);
+            $st->execute(array_values($data));
+            $id = (int) $this->pdo->lastInsertId();
+            $this->replaceAnexos($id, $payload['anexos'] ?? []);
+            $this->pdo->commit();
+            return $id;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     public function update(int $id, array $payload): void
     {
-        $data = $this->persistenceData($payload);
-        $sets = [];
-        foreach (array_keys($data) as $column) {
-            $sets[] = $column . '=?';
-        }
+        $this->pdo->beginTransaction();
+        try {
+            $data = $this->persistenceData($payload);
+            $sets = [];
+            foreach (array_keys($data) as $column) {
+                $sets[] = $column . '=?';
+            }
 
-        $sql = 'UPDATE documentos_recibidos SET ' . implode(', ', $sets) . ' WHERE id=? LIMIT 1';
-        $st = $this->pdo->prepare($sql);
-        $st->execute([...array_values($data), $id]);
+            $sql = 'UPDATE documentos_recibidos SET ' . implode(', ', $sets) . ' WHERE id=? LIMIT 1';
+            $st = $this->pdo->prepare($sql);
+            $st->execute([...array_values($data), $id]);
+            $this->replaceAnexos($id, $payload['anexos'] ?? []);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     public function delete(int $id): void
@@ -191,6 +217,36 @@ final class DocumentoRecibidoRepository
         $data['estado'] = $payload['estado'] ?? null;
 
         return $data;
+    }
+
+    private function anexosByDocumento(int $documentoId): array
+    {
+        $st = $this->pdo->prepare(
+            'SELECT id, descripcion, orden
+               FROM documentos_recibidos_anexos
+              WHERE documento_recibido_id = ?
+              ORDER BY orden, id'
+        );
+        $st->execute([$documentoId]);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function replaceAnexos(int $documentoId, array $anexos): void
+    {
+        $delete = $this->pdo->prepare('DELETE FROM documentos_recibidos_anexos WHERE documento_recibido_id = ?');
+        $delete->execute([$documentoId]);
+
+        if ($anexos === []) {
+            return;
+        }
+
+        $insert = $this->pdo->prepare(
+            'INSERT INTO documentos_recibidos_anexos (documento_recibido_id, descripcion, orden)
+             VALUES (?, ?, ?)'
+        );
+        foreach (array_values($anexos) as $index => $descripcion) {
+            $insert->execute([$documentoId, $descripcion, $index + 1]);
+        }
     }
 
     private function resolvedDateExpression(string $alias, string $preferredColumn, string $fallbackColumn): string

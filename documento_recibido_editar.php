@@ -48,7 +48,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <style>
 :root{--bg:#fafafa;--panel:#ffffff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--primary:#0b84ff;--radius:10px;--gap:14px;--max-width:980px}
 @media (prefers-color-scheme: dark){:root{--bg:#0b1220;--panel:#0f1724;--text:#e6eef8;--muted:#9aa7bf;--border:#243041;--primary:#4ea8ff}}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg);color:var(--text);padding:20px}.wrap{max-width:var(--max-width);margin:18px auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}form{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}.full{grid-column:1/-1}label{display:block;font-weight:700;margin-bottom:6px}input[type=text],input[type=date],select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}textarea{min-height:120px}.actions{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:8px}.btn{padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--text)}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.error{background:#fff0f0;padding:10px;border-radius:8px;border:1px solid #f5c2c2;color:#8a1f1f;margin-bottom:12px}@media (max-width:800px){form{grid-template-columns:1fr}}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg);color:var(--text);padding:20px}.wrap{max-width:var(--max-width);margin:18px auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}form{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}.full{grid-column:1/-1}label{display:block;font-weight:700;margin-bottom:6px}input[type=text],input[type=date],select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}textarea{min-height:120px}.actions{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:8px}.btn{padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.error{background:#fff0f0;padding:10px;border-radius:8px;border:1px solid #f5c2c2;color:#8a1f1f;margin-bottom:12px}.annex-box{padding:14px;border:1px solid var(--border);border-radius:10px}.annex-heading{margin:0 0 4px;font-size:1rem}.annex-help{margin:0 0 12px;color:var(--muted);font-size:.82rem}.annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);font:inherit;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 14%,transparent)}.annex-panels{margin-top:12px}.annex-panel{padding:12px;border:1px solid var(--border);border-radius:9px}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.annex-panel-title{font-weight:800}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-weight:800;cursor:pointer}.annex-remove:disabled{display:none}@media (max-width:800px){form{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -66,5 +66,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div><label>Estado</label><select name="estado"><option value="">(ninguno)</option><?php foreach($ctx['estados'] as $estado): ?><option value="<?= h($estado) ?>" <?= ($data['estado']===$estado)?'selected':'' ?>><?= h($estado) ?></option><?php endforeach; ?></select></div>
 <div class="full"><label>Contenido</label><textarea name="contenido"><?= h($data['contenido']) ?></textarea></div>
 <div><label>Referencia a oficio</label><select name="referencia_oficio_id"><option value="">(ninguno)</option><?php foreach($ctx['oficios'] as $o): ?><option value="<?= h($o['id']) ?>" <?= ((string)$data['referencia_oficio_id']===(string)$o['id'])?'selected':'' ?>><?= h($service->oficioLabel($o, $ctx['asuntos'])) ?></option><?php endforeach; ?></select></div>
+<div class="full annex-box">
+  <h2 class="annex-heading">Anexos remitidos</h2>
+  <p class="annex-help">Cada pestaña corresponde a un anexo. Puedes agregar uno o varios.</p>
+  <div class="annex-toolbar">
+    <div class="annex-tabs" id="anexos_tabs" role="tablist" aria-label="Anexos remitidos">
+      <?php foreach ($data['anexos'] as $index => $anexo): ?><button type="button" class="annex-tab <?= $index === 0 ? 'is-active' : '' ?>" role="tab">Anexo <?= $index + 1 ?></button><?php endforeach; ?>
+    </div>
+    <button type="button" class="btn" id="anexo_agregar">+ Agregar anexo</button>
+  </div>
+  <div class="annex-panels" id="anexos_panels">
+    <?php foreach ($data['anexos'] as $index => $anexo): ?>
+      <div class="annex-panel" role="tabpanel" <?= $index === 0 ? '' : 'hidden' ?>><div class="annex-panel-head"><span class="annex-panel-title">Anexo remitido <?= $index + 1 ?></span><button type="button" class="annex-remove">Quitar anexo</button></div><label>Descripción del anexo</label><textarea name="anexos[]" maxlength="1000" placeholder="Ej.: Un CD que contiene grabaciones de videovigilancia"><?= h($anexo) ?></textarea></div>
+    <?php endforeach; ?>
+  </div>
+</div>
 <div class="actions"><?php if ($embed): ?><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Cancelar</a><?php else: ?><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar cambios</button></div>
-</form></div></body></html>
+</form></div><script src="assets/js/documento_recibido_anexos.js"></script></body></html>
