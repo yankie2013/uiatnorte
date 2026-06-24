@@ -119,12 +119,12 @@ if (($_POST['ajax'] ?? '') === 'folder') {
     echo json_encode(['ok'=>true,'val'=>null]);
   } else {
     $n = (int)$raw;
-    if ($n>=1 && $n<=10) {
+    if ($n>=1 && $n<=20) {
       $st = $pdo->prepare("UPDATE accidentes SET folder=? WHERE id=?");
       $st->execute([$n,$id]);
       echo json_encode(['ok'=>true,'val'=>$n]);
     } else {
-      echo json_encode(['ok'=>false,'msg'=>'Folder invÃ¡lido (vacÃ­o o 1..10)']);
+      echo json_encode(['ok'=>false,'msg'=>'Folder invÃ¡lido (vacÃ­o o 1..20)']);
     }
   }
   exit;
@@ -1357,7 +1357,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                   </button>
                   <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
                     <option value="" <?=($folderVal===''?'selected':'')?>>&mdash;</option>
-                    <?php for($k=1;$k<=10;$k++): ?>
+                    <?php for($k=1;$k<=20;$k++): ?>
                       <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
                     <?php endfor; ?>
                   </select>
@@ -1522,7 +1522,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
       <?php $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']); ?>
       <option value="" <?=($folderVal===''?'selected':'')?>>â€”</option>
-      <?php for($k=1;$k<=10;$k++): ?>
+      <?php for($k=1;$k<=20;$k++): ?>
         <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
       <?php endfor; ?>
     </select>
