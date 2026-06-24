@@ -211,6 +211,7 @@ if (!$embed) {
 html[data-theme-resolved="dark"]{color-scheme:dark;--page:#0b1220;--card:#101a2c;--panel:#0d1728;--field:#111d31;--button:#16243b;--preview:#0d192b;--actions:rgba(15,25,43,.9);--text:#e5edf8;--form-text:#e5edf8;--form-muted:#9fb0c6;--muted:#94a3b8;--border:#30415f;--section-title:#dbeafe;--primary:#60a5fa;--primary-soft:#172554;--gold:#facc15;--danger:#fecaca;--ok:#bbf7d0}
 body{margin:0;background:radial-gradient(circle at 20% 0,rgba(29,78,216,.08),transparent 28%),var(--page);color:var(--text)}
 .wrap{max-width:1180px;margin:24px auto 34px;padding:16px}
+body.is-embed .wrap{margin:0 auto;padding:14px}
 .office-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
 .office-title h1{margin:0;font-size:26px;letter-spacing:0;color:var(--text)}
 .office-title p{margin:5px 0 0;color:var(--muted);font-size:13px;font-weight:650}
@@ -273,7 +274,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 @media (max-width:900px){.wrap{padding:10px}.office-page-head{display:grid}.toolbar{justify-content:flex-start}.card{padding:9px}.office-section{margin:9px 0;padding:17px 13px 15px}.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.office-recipient-row{grid-template-columns:1fr}.office-actions{position:static;flex-wrap:wrap;margin:9px -9px -9px}.combo-suggestions{max-width:calc(100vw - 48px)}}
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <div class="office-page-head">
     <div class="office-title">
@@ -547,7 +548,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <?php else: ?>
           <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Cancelar</a>
         <?php endif; ?>
-        <button class="btn" type="submit" name="save_action" value="download">Guardar y descargar</button>
+        <?php if (!$embed): ?><button class="btn" type="submit" name="save_action" value="download">Guardar y descargar</button><?php endif; ?>
         <button class="btn primary" type="submit">Guardar oficio</button>
       </div>
   </form>

@@ -96,7 +96,7 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <input type="hidden" name="confirm" value="1">
     <?php if ($embed): ?>
-      <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
+      <a class="btn" href="oficios_leer.php?id=<?= (int)$id ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Cancelar</a>
     <?php else: ?>
       <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
     <?php endif; ?>

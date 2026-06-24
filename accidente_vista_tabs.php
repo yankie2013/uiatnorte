@@ -9261,6 +9261,16 @@ include __DIR__ . '/sidebar.php';
             </div>
           </div>
 
+          <div class="inline-workbench modal-workbench" id="oficio-modal" role="dialog" aria-modal="true" aria-labelledby="oficio-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="oficio-modal-title">Oficio</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="oficio-modal" data-frame="oficio-modal-frame" aria-label="Cerrar oficio">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="oficio-modal-frame" src="about:blank" loading="lazy" title="Detalle y edición de oficio"></iframe>
+            </div>
+          </div>
+
           <div class="inline-workbench" id="documentos-workbench" hidden>
             <div class="inline-head">
               <strong id="documentos-workbench-title">Formulario</strong>
@@ -9288,8 +9298,8 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell js-inline-open" href="oficio_registro_rapido.php?accidente_id=<?= (int) $accidente_id ?>" data-workbench="oficio-rapido-workbench" data-frame="oficio-rapido-workbench-frame" data-title="Nuevo oficio - registro rapido">+ Nuevo oficio registro rapido</a>
-	                  <a class="btn-shell" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>">Nuevo oficio completo</a>
+	                  <a class="btn-shell js-inline-open" href="oficio_registro_rapido.php?accidente_id=<?= (int) $accidente_id ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio - registro rápido">+ Nuevo oficio registro rápido</a>
+	                  <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio completo">Nuevo oficio completo</a>
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
 	                  <a class="btn-shell btn-docx" href="word_caratula_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Carátula resumen</a>
@@ -9298,13 +9308,6 @@ include __DIR__ . '/sidebar.php';
 	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
 	                  <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
 	                </div>
-                <div class="inline-workbench" id="oficio-rapido-workbench" hidden>
-                  <div class="inline-head">
-                    <strong>Nuevo oficio - registro rapido</strong>
-                    <button type="button" class="btn-shell js-inline-close" data-workbench="oficio-rapido-workbench" data-frame="oficio-rapido-workbench-frame">Cerrar</button>
-                  </div>
-                  <iframe class="inline-frame" id="oficio-rapido-workbench-frame" src="about:blank" loading="lazy"></iframe>
-                </div>
 
                 <?php if (!$oficios): ?>
                   <div class="empty-state">No hay oficios registrados para este accidente.</div>
@@ -9354,9 +9357,9 @@ include __DIR__ . '/sidebar.php';
                           <?php if ($oficioEsSunarpHistorial): ?><a class="btn-shell btn-docx" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= (int) $row['id'] ?>">Descargar SUNARP</a><?php endif; ?>
                           <?php if ($oficioEsInformacionCertificadoUper): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= (int) $row['id'] ?>">Descargar UPER</a><?php endif; ?>
                           <?php if ($oficioEsInformacionDiligencias): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= (int) $row['id'] ?>">Descargar diligencias</a><?php endif; ?>
-                          <a class="btn-shell" href="oficios_leer.php?id=<?= (int) $row['id'] ?>">Ver</a>
-                          <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar oficio">Editar</a>
-                          <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar oficio">Eliminar</a>
+                          <a class="btn-shell js-inline-open" href="oficios_leer.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Ver oficio">Ver</a>
+                          <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Editar oficio">Editar</a>
+                          <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio">Eliminar</a>
                         </div>
                       </article>
                     <?php endforeach; ?>
@@ -9401,8 +9404,8 @@ include __DIR__ . '/sidebar.php';
                         </div>
                         <?php if (!empty($row['contenido'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['contenido'])) ?></p><?php endif; ?>
                         <div class="module-actions">
-                          <a class="btn-shell" href="documento_recibido_ver.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Ver</a>
-                          <a class="btn-shell js-inline-open" href="documento_recibido_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar documento recibido">Editar</a>
+                          <a class="btn-shell js-inline-open" href="documento_recibido_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Ver documento recibido">Ver</a>
+                          <a class="btn-shell js-inline-open" href="documento_recibido_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Editar documento recibido">Editar</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar documento recibido">Eliminar</a>
                         </div>
                       </article>

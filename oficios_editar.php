@@ -177,7 +177,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
   <h1>Editar Oficio #<?= h($id) ?></h1>
 <div class="toolbar">
   <?php if ($embed): ?>
-    <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
+    <a class="btn" href="oficios_leer.php?id=<?= h($id) ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Ver detalle</a>
   <?php else: ?>
     <a class="btn" href="<?= h($listarHref) ?>">← Volver</a>
     <?php if (!empty($data['accidente_id'])): ?>
@@ -223,7 +223,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
       <div class="c4"><label>Estado</label><select name="estado"><?php foreach ($ctx['estados'] as $estado): ?><option value="<?= h($estado) ?>" <?= (string) $data['estado'] === (string) $estado ? 'selected' : '' ?>><?= h($estado) ?></option><?php endforeach; ?></select></div>
       <div class="c12" style="display:flex;justify-content:flex-end;gap:10px;">
         <?php if ($embed): ?>
-          <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
+          <a class="btn" href="oficios_leer.php?id=<?= h($id) ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Cancelar</a>
         <?php else: ?>
           <a class="btn" href="<?= h($listarHref) ?>">Cancelar</a>
         <?php endif; ?>
