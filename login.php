@@ -2,6 +2,8 @@
 require __DIR__.'/auth.php';
 require __DIR__.'/db.php';
 
+use App\Support\Auth;
+
 if (session_status()===PHP_SESSION_NONE) session_start();
 
 header('Content-Type: text/html; charset=utf-8');
@@ -10,12 +12,14 @@ $pdo->exec("SET NAMES utf8mb4");
 
 /* Si ya está logueado, envía al panel */
 if (!empty($_SESSION['user'])) {
-  header('Location: index.php'); exit;
+  header('Location: ' . Auth::postLoginDestination()); exit;
 }
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 $err=''; $email='';
+$flash = trim((string) ($_SESSION['flash'] ?? ''));
+unset($_SESSION['flash']);
 
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   $email = trim($_POST['email'] ?? '');
@@ -48,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'nombre' => $u['nombre'],
         'rol'    => $u['rol'],
       ];
-      header('Location: index.php'); exit;
+      header('Location: ' . Auth::postLoginDestination()); exit;
     }
   }
 }
@@ -169,6 +173,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     border:1px solid #ef4444aa; color:#ef4444; padding:10px 12px; border-radius:12px;
     background: transparent;
   }
+  .msg-info{
+    border:1px solid rgba(37,99,235,.35); color:var(--fg); padding:11px 12px; border-radius:12px;
+    background:rgba(37,99,235,.10); line-height:1.4;
+  }
 
   .actions{ display:grid; gap:10px; }
   .btn{
@@ -222,6 +230,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
       <?php if ($err): ?>
         <div class="msg-err">⚠️ <?= h($err) ?></div>
+      <?php endif; ?>
+      <?php if ($flash): ?>
+        <div class="msg-info"><?= h($flash) ?></div>
       <?php endif; ?>
 
       <form method="post" autocomplete="off" id="loginForm">

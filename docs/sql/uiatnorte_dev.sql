@@ -614,7 +614,7 @@ CREATE TABLE `diligencias_pendientes` (
   `contenido` text COLLATE utf8mb4_unicode_ci,
   `estado` enum('Pendiente','En proceso','Realizado','Cancelado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pendiente',
   `documento_realizado` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `documentos_recibidos` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `documentos_recibidos` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `actualizado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

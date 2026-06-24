@@ -6,6 +6,8 @@ namespace App\Support;
 final class Auth
 {
     private static bool $configured = false;
+    private const PENDING_REQUEST_KEY = 'auth_pending_request';
+    private const RETURN_TO_KEY = 'auth_return_to';
 
     public static function startSession(): void
     {
@@ -30,10 +32,65 @@ final class Auth
         self::startSession();
 
         if (empty($_SESSION['user'])) {
-            $_SESSION['flash'] = 'Inicia sesión';
+            self::rememberInterruptedRequest();
+            $_SESSION['flash'] = !empty($_SESSION[self::PENDING_REQUEST_KEY])
+                ? 'Tu sesion vencio al guardar. Inicia sesion para recuperar y confirmar los datos.'
+                : 'Inicia sesion para continuar.';
             header('Location: ' . $redirectTo);
             exit;
         }
+
+        $recoveryToken = trim((string) ($_POST['_uiat_recovery_token'] ?? ''));
+        if ($recoveryToken !== '') {
+            self::discardPendingRequest($recoveryToken);
+            unset($_POST['_uiat_recovery_token']);
+        }
+    }
+
+    public static function pendingRequest(): ?array
+    {
+        self::startSession();
+        $pending = $_SESSION[self::PENDING_REQUEST_KEY] ?? null;
+        if (!is_array($pending) || empty($pending['uri']) || empty($pending['token']) || !isset($pending['post'])) {
+            return null;
+        }
+        if ((int) ($pending['captured_at'] ?? 0) < time() - 172800) {
+            unset($_SESSION[self::PENDING_REQUEST_KEY]);
+            return null;
+        }
+        return $pending;
+    }
+
+    public static function consumePendingRequest(string $token): ?array
+    {
+        $pending = self::pendingRequest();
+        if ($pending === null || !hash_equals((string) $pending['token'], $token)) {
+            return null;
+        }
+        unset($_SESSION[self::PENDING_REQUEST_KEY]);
+        return $pending;
+    }
+
+    public static function discardPendingRequest(string $token): bool
+    {
+        $pending = self::pendingRequest();
+        if ($pending === null || !hash_equals((string) $pending['token'], $token)) {
+            return false;
+        }
+        unset($_SESSION[self::PENDING_REQUEST_KEY]);
+        return true;
+    }
+
+    public static function postLoginDestination(): string
+    {
+        self::startSession();
+        if (self::pendingRequest() !== null) {
+            return 'session_resume.php';
+        }
+
+        $returnTo = self::safeLocalUri((string) ($_SESSION[self::RETURN_TO_KEY] ?? ''));
+        unset($_SESSION[self::RETURN_TO_KEY]);
+        return $returnTo !== '' ? $returnTo : 'index.php';
     }
 
     public static function requireRole(string $role): void
@@ -65,6 +122,73 @@ final class Auth
             ]);
             session_destroy();
         }
+    }
+
+    private static function rememberInterruptedRequest(): void
+    {
+        $uri = self::safeLocalUri((string) ($_SERVER['REQUEST_URI'] ?? ''));
+        if ($uri === '') {
+            return;
+        }
+
+        $_SESSION[self::RETURN_TO_KEY] = $uri;
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST' || $_POST === []) {
+            return;
+        }
+
+        $post = self::removeSensitiveFields($_POST);
+        $encoded = json_encode($post, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false || strlen($encoded) > 2 * 1024 * 1024) {
+            return;
+        }
+
+        $fileNames = [];
+        foreach ($_FILES as $field => $file) {
+            if (is_array($file) && !empty($file['name'])) {
+                $names = is_array($file['name']) ? array_values(array_filter($file['name'])) : [(string) $file['name']];
+                $fileNames[(string) $field] = $names;
+            }
+        }
+
+        $_SESSION[self::PENDING_REQUEST_KEY] = [
+            'token' => bin2hex(random_bytes(24)),
+            'uri' => $uri,
+            'post' => $post,
+            'captured_at' => time(),
+            'files' => $fileNames,
+        ];
+    }
+
+    private static function removeSensitiveFields(array $values): array
+    {
+        $clean = [];
+        foreach ($values as $key => $value) {
+            if (preg_match('/pass(word)?|contrasena|clave/i', (string) $key)) {
+                continue;
+            }
+            $clean[$key] = is_array($value) ? self::removeSensitiveFields($value) : $value;
+        }
+        return $clean;
+    }
+
+    private static function safeLocalUri(string $uri): string
+    {
+        $uri = trim(str_replace(["\r", "\n"], '', $uri));
+        if ($uri === '' || str_starts_with($uri, '//')) {
+            return '';
+        }
+
+        $parts = parse_url($uri);
+        if ($parts === false || isset($parts['scheme']) || isset($parts['host'])) {
+            return '';
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        if ($path === '' || !str_starts_with($path, '/')) {
+            return '';
+        }
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+        return $path . $query;
     }
 
     private static function configureSession(): void
