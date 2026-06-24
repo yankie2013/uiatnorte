@@ -6174,6 +6174,43 @@ include __DIR__ . '/sidebar.php';
   .inline-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--line);background:#eef3fb}
   .inline-head strong{font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#51627d}
   .inline-frame{width:100%;height:520px;border:0;background:#fff}
+  body.modal-workbench-open{overflow:hidden}
+  .modal-workbench{
+    position:fixed;
+    inset:0;
+    z-index:1090;
+    margin:0;
+    padding:24px;
+    border:0;
+    border-radius:0;
+    background:rgba(15,23,42,.58);
+    backdrop-filter:blur(3px);
+    display:grid;
+    place-items:center;
+    overflow:auto;
+  }
+  .modal-workbench[hidden]{display:none}
+  .modal-workbench-dialog{
+    width:min(960px,100%);
+    max-height:calc(100vh - 48px);
+    border:1px solid #cbd8e8;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 28px 70px rgba(15,23,42,.30);
+    overflow:hidden;
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .modal-workbench .inline-head{padding:12px 16px;background:linear-gradient(180deg,#f8fbff 0%,#edf4fc 100%)}
+  .modal-workbench .inline-head strong{font-size:13px;color:#294a70}
+  .modal-workbench .inline-frame{height:min(720px,calc(100vh - 112px))}
+  html[data-theme-resolved="dark"] .modal-workbench{background:rgba(2,6,23,.76)!important}
+  html[data-theme-resolved="dark"] .modal-workbench-dialog{background:#111b30;border-color:#34445f}
+  @media (max-width:700px){
+    .modal-workbench{padding:10px}
+    .modal-workbench-dialog{max-height:calc(100vh - 20px);border-radius:14px}
+    .modal-workbench .inline-frame{height:calc(100vh - 78px)}
+  }
   .componentes-informe-frame{height:760px;min-height:70vh;border-radius:12px}
   html[data-theme-resolved="dark"] .btn-shell{
     background:#10192c;
@@ -9214,6 +9251,16 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade" id="documentos" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-documentos">
+          <div class="inline-workbench modal-workbench" id="documento-recibido-modal" role="dialog" aria-modal="true" aria-labelledby="documento-recibido-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="documento-recibido-modal-title">Nuevo documento recibido</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" aria-label="Cerrar formulario">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="documento-recibido-modal-frame" src="about:blank" loading="lazy" title="Formulario de documento recibido"></iframe>
+            </div>
+          </div>
+
           <div class="inline-workbench" id="documentos-workbench" hidden>
             <div class="inline-head">
               <strong id="documentos-workbench-title">Formulario</strong>
@@ -9321,7 +9368,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nuevo documento recibido">+ Nuevo documento recibido</a>
+                  <a class="btn-shell js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">+ Nuevo documento recibido</a>
                   <a class="btn-shell" href="documento_recibido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
                 </div>
 
@@ -9697,6 +9744,9 @@ include __DIR__ . '/sidebar.php';
       frame.src = 'about:blank';
       workbench.hidden = true;
       workbenchStates.delete(frame.id);
+      if (workbench.classList.contains('modal-workbench')) {
+        document.body.classList.remove('modal-workbench-open');
+      }
     }
 
     function requestCloseWorkbench(workbench, frame) {
@@ -11167,7 +11217,20 @@ include __DIR__ . '/sidebar.php';
         }
         frame.src = link.href;
         workbench.hidden = false;
-        workbench.scrollIntoView({behavior: 'smooth', block: 'start'});
+        if (workbench.classList.contains('modal-workbench')) {
+          document.body.classList.add('modal-workbench-open');
+        } else {
+          workbench.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+      });
+    });
+
+    document.querySelectorAll('.modal-workbench').forEach((workbench) => {
+      workbench.addEventListener('click', (event) => {
+        if (event.target !== workbench) return;
+        const frame = workbench.querySelector('.inline-frame');
+        if (!frame) return;
+        requestCloseWorkbench(workbench, frame);
       });
     });
 
