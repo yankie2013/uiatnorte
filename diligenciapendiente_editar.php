@@ -17,6 +17,8 @@ if (!function_exists('h')) {
 
 $service = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $detail = $id > 0 ? $service->detalle($id) : null;
 
 if ($id <= 0 || $detail === null) {
@@ -43,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->actualizar($id, $data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{window.parent.postMessage({type:"diligencia.saved"},"*");}catch(_){}</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
         header('Location: diligenciapendiente_ver.php?id=' . $id . '&msg=' . urlencode('Diligencia actualizada correctamente.'));
         exit;
     } catch (Throwable $e) {
@@ -51,7 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
-@include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    @include __DIR__ . '/sidebar.php';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -88,7 +96,7 @@ $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
         --danger-bg: #450a0a;
     }
 }
-body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; } body.is-embed { padding: 14px; }
 .container { max-width: 860px; margin: 0 auto; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 12px 32px rgba(0,0,0,.08); }
 h1 { margin: 0 0 6px; font-size: 1.6rem; }
@@ -116,7 +124,7 @@ select[multiple] { min-height: 140px; }
 @media (max-width: 720px) { body { padding: 14px; } .row { flex-direction: column; align-items: stretch; } }
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="container">
   <div class="card">
     <h1>Editar diligencia #<?= h($id) ?></h1>
@@ -134,6 +142,8 @@ select[multiple] { min-height: 140px; }
     <?php endif; ?>
 
     <form method="post" novalidate>
+      <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+      <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
       <label for="tipo_diligencia_id">Tipo de diligencia</label>
       <div class="row">
         <div class="grow">
@@ -158,9 +168,9 @@ select[multiple] { min-height: 140px; }
       <label for="contenido">Contenido / observaciones</label>
       <textarea id="contenido" name="contenido" class="input"><?= h($data['contenido']) ?></textarea>
 
-      <label for="oficio_id">Oficio relacionado</label>
+      <label for="oficio_id">Oficio realizado</label>
       <select id="oficio_id" name="oficio_id" class="input">
-        <option value="">Sin oficio relacionado</option>
+        <option value="">Sin oficio realizado</option>
         <?php foreach ($ctx['oficios'] as $oficio): ?>
           <option value="<?= h($oficio['id']) ?>" <?= (string) $data['oficio_id'] === (string) $oficio['id'] ? 'selected' : '' ?>><?= h($oficio['label']) ?></option>
         <?php endforeach; ?>
@@ -182,9 +192,9 @@ select[multiple] { min-height: 140px; }
 
       <div class="actions">
         <button type="submit" class="btn primary">Guardar cambios</button>
-        <a class="btn ghost" href="diligenciapendiente_ver.php?id=<?= h($id) ?>">Ver detalle</a>
-        <a class="btn ghost" href="diligenciapendiente_listar.php?accidente_id=<?= h($accidenteId) ?>">Volver al listado</a>
-        <?php if ($accidenteId > 0): ?>
+        <a class="btn ghost" href="diligenciapendiente_ver.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>"><?= $embed ? 'Cancelar' : 'Ver detalle' ?></a>
+        <?php if (!$embed): ?><a class="btn ghost" href="diligenciapendiente_listar.php?accidente_id=<?= h($accidenteId) ?>">Volver al listado</a><?php endif; ?>
+        <?php if (!$embed && $accidenteId > 0): ?>
           <a class="btn ghost" href="Dato_General_accidente.php?accidente_id=<?= h($accidenteId) ?>">Volver al accidente</a>
         <?php endif; ?>
       </div>

@@ -17,6 +17,8 @@ if (!function_exists('h')) {
 
 $service = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
+$returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $detail = $id > 0 ? $service->detalle($id) : null;
 
 if ($id <= 0 || $detail === null) {
@@ -32,6 +34,10 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     try {
         $service->eliminar($id);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{window.parent.postMessage({type:"diligencia.deleted"},"*");}catch(_){}</script><body style="font:13px Inter,sans-serif;padding:16px">Eliminado...</body>';
+            exit;
+        }
         $target = 'diligenciapendiente_listar.php';
         if ($accidenteId > 0) {
             $target .= '?accidente_id=' . urlencode((string) $accidenteId) . '&msg=' . urlencode('Diligencia eliminada correctamente.');
@@ -45,7 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     }
 }
 
-@include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    @include __DIR__ . '/sidebar.php';
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -62,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     --bg:#0b1220; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#60a5fa; --success:#bbf7d0; --danger:#fecaca; --border:#243041;
   }
 }
-body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"Segoe UI",sans-serif}
+body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"Segoe UI",sans-serif}body.is-embed{padding:14px}
 .container{max-width:980px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 12px 32px rgba(0,0,0,.08)}
 .header{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
@@ -72,7 +80,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
 @media (max-width: 900px){body{padding:14px}.grid{grid-template-columns:1fr}}
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="container">
   <div class="card">
     <div class="header">
@@ -81,11 +89,11 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
         <div class="sub">Accidente vinculado: <?= $accidenteId > 0 ? ('#' . h($accidenteId)) : 'sin accidente' ?></div>
       </div>
       <div class="actions">
-        <?php if ($accidenteId > 0): ?>
+        <?php if (!$embed && $accidenteId > 0): ?>
           <a class="btn primary" href="oficios_nuevo.php?accidente_id=<?= h($accidenteId) ?>">+ Nuevo oficio</a>
           <a class="btn primary" href="citacion_nuevo.php?accidente_id=<?= h($accidenteId) ?>">+ Nueva citación</a>
         <?php endif; ?>
-        <a class="btn" href="diligenciapendiente_editar.php?id=<?= h($id) ?>">Editar</a>
+        <a class="btn primary" href="diligenciapendiente_editar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar</a>
       </div>
     </div>
 
@@ -115,15 +123,15 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
         </div>
 
         <div>
-          <span class="label">Documentos recibidos</span>
+          <span class="label">Documento recibido</span>
           <div class="value"><?= h($row['documentos_recibidos'] ?? '') ?: '<span class="muted">Sin registro</span>' ?></div>
         </div>
       </div>
 
       <div class="panel">
         <div style="margin-bottom:16px;">
-          <span class="label">Oficio relacionado</span>
-          <div><?= $detail['oficio_label'] !== '' ? h($detail['oficio_label']) : '<span class="muted">Sin oficio relacionado</span>' ?></div>
+          <span class="label">Oficio realizado</span>
+          <div><?= $detail['oficio_label'] !== '' ? h($detail['oficio_label']) : '<span class="muted">Sin oficio realizado</span>' ?></div>
         </div>
 
         <div style="margin-bottom:16px;">
@@ -152,12 +160,18 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
     </div>
 
     <div class="actions" style="margin-top:18px;">
-      <a class="btn" href="diligenciapendiente_listar.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : '' ?>">Volver al listado</a>
-      <?php if ($accidenteId > 0): ?>
+      <?php if ($embed): ?>
+        <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'diligencia.close'},'*');}catch(e){}">Cerrar</button>
+      <?php else: ?>
+        <a class="btn" href="diligenciapendiente_listar.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : '' ?>">Volver al listado</a>
+      <?php endif; ?>
+      <?php if (!$embed && $accidenteId > 0): ?>
         <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= h($accidenteId) ?>">Volver al accidente</a>
       <?php endif; ?>
       <form method="post" style="display:inline;">
         <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+        <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
         <button type="submit" class="btn danger" onclick="return confirm('¿Eliminar diligencia #<?= h($id) ?>?');">Eliminar</button>
       </form>
     </div>

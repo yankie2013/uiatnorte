@@ -285,9 +285,16 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
    QUERY BASE
 ============================ */
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
-$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria
+$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria,
+               COALESCE(dpc.diligencias_pendientes, 0) AS diligencias_pendientes
         FROM accidentes a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
+        LEFT JOIN (
+          SELECT accidente_id, COUNT(*) AS diligencias_pendientes
+            FROM diligencias_pendientes
+           WHERE COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') = 'Pendiente'
+           GROUP BY accidente_id
+        ) dpc ON dpc.accidente_id = a.id
         WHERE 1=1";
 $params = [];
 
@@ -734,6 +741,9 @@ tbody tr:hover{box-shadow:inset 0 0 0 1px rgba(148,163,184,.08)}
 .chip-status-herido{background:#fff4e5;color:#b45309}
 .chip-status-fallecido{background:#fee2e2;color:#b91c1c}
 .chip-more{background:rgba(148,163,184,.16);color:#475569}
+.chip-diligencias-pendientes{background:#fff0f1;color:#b42318;border:1px solid #fecaca;text-decoration:none;box-shadow:0 4px 10px rgba(180,35,24,.08)}
+.chip-diligencias-pendientes:hover{background:#ffe4e6;color:#991b1b}
+.chip-diligencias-pendientes.is-zero{background:rgba(148,163,184,.12);color:#64748b;border-color:rgba(148,163,184,.3);box-shadow:none}
 .th-people{min-width:320px}
 html[data-theme-resolved="dark"] .cell-primary,
 html[data-theme-resolved="dark"] .inv-name{color:#e5edf8}
@@ -864,6 +874,8 @@ html[data-theme-resolved="dark"]{
   border-color:rgba(212,175,55,.62);
   box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
 }
+html[data-theme-resolved="dark"] .chip-diligencias-pendientes{background:#3b171d;color:#fecdd3;border-color:#7f1d2d}
+html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background:#172033;color:#94a3b8;border-color:#334155}
 .acc-card.last-opened{
   border-color:rgba(212,175,55,.70);
   box-shadow:0 14px 32px rgba(212,175,55,.18), inset 4px 0 0 #d4af37;
@@ -1323,6 +1335,10 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
               <div class="acc-mini-counts">
                 <span class="chip chip-more"><?=count($personasDetalle)?> persona(s)</span>
                 <span class="chip chip-more"><?=count($vehiculosResumen)?> vehiculo(s)</span>
+                <?php $diligenciasPendientesTotal = (int)($r['diligencias_pendientes'] ?? 0); ?>
+                <a class="chip chip-diligencias-pendientes <?= $diligenciasPendientesTotal === 0 ? 'is-zero' : '' ?>" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=diligencias-pendientes" title="Ver diligencias pendientes">
+                  <?= $diligenciasPendientesTotal ?> diligencia<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?> pendiente<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?>
+                </a>
               </div>
               <div class="acc-hint">Pulsa la caja o + para ver personas y vehiculos</div>
             </div>
@@ -1517,6 +1533,12 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           data-estado="<?=h($estado)?>">
       <?=h($estado)?>
     </span>
+    <?php $diligenciasPendientesTotal = (int)($r['diligencias_pendientes'] ?? 0); ?>
+    <div style="margin-top:7px">
+      <a class="chip chip-diligencias-pendientes <?= $diligenciasPendientesTotal === 0 ? 'is-zero' : '' ?>" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=diligencias-pendientes" title="Ver diligencias pendientes">
+        <?= $diligenciasPendientesTotal ?> pendiente<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?>
+      </a>
+    </div>
   </td>
   <td class="td-actions" role="cell">
     <a class="btn small" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>

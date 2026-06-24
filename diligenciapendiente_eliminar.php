@@ -42,6 +42,7 @@ if ($detail === null) {
 
 $row = $detail['row'];
 $accidenteId = (int) ($row['accidente_id'] ?? 0);
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? ($_POST['return_to'] ?? '')));
 if ($returnTo === '') {
     $returnTo = 'diligenciapendiente_listar.php' . ($accidenteId > 0 ? ('?accidente_id=' . $accidenteId) : '');
@@ -51,6 +52,10 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['confirm'] ?? '') === '1') {
     try {
         $service->eliminar($id);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>try{window.parent.postMessage({type:"diligencia.deleted"},"*");}catch(_){}</script><body style="font:13px Inter,sans-serif;padding:16px">Eliminado...</body>';
+            exit;
+        }
         header('Location: ' . append_query($returnTo, ['ok' => 'deleted']));
         exit;
     } catch (Throwable $e) {
@@ -65,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['confirm'] ?? '') === '1') 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eliminar diligencia</title>
 <style>
-body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:20px}
+body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:20px}body.is-embed{padding:14px}
 .wrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px}
 .err{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:10px 12px;border-radius:10px;margin-bottom:12px}
 .meta{margin:10px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa}
@@ -75,7 +80,7 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
 .btn.primary{background:#dc2626;border-color:#dc2626;color:#fff}
 </style>
 </head>
-<body>
+<body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <h1 style="margin-top:0">Eliminar diligencia #<?= (int) $id ?></h1>
   <?php if ($error !== ''): ?><div class="err">Error: <?= h($error) ?></div><?php endif; ?>
@@ -90,9 +95,14 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
 
   <form method="post" class="actions">
     <input type="hidden" name="id" value="<?= (int) $id ?>">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <input type="hidden" name="confirm" value="1">
-    <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
+    <?php if ($embed): ?>
+      <a class="btn" href="diligenciapendiente_ver.php?id=<?= (int)$id ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Cancelar</a>
+    <?php else: ?>
+      <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
+    <?php endif; ?>
     <button class="btn primary" type="submit">Eliminar</button>
   </form>
 </div>

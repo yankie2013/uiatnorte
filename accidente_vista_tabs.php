@@ -4290,34 +4290,6 @@ $diligencias = safe_query_all(
     [$accidente_id]
 );
 
-$diligenciaOficioOptions = ['' => 'Sin oficio relacionado'];
-foreach ($oficios as $oficioOption) {
-    $label = trim((string) ('Oficio N° ' . ($oficioOption['numero'] ?? '—') . '/' . ($oficioOption['anio'] ?? '—')));
-    if (!empty($oficioOption['asunto_nombre'])) {
-        $label .= ' · ' . trim((string) $oficioOption['asunto_nombre']);
-    }
-    $diligenciaOficioOptions[(string) ($oficioOption['id'] ?? '')] = $label;
-}
-
-$diligenciaDocumentoRecibidoOptions = ['' => 'Sin documento recibido'];
-foreach ($documentosRecibidos as $documentoRecibido) {
-    $labelParts = [];
-    if (!empty($documentoRecibido['tipo_documento'])) {
-        $labelParts[] = (string) $documentoRecibido['tipo_documento'];
-    }
-    if (!empty($documentoRecibido['numero_documento'])) {
-        $labelParts[] = (string) $documentoRecibido['numero_documento'];
-    }
-    if (!empty($documentoRecibido['asunto'])) {
-        $labelParts[] = (string) $documentoRecibido['asunto'];
-    }
-    $label = trim((string) implode(' · ', array_filter($labelParts, static fn($item): bool => trim((string) $item) !== '')));
-    if ($label === '') {
-        $label = 'Documento recibido #' . (int) ($documentoRecibido['id'] ?? 0);
-    }
-    $diligenciaDocumentoRecibidoOptions[$label] = $label;
-}
-
 $diligenciasPendientesSolo = array_values(array_filter(
     $diligencias,
     static fn(array $row): bool => trim((string) ($row['estado'] ?? 'Pendiente')) !== 'Realizado'
@@ -4327,96 +4299,33 @@ $diligenciasRealizadas = array_values(array_filter(
     static fn(array $row): bool => trim((string) ($row['estado'] ?? 'Pendiente')) === 'Realizado'
 ));
 
-$renderDiligenciaCards = static function (array $items) use ($diligenciaDocumentoRecibidoOptions, $diligenciaOficioOptions): string {
+$renderDiligenciaCards = static function (array $items): string {
     ob_start();
     if (!$items): ?>
       <div class="empty-state">No hay diligencias en esta pestaña.</div>
     <?php else: ?>
-      <div class="module-grid">
+      <div class="diligencia-list">
         <?php foreach ($items as $row): ?>
           <?php
             $estadoDiligenciaRaw = trim((string) ($row['estado'] ?? 'Pendiente'));
             $estadoDiligenciaUi = $estadoDiligenciaRaw === 'Realizado' ? 'Resuelto' : 'Pendiente';
-            $documentoRecibidoValue = trim((string) ($row['documentos_recibidos'] ?? ''));
-            $diligenciaDocOptions = $diligenciaDocumentoRecibidoOptions;
-            if ($documentoRecibidoValue !== '' && !array_key_exists($documentoRecibidoValue, $diligenciaDocOptions)) {
-                $diligenciaDocOptions[$documentoRecibidoValue] = $documentoRecibidoValue;
-            }
+            $tipoDiligencia = trim((string) (($row['tipo_nombre'] ?? '') !== '' ? $row['tipo_nombre'] : (($row['tipo_diligencia'] ?? '') !== '' ? $row['tipo_diligencia'] : 'Sin tipo')));
+            $contenidoLista = trim((string) preg_replace('/\s+/u', ' ', (string) ($row['contenido'] ?? '')));
+            $contenidoLista = $contenidoLista !== '' ? $contenidoLista : 'Sin contenido registrado.';
           ?>
-          <article class="module-card">
-            <div class="editable-shell" data-edit-shell="diligencia-<?= (int) $row['id'] ?>">
-              <div class="diligencia-card">
-                <div class="diligencia-main">
-                  <div class="diligencia-head">
-                    <div>
-                      <h4>Diligencia #<?= (int) $row['id'] ?></h4>
-                      <p><?= h((string) (($row['tipo_nombre'] ?? '') !== '' ? $row['tipo_nombre'] : (($row['tipo_diligencia'] ?? '') !== '' ? $row['tipo_diligencia'] : 'Sin tipo'))) ?></p>
-                      <div class="module-meta" style="margin-top:6px">
-                        <?php if (!empty($row['oficio_id'])): ?><span class="chip-simple">Oficio #<?= (int) $row['oficio_id'] ?></span><?php endif; ?>
-                        <?php if (!empty($row['citacion_id'])): ?><span class="chip-simple">Citación #<?= (int) $row['citacion_id'] ?></span><?php endif; ?>
-                        <?php if (!empty($row['creado_en'])): ?><span class="chip-simple">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></span><?php endif; ?>
-                      </div>
-                    </div>
-                    <div class="diligencia-side">
-                      <select class="diligencia-status-select js-quick-diligencia-status <?= $estadoDiligenciaUi === 'Resuelto' ? 'status-resuelto' : 'status-pendiente' ?>" data-diligencia-id="<?= (int) $row['id'] ?>" data-prev="<?= h($estadoDiligenciaUi) ?>" aria-label="Estado de la diligencia">
-                        <option value="Pendiente" <?= $estadoDiligenciaUi === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
-                        <option value="Resuelto" <?= $estadoDiligenciaUi === 'Resuelto' ? 'selected' : '' ?>>Resuelto</option>
-                      </select>
-                      <div class="diligencia-actions">
-                        <a class="btn-shell" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>">Ver</a>
-                        <button type="button" class="btn-shell js-edit-start" data-shell="diligencia-<?= (int) $row['id'] ?>">Editar</button>
-                        <a class="btn-shell" href="diligenciapendiente_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>">Eliminar</a>
-                        <div class="editable-actions" data-edit-actions="diligencia-<?= (int) $row['id'] ?>" hidden>
-                          <button type="button" class="btn-shell js-edit-cancel" data-shell="diligencia-<?= (int) $row['id'] ?>">Cancelar</button>
-                          <button type="submit" class="btn-shell btn-primary" form="diligencia-inline-form-<?= (int) $row['id'] ?>">Guardar</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="inline-edit-error" id="diligencia-inline-error-<?= (int) $row['id'] ?>"></div>
-                  <div class="editable-view" data-edit-view="diligencia-<?= (int) $row['id'] ?>">
-                    <div class="diligencia-inline-fields">
-                      <div class="diligencia-inline-row">
-                        <div class="diligencia-inline-box">
-                          <strong>Contenido</strong>
-                          <div><?= !empty($row['contenido']) ? nl2br(h((string) $row['contenido'])) : '—' ?></div>
-                        </div>
-                        <div class="diligencia-inline-box">
-                          <strong>Documento realizado</strong>
-                          <div><?= h((string) (($row['documento_realizado'] ?? '') !== '' ? $row['documento_realizado'] : '—')) ?></div>
-                        </div>
-                      </div>
-                      <div class="diligencia-inline-row">
-                        <div class="diligencia-inline-box">
-                          <strong>Documento recibido</strong>
-                          <div><?= h($documentoRecibidoValue !== '' ? $documentoRecibidoValue : '—') ?></div>
-                        </div>
-                        <div class="diligencia-inline-box">
-                          <strong>Oficio relacionado</strong>
-                          <div><?= !empty($row['oficio_id']) && isset($diligenciaOficioOptions[(string) $row['oficio_id']]) ? h($diligenciaOficioOptions[(string) $row['oficio_id']]) : '—' ?></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <form class="editable-form js-inline-ajax-form" id="diligencia-inline-form-<?= (int) $row['id'] ?>" data-shell="diligencia-<?= (int) $row['id'] ?>" data-error="diligencia-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
-                    <input type="hidden" name="action" value="save_diligencia_inline">
-                    <input type="hidden" name="diligencia_id" value="<?= (int) $row['id'] ?>">
-                    <input type="hidden" name="tipo_diligencia_id" value="<?= (int) ($row['tipo_diligencia_id'] ?? 0) ?>">
-                    <input type="hidden" name="estado" value="<?= h($estadoDiligenciaRaw) ?>">
-                    <div class="section-block">
-                      <h3>Edición rápida</h3>
-                      <div class="field-grid">
-                        <?= render_editable_fields($row, [
-                            ['name' => 'contenido', 'label' => 'Contenido', 'type' => 'textarea', 'rows' => 4, 'class' => 'span-2'],
-                            ['name' => 'documento_realizado', 'label' => 'Documento realizado', 'class' => 'span-2'],
-                            ['name' => 'documentos_recibidos', 'label' => 'Documento recibido', 'type' => 'select', 'options' => $diligenciaDocOptions, 'class' => 'span-2'],
-                            ['name' => 'oficio_id', 'label' => 'Oficio relacionado', 'type' => 'select', 'options' => $diligenciaOficioOptions, 'class' => 'span-2'],
-                        ], 'diligencia-' . (int) $row['id']) ?>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </div>
+          <article class="diligencia-list-row">
+            <select class="diligencia-status-select js-quick-diligencia-status <?= $estadoDiligenciaUi === 'Resuelto' ? 'status-resuelto' : 'status-pendiente' ?>" data-diligencia-id="<?= (int) $row['id'] ?>" data-prev="<?= h($estadoDiligenciaUi) ?>" aria-label="Estado de la diligencia">
+              <option value="Pendiente" <?= $estadoDiligenciaUi === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
+              <option value="Resuelto" <?= $estadoDiligenciaUi === 'Resuelto' ? 'selected' : '' ?>>Resuelto</option>
+            </select>
+            <div class="diligencia-list-body">
+              <div class="diligencia-list-title"><?= h($tipoDiligencia) ?></div>
+              <div class="diligencia-list-summary"><?= h($contenidoLista) ?></div>
+              <?php if (!empty($row['creado_en'])): ?><div class="diligencia-list-date">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></div><?php endif; ?>
+            </div>
+            <div class="diligencia-list-actions">
+              <a class="btn-shell js-inline-open" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Ver diligencia #<?= (int) $row['id'] ?>">Ver</a>
+              <a class="btn-shell danger js-inline-open" href="diligenciapendiente_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Eliminar diligencia #<?= (int) $row['id'] ?>">Eliminar</a>
             </div>
           </article>
         <?php endforeach; ?>
@@ -4939,6 +4848,10 @@ $analysisFallecidoRows[] = [
     ];
 }
 
+$analysisComparisonDamageRows = array_values(array_filter(
+    $analysisDriverRows,
+    static fn(array $driver): bool => !empty($driver['peritaje'])
+));
 $analysisTabCount = count($analysisDriverRows) + count($analysisFallecidoRows);
 $analysisMediaBySection = [
     'danos' => [],
@@ -6078,6 +5991,39 @@ include __DIR__ . '/sidebar.php';
   .analysis-image-name{font-size:11px;font-weight:700;color:var(--muted);word-break:break-word}
   .analysis-delete-btn{margin-left:auto;border-color:#fecaca;background:#fff7f7;color:#b91c1c}
   .analysis-delete-btn:hover{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+  .analysis-compare-btn{border-color:#34d399;background:linear-gradient(135deg,#087f5b,#0f9f75);color:#fff;box-shadow:0 9px 20px rgba(5,150,105,.20)}
+  .analysis-compare-btn:hover{border-color:#10b981;background:linear-gradient(135deg,#06694c,#0b8a65);color:#fff}
+  .analysis-compare-modal{position:fixed;inset:0;z-index:1110;display:grid;place-items:center;padding:22px;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);overflow:auto}
+  .analysis-compare-modal[hidden]{display:none}
+  .analysis-compare-dialog{width:min(1180px,100%);max-height:calc(100vh - 44px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;border:1px solid #cbd8e8;border-radius:20px;background:#fff;box-shadow:0 30px 80px rgba(15,23,42,.34)}
+  .analysis-compare-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;border-bottom:1px solid #dbe4ef;background:linear-gradient(135deg,#f7fffb,#f5f8ff)}
+  .analysis-compare-head h3{margin:0;color:#17375d;font-size:16px;font-weight:900}
+  .analysis-compare-head p{margin:3px 0 0;color:#69798e;font-size:11px;font-weight:650}
+  .analysis-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));min-height:0;overflow:auto}
+  .analysis-compare-side{min-width:0;padding:16px;overflow:auto}
+  .analysis-compare-side + .analysis-compare-side{border-left:1px solid #dfe6f0}
+  .analysis-compare-side.damage{background:linear-gradient(180deg,#fffaf4,#fff 180px)}
+  .analysis-compare-side.injury{background:linear-gradient(180deg,#fff6f7,#fff 180px)}
+  .analysis-compare-side-head{display:flex;align-items:center;gap:10px;margin-bottom:13px;padding-bottom:11px;border-bottom:2px solid}
+  .analysis-compare-side.damage .analysis-compare-side-head{border-color:#fb923c;color:#9a3412}
+  .analysis-compare-side.injury .analysis-compare-side-head{border-color:#fb7185;color:#9f1239}
+  .analysis-compare-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;font-size:18px;font-weight:900}
+  .damage .analysis-compare-icon{background:#ffedd5;color:#c2410c}.injury .analysis-compare-icon{background:#ffe4e6;color:#be123c}
+  .analysis-compare-side-head h4{margin:0;font-size:14px}.analysis-compare-side-head span{display:block;margin-top:2px;font-size:10px;font-weight:750;opacity:.72}
+  .analysis-compare-records{display:grid;gap:10px}
+  .analysis-compare-record{padding:12px;border:1px solid #dde5ef;border-radius:13px;background:rgba(255,255,255,.9);box-shadow:0 6px 16px rgba(30,41,59,.055)}
+  .analysis-compare-record h5{margin:0 0 7px;color:#263750;font-size:12px;font-weight:900}
+  .analysis-compare-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}.analysis-compare-meta span{padding:4px 7px;border-radius:999px;background:#f1f5f9;color:#5d6c80;font-size:9px;font-weight:800}
+  .analysis-compare-record .section-block{margin:0;padding:10px;box-shadow:none}.analysis-compare-record .summary-empty{padding:10px}
+  .analysis-compare-record,.analysis-compare-record *{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .analysis-compare-record .vehicle-docs-story-title,.analysis-compare-record .field-label{margin:0 0 8px;color:#596a80;font-size:11px;font-weight:850;line-height:1.3;text-transform:uppercase;letter-spacing:.045em;text-decoration:none}
+  .analysis-compare-record .vehicle-story-key,.analysis-compare-record .vehicle-story-sep,.analysis-compare-record .vehicle-story-value,.analysis-compare-record .vehicle-docs-story-text,.analysis-compare-record .field-value,.analysis-compare-record .hyphen-list,.analysis-compare-record .hyphen-list div{font-size:13px;font-weight:600;line-height:1.5;color:#2f3e53}
+  .analysis-compare-record .vehicle-story-key{font-weight:750}.analysis-compare-record .vehicle-story-sep{font-weight:850}.analysis-compare-record .vehicle-docs-story-text strong{font-size:13px;font-weight:800}
+  html[data-theme-resolved="dark"] .analysis-compare-dialog{background:#10192b;border-color:#34445f}
+  html[data-theme-resolved="dark"] .analysis-compare-head{background:linear-gradient(135deg,#10231f,#111b30);border-color:#2c3b54}
+  html[data-theme-resolved="dark"] .analysis-compare-head h3{color:#e5edf8}html[data-theme-resolved="dark"] .analysis-compare-head p{color:#9cabc0}
+  html[data-theme-resolved="dark"] .analysis-compare-side.damage{background:linear-gradient(180deg,#2a1c12,#10192b 180px)}html[data-theme-resolved="dark"] .analysis-compare-side.injury{background:linear-gradient(180deg,#2a151c,#10192b 180px)}
+  html[data-theme-resolved="dark"] .analysis-compare-side + .analysis-compare-side{border-color:#2d3b53}html[data-theme-resolved="dark"] .analysis-compare-record{background:#111d31;border-color:#30405a;box-shadow:none}html[data-theme-resolved="dark"] .analysis-compare-record h5{color:#e5edf8}html[data-theme-resolved="dark"] .analysis-compare-meta span{background:#17243a;color:#aab8ca}
   .diligencia-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
   .diligencia-main{display:grid;gap:6px;min-width:0}
   .diligencia-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -6093,6 +6039,22 @@ include __DIR__ . '/sidebar.php';
   .diligencia-inline-box{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:#fff}
   .diligencia-inline-box strong{display:block;margin:0 0 3px;color:#8b6a12;font-size:9px;line-height:1.15;text-transform:uppercase;letter-spacing:.05em}
   .diligencia-inline-box div{font-size:12px;font-weight:700;color:#2d3c52;line-height:1.35}
+  .diligencia-list{display:grid;gap:9px}
+  .diligencia-list-row{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:center;padding:11px 13px 11px 16px;border:1px solid #dce4f0;border-radius:14px;background:linear-gradient(135deg,#fff 0%,#fbfcff 72%,#f5f2ff 100%);box-shadow:0 7px 18px rgba(31,45,72,.06);overflow:hidden;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+  .diligencia-list-row::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#8b5cf6,#6366f1);opacity:.72}
+  .diligencia-list-row:hover{transform:translateY(-1px);border-color:#c9bdf8;box-shadow:0 11px 25px rgba(79,70,229,.11)}
+  .diligencia-list-body{min-width:0;display:grid;grid-template-columns:minmax(125px,185px) minmax(0,1fr) auto;gap:14px;align-items:center}
+  .diligencia-list-title{position:relative;padding-left:12px;font-size:12px;font-weight:900;color:#263550;line-height:1.25}
+  .diligencia-list-title::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;border-radius:50%;background:#8b5cf6;transform:translateY(-50%);box-shadow:0 0 0 4px rgba(139,92,246,.10)}
+  .diligencia-list-summary{margin:0;color:#5e6d83;font-size:11px;font-weight:650;line-height:1.45;white-space:normal;overflow:visible}
+  .diligencia-list-date{justify-self:start;width:max-content;max-width:100%;margin:0;padding:4px 7px;border-radius:999px;background:#f3f6fa;color:#7a8799;font-size:9px;font-weight:800;white-space:nowrap}
+  .diligencia-list-actions{display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .diligencia-list-actions .btn-shell{min-height:34px;padding:7px 12px;border-radius:10px;font-size:11px;box-shadow:none}
+  .diligencia-list-actions .btn-shell:not(.danger){border-color:#cfdced;background:#fff;color:#29496f}
+  .diligencia-list-actions .btn-shell:not(.danger):hover{border-color:#8bb4e6;background:#eef6ff;color:#183b64}
+  .diligencia-list-actions .btn-shell.danger{border-color:#fecaca;background:#fff7f7;color:#b42318}
+  .diligencia-list-actions .btn-shell.danger:hover{border-color:#fca5a5;background:#feecec;color:#991b1b}
+  .diligencia-list-row .diligencia-status-select{min-width:132px;min-height:36px;padding-top:7px;padding-bottom:7px;box-shadow:none}
   .diligencias-ocr-panel{margin:0 0 10px}
   .diligencias-ocr-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px;box-shadow:0 10px 24px rgba(17,24,39,.08)}
   .diligencias-ocr-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
@@ -6324,6 +6286,14 @@ include __DIR__ . '/sidebar.php';
     color:var(--ink);
     border-color:#32415a;
   }
+  html[data-theme-resolved="dark"] .diligencia-list-row{background:linear-gradient(135deg,#111b30 0%,#10192b 72%,#19152e 100%);border-color:#2f3d58;box-shadow:0 7px 18px rgba(2,6,23,.22)}
+  html[data-theme-resolved="dark"] .diligencia-list-row:hover{border-color:#6557a3;box-shadow:0 12px 26px rgba(2,6,23,.34)}
+  html[data-theme-resolved="dark"] .diligencia-list-title{color:#e5edf8}
+  html[data-theme-resolved="dark"] .diligencia-list-title::before{background:#a78bfa;box-shadow:0 0 0 4px rgba(167,139,250,.12)}
+  html[data-theme-resolved="dark"] .diligencia-list-summary{color:#a8b5c8}
+  html[data-theme-resolved="dark"] .diligencia-list-date{background:#172238;color:#93a2b8}
+  html[data-theme-resolved="dark"] .diligencia-list-actions .btn-shell:not(.danger){background:#121d31;border-color:#344763;color:#bfdbfe}
+  html[data-theme-resolved="dark"] .diligencia-list-actions .btn-shell.danger{background:#35191f;border-color:#6f2934;color:#fecaca}
   html[data-theme-resolved="dark"] .quick-pill-btn.download{
     background:linear-gradient(180deg,#2e1065 0%,#4c1d95 100%);
     border-color:#c084fc;
@@ -6778,6 +6748,8 @@ include __DIR__ . '/sidebar.php';
     .line-grid{grid-template-columns:1fr}
     .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .general-grid{gap:5px}
+    .diligencia-list-body{grid-template-columns:minmax(110px,160px) minmax(0,1fr)}
+    .diligencia-list-date{grid-column:1/-1}
     .diligencia-card{grid-template-columns:1fr}
     .diligencia-head{grid-template-columns:1fr}
     .diligencia-side{justify-items:start}
@@ -6789,6 +6761,12 @@ include __DIR__ . '/sidebar.php';
     .top-actions{gap:6px}
     .btn-shell{padding:6px 8px;font-size:11px}
     .panel,.tab-panel{padding:8px}
+    .analysis-compare-modal{padding:8px}.analysis-compare-dialog{max-height:calc(100vh - 16px);border-radius:14px}.analysis-compare-grid{grid-template-columns:1fr}.analysis-compare-side + .analysis-compare-side{border-left:0;border-top:1px solid #dfe6f0}
+    .diligencia-list-row{grid-template-columns:1fr}
+    .diligencia-list-body{grid-template-columns:1fr;gap:4px}
+    .diligencia-list-date{grid-column:auto}
+    .diligencia-status-select{grid-column:1;justify-self:start}
+    .diligencia-list-actions{grid-column:1;justify-self:start}
     .summary-pill{grid-template-columns:118px 10px minmax(0,1fr);padding:8px 9px;font-size:12px}
     .summary-pill strong{margin-bottom:0}
     .g-3,.g-4,.g-6,.g-12{grid-column:span 12}
@@ -9491,6 +9469,15 @@ include __DIR__ . '/sidebar.php';
       </div>
       <div class="tab-pane fade" id="diligencias-pendientes" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-diligencias">
+          <div class="inline-workbench modal-workbench" id="diligencia-modal" role="dialog" aria-modal="true" aria-labelledby="diligencia-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="diligencia-modal-title">Diligencia</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" aria-label="Cerrar diligencia">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="diligencia-modal-frame" src="about:blank" loading="lazy" title="Detalle y edición de diligencia"></iframe>
+            </div>
+          </div>
           <div class="module-actions" style="margin-bottom:8px;">
             <button type="button" class="btn-shell btn-primary js-diligencias-ocr-open" data-accidente-id="<?= (int) $accidente_id ?>">Subir lista por imagen</button>
             <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
@@ -9542,6 +9529,68 @@ include __DIR__ . '/sidebar.php';
       </div>
       <div class="tab-pane fade" id="analisis" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-analisis">
+          <div class="module-actions" style="margin-bottom:8px;">
+            <button type="button" class="btn-shell analysis-compare-btn js-analysis-compare-open">Ver cuadro comparativo</button>
+          </div>
+
+          <div class="analysis-compare-modal" id="analysis-compare-modal" role="dialog" aria-modal="true" aria-labelledby="analysis-compare-title" hidden>
+            <div class="analysis-compare-dialog">
+              <div class="analysis-compare-head">
+                <div>
+                  <h3 id="analysis-compare-title">Cuadro comparativo de daños y lesiones</h3>
+                  <p>Accidente #<?= (int) $accidente_id ?> · información registrada en peritajes y documentos del fallecido.</p>
+                </div>
+                <button type="button" class="btn-shell js-analysis-compare-close">Cerrar</button>
+              </div>
+              <div class="analysis-compare-grid">
+                <section class="analysis-compare-side damage">
+                  <div class="analysis-compare-side-head">
+                    <span class="analysis-compare-icon">V</span>
+                    <div><h4>Daños del peritaje</h4><span><?= count($analysisComparisonDamageRows) ?> peritaje(s) registrado(s)</span></div>
+                  </div>
+                  <?php if (!$analysisComparisonDamageRows): ?>
+                    <div class="summary-empty">No hay peritajes vehiculares registrados para este accidente.</div>
+                  <?php else: ?>
+                    <div class="analysis-compare-records">
+                      <?php foreach ($analysisComparisonDamageRows as $driver): ?>
+                        <article class="analysis-compare-record">
+                          <h5><?= h((string) ($driver['nombre'] ?? 'Conductor sin nombre')) ?></h5>
+                          <div class="analysis-compare-meta">
+                            <span><?= h((string) ($driver['vehiculo'] ?? 'Sin vehículo')) ?></span>
+                            <span><?= h((string) (($driver['peritaje']['numero_peritaje'] ?? '') !== '' ? ('Peritaje N° ' . $driver['peritaje']['numero_peritaje']) : 'Peritaje sin número')) ?></span>
+                          </div>
+                          <div class="section-block"><?= render_analysis_peritaje_story((array) ($driver['peritaje'] ?? [])) ?></div>
+                        </article>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </section>
+
+                <section class="analysis-compare-side injury">
+                  <div class="analysis-compare-side-head">
+                    <span class="analysis-compare-icon">P</span>
+                    <div><h4>Lesiones de la persona fallecida</h4><span><?= count($analysisFallecidoRows) ?> persona(s) fallecida(s)</span></div>
+                  </div>
+                  <?php if (!$analysisFallecidoRows): ?>
+                    <div class="summary-empty">No hay personas fallecidas registradas para este accidente.</div>
+                  <?php else: ?>
+                    <div class="analysis-compare-records">
+                      <?php foreach ($analysisFallecidoRows as $fallecido): ?>
+                        <article class="analysis-compare-record">
+                          <h5><?= h((string) ($fallecido['nombre'] ?? 'Persona fallecida sin nombre')) ?></h5>
+                          <div class="section-block">
+                            <div class="field-label">Lesiones registradas</div>
+                            <div class="field-value"><?= ($fallecido['lesiones'] ?? '') !== '' ? render_hyphen_list_html((string) $fallecido['lesiones']) : 'Sin lesiones registradas' ?></div>
+                          </div>
+                        </article>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </section>
+              </div>
+            </div>
+          </div>
+
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#analisis-danos-lesiones" type="button" role="tab">
               analisis de daños y lesiones
@@ -12190,6 +12239,31 @@ include __DIR__ . '/sidebar.php';
     initSummaryBlockAccordions(document);
     applyNuevoButtonStyles(document);
 
+    const analysisCompareModal = document.getElementById('analysis-compare-modal');
+    const analysisCompareOpen = document.querySelector('.js-analysis-compare-open');
+    const analysisCompareClose = document.querySelector('.js-analysis-compare-close');
+    const closeAnalysisComparison = () => {
+      if (!analysisCompareModal) return;
+      analysisCompareModal.hidden = true;
+      document.body.classList.remove('modal-workbench-open');
+    };
+    analysisCompareOpen?.addEventListener('click', () => {
+      if (!analysisCompareModal) return;
+      analysisCompareModal.hidden = false;
+      document.body.classList.add('modal-workbench-open');
+      analysisCompareClose?.focus();
+    });
+    analysisCompareClose?.addEventListener('click', closeAnalysisComparison);
+    analysisCompareModal?.addEventListener('click', (event) => {
+      if (event.target === analysisCompareModal) closeAnalysisComparison();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && analysisCompareModal && !analysisCompareModal.hidden) {
+        event.preventDefault();
+        closeAnalysisComparison();
+      }
+    });
+
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
       const workbench = visibleWorkbench();
@@ -12209,7 +12283,7 @@ include __DIR__ . '/sidebar.php';
 
     window.addEventListener('message', (event) => {
       const data = event.data || {};
-      if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close' || data.type === 'acta.close') {
+      if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close' || data.type === 'diligencia.close' || data.type === 'acta.close') {
         const workbench = visibleWorkbench();
         if (!workbench) return;
         const frame = workbench.querySelector('.inline-frame');
@@ -12217,7 +12291,7 @@ include __DIR__ . '/sidebar.php';
         closeWorkbenchImmediate(workbench, frame);
         return;
       }
-      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted', 'acta.saved', 'acta.deleted'].includes(data.type)) {
+      if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted', 'diligencia.saved', 'diligencia.deleted', 'acta.saved', 'acta.deleted'].includes(data.type)) {
         window.location.reload();
       }
     });
