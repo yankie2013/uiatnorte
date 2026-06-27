@@ -383,16 +383,19 @@ if($vehiculo!==''){
   $params[] = "%$vehiculo%";
 }
 
-/* Las prioridades siempre aparecen primero; dentro de cada grupo se respeta el orden elegido. */
+/* En la vista TODOS manda el orden manual de Folder; los que no tienen número van al final. */
 $orderBy = match ($orden) {
   'fecha_desc' => 'a.fecha_accidente DESC, a.id DESC',
   'fecha_asc' => 'a.fecha_accidente ASC, a.id ASC',
   default => 'a.id DESC',
 };
-$lastOpenedOrder = (!$hasIncomingFilters && !$restoredLastFilters && $ultimoAccidenteAbiertoId > 0)
+$lastOpenedOrder = ($estadoFiltro !== 'todos' && !$hasIncomingFilters && !$restoredLastFilters && $ultimoAccidenteAbiertoId > 0)
   ? "CASE WHEN a.id = $ultimoAccidenteAbiertoId THEN 1 ELSE 0 END DESC, "
   : '';
-$sql .= " ORDER BY {$lastOpenedOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
+$folderOrder = $estadoFiltro === 'todos'
+  ? "CASE WHEN a.folder IS NULL THEN 1 ELSE 0 END ASC, a.folder ASC, "
+  : '';
+$sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
@@ -1739,7 +1742,7 @@ document.addEventListener('keydown', (e)=>{
   });
 })();
 
-// Guardar Folder (1..10) al cambiar el select
+// Guardar Folder (1..20) al cambiar el select
 document.querySelectorAll('.select-folder').forEach(sel=>{
   sel.addEventListener('change', ()=>{
     const id = sel.dataset.id;
