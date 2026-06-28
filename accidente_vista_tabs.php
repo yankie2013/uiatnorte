@@ -2729,8 +2729,16 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
     ];
     $maxBytes = 10 * 1024 * 1024;
     $targetDir = __DIR__ . '/uploads/analisis/accidente_' . $accidenteId . '/' . $section;
-    if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
-        throw new RuntimeException('No se pudo crear la carpeta de destino para las imágenes.');
+    if (!is_dir($targetDir)) {
+        $mkdirOk = @mkdir($targetDir, 0775, true);
+        if (!$mkdirOk && !is_dir($targetDir)) {
+            $mkdirError = error_get_last();
+            $detail = is_array($mkdirError) && isset($mkdirError['message']) ? ' Detalle: ' . $mkdirError['message'] : '';
+            throw new RuntimeException('No se pudo crear la carpeta de destino para las imágenes: ' . $targetDir . '.' . $detail);
+        }
+    }
+    if (!is_writable($targetDir)) {
+        throw new RuntimeException('La carpeta de destino no tiene permiso de escritura: ' . $targetDir . '.');
     }
 
     $finfo = class_exists('finfo') ? new \finfo(FILEINFO_MIME_TYPE) : null;
