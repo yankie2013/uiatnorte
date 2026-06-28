@@ -2487,10 +2487,58 @@ function render_editable_fields(array $record, array $fields, string $idPrefix =
 
 function json_response(array $payload, int $status = 200): never
 {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function is_ajax_request(): bool
+{
+    return strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+}
+
+function ini_size_to_bytes(string $value): int
+{
+    $value = trim($value);
+    if ($value === '') {
+        return 0;
+    }
+
+    $unit = strtolower(substr($value, -1));
+    $number = (float) $value;
+    return match ($unit) {
+        'g' => (int) ($number * 1024 * 1024 * 1024),
+        'm' => (int) ($number * 1024 * 1024),
+        'k' => (int) ($number * 1024),
+        default => (int) $number,
+    };
+}
+
+function upload_limit_bytes(): int
+{
+    $limits = array_filter([
+        ini_size_to_bytes((string) ini_get('upload_max_filesize')),
+        ini_size_to_bytes((string) ini_get('post_max_size')),
+    ], static fn(int $bytes): bool => $bytes > 0);
+
+    return $limits !== [] ? min($limits) : 0;
+}
+
+function human_file_size(int $bytes): string
+{
+    if ($bytes >= 1024 * 1024) {
+        return rtrim(rtrim(number_format($bytes / (1024 * 1024), 1, '.', ''), '0'), '.') . ' MB';
+    }
+
+    if ($bytes >= 1024) {
+        return rtrim(rtrim(number_format($bytes / 1024, 1, '.', ''), '0'), '.') . ' KB';
+    }
+
+    return $bytes . ' bytes';
 }
 
 function safe_table_exists(PDO $pdo, string $table): bool
@@ -2568,6 +2616,22 @@ function analysis_is_heic_like_upload(string $fileName, string $mimeType): bool
 
     $mimeType = strtolower(trim($mimeType));
     return in_array($mimeType, ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'], true);
+}
+
+function analysis_detect_image_mime(string $path): string
+{
+    $imageInfo = @getimagesize($path);
+    if (!is_array($imageInfo)) {
+        return '';
+    }
+
+    return match ((int) ($imageInfo[2] ?? 0)) {
+        IMAGETYPE_JPEG => 'image/jpeg',
+        IMAGETYPE_PNG => 'image/png',
+        IMAGETYPE_WEBP => 'image/webp',
+        IMAGETYPE_GIF => 'image/gif',
+        default => '',
+    };
 }
 
 function analysis_try_convert_heic_to_jpeg(string $sourcePath, string $destPath): bool
@@ -2719,6 +2783,13 @@ function analysis_store_uploaded_images(PDO $pdo, int $accidenteId, string $sect
                 };
             }
 
+            if (!isset($allowedMimeToExt[$mimeType]) && !analysis_is_heic_like_upload($originalName, $mimeType)) {
+                $detectedImageMime = analysis_detect_image_mime($tmpName);
+                if ($detectedImageMime !== '') {
+                    $mimeType = $detectedImageMime;
+                }
+            }
+
             if (analysis_is_heic_like_upload($originalName, $mimeType)) {
                 $fileName = sprintf('%02d_%s.jpg', $sortOrder, bin2hex(random_bytes(8)));
                 $absolutePath = $targetDir . '/' . $fileName;
@@ -2844,6 +2915,22 @@ function analysis_delete_image(PDO $pdo, int $accidenteId, int $mediaId): void
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string) ($_POST['action'] ?? ''));
+
+    if ($action === '' && is_ajax_request()) {
+        $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $uploadLimit = upload_limit_bytes();
+        if ($contentLength > 0 && $uploadLimit > 0 && $contentLength > $uploadLimit) {
+            json_response([
+                'ok' => false,
+                'message' => 'La imagen supera el límite del servidor (' . human_file_size($uploadLimit) . '). Reduce el tamaño o guarda la captura como JPG.',
+            ], 413);
+        }
+
+        json_response([
+            'ok' => false,
+            'message' => 'No se recibieron los datos de la imagen. Intenta con una imagen más liviana o vuelve a seleccionar el archivo.',
+        ], 422);
+    }
 
     if ($action === 'save_analysis_images') {
         try {
@@ -12112,14 +12199,18 @@ include __DIR__ . '/sidebar.php';
           });
 
           let data = null;
+          const responseText = await response.text();
           try {
-            data = await response.json();
+            data = JSON.parse(responseText);
           } catch (error) {
             data = null;
           }
 
           if (!response.ok || !data || !data.ok) {
-            throw new Error((data && data.message) ? data.message : 'No se pudieron guardar las imágenes.');
+            const fallbackMessage = response.status === 413
+              ? 'La imagen es demasiado pesada para el servidor. Intenta guardarla como JPG o reducir su tamaño.'
+              : 'No se pudieron guardar las imágenes. El servidor no devolvió una respuesta válida.';
+            throw new Error((data && data.message) ? data.message : fallbackMessage);
           }
 
           if (message) message.textContent = data.message || 'Imágenes guardadas.';
