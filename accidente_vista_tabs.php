@@ -4569,10 +4569,10 @@ $renderVehiculoSubtabs = static function (
                 <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) ($vehiculoRecord['accidente_id'] ?? 0) ?>&invol_id=<?= $involucradoVehiculoId ?>&return_to=<?= $returnToEncoded ?>">Generar oficio peritaje</a>
               <?php endif; ?>
               <?php if ($documentoVehiculoId > 0): ?>
-                <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">Editar documento</a>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="vehiculo-documento-modal" data-frame="vehiculo-documento-modal-frame" data-title="Documento de vehículo">Editar documento</a>
                 <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
               <?php elseif ($involucradoVehiculoId > 0): ?>
-                <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="<?= h($workbenchId) ?>" data-frame="<?= h($frameId) ?>" data-title="Documento de vehículo">+ Nuevo documento</a>
+                <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="vehiculo-documento-modal" data-frame="vehiculo-documento-modal-frame" data-title="Documento de vehículo">+ Nuevo documento</a>
               <?php endif; ?>
             </div>
 
@@ -8111,6 +8111,15 @@ include __DIR__ . '/sidebar.php';
               <span class="participant-create-copy"><span class="participant-create-title">Nuevo vehículo involucrado</span><span class="participant-create-sub">Registrar unidad participante</span></span>
             </a>
             <a class="btn-shell btn-citacion" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>">Citaciones</a>
+          </div>
+          <div class="inline-workbench modal-workbench" id="vehiculo-documento-modal" role="dialog" aria-modal="true" aria-labelledby="vehiculo-documento-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="vehiculo-documento-modal-title">Documento de vehículo</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="vehiculo-documento-modal" data-frame="vehiculo-documento-modal-frame" aria-label="Cerrar documento de vehículo">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="vehiculo-documento-modal-frame" src="about:blank" loading="lazy" title="Formulario de documento de vehículo"></iframe>
+            </div>
           </div>
           <?php
             $participantFixedTabs = [

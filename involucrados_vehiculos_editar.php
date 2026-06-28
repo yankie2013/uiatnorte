@@ -490,7 +490,11 @@ function openDocVehNew(involId){
   const ifr   = document.getElementById('ifrDocVeh');
   const ttl   = document.getElementById('mdDocVehTitle');
   if (ttl) ttl.textContent = 'Nuevo - Documento de vehículo';
-  ifr.src = 'documento_vehiculo_nuevo.php?invol_id=' + encodeURIComponent(involId);
+  const url = new URL('documento_vehiculo_nuevo.php', window.location.href);
+  url.searchParams.set('invol_id', involId);
+  url.searchParams.set('embed', '1');
+  url.searchParams.set('return_to', window.location.pathname + window.location.search);
+  ifr.src = url.toString();
   modal.classList.add('open');
   return false;
 }
@@ -499,7 +503,11 @@ function openDocVehEdit(docId){
   const ifr   = document.getElementById('ifrDocVeh');
   const ttl   = document.getElementById('mdDocVehTitle');
   if (ttl) ttl.textContent = 'Editar - Documento de vehículo #' + docId;
-  ifr.src = 'documento_vehiculo_editar.php?id=' + encodeURIComponent(docId);
+  const url = new URL('documento_vehiculo_editar.php', window.location.href);
+  url.searchParams.set('id', docId);
+  url.searchParams.set('embed', '1');
+  url.searchParams.set('return_to', window.location.pathname + window.location.search);
+  ifr.src = url.toString();
   modal.classList.add('open');
   return false;
 }
