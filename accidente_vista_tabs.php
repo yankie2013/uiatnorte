@@ -982,6 +982,7 @@ function human_label(string $key): string
         'planta_motriz_peritaje' => 'Planta motriz',
         'otros_peritaje' => 'Otros',
         'danos_peritaje' => 'Daños constatados',
+        'imagen_peritaje_path' => 'Imagen del peritaje',
         'fecha_levantamiento' => 'Fecha',
         'hora_levantamiento' => 'Hora',
         'lugar_levantamiento' => 'Lugar',
@@ -1086,6 +1087,14 @@ function field_html(string $key, mixed $value): string
 
     if ($key === 'foto_path') {
         return '<a href="' . h((string) $value) . '" target="_blank" rel="noopener">' . h((string) $value) . '</a>';
+    }
+
+    if ($key === 'imagen_peritaje_path') {
+        $path = trim((string) $value);
+        if ($path === '') {
+            return '—';
+        }
+        return '<a href="' . h($path) . '" target="_blank" rel="noopener"><img src="' . h($path) . '" alt="Imagen del peritaje" style="display:block;width:100%;max-height:260px;object-fit:contain;border-radius:10px;border:1px solid #d7e1ef;background:#fff;"></a>';
     }
 
     $text = trim((string) $value);
@@ -4492,6 +4501,7 @@ $docVehiculoSections = [
             'sistema_transmision_peritaje', 'sistema_suspension_peritaje', 'planta_motriz_peritaje',
             ['key' => 'otros_peritaje', 'class' => 'span-2'],
             ['key' => 'danos_peritaje', 'class' => 'span-2'],
+            ['key' => 'imagen_peritaje_path', 'class' => 'span-2'],
         ],
     ],
     'revision' => [
@@ -5031,6 +5041,7 @@ $summaryDocVehiculoSections = [
             'sistema_transmision_peritaje', 'sistema_suspension_peritaje', 'planta_motriz_peritaje',
             ['key' => 'otros_peritaje', 'class' => 'span-2'],
             ['key' => 'danos_peritaje', 'class' => 'span-2'],
+            ['key' => 'imagen_peritaje_path', 'class' => 'span-2'],
         ],
     ],
     'revision' => [

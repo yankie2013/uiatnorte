@@ -52,7 +52,7 @@ $nuevo_id = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form = $service->mergeOld($form, $_POST);
     try {
-        $nuevo_id = $service->crear($invol_id, $_POST);
+        $nuevo_id = $service->crear($invol_id, $_POST, $_FILES);
         $guardado = true;
     } catch (Throwable $e) {
         $error_msg = $e->getMessage();
@@ -127,6 +127,9 @@ textarea{ min-height:96px; resize:vertical; }
 .ocr-preview-wrap img{ display:block; width:100%; max-width:100%; max-height:180px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
 .ocr-status{ min-height:18px; margin-top:10px; font-size:12px; }
 #daniosOcrTextBox{ min-height:84px; max-height:120px; }
+.peritaje-image-field{ display:grid; gap:8px; margin-top:10px; padding:10px; border:1px dashed var(--line); border-radius:12px; background:var(--bg-2); }
+.peritaje-image-field input[type="file"]{ width:100%; }
+.peritaje-image-help{ color:var(--fg-2); font-size:12px; line-height:1.35; }
 </style>
 </head>
 <body class="p">
@@ -159,7 +162,7 @@ textarea{ min-height:96px; resize:vertical; }
   <div><a class="btn ghost" href="javascript:history.back()">Volver</a></div>
 </div>
 
-<form method="post" autocomplete="off" id="formDocVeh">
+<form method="post" autocomplete="off" id="formDocVeh" enctype="multipart/form-data">
   <input type="hidden" name="involucrado_vehiculo_id" value="<?=h($invol_id)?>">
   <input type="hidden" name="vehiculo_id" value="<?= h($form['vehiculo_id']) ?>">
   <input type="hidden" name="section" value="<?= h($section) ?>">
@@ -276,6 +279,12 @@ textarea{ min-height:96px; resize:vertical; }
             <label>Otros</label>
             <input type="text" name="otros_peritaje" maxlength="255" value="<?= h($form['otros_peritaje']) ?>">
           </div>
+        </div>
+
+        <div class="peritaje-image-field">
+          <label for="imagen_peritaje">Imagen del peritaje vehicular</label>
+          <input type="file" name="imagen_peritaje" id="imagen_peritaje" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif">
+          <div class="peritaje-image-help">Admite JPG, PNG, WEBP o GIF. Maximo 10 MB.</div>
         </div>
 
         <div class="section-header" style="margin-top:10px;">

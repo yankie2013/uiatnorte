@@ -32,6 +32,10 @@ final class DocumentoVehiculoService
         'planta_motriz_peritaje',
         'otros_peritaje',
         'danos_peritaje',
+        'imagen_peritaje_path',
+        'imagen_peritaje_nombre',
+        'imagen_peritaje_mime',
+        'imagen_peritaje_size',
     ];
 
     public function __construct(private DocumentoVehiculoRepository $repository)
@@ -48,7 +52,7 @@ final class DocumentoVehiculoService
         return $this->repository->find($id);
     }
 
-    public function crear(int $involucradoVehiculoId, array $input): int
+    public function crear(int $involucradoVehiculoId, array $input, array $files = []): int
     {
         $context = $this->repository->involucradoInfo($involucradoVehiculoId);
         if ($context === null) {
@@ -56,10 +60,20 @@ final class DocumentoVehiculoService
         }
 
         $payload = $this->payload($input, (int) ($context['vehiculo_id'] ?? 0), $involucradoVehiculoId);
-        return $this->repository->create($payload);
+        $this->validatePeritajeImageUpload($files['imagen_peritaje'] ?? null);
+        $id = $this->repository->create($payload);
+        $image = $this->storePeritajeImage($id, $files['imagen_peritaje'] ?? null);
+        if ($image !== null) {
+            $payload[':imagen_peritaje_path'] = $image['path'];
+            $payload[':imagen_peritaje_nombre'] = $image['name'];
+            $payload[':imagen_peritaje_mime'] = $image['mime'];
+            $payload[':imagen_peritaje_size'] = $image['size'];
+            $this->repository->update($id, $payload);
+        }
+        return $id;
     }
 
-    public function actualizar(int $id, array $input): void
+    public function actualizar(int $id, array $input, array $files = []): void
     {
         $documento = $this->repository->find($id);
         if ($documento === null) {
@@ -67,6 +81,19 @@ final class DocumentoVehiculoService
         }
 
         $payload = $this->payload($input, (int) ($documento['vehiculo_id'] ?? 0), (int) $documento['invol_id']);
+        $payload[':imagen_peritaje_path'] = $documento['imagen_peritaje_path'] ?? null;
+        $payload[':imagen_peritaje_nombre'] = $documento['imagen_peritaje_nombre'] ?? null;
+        $payload[':imagen_peritaje_mime'] = $documento['imagen_peritaje_mime'] ?? null;
+        $payload[':imagen_peritaje_size'] = $documento['imagen_peritaje_size'] ?? null;
+        $this->validatePeritajeImageUpload($files['imagen_peritaje'] ?? null);
+        $image = $this->storePeritajeImage($id, $files['imagen_peritaje'] ?? null);
+        if ($image !== null) {
+            $this->deleteStoredFile((string) ($documento['imagen_peritaje_path'] ?? ''));
+            $payload[':imagen_peritaje_path'] = $image['path'];
+            $payload[':imagen_peritaje_nombre'] = $image['name'];
+            $payload[':imagen_peritaje_mime'] = $image['mime'];
+            $payload[':imagen_peritaje_size'] = $image['size'];
+        }
         $this->repository->update($id, $payload);
     }
 
@@ -134,6 +161,10 @@ final class DocumentoVehiculoService
             ':planta_motriz_peritaje' => $this->nullableTrim($input['planta_motriz_peritaje'] ?? null),
             ':otros_peritaje' => $this->nullableTrim($input['otros_peritaje'] ?? null),
             ':danos_peritaje' => $this->nullableMultiline($input['danos_peritaje'] ?? null),
+            ':imagen_peritaje_path' => $this->nullableTrim($input['imagen_peritaje_path'] ?? null),
+            ':imagen_peritaje_nombre' => $this->nullableTrim($input['imagen_peritaje_nombre'] ?? null),
+            ':imagen_peritaje_mime' => $this->nullableTrim($input['imagen_peritaje_mime'] ?? null),
+            ':imagen_peritaje_size' => $this->nullableInt($input['imagen_peritaje_size'] ?? null),
         ];
     }
 
@@ -148,5 +179,122 @@ final class DocumentoVehiculoService
         $value = str_replace(["\r\n", "\r"], "\n", (string) ($value ?? ''));
         $lines = array_filter(array_map(static fn(string $line): string => trim($line), explode("\n", $value)), static fn(string $line): bool => $line !== '');
         return $lines === [] ? null : implode("\n", $lines);
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        $value = trim((string) ($value ?? ''));
+        return $value === '' ? null : max(0, (int) $value);
+    }
+
+    private function validatePeritajeImageUpload(mixed $upload): void
+    {
+        if (!is_array($upload) || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return;
+        }
+
+        $error = (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($error !== UPLOAD_ERR_OK) {
+            throw new InvalidArgumentException(match ($error) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'La imagen del peritaje supera el tamano permitido.',
+                UPLOAD_ERR_PARTIAL => 'La imagen del peritaje no se cargo completamente.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Falta la carpeta temporal del servidor.',
+                UPLOAD_ERR_CANT_WRITE => 'No se pudo escribir la imagen del peritaje en disco.',
+                UPLOAD_ERR_EXTENSION => 'La carga de la imagen del peritaje fue detenida por una extension de PHP.',
+                default => 'No se pudo procesar la imagen del peritaje.',
+            });
+        }
+
+        $size = (int) ($upload['size'] ?? 0);
+        if ($size <= 0) {
+            throw new InvalidArgumentException('La imagen del peritaje esta vacia.');
+        }
+        if ($size > 10 * 1024 * 1024) {
+            throw new InvalidArgumentException('La imagen del peritaje debe pesar como maximo 10 MB.');
+        }
+
+        $mime = $this->detectImageMime((string) ($upload['tmp_name'] ?? ''));
+        if (!isset($this->allowedImageExtensions()[$mime])) {
+            throw new InvalidArgumentException('La imagen del peritaje debe ser JPG, PNG, WEBP o GIF.');
+        }
+    }
+
+    private function storePeritajeImage(int $documentoId, mixed $upload): ?array
+    {
+        if (!is_array($upload) || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        $tmp = (string) ($upload['tmp_name'] ?? '');
+        if ($tmp === '' || !is_uploaded_file($tmp)) {
+            throw new InvalidArgumentException('No se pudo validar la imagen del peritaje subida.');
+        }
+
+        $mime = $this->detectImageMime($tmp);
+        $extension = $this->allowedImageExtensions()[$mime] ?? null;
+        if ($extension === null) {
+            throw new InvalidArgumentException('La imagen del peritaje debe ser JPG, PNG, WEBP o GIF.');
+        }
+
+        $basePath = defined('UIAT_BASE_PATH') ? UIAT_BASE_PATH : dirname(__DIR__, 2);
+        $relativeDir = 'uploads/peritajes/documento_vehiculo_' . $documentoId;
+        $absoluteDir = $basePath . '/' . $relativeDir;
+        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0775, true) && !is_dir($absoluteDir)) {
+            throw new InvalidArgumentException('No se pudo crear la carpeta para la imagen del peritaje.');
+        }
+
+        $fileName = 'peritaje_' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $absolutePath = $absoluteDir . '/' . $fileName;
+        if (!move_uploaded_file($tmp, $absolutePath)) {
+            throw new InvalidArgumentException('No se pudo guardar la imagen del peritaje.');
+        }
+
+        return [
+            'path' => $relativeDir . '/' . $fileName,
+            'name' => trim((string) ($upload['name'] ?? 'imagen_peritaje')) ?: 'imagen_peritaje',
+            'mime' => $mime,
+            'size' => (int) ($upload['size'] ?? 0),
+        ];
+    }
+
+    private function detectImageMime(string $path): string
+    {
+        $imageInfo = @getimagesize($path);
+        if (!is_array($imageInfo)) {
+            return '';
+        }
+
+        return match ((int) ($imageInfo[2] ?? 0)) {
+            IMAGETYPE_JPEG => 'image/jpeg',
+            IMAGETYPE_PNG => 'image/png',
+            IMAGETYPE_WEBP => 'image/webp',
+            IMAGETYPE_GIF => 'image/gif',
+            default => '',
+        };
+    }
+
+    private function allowedImageExtensions(): array
+    {
+        return [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+        ];
+    }
+
+    private function deleteStoredFile(string $relativePath): void
+    {
+        $relativePath = trim($relativePath);
+        if ($relativePath === '') {
+            return;
+        }
+
+        $basePath = defined('UIAT_BASE_PATH') ? UIAT_BASE_PATH : dirname(__DIR__, 2);
+        $absolutePath = realpath($basePath . '/' . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath));
+        $uploadsPath = realpath($basePath . '/uploads/peritajes');
+        if ($absolutePath !== false && $uploadsPath !== false && str_starts_with($absolutePath, $uploadsPath . DIRECTORY_SEPARATOR) && is_file($absolutePath)) {
+            @unlink($absolutePath);
+        }
     }
 }

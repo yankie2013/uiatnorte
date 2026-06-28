@@ -48,7 +48,8 @@ final class DocumentoVehiculoRepository
              numero_peritaje, fecha_peritaje, perito_peritaje,
              sistema_electrico_peritaje, sistema_frenos_peritaje, sistema_direccion_peritaje,
              sistema_transmision_peritaje, sistema_suspension_peritaje, planta_motriz_peritaje,
-             otros_peritaje, danos_peritaje)
+             otros_peritaje, danos_peritaje,
+             imagen_peritaje_path, imagen_peritaje_nombre, imagen_peritaje_mime, imagen_peritaje_size)
             VALUES
             (:involucrado_vehiculo_id, :vehiculo_id,
              :numero_propiedad, :titulo_propiedad, :partida_propiedad, :sede_propiedad,
@@ -57,7 +58,8 @@ final class DocumentoVehiculoRepository
              :numero_peritaje, :fecha_peritaje, :perito_peritaje,
              :sistema_electrico_peritaje, :sistema_frenos_peritaje, :sistema_direccion_peritaje,
              :sistema_transmision_peritaje, :sistema_suspension_peritaje, :planta_motriz_peritaje,
-             :otros_peritaje, :danos_peritaje)";
+             :otros_peritaje, :danos_peritaje,
+             :imagen_peritaje_path, :imagen_peritaje_nombre, :imagen_peritaje_mime, :imagen_peritaje_size)";
         $st = $this->pdo->prepare($sql);
         $st->execute($payload);
         return (int) $this->pdo->lastInsertId();
@@ -92,6 +94,10 @@ final class DocumentoVehiculoRepository
                   planta_motriz_peritaje = :planta_motriz_peritaje,
                   otros_peritaje = :otros_peritaje,
                   danos_peritaje = :danos_peritaje,
+                  imagen_peritaje_path = :imagen_peritaje_path,
+                  imagen_peritaje_nombre = :imagen_peritaje_nombre,
+                  imagen_peritaje_mime = :imagen_peritaje_mime,
+                  imagen_peritaje_size = :imagen_peritaje_size,
                   actualizado_en = NOW()
                 WHERE id = :id";
         $st = $this->pdo->prepare($sql);

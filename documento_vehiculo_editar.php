@@ -42,7 +42,7 @@ $guardado = false;
 $error_msg = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $service->actualizar($id, $_POST);
+        $service->actualizar($id, $_POST, $_FILES);
         $guardado = true;
         $dv = $service->contextoEditar($id) ?? $dv;
     } catch (Throwable $e) {
@@ -94,6 +94,11 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 .ocr-preview-wrap img{ display:block; width:100%; max-width:100%; max-height:180px; border-radius:12px; border:1px solid var(--line); object-fit:contain; }
 .ocr-status{ min-height:18px; margin-top:10px; font-size:12px; }
 #daniosOcrTextBox{ min-height:84px; max-height:120px; }
+.peritaje-image-field{ display:grid; gap:8px; margin-top:10px; padding:10px; border:1px dashed var(--line); border-radius:12px; background:var(--bg-2); }
+.peritaje-image-field input[type="file"]{ width:100%; }
+.peritaje-image-help{ color:var(--fg-2); font-size:12px; line-height:1.35; }
+.peritaje-image-current{ display:grid; gap:6px; }
+.peritaje-image-current img{ display:block; width:100%; max-height:260px; object-fit:contain; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.05); }
 .alert.success{ background:var(--success-bg); color:var(--success-fg); padding:12px 14px; border-radius:12px; margin-bottom:12px }
 .alert.error{ background:var(--error-bg); color:var(--error-fg); padding:12px 14px; border-radius:12px; margin-bottom:12px }
 </style>
@@ -126,7 +131,7 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
   <div><a class="btn ghost" href="javascript:history.back()">Volver</a></div>
 </div>
 
-<form method="post" autocomplete="off" id="formDocVeh">
+<form method="post" autocomplete="off" id="formDocVeh" enctype="multipart/form-data">
   <input type="hidden" name="id" value="<?=h($id)?>">
   <input type="hidden" name="involucrado_vehiculo_id" value="<?=h($dv['invol_id'])?>">
   <input type="hidden" name="vehiculo_id" value="<?=h($dv['vehiculo_id'])?>">
@@ -178,6 +183,20 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
           <div><label>Sistema de suspension</label><input type="text" name="sistema_suspension_peritaje" maxlength="255" value="<?=h($dv['sistema_suspension_peritaje'] ?? '')?>"></div>
           <div><label>Planta motriz</label><input type="text" name="planta_motriz_peritaje" maxlength="255" value="<?=h($dv['planta_motriz_peritaje'] ?? '')?>"></div>
           <div class="col-span-2"><label>Otros</label><input type="text" name="otros_peritaje" maxlength="255" value="<?=h($dv['otros_peritaje'] ?? '')?>"></div>
+        </div>
+
+        <div class="peritaje-image-field">
+          <label for="imagen_peritaje">Imagen del peritaje vehicular</label>
+          <?php if (!empty($dv['imagen_peritaje_path'])): ?>
+            <div class="peritaje-image-current">
+              <a href="<?= h($dv['imagen_peritaje_path']) ?>" target="_blank" rel="noopener">
+                <img src="<?= h($dv['imagen_peritaje_path']) ?>" alt="Imagen del peritaje vehicular">
+              </a>
+              <div class="peritaje-image-help">Actual: <?= h($dv['imagen_peritaje_nombre'] ?? basename((string) $dv['imagen_peritaje_path'])) ?></div>
+            </div>
+          <?php endif; ?>
+          <input type="file" name="imagen_peritaje" id="imagen_peritaje" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif">
+          <div class="peritaje-image-help">Si seleccionas una nueva imagen, reemplazara la actual. Admite JPG, PNG, WEBP o GIF. Maximo 10 MB.</div>
         </div>
 
         <div class="section-header">
