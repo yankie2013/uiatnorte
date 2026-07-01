@@ -744,22 +744,80 @@ function needs_herido(array $row): bool
     return str_contains($lesion, 'heri');
 }
 
-function whatsapp_contact_message(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente): string
+function whatsapp_accident_context(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente, ?string $sidpol = null): string
 {
-    $inicio = html_entity_decode(
-        'Buen d&iacute;a le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigaci&oacute;n por el accidente de tr&aacute;nsito ',
+    $parts = [];
+    $modalidad = trim(join_con_y($modalidades));
+    if ($modalidad !== '') {
+        $parts[] = 'accidente de tránsito ' . $modalidad;
+    } else {
+        $parts[] = 'accidente de tránsito en investigación';
+    }
+
+    $fecha = fecha_hora_aprox_text($fechaAccidente);
+    if ($fecha !== '' && $fecha !== '—') {
+        $parts[] = 'suscitado el ' . $fecha;
+    }
+
+    $lugar = trim((string) $lugarAccidente);
+    if ($lugar !== '') {
+        $parts[] = 'en ' . $lugar;
+    }
+
+    $sidpol = trim((string) $sidpol);
+    if ($sidpol !== '') {
+        $parts[] = 'registro SIDPOL ' . $sidpol;
+    }
+
+    return implode(', ', $parts);
+}
+
+function whatsapp_base_greeting(): string
+{
+    return html_entity_decode(
+        'Buen d&iacute;a le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE',
         ENT_QUOTES | ENT_HTML5,
         'UTF-8'
     );
-    $medio = html_entity_decode(', suscitado el d&iacute;a ', ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
 
-    return $inicio
-        . join_con_y($modalidades)
-        . $medio
-        . fecha_simple($fechaAccidente)
-        . ' en '
-        . ($lugarAccidente ?? 'el lugar del accidente')
-        . '.';
+function whatsapp_message_pack(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente, ?string $sidpol = null): array
+{
+    $greeting = whatsapp_base_greeting();
+    $context = whatsapp_accident_context($modalidades, $fechaAccidente, $lugarAccidente, $sidpol);
+
+    return [
+        'saludo' => $greeting . ', a cargo de la investigación por el ' . $context . '.',
+        'citacion' => $greeting . '. Se le comunica que se le está remitiendo la citación policial correspondiente para su concurrencia a la diligencia programada, respecto al ' . $context . '. Motivo: diligencias de investigación del accidente en mención. Sírvase revisar el documento adjunto/remitido y confirmar recepción.',
+        'meet' => $greeting . '. Se le comunica que la manifestación se realizará de manera virtual mediante Google Meet, respecto al ' . $context . '. Motivo: recepción de manifestación como parte de las diligencias de investigación. Enlace Google Meet: {meet_link}. Sírvase ingresar puntualmente y tener a la mano su documento de identidad.',
+    ];
+}
+
+function whatsapp_contact_message(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente): string
+{
+    return whatsapp_message_pack($modalidades, $fechaAccidente, $lugarAccidente)['saludo'];
+}
+
+function whatsapp_link(string $phone, string $message): string
+{
+    $phone = preg_replace('/\D+/', '', $phone);
+    if ($phone === '') {
+        return 'https://wa.me/?text=' . rawurlencode($message);
+    }
+
+    return 'https://wa.me/' . rawurlencode($phone) . '?text=' . rawurlencode($message);
+}
+
+function render_whatsapp_message_actions(string $phone, array $messages): string
+{
+    $phone = preg_replace('/\D+/', '', $phone);
+    $saludo = (string) ($messages['saludo'] ?? '');
+    $citacion = (string) ($messages['citacion'] ?? $saludo);
+    $meet = (string) ($messages['meet'] ?? $citacion);
+
+    return '<a class="quick-pill-btn whatsapp" href="' . h(whatsapp_link($phone, $saludo)) . '" target="_blank" rel="noopener" aria-label="WhatsApp saludo" title="WhatsApp saludo">WA</a>'
+        . '<a class="quick-pill-btn whatsapp whatsapp-citacion" href="' . h(whatsapp_link($phone, $citacion)) . '" target="_blank" rel="noopener" aria-label="WhatsApp citación policial" title="WhatsApp citación policial">CIT</a>'
+        . '<button type="button" class="quick-pill-btn whatsapp whatsapp-meet js-whatsapp-meet" data-wa-phone="' . h($phone) . '" data-wa-template="' . h($meet) . '" aria-label="WhatsApp manifestación virtual con Google Meet" title="WhatsApp manifestación virtual con Google Meet">MEET</button>';
 }
 
 function person_tab_tone_class(array $row): string
@@ -2303,10 +2361,15 @@ function render_summary_person_block(
     array $occProtocoloFields,
     array $occEpicrisisFields
 ): string {
+    $wa = preg_replace('/\D+/', '', (string) ($person['celular'] ?? ''));
+    $messages = whatsapp_message_pack($GLOBALS['modalidades'] ?? [], $GLOBALS['A']['fecha_accidente'] ?? null, $GLOBALS['A']['lugar'] ?? null, $GLOBALS['A']['registro_sidpol'] ?? null);
+    $whatsAppActions = render_whatsapp_message_actions($wa, $messages);
+
     $html = '<article class="record-card summary-person-card" data-collapsible-card>';
     $html .= '<div class="summary-header"><div><h5 class="summary-person-name">' . h($title . ' · ' . person_label($person)) . '</h5>';
     $html .= '<p>' . h(tab_person_label($person)) . person_heading_suffix($person) . '</p></div>';
     $html .= '<div class="summary-chipline">';
+    $html .= '<span class="person-quick-actions summary-whatsapp-actions">' . $whatsAppActions . '</span>';
     $html .= '<span class="' . h(role_chip_class((string) ($person['rol_nombre'] ?? ''))) . '">' . h((string) (($person['rol_nombre'] ?? '') !== '' ? $person['rol_nombre'] : 'Sin rol')) . '</span>';
     if ((string) ($person['lesion'] ?? '') !== '') {
         $html .= '<span class="' . h(lesion_chip_class((string) ($person['lesion'] ?? ''))) . '">' . h((string) $person['lesion']) . '</span>';
@@ -5148,6 +5211,80 @@ $sortSummaryPeople($summaryPeatones);
 $sortSummaryPeople($summaryPasajerosOcupantesSinUnidad);
 $sortSummaryPeople($summaryOtrosSinUnidad);
 
+$caseSummarySidpol = compact_text((string) ($A['registro_sidpol'] ?? ''));
+if ($caseSummarySidpol === '') {
+    $caseSummarySidpol = compact_text((string) ($A['sidpol'] ?? ''));
+}
+$caseSummaryDate = fecha_simple($A['fecha_accidente'] ?? null);
+$caseSummaryTime = '—';
+if (!empty($A['fecha_accidente']) && strtotime((string) $A['fecha_accidente'])) {
+    $caseSummaryTime = date('H:i', strtotime((string) $A['fecha_accidente']));
+}
+$caseSummaryDistrict = compact_text((string) ($A['distrito_nombre'] ?? ''));
+$caseSummaryJurisdiction = compact_text((string) ($summaryAccidentRecord['comisaria_nombre'] ?? ''));
+$caseSummaryParticipantRows = [];
+$caseSummaryVehicleText = static function (array $vehicle): string {
+    $parts = [];
+    $ut = compact_text((string) ($vehicle['orden_participacion'] ?? ''));
+    if ($ut !== '') {
+        $parts[] = $ut;
+    }
+    $type = title_text((string) ($vehicle['veh_tipo'] ?? ''));
+    if ($type !== '') {
+        $parts[] = $type;
+    }
+    $plate = compact_text((string) ($vehicle['veh_placa'] ?? ''));
+    if ($plate !== '') {
+        $parts[] = 'placa ' . $plate;
+    }
+
+    return compact_text(implode(' - ', $parts));
+};
+$caseSummaryPersonRow = static function (array $person, string $context = '', string $vehicleText = '', array $plates = []): array {
+    $role = title_text((string) ($person['rol_nombre'] ?? 'Participante'));
+    $name = compact_text(person_label($person));
+    $lesion = title_text((string) ($person['lesion'] ?? ''));
+    $label = compact_text(trim(($context !== '' ? $context . ' ' : '') . $role));
+    $meta = array_values(array_filter([$lesion, $vehicleText], static fn(string $value): bool => trim($value) !== ''));
+    $docType = person_doc_label((string) ($person['tipo_doc'] ?? 'DNI'));
+    $docNumber = compact_text((string) ($person['num_doc'] ?? ''));
+    $personPlate = compact_text((string) ($person['veh_placa'] ?? ''));
+    if ($personPlate !== '') {
+        $plates[] = $personPlate;
+    }
+    $plates = unique_text_values(array_values(array_filter($plates, static fn(string $value): bool => trim($value) !== '')));
+
+    return [
+        'label' => $label !== '' ? $label : 'Participante',
+        'name' => $name !== '' ? $name : 'Persona sin identificar',
+        'meta' => $meta !== [] ? implode(' · ', $meta) : '',
+        'doc_label' => $docType !== '' ? $docType : 'Doc.',
+        'doc_value' => $docNumber,
+        'plates' => $plates,
+    ];
+};
+foreach ($summaryUnits as $summaryUnit) {
+    $ut = compact_text((string) ($summaryUnit['ut'] ?? ''));
+    $vehicleLabels = array_values(array_filter(array_map($caseSummaryVehicleText, $summaryUnit['vehiculos'] ?? [])));
+    $vehiclePlates = unique_text_values(array_values(array_filter(array_map(
+        static fn(array $vehicle): string => compact_text((string) ($vehicle['veh_placa'] ?? '')),
+        $summaryUnit['vehiculos'] ?? []
+    ))));
+    $vehicleText = $vehicleLabels !== [] ? implode(' / ', $vehicleLabels) : '';
+    foreach (($summaryUnit['personas'] ?? []) as $person) {
+        $caseSummaryParticipantRows[] = $caseSummaryPersonRow($person, $ut, $vehicleText, $vehiclePlates);
+    }
+}
+foreach ($summaryPeatones as $person) {
+    $caseSummaryParticipantRows[] = $caseSummaryPersonRow($person, 'Peatón');
+}
+foreach ($summaryPasajerosOcupantesSinUnidad as $person) {
+    $caseSummaryParticipantRows[] = $caseSummaryPersonRow($person, 'Ocupante', compact_text((string) ($person['veh_chip_text'] ?? '')));
+}
+foreach ($summaryOtrosSinUnidad as $person) {
+    $caseSummaryParticipantRows[] = $caseSummaryPersonRow($person, '', compact_text((string) ($person['veh_chip_text'] ?? '')));
+}
+
 $summaryBlocksCount = 1
     + count($summaryUnits)
     + (count($summaryPeatones) > 0 ? 1 : 0)
@@ -5243,6 +5380,28 @@ include __DIR__ . '/sidebar.php';
   .topbar{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
   .title-wrap h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--title-blue)}
   .title-wrap p{margin:0;color:var(--muted);font-size:11px}
+  .sidpol-summary-trigger{display:inline-flex;align-items:center;gap:4px;margin:0;padding:1px 6px;border:1px solid #cbd8eb;border-radius:999px;background:#fff;color:#315a87;font:inherit;font-weight:800;line-height:1.35;cursor:pointer;box-shadow:0 2px 7px rgba(17,24,39,.05)}
+  .sidpol-summary-trigger:hover{border-color:#8fb3e0;background:#f5f9ff;color:#1d4f91}
+  .case-summary-modal{position:fixed;inset:0;z-index:1120;display:grid;place-items:start center;padding:92px 14px 20px;background:rgba(15,23,42,.26);backdrop-filter:blur(2px);overflow:auto}
+  .case-summary-modal[hidden]{display:none}
+  .case-summary-dialog{width:min(390px,100%);border:1px solid #cbd8e8;border-radius:14px;background:#fff;box-shadow:0 24px 58px rgba(15,23,42,.28);overflow:hidden}
+  .case-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #e2e8f0;background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%)}
+  .case-summary-head h2{margin:0;color:#1f3f68;font-size:13px;font-weight:900;line-height:1.2}
+  .case-summary-head p{margin:2px 0 0;color:#64748b;font-size:10.5px;font-weight:700;line-height:1.25}
+  .case-summary-close{flex:0 0 auto;padding:4px 8px;border-radius:8px;border:1px solid #cbd8e8;background:#fff;color:#334155;font-size:11px;font-weight:800;cursor:pointer}
+  .case-summary-body{display:grid;gap:8px;padding:10px 12px 12px}
+  .case-summary-fields{display:grid;grid-template-columns:112px minmax(0,1fr);gap:5px 8px;padding:8px;border:1px dashed #d5e0ef;border-radius:10px;background:#fbfdff;font-size:11px;line-height:1.25}
+  .case-summary-fields dt{margin:0;color:#7c5e12;font-weight:900}
+  .case-summary-fields dd{margin:0;color:#1f2937;font-weight:700;overflow-wrap:anywhere}
+  .case-summary-people{display:grid;gap:5px;max-height:220px;overflow:auto;padding-right:2px}
+  .case-summary-person{display:grid;grid-template-columns:78px minmax(0,1fr);gap:6px;padding:6px 7px;border:1px solid #dbe4f0;border-radius:9px;background:#f8fafc;font-size:11px;line-height:1.22}
+  .case-summary-person-role{color:#315a87;font-weight:900;overflow-wrap:anywhere}
+  .case-summary-person-name{color:#0f172a;font-weight:800;overflow-wrap:anywhere}
+  .case-summary-person-meta{display:block;margin-top:2px;color:#64748b;font-size:10.5px;font-weight:600}
+  .case-summary-copyline{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+  .case-summary-copychip{display:inline-flex;align-items:center;gap:4px;min-height:21px;padding:2px 6px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#334155;font-size:10.5px;font-weight:800;line-height:1;box-shadow:none;cursor:pointer}
+  .case-summary-copychip:hover{background:#f2f7ff;border-color:#9fbbe0;color:#1d4f91}
+  .case-summary-copychip.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
   .top-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
   .btn-shell.btn-nuevo:not(.participant-create-btn){
@@ -5745,10 +5904,14 @@ include __DIR__ . '/sidebar.php';
   .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
-  .quick-pill-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;text-decoration:none;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+  .quick-pill-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-family:inherit;font-size:12px;font-weight:700;line-height:1;text-decoration:none;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease;cursor:pointer}
   .quick-pill-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .quick-pill-btn.whatsapp{border-color:#9fe0b7;background:#f0fff5;color:#178248}
   .quick-pill-btn.whatsapp:hover{background:#25d366;color:#fff;border-color:#25d366}
+  .quick-pill-btn.whatsapp-citacion{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}
+  .quick-pill-btn.whatsapp-citacion:hover{background:#3b82f6;color:#fff;border-color:#3b82f6}
+  .quick-pill-btn.whatsapp-meet{border-color:#f0abfc;background:#fdf4ff;color:#a21caf}
+  .quick-pill-btn.whatsapp-meet:hover{background:#c026d3;color:#fff;border-color:#c026d3}
   .quick-pill-btn.download{border-color:#a855f7;border-radius:8px;background:linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%);box-shadow:0 0 0 1px rgba(168,85,247,.32),0 0 16px rgba(168,85,247,.34),0 8px 18px rgba(109,40,217,.14);color:#6d28d9;text-shadow:0 0 10px rgba(168,85,247,.22)}
   .quick-pill-btn.download:hover{background:linear-gradient(180deg,#f5d0fe 0%,#e9d5ff 100%);color:#581c87;border-color:#d946ef;box-shadow:0 0 0 1px rgba(217,70,239,.44),0 0 22px rgba(217,70,239,.42),0 10px 22px rgba(109,40,217,.2)}
   .chip-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -6339,6 +6502,22 @@ include __DIR__ . '/sidebar.php';
     border-color:#2a3852;
     box-shadow:0 14px 30px rgba(2,6,23,.34);
   }
+  html[data-theme-resolved="dark"] .sidpol-summary-trigger{background:#111b30;border-color:#33435e;color:#bfdbfe}
+  html[data-theme-resolved="dark"] .sidpol-summary-trigger:hover{background:#17243b;border-color:#4e6688;color:#dbeafe}
+  html[data-theme-resolved="dark"] .case-summary-modal{background:rgba(2,6,23,.58)}
+  html[data-theme-resolved="dark"] .case-summary-dialog{background:#101a2d;border-color:#34445f}
+  html[data-theme-resolved="dark"] .case-summary-head{background:linear-gradient(180deg,#16243a 0%,#111b30 100%);border-color:#2f405a}
+  html[data-theme-resolved="dark"] .case-summary-head h2{color:#dbeafe}
+  html[data-theme-resolved="dark"] .case-summary-head p{color:#9fb0c8}
+  html[data-theme-resolved="dark"] .case-summary-close{background:#0f172a;border-color:#33445f;color:#dbe6f4}
+  html[data-theme-resolved="dark"] .case-summary-fields{background:#0f172a;border-color:#33445f}
+  html[data-theme-resolved="dark"] .case-summary-fields dd,
+  html[data-theme-resolved="dark"] .case-summary-person-name{color:#e5edf8}
+  html[data-theme-resolved="dark"] .case-summary-person{background:#111b30;border-color:#33445f}
+  html[data-theme-resolved="dark"] .case-summary-person-role{color:#93c5fd}
+  html[data-theme-resolved="dark"] .case-summary-person-meta{color:#aebdd2}
+  html[data-theme-resolved="dark"] .case-summary-copychip{background:#0f172a;border-color:#33445f;color:#dbe6f4}
+  html[data-theme-resolved="dark"] .case-summary-copychip:hover{background:#17243b;border-color:#4e6688;color:#bfdbfe}
   html[data-theme-resolved="dark"] [data-edit-view="general-accidente"] > .section-block{
     background:linear-gradient(180deg,rgba(15,23,42,.98) 0%,rgba(19,29,51,.95) 100%);
     border-color:#2f3d56;
@@ -6927,7 +7106,12 @@ include __DIR__ . '/sidebar.php';
   <div class="topbar">
     <div class="title-wrap">
       <h1>Vista por pestañas del accidente</h1>
-      <p>Accidente #<?= (int) $accidente_id ?> · SIDPOL <?= fmt($A['sidpol'] ?? '') ?></p>
+      <p>
+        Accidente #<?= (int) $accidente_id ?> ·
+        <button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)">
+          Registro SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?>
+        </button>
+      </p>
     </div>
     <div class="top-actions">
       <?php if ($googleMapsUrl !== ''): ?>
@@ -6935,6 +7119,63 @@ include __DIR__ . '/sidebar.php';
       <?php endif; ?>
       <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Volver a datos generales</a>
       <a class="btn-shell" href="accidente_listar.php">Volver al listado</a>
+    </div>
+  </div>
+
+  <div class="case-summary-modal" id="case-summary-modal" role="dialog" aria-modal="true" aria-labelledby="case-summary-title" hidden>
+    <div class="case-summary-dialog">
+      <div class="case-summary-head">
+        <div>
+          <h2 id="case-summary-title">Resumen SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></h2>
+          <p>Accidente #<?= (int) $accidente_id ?> · <?= count($caseSummaryParticipantRows) ?> persona(s)</p>
+        </div>
+        <button type="button" class="case-summary-close js-case-summary-close">Cerrar</button>
+      </div>
+      <div class="case-summary-body">
+        <dl class="case-summary-fields">
+          <dt>Modalidad</dt><dd><?= h(join_con_y_text($modalidades) ?: '—') ?></dd>
+          <dt>Consecuencia</dt><dd><?= h(join_con_y_text($consecuencias) ?: '—') ?></dd>
+          <dt>F. accidente</dt><dd><?= h($caseSummaryDate) ?></dd>
+          <dt>H. accidente</dt><dd><?= h($caseSummaryTime) ?></dd>
+          <dt>Lugar</dt><dd><?= h(compact_text((string) ($A['lugar'] ?? '')) ?: '—') ?></dd>
+          <dt>Distrito</dt><dd><?= h($caseSummaryDistrict !== '' ? $caseSummaryDistrict : '—') ?></dd>
+          <dt>Jurisdicción</dt><dd><?= h($caseSummaryJurisdiction !== '' ? $caseSummaryJurisdiction : '—') ?></dd>
+        </dl>
+        <div class="case-summary-people" aria-label="Personas involucradas">
+          <?php if ($caseSummaryParticipantRows === []): ?>
+            <div class="case-summary-person">
+              <span class="case-summary-person-role">Personas</span>
+              <span><span class="case-summary-person-name">Sin involucrados registrados</span></span>
+            </div>
+          <?php else: ?>
+            <?php foreach ($caseSummaryParticipantRows as $summaryPerson): ?>
+              <div class="case-summary-person">
+                <span class="case-summary-person-role"><?= h((string) $summaryPerson['label']) ?></span>
+                <span>
+                  <span class="case-summary-person-name"><?= h((string) $summaryPerson['name']) ?></span>
+                  <?php if ((string) $summaryPerson['meta'] !== ''): ?>
+                    <span class="case-summary-person-meta"><?= h((string) $summaryPerson['meta']) ?></span>
+                  <?php endif; ?>
+                  <?php if ((string) ($summaryPerson['doc_value'] ?? '') !== '' || ($summaryPerson['plates'] ?? []) !== []): ?>
+                    <span class="case-summary-copyline">
+                      <?php if ((string) ($summaryPerson['doc_value'] ?? '') !== ''): ?>
+                        <button type="button" class="case-summary-copychip js-copy-name" data-copy-text="<?= h((string) $summaryPerson['doc_value']) ?>" title="Copiar <?= h((string) $summaryPerson['doc_label']) ?>">
+                          <?= h((string) $summaryPerson['doc_label']) ?> <?= h((string) $summaryPerson['doc_value']) ?>
+                        </button>
+                      <?php endif; ?>
+                      <?php foreach (($summaryPerson['plates'] ?? []) as $summaryPlate): ?>
+                        <button type="button" class="case-summary-copychip js-copy-name" data-copy-text="<?= h((string) $summaryPlate) ?>" title="Copiar placa">
+                          Placa <?= h((string) $summaryPlate) ?>
+                        </button>
+                      <?php endforeach; ?>
+                    </span>
+                  <?php endif; ?>
+                </span>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -8188,7 +8429,7 @@ include __DIR__ . '/sidebar.php';
           }
           $extras = $personaExtras[(int) $persona['involucrado_id']] ?? ['lc'=>[],'rml'=>[],'dos'=>[],'man'=>[],'occ'=>[],'show_lc'=>false,'show_rml'=>false,'show_dos'=>false,'show_man'=>false,'show_occ'=>false];
           $wa = preg_replace('/\D+/', '', (string) ($persona['celular'] ?? ''));
-          $whatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+          $whatsAppMessages = whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null);
           $manifestDownloadUrl = '';
           if (!empty($extras['show_man']) && (int) $persona['involucrado_id'] > 0 && (int) $accidente_id > 0) {
               $manifestDownloadUrl = 'marcador_manifestacion_investigado.php?involucrado_id=' . (int) $persona['involucrado_id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
@@ -8205,9 +8446,7 @@ include __DIR__ . '/sidebar.php';
                     <span><?= h(person_label($persona)) ?></span>
                     <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($persona)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
                     <span class="person-quick-actions">
-                      <?php if ($wa): ?>
-                        <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($wa) ?>?text=<?= rawurlencode($whatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
-                      <?php endif; ?>
+                      <?= render_whatsapp_message_actions($wa, $whatsAppMessages) ?>
                       <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('INV:' . (int) $persona['involucrado_id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
                     </span>
                   </span>
@@ -8742,7 +8981,7 @@ include __DIR__ . '/sidebar.php';
                   $policiaTabId = 'policia-registro-' . (int) $row['id'];
                   $policiaPaneId = 'policia-detalle-' . (int) $row['id'];
                   $policiaWa = preg_replace('/\D+/', '', (string) ($row['celular'] ?? ''));
-                  $policiaWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+                  $policiaWhatsAppMessages = whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null);
                   $policiaManifestUrl = 'marcador_manifestacion_policia.php?policia_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
                   $policiaPersonaId = (int) ($row['persona_id'] ?? 0);
                   $policiaManifestaciones = $manifestacionesPorPersona[$policiaPersonaId] ?? [];
@@ -8759,7 +8998,7 @@ include __DIR__ . '/sidebar.php';
                             <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($row)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
                             <span class="person-quick-actions">
                               <?php if ($policiaWa !== ''): ?>
-                                <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($policiaWa) ?>?text=<?= rawurlencode($policiaWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                                <?= render_whatsapp_message_actions($policiaWa, $policiaWhatsAppMessages) ?>
                               <?php endif; ?>
                             </span>
                           </span>
@@ -8929,7 +9168,7 @@ include __DIR__ . '/sidebar.php';
                     ? ($repRecord['celular'] ?? '')
                     : ($ownerRecord['celular'] ?? ''));
 	                  $propietarioWa = preg_replace('/\D+/', '', $propietarioCelular);
-	                  $propietarioWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+	                  $propietarioWhatsAppMessages = whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null);
 	                  $propietarioManifestUrl = 'marcador_manifestacion_propietario.php?propietario_id=' . (int) $row['id'] . '&accidente_id=' . (int) $accidente_id . '&download=1';
 	                  $propietarioPersonaId = $propietarioTipo === 'JURIDICA'
 	                    ? (int) ($row['representante_persona_id'] ?? 0)
@@ -8968,7 +9207,7 @@ include __DIR__ . '/sidebar.php';
                             <?php if ($principal !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($principal) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
                             <span class="person-quick-actions">
                               <?php if ($propietarioWa !== ''): ?>
-                                <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($propietarioWa) ?>?text=<?= rawurlencode($propietarioWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                                <?= render_whatsapp_message_actions($propietarioWa, $propietarioWhatsAppMessages) ?>
                               <?php endif; ?>
                             </span>
                           </span>
@@ -9131,7 +9370,7 @@ include __DIR__ . '/sidebar.php';
                   $nombreFamiliar = trim((string) (($famRecord['nombres'] ?? '') . ' ' . ($famRecord['apellido_paterno'] ?? '') . ' ' . ($famRecord['apellido_materno'] ?? '')));
                   $nombreFallecido = trim((string) (($fallRecord['nombres'] ?? '') . ' ' . ($fallRecord['apellido_paterno'] ?? '') . ' ' . ($fallRecord['apellido_materno'] ?? '')));
 	                  $familiarWa = preg_replace('/\D+/', '', (string) ($famRecord['celular'] ?? ''));
-	                  $familiarWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+	                  $familiarWhatsAppMessages = whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null);
 	                  $familiarManifestUrl = 'marcador_manifestacion_familiar.php?fam_id=' . (int) $row['id'];
 	                  $familiarPersonaId = (int) ($row['familiar_persona_id'] ?? 0);
 	                  $familiarManifestaciones = $manifestacionesPorPersona[$familiarPersonaId] ?? [];
@@ -9149,7 +9388,7 @@ include __DIR__ . '/sidebar.php';
                             <?php if ($nombreFamiliar !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreFamiliar) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
                             <span class="person-quick-actions">
                               <?php if ($familiarWa !== ''): ?>
-                                <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($familiarWa) ?>?text=<?= rawurlencode($familiarWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                                <?= render_whatsapp_message_actions($familiarWa, $familiarWhatsAppMessages) ?>
                               <?php endif; ?>
                             </span>
                           </span>
@@ -9257,7 +9496,7 @@ include __DIR__ . '/sidebar.php';
                   $nombreAbogado = trim((string) (($row['apellido_paterno'] ?? '') . ' ' . ($row['apellido_materno'] ?? '') . ', ' . ($row['nombres'] ?? '')));
                   $abogadoCelular = (string) ($row['celular'] ?? '');
                   $abogadoWa = preg_replace('/\D+/', '', $abogadoCelular);
-                  $abogadoWhatsAppMsg = whatsapp_contact_message($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null);
+                  $abogadoWhatsAppMessages = whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null);
                   $contactoAbogado = trim((string) ($row['celular'] ?? ''));
                   if (($row['email'] ?? '') !== '') {
                       $contactoAbogado .= $contactoAbogado !== '' ? ' · ' . $row['email'] : $row['email'];
@@ -9272,7 +9511,7 @@ include __DIR__ . '/sidebar.php';
                           <?php if ($nombreAbogado !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreAbogado) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
                           <?php if ($abogadoWa !== ''): ?>
                             <span class="person-quick-actions">
-                              <a class="quick-pill-btn whatsapp" href="https://wa.me/<?= h($abogadoWa) ?>?text=<?= rawurlencode($abogadoWhatsAppMsg) ?>" target="_blank" rel="noopener" aria-label="Abrir WhatsApp" title="Abrir WhatsApp">WA</a>
+                              <?= render_whatsapp_message_actions($abogadoWa, $abogadoWhatsAppMessages) ?>
                             </span>
                           <?php endif; ?>
                         </span>
@@ -9893,6 +10132,42 @@ include __DIR__ . '/sidebar.php';
 <script>
   (function () {
     const accId = <?= (int) $accidente_id ?>;
+    const caseSummaryModal = document.getElementById('case-summary-modal');
+    const caseSummaryOpen = document.querySelector('.js-case-summary-open');
+    const caseSummaryClose = document.querySelector('.js-case-summary-close');
+    const closeCaseSummary = () => {
+      if (!caseSummaryModal) return;
+      caseSummaryModal.hidden = true;
+      caseSummaryOpen?.setAttribute('aria-expanded', 'false');
+    };
+    caseSummaryOpen?.addEventListener('click', () => {
+      if (!caseSummaryModal) return;
+      caseSummaryModal.hidden = false;
+      caseSummaryOpen.setAttribute('aria-expanded', 'true');
+      caseSummaryClose?.focus();
+    });
+    caseSummaryClose?.addEventListener('click', closeCaseSummary);
+    caseSummaryModal?.addEventListener('click', (event) => {
+      if (event.target === caseSummaryModal) {
+        closeCaseSummary();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      const key = String(event.key || '').toLowerCase();
+      if (event.ctrlKey && event.altKey && key === 's') {
+        if (!caseSummaryModal) return;
+        event.preventDefault();
+        caseSummaryModal.hidden = false;
+        caseSummaryOpen?.setAttribute('aria-expanded', 'true');
+        caseSummaryClose?.focus();
+        return;
+      }
+      if (event.key === 'Escape' && caseSummaryModal && !caseSummaryModal.hidden) {
+        event.preventDefault();
+        closeCaseSummary();
+        caseSummaryOpen?.focus();
+      }
+    });
     const workbenchStates = new Map();
     const editStates = new Map();
     const VEH_CATALOGS = <?= json_encode($vehiculoCatalogos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -11973,6 +12248,26 @@ include __DIR__ . '/sidebar.php';
             button.textContent = originalText || 'Copiar';
           }, 1400);
         }
+      });
+    });
+
+    document.querySelectorAll('.js-whatsapp-meet').forEach((button) => {
+      button.addEventListener('click', () => {
+        const phone = String(button.dataset.waPhone || '').replace(/\D+/g, '');
+        const template = String(button.dataset.waTemplate || '');
+        if (!template) return;
+
+        const meetLink = window.prompt('Pega el enlace de Google Meet para esta manifestación virtual:');
+        if (meetLink === null) return;
+
+        const cleanedLink = meetLink.trim();
+        if (cleanedLink === '') return;
+
+        const message = template.replace('{meet_link}', cleanedLink);
+        const whatsappUrl = phone
+          ? `https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(message)}`
+          : `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank', 'noopener');
       });
     });
 

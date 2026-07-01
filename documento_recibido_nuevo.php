@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\DocumentoRecibidoRepository;
 use App\Services\DocumentoRecibidoService;
@@ -16,6 +17,7 @@ $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $accidenteId = isset($_GET['accidente_id']) && $_GET['accidente_id'] !== '' ? (int) $_GET['accidente_id'] : null;
 $ctx = $service->formContext($accidenteId);
 $data = $service->defaultData(['accidente_id' => $accidenteId ?: '']);
+$caseSummaryContext = case_summary_widget_context($pdo, (int) ($data['accidente_id'] ?? 0));
 $errores = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Throwable $e) {
         $errores[] = $e->getMessage();
         $ctx = $service->formContext(($data['accidente_id'] !== '' ? (int) $data['accidente_id'] : null));
+        $caseSummaryContext = case_summary_widget_context($pdo, (int) ($data['accidente_id'] ?? 0));
     }
 }
 ?>
@@ -66,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p class="eyebrow">Documentos recibidos</p>
       <h1>Registrar nuevo documento</h1>
       <div class="help">Completa los datos principales y vincúlalo con un oficio si corresponde.</div>
+      <?= case_summary_widget_render($caseSummaryContext, 'documento-recibido-nuevo') ?>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <?php if ($embed): ?>

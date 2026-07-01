@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\OficioRepository;
 use App\Services\OficioService;
@@ -200,6 +201,7 @@ if ($personaDestinoTexto === '' && !empty($data['persona_id'])) {
         }
     }
 }
+$caseSummaryContext = case_summary_widget_context($pdo, (int) ($data['accidente_id'] ?? 0));
 
 if (!$embed) {
     include __DIR__ . '/sidebar.php';
@@ -286,6 +288,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <div class="office-title">
       <h1>Nuevo Oficio</h1>
       <p>Registro de oficio vinculado al accidente y su destinatario.</p>
+      <?= case_summary_widget_render($caseSummaryContext, 'oficio-nuevo') ?>
     </div>
     <div class="toolbar">
       <?php if ($embed): ?>

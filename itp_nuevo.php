@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\ItpRepository;
 use App\Services\ItpService;
@@ -71,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
+$caseSummaryContext = case_summary_widget_context($pdo, $accidenteId);
 include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
@@ -88,7 +90,11 @@ include __DIR__ . '/sidebar.php';
 <body>
 <div class="wrap">
   <div class="toolbar">
-    <div><h1>ITP <span class="badge">Nuevo</span></h1><div class="small">Inspeccion tecnico policial</div></div>
+    <div>
+      <h1>ITP <span class="badge">Nuevo</span></h1>
+      <div class="small">Inspeccion tecnico policial</div>
+      <?= case_summary_widget_render($caseSummaryContext, 'itp-nuevo') ?>
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn ghost" href="itp_listar.php<?= $accidenteId > 0 ? '?accidente_id=' . (int) $accidenteId : '' ?>">Volver</a><button class="btn primary" type="submit" form="frmItp">Guardar ITP</button></div>
   </div>
 

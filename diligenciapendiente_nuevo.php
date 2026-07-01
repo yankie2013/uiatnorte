@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\DiligenciaPendienteRepository;
 use App\Services\DiligenciaPendienteService;
@@ -84,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $accidenteId = (int) ($data['accidente_id'] ?: 0);
 $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
+$caseSummaryContext = case_summary_widget_context($pdo, $accidenteId);
 @include __DIR__ . '/sidebar.php';
 ?>
 <!DOCTYPE html>
@@ -178,6 +180,7 @@ select[multiple] { min-height: 130px; }
   <div class="card">
     <h1>Nueva diligencia pendiente</h1>
     <div class="sub">Registra una diligencia vinculada al accidente <?= $accidenteId > 0 ? ('#' . h($accidenteId)) : 'actual' ?>.</div>
+    <?= case_summary_widget_render($caseSummaryContext, 'diligencia-pendiente-nuevo') ?>
 
     <?php if ($errors): ?>
       <div class="alert error">
