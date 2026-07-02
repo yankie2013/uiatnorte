@@ -4491,6 +4491,7 @@ $renderDiligenciaCards = static function (array $items): string {
               <?php if (!empty($row['creado_en'])): ?><div class="diligencia-list-date">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></div><?php endif; ?>
             </div>
             <div class="diligencia-list-actions">
+              <a class="btn-shell btn-primary js-inline-open" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Resolver diligencia #<?= (int) $row['id'] ?>">Resolver</a>
               <a class="btn-shell js-inline-open" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Ver diligencia #<?= (int) $row['id'] ?>">Ver</a>
               <a class="btn-shell danger js-inline-open" href="diligenciapendiente_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Eliminar diligencia #<?= (int) $row['id'] ?>">Eliminar</a>
             </div>
@@ -9739,7 +9740,13 @@ include __DIR__ . '/sidebar.php';
                           <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>
                         </div>
                         <?php if (!empty($row['contenido'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['contenido'])) ?></p><?php endif; ?>
+                        <?php
+                          $docDerivarUrl = 'diligenciapendiente_nuevo.php?accidente_id=' . (int) $accidente_id
+                            . '&documento_recibido_id=' . (int) $row['id']
+                            . '&return_to=' . urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos');
+                        ?>
                         <div class="module-actions">
+                          <a class="btn-shell btn-primary" href="<?= h($docDerivarUrl) ?>">Derivar a diligencia</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Ver documento recibido">Ver</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Editar documento recibido">Editar</a>
                           <a class="btn-shell js-inline-open" href="documento_recibido_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Eliminar documento recibido">Eliminar</a>

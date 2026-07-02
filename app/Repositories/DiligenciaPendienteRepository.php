@@ -205,6 +205,25 @@ final class DiligenciaPendienteRepository
             $select[] = 'numero';
         }
 
+        foreach ([
+            'persona_nombres',
+            'persona_apep',
+            'persona_apem',
+            'persona_doc_tipo',
+            'persona_doc_num',
+            'en_calidad',
+            'tipo_diligencia',
+            'fecha',
+            'hora',
+            'lugar',
+            'motivo',
+            'oficio_id',
+        ] as $candidate) {
+            if (in_array($candidate, $columns, true)) {
+                $select[] = $candidate;
+            }
+        }
+
         $textColumn = null;
         foreach (['resumen', 'asunto', 'descripcion', 'detalle', 'observaciones', 'motivo'] as $candidate) {
             if (in_array($candidate, $columns, true)) {

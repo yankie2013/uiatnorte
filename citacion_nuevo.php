@@ -24,6 +24,8 @@ $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 if ($returnTo === '') {
     $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes';
 }
+$returnLabel = str_contains($returnTo, 'diligenciapendiente_ver.php') ? 'Volver a la diligencia pendiente' : 'Volver a Participantes';
+$downloadReturnLabel = str_contains($returnTo, 'diligenciapendiente_ver.php') ? 'Descargar Word y volver a la diligencia' : 'Descargar Word y volver a Participantes';
 if ($accidenteId <= 0) {
     http_response_code(400);
     exit('Falta accidente_id');
@@ -105,13 +107,23 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
   <div class="small">Accidente ID: <?= (int) $accidenteId ?></div>
 
   <div class="actions">
-    <a class="btn" href="<?= h($returnTo) ?>">← Volver a Participantes</a>
+    <?php if (str_contains($returnTo, 'diligenciapendiente_ver.php')): ?>
+      <a class="btn primary" href="<?= h($returnTo) ?>">Volver a la diligencia pendiente</a>
+    <?php endif; ?>
+    <?php if (!str_contains($returnTo, 'diligenciapendiente_ver.php')): ?>
+      <a class="btn" href="<?= h($returnTo) ?>">← Volver a Participantes</a>
+    <?php endif; ?>
     <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?>&return_to=<?= urlencode($returnTo) ?>">Ver citaciones</a>
     <button class="btn primary" type="submit" form="frmCitacion">Guardar citación</button>
   </div>
 
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
-  <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?><?php if ($newId): ?> - <a class="btn js-download-return" href="citacion_diligencia.php?citacion_id=<?= (int) $newId ?>" data-return-to="<?= h($returnTo) ?>">Descargar Word y volver a Participantes</a><?php endif; ?></div><?php endif; ?>
+  <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?><?php if ($newId): ?> - <a class="btn js-download-return" href="citacion_diligencia.php?citacion_id=<?= (int) $newId ?>" data-return-to="<?= h($returnTo) ?>"><?= h($downloadReturnLabel) ?></a><?php endif; ?></div><?php endif; ?>
+  <?php if ($success !== '' && $newId && str_contains($returnTo, 'diligenciapendiente_ver.php')): ?>
+    <div class="actions" style="justify-content:flex-start;margin-top:0;">
+      <a class="btn primary" href="<?= h($returnTo) ?>">Volver a la diligencia pendiente</a>
+    </div>
+  <?php endif; ?>
 
   <form method="post" class="card" id="frmCitacion">
     <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>

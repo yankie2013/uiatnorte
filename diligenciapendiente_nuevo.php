@@ -21,6 +21,10 @@ $errors = [];
 $success = '';
 $createdId = 0;
 $createdIds = [];
+$returnTo = trim((string) ($_REQUEST['return_to'] ?? ''));
+if ($returnTo !== '' && (preg_match('~^(?:https?:)?//~i', $returnTo) || preg_match('~^[a-z][a-z0-9+.-]*:~i', $returnTo))) {
+    $returnTo = '';
+}
 
 $accidenteId = 0;
 if (isset($_REQUEST['accidente_id']) && $_REQUEST['accidente_id'] !== '') {
@@ -31,6 +35,65 @@ if (isset($_REQUEST['accidente_id']) && $_REQUEST['accidente_id'] !== '') {
 
 $data = $service->defaultData();
 $data['accidente_id'] = $accidenteId > 0 ? $accidenteId : '';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $accidenteId > 0) {
+    $documentoRecibidoId = (int) ($_GET['documento_recibido_id'] ?? 0);
+    if ($documentoRecibidoId > 0) {
+        $stDoc = $pdo->prepare(
+            "SELECT dr.*,
+                    (
+                        SELECT GROUP_CONCAT(NULLIF(TRIM(a.descripcion), '') ORDER BY a.orden, a.id SEPARATOR '; ')
+                          FROM documentos_recibidos_anexos a
+                         WHERE a.documento_recibido_id = dr.id
+                    ) AS anexos_texto
+               FROM documentos_recibidos dr
+              WHERE dr.id = ? AND dr.accidente_id = ?
+              LIMIT 1"
+        );
+        $stDoc->execute([$documentoRecibidoId, $accidenteId]);
+        $doc = $stDoc->fetch(PDO::FETCH_ASSOC);
+
+        if ($doc) {
+            $docAsunto = trim((string) ($doc['asunto'] ?? ''));
+            $docNumero = trim((string) ($doc['numero_documento'] ?? ''));
+            $docTipo = trim((string) ($doc['tipo_documento'] ?? ''));
+            $docEntidad = trim((string) ($doc['entidad_persona'] ?? ''));
+            $docContenido = trim((string) ($doc['contenido'] ?? ''));
+            $docAnexos = trim((string) ($doc['anexos_texto'] ?? ''));
+            $textoBase = $docAsunto . ' ' . $docTipo . ' ' . $docContenido . ' ' . $docAnexos;
+            $textoNormalizado = function_exists('mb_strtolower')
+                ? mb_strtolower($textoBase, 'UTF-8')
+                : strtolower($textoBase);
+            $esVideo = (bool) preg_match('/camara|cámara|video|vigilancia|grabacion|grabación|filmacion|filmación/u', $textoNormalizado);
+            $docLabelParts = array_filter([
+                $docTipo !== '' ? $docTipo : 'Documento recibido',
+                $docNumero !== '' ? 'N° ' . $docNumero : '',
+                $docAsunto,
+            ]);
+            $docLabel = implode(' - ', $docLabelParts);
+            $docLabel = $docLabel !== '' ? $docLabel : 'Documento recibido #' . $documentoRecibidoId;
+            $resumenParts = ['Documento recibido #' . $documentoRecibidoId . ': ' . $docLabel];
+            if ($docEntidad !== '') {
+                $resumenParts[] = 'Remitente: ' . $docEntidad;
+            }
+            if ($docAnexos !== '') {
+                $resumenParts[] = 'Anexos: ' . $docAnexos;
+            }
+            if ($docContenido !== '') {
+                $contenidoCorto = function_exists('mb_substr') ? mb_substr($docContenido, 0, 450, 'UTF-8') : substr($docContenido, 0, 450);
+                $resumenParts[] = 'Contenido: ' . $contenidoCorto . ((strlen($docContenido) > strlen($contenidoCorto)) ? '...' : '');
+            }
+
+            $data['contenido'] = $esVideo
+                ? 'Realizar diligencia de visualización del video remitido mediante ' . $docLabel . ', dejando constancia del contenido relevante para la investigación.'
+                : 'Atender y evaluar el documento recibido ' . $docLabel . ', realizando la diligencia pendiente que corresponda para la investigación.';
+            $data['documentos_recibidos'] = implode("\n", $resumenParts);
+            if (!empty($doc['referencia_oficio_id'])) {
+                $data['oficio_id'] = (int) $doc['referencia_oficio_id'];
+            }
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bulkItems = [];
@@ -199,10 +262,12 @@ select[multiple] { min-height: 130px; }
         <?php if (count($createdIds) > 1): ?>
           <div style="margin-top:8px;">
             <a class="btn ghost" href="diligenciapendiente_listar.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : '' ?>">Ver diligencias creadas</a>
+            <?php if ($returnTo !== ''): ?><a class="btn ghost" href="<?= h($returnTo) ?>">Volver a documentos</a><?php endif; ?>
           </div>
         <?php elseif ($createdId > 0): ?>
           <div style="margin-top:8px;">
             <a class="btn ghost" href="diligenciapendiente_ver.php?id=<?= h($createdId) ?>">Ver diligencia #<?= h($createdId) ?></a>
+            <?php if ($returnTo !== ''): ?><a class="btn ghost" href="<?= h($returnTo) ?>">Volver a documentos</a><?php endif; ?>
           </div>
         <?php endif; ?>
       </div>
@@ -210,6 +275,7 @@ select[multiple] { min-height: 130px; }
 
     <form method="post" novalidate>
       <input type="hidden" name="accidente_id" value="<?= h($data['accidente_id']) ?>">
+      <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 
       <label for="tipo_diligencia_id">Tipo de diligencia</label>
       <div class="row">
@@ -267,6 +333,9 @@ select[multiple] { min-height: 130px; }
 
       <div class="actions">
         <button type="submit" class="btn primary">Crear diligencia</button>
+        <?php if ($returnTo !== ''): ?>
+          <a class="btn ghost" href="<?= h($returnTo) ?>">Volver a documentos</a>
+        <?php endif; ?>
         <a class="btn ghost" href="diligenciapendiente_listar.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : '' ?>">Volver al listado</a>
         <?php if ($accidenteId > 0): ?>
           <a class="btn ghost" href="Dato_General_accidente.php?accidente_id=<?= h($accidenteId) ?>">Volver al accidente</a>

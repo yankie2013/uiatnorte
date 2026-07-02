@@ -238,6 +238,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
             </td>
             <td data-label="Acciones">
               <div class="actions">
+                <a class="btn primary" href="diligenciapendiente_ver.php?id=<?= h($row['id']) ?>">Resolver</a>
                 <a class="btn" href="diligenciapendiente_ver.php?id=<?= h($row['id']) ?>">Ver</a>
                 <a class="btn" href="diligenciapendiente_editar.php?id=<?= h($row['id']) ?>">Editar</a>
                 <form method="post" style="display:inline;">

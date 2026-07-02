@@ -31,6 +31,27 @@ $accidenteId = (int) ($row['accidente_id'] ?? 0);
 $message = trim((string) ($_GET['msg'] ?? ''));
 $errors = [];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'resolve') {
+    try {
+        $data = $service->defaultData($row);
+        $data['oficio_id'] = $_POST['oficio_id'] ?? '';
+        $data['citacion_id'] = $_POST['citacion_id'] ?? [];
+        $data['documento_realizado'] = $_POST['documento_realizado'] ?? ($data['documento_realizado'] ?? '');
+        if (!empty($_POST['marcar_realizado'])) {
+            $data['estado'] = 'Realizado';
+        }
+        $service->actualizar($id, $data);
+        $target = 'diligenciapendiente_ver.php?id=' . urlencode((string) $id)
+            . '&embed=' . ($embed ? '1' : '0')
+            . '&return_to=' . urlencode($returnTo)
+            . '&msg=' . urlencode('Diligencia vinculada correctamente.');
+        header('Location: ' . $target);
+        exit;
+    } catch (Throwable $e) {
+        $errors = preg_split('/\r?\n/', trim($e->getMessage())) ?: ['No se pudo vincular la diligencia.'];
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     try {
         $service->eliminar($id);
@@ -77,7 +98,9 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
 .title{margin:0;font-size:1.65rem}.sub{color:var(--muted);margin-top:6px}
 .actions{display:flex;gap:10px;flex-wrap:wrap}.btn{display:inline-block;padding:11px 16px;border-radius:10px;text-decoration:none;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:600;cursor:pointer}.btn.primary{background:var(--accent);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}
 .grid{display:grid;grid-template-columns:1.4fr .9fr;gap:18px;margin-top:18px}.panel{border:1px solid var(--border);border-radius:14px;padding:18px}.label{display:block;color:var(--text);font-weight:800;font-size:.9rem;margin-bottom:6px}.value{white-space:pre-wrap;line-height:1.4}.badge{display:inline-block;padding:7px 12px;border-radius:999px;background:rgba(29,78,216,.1);color:var(--accent);font-weight:700}.alert{padding:12px 14px;border-radius:12px;margin-top:16px}.alert.success{background:rgba(22,163,74,.12);color:var(--success)}.alert.error{background:rgba(220,38,38,.12);color:var(--danger)}.list{margin:0;padding-left:18px}.muted{color:var(--muted)}
+.resolve-panel{margin-top:18px;border:1px solid var(--border);border-radius:16px;padding:18px;background:rgba(29,78,216,.035)}.resolve-title{margin:0 0 4px;font-size:1.05rem}.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field-full{grid-column:1/-1}.input,select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--text)}.pick-list{display:grid;gap:8px;max-height:290px;overflow:auto;padding-right:4px}.pick-card{display:flex;align-items:flex-start;gap:9px;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card)}.pick-card input{margin-top:4px}.pick-card strong{display:block}.pick-card small{display:block;color:var(--muted);line-height:1.35;margin-top:3px}.checkline{display:flex;gap:8px;align-items:center;margin-top:10px}.checkline input{width:auto}
 @media (max-width: 900px){body{padding:14px}.grid{grid-template-columns:1fr}}
+@media (max-width: 720px){.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -158,6 +181,91 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
         </div>
       </div>
     </div>
+
+    <?php
+      $ctx = $detail['ctx'] ?? ['oficios' => [], 'citaciones' => []];
+      $selectedCitaciones = array_fill_keys(array_map('intval', $detail['citacion_ids'] ?? []), true);
+      $returnHere = 'diligenciapendiente_ver.php?id=' . (int) $id;
+      $oficioNuevoUrl = 'oficios_nuevo.php?accidente_id=' . (int) $accidenteId . '&return_to=' . urlencode($returnHere);
+      $citacionNuevaUrl = 'citacion_nuevo.php?accidente_id=' . (int) $accidenteId . '&return_to=' . urlencode($returnHere);
+      $actaVisualUrl = 'acta_visualizacion_form.php?accidente_id=' . (int) $accidenteId;
+      $actaEntregaUrl = 'acta_entrega_vehiculo_form.php?accidente_id=' . (int) $accidenteId;
+    ?>
+    <section class="resolve-panel">
+      <h2 class="resolve-title">Resolver diligencia</h2>
+      <div class="muted">Crea el documento que corresponda o vincula uno que ya exista. Al guardar puedes marcar esta diligencia como realizada.</div>
+
+      <?php if ($accidenteId > 0): ?>
+        <div class="quick-actions">
+          <a class="btn primary" href="<?= h($oficioNuevoUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear oficio</a>
+          <a class="btn primary" href="<?= h($citacionNuevaUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear citacion</a>
+          <a class="btn" href="<?= h($actaVisualUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear acta de visualizacion</a>
+          <a class="btn" href="<?= h($actaEntregaUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear acta de entrega</a>
+        </div>
+      <?php endif; ?>
+
+      <form method="post">
+        <input type="hidden" name="action" value="resolve">
+        <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+        <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+        <div class="form-grid">
+          <div>
+            <label class="label" for="oficio_id">Oficio relacionado</label>
+            <select id="oficio_id" name="oficio_id" class="input">
+              <option value="">Sin oficio</option>
+              <?php foreach (($ctx['oficios'] ?? []) as $oficio): ?>
+                <option value="<?= h($oficio['id']) ?>" <?= (string) ($row['oficio_id'] ?? '') === (string) $oficio['id'] ? 'selected' : '' ?>><?= h($oficio['label'] ?? ('Oficio #' . $oficio['id'])) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="documento_realizado">Documento realizado / acta</label>
+            <input id="documento_realizado" name="documento_realizado" class="input" maxlength="255" value="<?= h($row['documento_realizado'] ?? '') ?>" placeholder="Ej: Acta de visualizacion de video">
+          </div>
+          <div class="field-full">
+            <span class="label">Citaciones creadas para este accidente</span>
+            <?php if (!empty($ctx['citaciones'])): ?>
+              <div class="pick-list">
+                <?php foreach ($ctx['citaciones'] as $citacion): ?>
+                  <?php
+                    $citacionId = (int) ($citacion['id'] ?? 0);
+                    $nombre = trim(implode(' ', array_filter([
+                        (string) ($citacion['persona_nombres'] ?? ''),
+                        (string) ($citacion['persona_apep'] ?? ''),
+                        (string) ($citacion['persona_apem'] ?? ''),
+                    ], static fn (string $part): bool => trim($part) !== '')));
+                    $detalleCitacion = [];
+                    if (!empty($citacion['tipo_diligencia'])) { $detalleCitacion[] = (string) $citacion['tipo_diligencia']; }
+                    if (!empty($citacion['en_calidad'])) { $detalleCitacion[] = 'Calidad: ' . $citacion['en_calidad']; }
+                    if (!empty($citacion['persona_doc_num'])) { $detalleCitacion[] = trim((string) ($citacion['persona_doc_tipo'] ?? 'Doc') . ' ' . $citacion['persona_doc_num']); }
+                    if (!empty($citacion['fecha'])) { $detalleCitacion[] = 'Fecha: ' . $citacion['fecha'] . (!empty($citacion['hora']) ? ' ' . substr((string) $citacion['hora'], 0, 5) : ''); }
+                    if (!empty($citacion['lugar'])) { $detalleCitacion[] = 'Lugar: ' . mb_strimwidth((string) $citacion['lugar'], 0, 90, '...'); }
+                    if (!empty($citacion['motivo'])) { $detalleCitacion[] = 'Motivo: ' . mb_strimwidth((string) $citacion['motivo'], 0, 120, '...'); }
+                  ?>
+                  <label class="pick-card">
+                    <input type="checkbox" name="citacion_id[]" value="<?= h($citacionId) ?>" <?= isset($selectedCitaciones[$citacionId]) ? 'checked' : '' ?>>
+                    <span>
+                      <strong><?= h($nombre !== '' ? $nombre : ($citacion['label'] ?? ('Citacion #' . $citacionId))) ?></strong>
+                      <small><?= h(implode(' - ', $detalleCitacion)) ?></small>
+                    </span>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div class="muted">No hay citaciones registradas para este accidente.</div>
+            <?php endif; ?>
+          </div>
+        </div>
+        <label class="checkline">
+          <input type="checkbox" name="marcar_realizado" value="1" <?= (string) ($row['estado'] ?? '') === 'Realizado' ? 'checked' : '' ?>>
+          <span>Marcar diligencia como realizada al guardar</span>
+        </label>
+        <div class="actions" style="margin-top:14px;">
+          <button type="submit" class="btn primary">Guardar vinculos</button>
+          <a class="btn" href="diligenciapendiente_editar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar todo</a>
+        </div>
+      </form>
+    </section>
 
     <div class="actions" style="margin-top:18px;">
       <?php if ($embed): ?>

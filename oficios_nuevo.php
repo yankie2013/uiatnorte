@@ -19,6 +19,7 @@ if (!function_exists('h')) {
 $service = new OficioService(new OficioRepository($pdo));
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+$returnLabel = str_contains($returnTo, 'diligenciapendiente_ver.php') ? 'Volver a la diligencia pendiente' : 'Volver a Documentos';
 
 $accidenteIdGet = isset($_GET['accidente_id']) ? (int) $_GET['accidente_id'] : 0;
 $sidpolGet = trim((string) ($_GET['sidpol'] ?? ''));
@@ -128,11 +129,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['anio_oficio'] = $asignado['anio'] ?? $data['anio_oficio'];
             $data['numero_oficio'] = $asignado['numero'] ?? $data['numero_oficio'];
         } else {
-            $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
-            header('Location: accidente_vista_tabs.php?' . http_build_query([
-                'accidente_id' => $accidenteIdGuardado,
-                'tab' => 'documentos',
-            ]));
+            if ($returnTo !== '') {
+                header('Location: ' . $returnTo);
+            } else {
+                $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
+                header('Location: accidente_vista_tabs.php?' . http_build_query([
+                    'accidente_id' => $accidenteIdGuardado,
+                    'tab' => 'documentos',
+                ]));
+            }
             exit;
         }
     } catch (Throwable $e) {
@@ -294,7 +299,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <?php if ($embed): ?>
         <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
       <?php else: ?>
-        <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Volver a Documentos</a>
+        <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>"><?= h($returnLabel) ?></a>
         <a class="btn" href="index.php">Ir al panel</a>
         <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
       <?php endif; ?>
@@ -302,7 +307,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   </div>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
-  <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>">Volver a Documentos</a><?php endif; ?></div><?php endif; ?>
+  <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>"><?= h($returnLabel) ?></a><?php endif; ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmOficio">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
@@ -555,7 +560,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <?php if ($embed): ?>
           <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cancelar</button>
         <?php else: ?>
-          <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>">Cancelar</a>
+          <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>"><?= h($returnLabel) ?></a>
         <?php endif; ?>
         <?php if (!$embed): ?><button class="btn" type="submit" name="save_action" value="download">Guardar y descargar</button><?php endif; ?>
         <button class="btn primary" type="submit">Guardar oficio</button>
