@@ -5220,7 +5220,7 @@ $caseSummaryTime = '—';
 if (!empty($A['fecha_accidente']) && strtotime((string) $A['fecha_accidente'])) {
     $caseSummaryTime = date('H:i', strtotime((string) $A['fecha_accidente']));
 }
-$caseSummaryDistrict = compact_text((string) ($A['distrito_nombre'] ?? ''));
+$caseSummaryDistrict = compact_text((string) ($A['dist_nom'] ?? ($A['distrito_nombre'] ?? '')));
 $caseSummaryJurisdiction = compact_text((string) ($summaryAccidentRecord['comisaria_nombre'] ?? ''));
 $caseSummaryParticipantRows = [];
 $caseSummaryVehicleText = static function (array $vehicle): string {

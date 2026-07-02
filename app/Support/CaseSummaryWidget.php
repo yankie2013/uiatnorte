@@ -66,7 +66,7 @@ if (!function_exists('case_summary_widget_context')) {
                     a.registro_sidpol,
                     a.fecha_accidente,
                     a.lugar,
-                    t.nombre AS distrito,
+                    t.nombre AS distrito_ubicacion,
                     c.nombre AS jurisdiccion
                FROM accidentes a
           LEFT JOIN ubigeo_distrito t ON t.cod_dep = a.cod_dep AND t.cod_prov = a.cod_prov AND t.cod_dist = a.cod_dist
@@ -173,7 +173,7 @@ if (!function_exists('case_summary_widget_context')) {
             'fecha' => case_summary_widget_date($accidente['fecha_accidente'] ?? null),
             'hora' => case_summary_widget_time($accidente['fecha_accidente'] ?? null),
             'lugar' => case_summary_widget_text((string) ($accidente['lugar'] ?? '')) ?: '-',
-            'distrito' => case_summary_widget_text((string) ($accidente['distrito'] ?? '')) ?: '-',
+            'distrito' => case_summary_widget_text((string) ($accidente['distrito_ubicacion'] ?? ($accidente['distrito'] ?? ''))) ?: '-',
             'jurisdiccion' => case_summary_widget_text((string) ($accidente['jurisdiccion'] ?? '')) ?: '-',
             'people' => $people,
         ];
