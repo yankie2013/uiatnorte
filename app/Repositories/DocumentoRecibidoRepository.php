@@ -30,13 +30,16 @@ final class DocumentoRecibidoRepository
     public function oficiosByAccidente(?int $accidenteId): array
     {
         $hasContenido = $this->columnExists('oficios', 'contenido');
-        $cols = 'id, numero, anio, asunto_id, motivo, referencia_texto';
+        $hasEntidadDestino = $this->columnExists('oficios', 'entidad_id_destino') && $this->tableExists('oficio_entidad');
+        $cols = 'o.id, o.numero, o.anio, o.asunto_id, o.motivo, o.referencia_texto';
         if ($hasContenido) {
-            $cols .= ', contenido';
+            $cols .= ', o.contenido';
         }
+        $cols .= $hasEntidadDestino ? ", COALESCE(e.nombre, '') AS entidad_destino" : ", '' AS entidad_destino";
+        $join = $hasEntidadDestino ? ' LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino' : '';
 
         if ($accidenteId && $this->columnExists('oficios', 'accidente_id')) {
-            $st = $this->pdo->prepare("SELECT {$cols} FROM oficios WHERE accidente_id = ? ORDER BY id DESC");
+            $st = $this->pdo->prepare("SELECT {$cols} FROM oficios o{$join} WHERE o.accidente_id = ? ORDER BY o.id DESC");
             $st->execute([$accidenteId]);
             $rows = $st->fetchAll(PDO::FETCH_ASSOC);
             if ($rows !== []) {
@@ -44,7 +47,7 @@ final class DocumentoRecibidoRepository
             }
         }
 
-        return $this->pdo->query("SELECT {$cols} FROM oficios ORDER BY id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+        return $this->pdo->query("SELECT {$cols} FROM oficios o{$join} ORDER BY o.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function asuntosByIds(array $ids): array
@@ -269,6 +272,20 @@ final class DocumentoRecibidoRepository
 
         $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
         $st->execute([$table, $column]);
+        $this->columnExistsCache[$cacheKey] = (int) $st->fetchColumn() > 0;
+
+        return $this->columnExistsCache[$cacheKey];
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $cacheKey = $table . '.*';
+        if (array_key_exists($cacheKey, $this->columnExistsCache)) {
+            return $this->columnExistsCache[$cacheKey];
+        }
+
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $st->execute([$table]);
         $this->columnExistsCache[$cacheKey] = (int) $st->fetchColumn() > 0;
 
         return $this->columnExistsCache[$cacheKey];

@@ -89,7 +89,17 @@ final class DocumentoRecibidoService
             $snippet = $oficio['contenido'];
         }
 
-        return $label . ($snippet !== '' ? ' - ' . mb_strimwidth(strip_tags((string) $snippet), 0, 120, '...') : '');
+        $parts = [$label];
+        if ($snippet !== '') {
+            $parts[] = mb_strimwidth(strip_tags((string) $snippet), 0, 120, '...');
+        }
+
+        $entidadDestino = trim((string) ($oficio['entidad_destino'] ?? ''));
+        if ($entidadDestino !== '') {
+            $parts[] = 'Dirigido a: ' . mb_strimwidth(strip_tags($entidadDestino), 0, 90, '...');
+        }
+
+        return implode(' - ', $parts);
     }
 
     public function defaultData(?array $row = null): array
