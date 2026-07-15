@@ -86,6 +86,33 @@ function vehiculo_tipo_resumen(array $veh): string {
   return 'vehiculo';
 }
 
+function occupied_folder_map(PDO $pdo): array {
+  $sql = "SELECT id, folder
+            FROM accidentes
+           WHERE folder BETWEEN 1 AND 20
+             AND COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') <> 'Resuelto'";
+  $map = [];
+  foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $folder = (int)($row['folder'] ?? 0);
+    if ($folder >= 1 && $folder <= 20 && !isset($map[(string)$folder])) {
+      $map[(string)$folder] = (int)$row['id'];
+    }
+  }
+  return $map;
+}
+
+function render_folder_options(string $current, int $currentId, array $occupiedFolders): void {
+  echo '<option value="" ' . ($current === '' ? 'selected' : '') . '>&mdash;</option>';
+  for ($k = 1; $k <= 20; $k++) {
+    $value = (string)$k;
+    $occupiedBy = (int)($occupiedFolders[$value] ?? 0);
+    if ($occupiedBy > 0 && $occupiedBy !== $currentId && $current !== $value) {
+      continue;
+    }
+    echo '<option value="' . $k . '" ' . ($current === $value ? 'selected' : '') . '>' . $k . '</option>';
+  }
+}
+
 /* ============================
    AJAX: cambiar estado (inline) / cambiar folder (inline) / priority
 ============================ */
@@ -96,9 +123,15 @@ if (($_POST['ajax'] ?? '') === 'estado') {
 
   $permitidos = ['Pendiente','Resuelto','Con diligencias'];
   if ($id>0 && in_array($estado,$permitidos,true)) {
-    $st = $pdo->prepare("UPDATE accidentes SET estado=? WHERE id=?");
+    $st = $estado === 'Resuelto'
+      ? $pdo->prepare("UPDATE accidentes SET estado=?, folder=NULL WHERE id=?")
+      : $pdo->prepare("UPDATE accidentes SET estado=? WHERE id=?");
     $st->execute([$estado,$id]);
-    echo json_encode(['ok'=>true]);
+    echo json_encode([
+      'ok'=>true,
+      'folder'=>($estado === 'Resuelto' ? null : false),
+      'occupied_folders'=>occupied_folder_map($pdo),
+    ]);
   } else {
     echo json_encode(['ok'=>false,'msg'=>'Estado no permitido']);
   }
@@ -116,13 +149,30 @@ if (($_POST['ajax'] ?? '') === 'folder') {
     // Guardar como NULL
     $st = $pdo->prepare("UPDATE accidentes SET folder=NULL WHERE id=?");
     $st->execute([$id]);
-    echo json_encode(['ok'=>true,'val'=>null]);
+    echo json_encode(['ok'=>true,'val'=>null,'occupied_folders'=>occupied_folder_map($pdo)]);
   } else {
     $n = (int)$raw;
     if ($n>=1 && $n<=20) {
+      $currentStatus = $pdo->prepare("SELECT COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') FROM accidentes WHERE id = ? LIMIT 1");
+      $currentStatus->execute([$id]);
+      if ((string)$currentStatus->fetchColumn() === 'Resuelto') {
+        echo json_encode(['ok'=>false,'msg'=>'No se asigna folder a accidentes resueltos.']);
+        exit;
+      }
+      $occupied = $pdo->prepare("SELECT id
+                                   FROM accidentes
+                                  WHERE folder = ?
+                                    AND id <> ?
+                                    AND COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') <> 'Resuelto'
+                                  LIMIT 1");
+      $occupied->execute([$n, $id]);
+      if ($occupied->fetchColumn()) {
+        echo json_encode(['ok'=>false,'msg'=>'Ese folder ya esta ocupado por otro accidente pendiente o con diligencias.']);
+        exit;
+      }
       $st = $pdo->prepare("UPDATE accidentes SET folder=? WHERE id=?");
       $st->execute([$n,$id]);
-      echo json_encode(['ok'=>true,'val'=>$n]);
+      echo json_encode(['ok'=>true,'val'=>$n,'occupied_folders'=>occupied_folder_map($pdo)]);
     } else {
       echo json_encode(['ok'=>false,'msg'=>'Folder invÃ¡lido (vacÃ­o o 1..20)']);
     }
@@ -219,6 +269,7 @@ if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
 }
 $ordenOpciones = [
   'registro_desc' => 'RECIÉN REGISTRADO',
+  'folder_asc' => 'FOLDER: MENOR A MAYOR',
   'fecha_desc' => 'FECHA ACCIDENTE: RECIENTE A ANTIGUA',
   'fecha_asc' => 'FECHA ACCIDENTE: ANTIGUA A RECIENTE',
 ];
@@ -383,8 +434,10 @@ if($vehiculo!==''){
   $params[] = "%$vehiculo%";
 }
 
-/* En la vista TODOS manda el orden manual de Folder; los que no tienen número van al final. */
+/* El orden por Folder deja los vacios al final. */
+$manualFolderOrder = "CASE WHEN a.folder IS NULL THEN 1 ELSE 0 END ASC, a.folder ASC";
 $orderBy = match ($orden) {
+  'folder_asc' => $manualFolderOrder . ', a.id DESC',
   'fecha_desc' => 'a.fecha_accidente DESC, a.id DESC',
   'fecha_asc' => 'a.fecha_accidente ASC, a.id ASC',
   default => 'a.id DESC',
@@ -392,13 +445,14 @@ $orderBy = match ($orden) {
 $lastOpenedOrder = ($estadoFiltro !== 'todos' && !$hasIncomingFilters && !$restoredLastFilters && $ultimoAccidenteAbiertoId > 0)
   ? "CASE WHEN a.id = $ultimoAccidenteAbiertoId THEN 1 ELSE 0 END DESC, "
   : '';
-$folderOrder = $estadoFiltro === 'todos'
-  ? "CASE WHEN a.folder IS NULL THEN 1 ELSE 0 END ASC, a.folder ASC, "
+$folderOrder = $estadoFiltro === 'todos' && $orden !== 'folder_asc'
+  ? $manualFolderOrder . ', '
   : '';
 $sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
 $st=$pdo->prepare($sql);
 $st->execute($params);
 $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+$occupiedFolders = occupied_folder_map($pdo);
 
 $personasResumenPorAccidente = [];
 $personasDetallePorAccidente = [];
@@ -1301,7 +1355,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $vehiculosResumen = $vehiculosResumenPorAccidente[(int)$r['id']] ?? [];
           $vehiculosPreview = array_slice($vehiculosResumen, 0, 2);
           $isPrior = !empty($r['priority']) && (int)$r['priority']===1;
-          $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']);
+          $folderVal = ($estado === 'Resuelto' || $r['folder'] === null ? '' : (string)$r['folder']);
           $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
           $tipoRegistroClass = ($r['tipo_registro'] ?? '') === 'Intervencion' ? 'tipo-reg-intervencion' : 'tipo-reg-carpeta';
           $lat = trim((string)($r['latitud'] ?? ''));
@@ -1359,10 +1413,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                     <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '&#9733;' : '&#9734;' ?></span>
                   </button>
                   <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
-                    <option value="" <?=($folderVal===''?'selected':'')?>>&mdash;</option>
-                    <?php for($k=1;$k<=20;$k++): ?>
-                      <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
-                    <?php endfor; ?>
+                    <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
                   </select>
                 </div>
                 <form class="acc-inline-form" action="accidente_eliminar.php" method="post"
@@ -1451,7 +1502,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
               $estado = $r['estado'] ?: 'Pendiente';
               $cls = ($estado==='Resuelto') ? 'estado-resuelto'
                    : (($estado==='Con diligencias') ? 'estado-dilig' : 'estado-pendiente');
-              $folderVal = (string)($r['folder'] ?? '');
+              $folderVal = ($estado === 'Resuelto' || $r['folder'] === null ? '' : (string)$r['folder']);
               $personasResumen = $personasResumenPorAccidente[(int)$r['id']] ?? [];
               $personasVisibles = array_slice($personasResumen, 0, 2);
               $personasExtra = array_slice($personasResumen, 2);
@@ -1523,11 +1574,7 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     </button>
 
     <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
-      <?php $folderVal = ($r['folder'] === null ? '' : (string)$r['folder']); ?>
-      <option value="" <?=($folderVal===''?'selected':'')?>>â€”</option>
-      <?php for($k=1;$k<=20;$k++): ?>
-        <option value="<?=$k?>" <?=($folderVal===(string)$k?'selected':'')?>><?=$k?></option>
-      <?php endfor; ?>
+      <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
     </select>
   </td>
   <td role="cell">
@@ -1562,6 +1609,58 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
 </div>
 
 <script>
+let occupiedFolders = new Map(Object.entries(<?= json_encode($occupiedFolders, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>).map(([folder, id]) => [String(folder), String(id)]));
+
+function updateOccupiedFolders(map) {
+  if (!map || typeof map !== 'object') return;
+  occupiedFolders = new Map(Object.entries(map).map(([folder, id]) => [String(folder), String(id)]));
+}
+
+function folderSelectsByAccident(id) {
+  const needle = String(id || '');
+  return Array.from(document.querySelectorAll('.select-folder')).filter((select) => String(select.dataset.id || '') === needle);
+}
+
+function renderFolderSelect(select) {
+  const id = String(select.dataset.id || '');
+  const current = String(select.value || '');
+  select.innerHTML = '';
+
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = '—';
+  blank.selected = current === '';
+  select.appendChild(blank);
+
+  for (let folder = 1; folder <= 20; folder++) {
+    const value = String(folder);
+    const occupiedBy = String(occupiedFolders.get(value) || '');
+    if (occupiedBy && occupiedBy !== id && current !== value) continue;
+
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    option.selected = current === value;
+    select.appendChild(option);
+  }
+}
+
+function refreshFolderSelects(map) {
+  updateOccupiedFolders(map);
+  document.querySelectorAll('.select-folder').forEach(renderFolderSelect);
+}
+
+function setFolderForAccident(id, value) {
+  folderSelectsByAccident(id).forEach((select) => {
+    select.value = value === null || value === false || value === undefined ? '' : String(value);
+    select.dataset.lastValue = select.value;
+  });
+}
+
+document.querySelectorAll('.select-folder').forEach((select) => {
+  select.dataset.lastValue = select.value || '';
+});
+
 // Mantiene visible la fila de comisarias del distrito seleccionado.
 (function(){
   const stationRow = document.getElementById('stationRow');
@@ -1724,13 +1823,20 @@ document.addEventListener('keydown', (e)=>{
             .then(r=>r.json())
             .then(j=>{
               if(j.ok){
-                badge.dataset.estado = nuevo;
-                badge.textContent = nuevo;
-                badge.classList.remove('estado-pendiente','estado-resuelto','estado-dilig');
-                badge.classList.add(
-                  nuevo==='Resuelto' ? 'estado-resuelto' :
-                  (nuevo==='Con diligencias' ? 'estado-dilig' : 'estado-pendiente')
-                );
+                document.querySelectorAll('.estado-badge').forEach((item)=>{
+                  if (String(item.dataset.id || '') !== String(id)) return;
+                  item.dataset.estado = nuevo;
+                  item.textContent = nuevo;
+                  item.classList.remove('estado-pendiente','estado-resuelto','estado-dilig');
+                  item.classList.add(
+                    nuevo==='Resuelto' ? 'estado-resuelto' :
+                    (nuevo==='Con diligencias' ? 'estado-dilig' : 'estado-pendiente')
+                  );
+                });
+                if (j.folder === null) {
+                  setFolderForAccident(id, '');
+                }
+                refreshFolderSelects(j.occupied_folders);
               }else{
                 alert(j.msg || 'No se pudo actualizar el estado');
               }
@@ -1747,6 +1853,7 @@ document.querySelectorAll('.select-folder').forEach(sel=>{
   sel.addEventListener('change', ()=>{
     const id = sel.dataset.id;
     const val = sel.value;
+    const previous = sel.dataset.lastValue || '';
 
     const fd = new FormData();
     fd.append('ajax','folder');
@@ -1758,9 +1865,16 @@ document.querySelectorAll('.select-folder').forEach(sel=>{
       .then(j=>{
         if(!j.ok){
           alert(j.msg || 'No se pudo actualizar Folder');
+          sel.value = previous;
+          return;
         }
+        refreshFolderSelects(j.occupied_folders);
+        setFolderForAccident(id, j.val);
       })
-      .catch(()=>alert('Error de red al guardar Folder'));
+      .catch(()=>{
+        sel.value = previous;
+        alert('Error de red al guardar Folder');
+      });
   });
 });
 

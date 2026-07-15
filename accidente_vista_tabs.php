@@ -5216,6 +5216,7 @@ $caseSummarySidpol = compact_text((string) ($A['registro_sidpol'] ?? ''));
 if ($caseSummarySidpol === '') {
     $caseSummarySidpol = compact_text((string) ($A['sidpol'] ?? ''));
 }
+$caseSummaryFolder = compact_text((string) ($A['folder'] ?? ''));
 $caseSummaryDate = fecha_simple($A['fecha_accidente'] ?? null);
 $caseSummaryTime = '—';
 if (!empty($A['fecha_accidente']) && strtotime((string) $A['fecha_accidente'])) {
@@ -7111,6 +7112,8 @@ include __DIR__ . '/sidebar.php';
         Accidente #<?= (int) $accidente_id ?> ·
         <button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)">
           Registro SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?>
+          <span class="sidpol-summary-sep">·</span>
+          Folder <?= h($caseSummaryFolder !== '' ? $caseSummaryFolder : '—') ?>
         </button>
       </p>
     </div>
