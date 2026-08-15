@@ -1197,6 +1197,33 @@ function render_field_cards(array $record, array $fields): string
     return $html;
 }
 
+function render_record_copy_button(string $label, string $copyText): string
+{
+    return '<button type="button" class="record-detail-copy js-copy-name" data-copy-text="' . h($copyText) . '" aria-label="Copiar ' . h($label) . '" title="Copiar">'
+        . '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5h8.5A1.5 1.5 0 0 1 19 7v11.5a1.5 1.5 0 0 1-1.5 1.5H9a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 9 5.5Z"/><path d="M15.5 5.5V5A1.5 1.5 0 0 0 14 3.5H5.5A1.5 1.5 0 0 0 4 5v11.5A1.5 1.5 0 0 0 5.5 18h2"/></svg>'
+        . '</button>';
+}
+
+function render_record_field_lines(array $record, array $fields): string
+{
+    $html = '';
+    foreach ($fields as $field) {
+        $key = is_array($field) ? (string) ($field['key'] ?? '') : (string) $field;
+        if ($key === '') {
+            continue;
+        }
+        $html .= '<div class="dosage-detail">';
+        $html .= '<dt>' . h(human_label($key)) . '</dt>';
+        $html .= '<span class="dosage-detail-separator" aria-hidden="true">:</span>';
+        $fieldValueHtml = field_html($key, $record[$key] ?? null);
+        $copyText = trim(html_entity_decode(strip_tags($fieldValueHtml), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $html .= '<dd><span class="record-detail-value-wrap"><span>' . $fieldValueHtml . '</span>' . render_record_copy_button(human_label($key), $copyText !== '' ? $copyText : '—') . '</span></dd>';
+        $html .= '</div>';
+    }
+
+    return $html;
+}
+
 function render_csv_list_html(?string $value): string
 {
     $items = array_values(array_filter(array_map('trim', explode(',', (string) $value)), static fn($item): bool => $item !== ''));
@@ -1844,6 +1871,18 @@ function simple_time_text(?string $value): string
     return substr($value, 0, 5);
 }
 
+function render_record_detail_line(string $label, ?string $value, bool $multiline = false): string
+{
+    $value = trim((string) ($value ?? ''));
+    $displayValue = $value !== '' ? $value : '—';
+    $renderedValue = h($displayValue);
+    if ($multiline) {
+        $renderedValue = nl2br($renderedValue);
+    }
+
+    return '<div class="dosage-detail"><dt>' . h($label) . '</dt><span class="dosage-detail-separator" aria-hidden="true">:</span><dd><span class="record-detail-value-wrap"><span>' . $renderedValue . '</span>' . render_record_copy_button($label, $displayValue) . '</span></dd></div>';
+}
+
 function abogado_nombre_text(array $abogado): string
 {
     return trim((string) preg_replace('/\s+/u', ' ', implode(' ', array_filter([
@@ -2272,16 +2311,13 @@ function render_participant_manifestation_section(
         return '<div class="empty-state">No hay persona vinculada para registrar manifestación.</div>';
     }
 
-    $returnParam = urlencode($returnTo);
-    $downloadParam = $downloadUrl !== '' ? '&download_url=' . urlencode($downloadUrl) : '';
     $html = '<div class="section-block">';
     $html .= '<h3>Manifestaciones</h3>';
-    $html .= '<div class="record-actions" style="margin-top:0;margin-bottom:8px">';
-    $html .= '<a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=' . $personaId . '&accidente_id=' . $accidenteId . '&embed=1&return_to=' . $returnParam . $downloadParam . '" data-workbench="' . h($workbenchId) . '" data-frame="' . h($frameId) . '" data-title="Manifestación">+ Nueva manifestación</a>';
     if ($downloadUrl !== '') {
+        $html .= '<div class="record-actions" style="margin-top:0;margin-bottom:8px">';
         $html .= '<a class="btn-shell btn-docx" href="' . h($downloadUrl) . '">DOCX</a>';
+        $html .= '</div>';
     }
-    $html .= '</div>';
     if ($renderLocalWorkbench) {
         $html .= '<div class="inline-workbench" id="' . h($workbenchId) . '" hidden>';
         $html .= '<div class="inline-head">';
@@ -2303,11 +2339,15 @@ function render_participant_manifestation_section(
             }
             $start = simple_time_text((string) ($manifestacion['horario_inicio'] ?? ''));
             $end = simple_time_text((string) ($manifestacion['hora_termino'] ?? ''));
-            $timeText = ($start !== '' ? $start : '--:--') . ' - ' . ($end !== '' ? $end : '--:--');
 
-            $html .= '<article class="record-card">';
-            $html .= '<h5>' . h($title . ' · ' . fecha_simple($manifestacion['fecha'] ?? null)) . '</h5>';
-            $html .= '<div class="record-chipline"><span class="chip-simple">' . h($timeText) . '</span></div>';
+            $html .= '<article class="record-card dosage-record">';
+            $html .= '<header class="dosage-record-head"><h5>Registro de manifestación</h5></header>';
+            $html .= '<dl class="dosage-detail-grid">';
+            $html .= render_record_detail_line('Modalidad', $title);
+            $html .= render_record_detail_line('Fecha', fecha_simple($manifestacion['fecha'] ?? null));
+            $html .= render_record_detail_line('Hora de inicio', $start !== '' ? $start : '--:--');
+            $html .= render_record_detail_line('Hora de término', $end !== '' ? $end : '--:--');
+            $html .= '</dl>';
             $html .= '<div class="record-actions">';
             $html .= '<a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=' . (int) ($manifestacion['id'] ?? 0) . '&embed=1&return_to=' . $returnParam . '" data-workbench="' . h($workbenchId) . '" data-frame="' . h($frameId) . '" data-title="Manifestación">Ver / Editar</a>';
             $html .= '<button type="button" class="btn-shell danger js-manifestacion-delete" data-manifestacion-id="' . (int) ($manifestacion['id'] ?? 0) . '">Eliminar X</button>';
@@ -4348,6 +4388,64 @@ foreach ($manifestacionesAccidente as $manifestacionAccidente) {
     $manifestacionesPorPersona[$manifestacionPersonaId][] = $manifestacionAccidente;
 }
 
+function manifestacion_persona_icono(?string $condicion): string
+{
+    $normalizada = mb_strtolower(trim((string) $condicion), 'UTF-8');
+    $normalizada = strtr($normalizada, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n']);
+    if (str_contains($normalizada, 'efectivo') || str_contains($normalizada, 'policial')) return '👮';
+    if (str_contains($normalizada, 'propietario')) return '🔑';
+    if (str_contains($normalizada, 'familiar')) return '👥';
+    if (str_contains($normalizada, 'peaton')) return '🚶';
+    if (str_contains($normalizada, 'conductor')) return '🚘';
+    if (str_contains($normalizada, 'ciclista')) return '🚲';
+    if (str_contains($normalizada, 'ocupante') || str_contains($normalizada, 'pasajero') || str_contains($normalizada, 'copiloto') || str_contains($normalizada, 'acompanante')) return '🧍';
+    if (str_contains($normalizada, 'testigo')) return '👁️';
+    return '👤';
+}
+
+$manifestacionPersonaOptions = [];
+$addManifestacionPersonaOption = static function (int $personaId, string $nombre, string $condicion, int $rolId = 0) use (&$manifestacionPersonaOptions): void {
+    if ($personaId <= 0 || isset($manifestacionPersonaOptions[$personaId])) {
+        return;
+    }
+    $nombre = compact_text($nombre);
+    if ($nombre === '') {
+        return;
+    }
+    $manifestacionPersonaOptions[$personaId] = [
+        'persona_id' => $personaId,
+        'rol_id' => $rolId,
+        'nombre' => $nombre,
+        'condicion' => compact_text($condicion),
+    ];
+};
+foreach ($personas as $persona) {
+    $addManifestacionPersonaOption(
+        (int) ($persona['persona_id'] ?? 0),
+        person_label($persona),
+        (string) ($persona['rol_nombre'] ?? 'Persona involucrada'),
+        (int) ($persona['rol_id'] ?? 0)
+    );
+}
+foreach ($policias as $policia) {
+    $addManifestacionPersonaOption((int) ($policia['persona_id'] ?? 0), person_label($policia), 'Efectivo policial');
+}
+foreach ($propietarios as $propietario) {
+    $addManifestacionPersonaOption(
+        (int) ($propietario['propietario_persona_id'] ?? 0),
+        trim((string) (($propietario['owner_nombres'] ?? '') . ' ' . ($propietario['owner_apellido_paterno'] ?? '') . ' ' . ($propietario['owner_apellido_materno'] ?? ''))),
+        'Propietario de vehículo'
+    );
+}
+foreach ($familiares as $familiar) {
+    $addManifestacionPersonaOption(
+        (int) ($familiar['familiar_persona_id'] ?? 0),
+        trim((string) (($familiar['fam_nombres'] ?? '') . ' ' . ($familiar['fam_apellido_paterno'] ?? '') . ' ' . ($familiar['fam_apellido_materno'] ?? ''))),
+        'Familiar de fallecido'
+    );
+}
+uasort($manifestacionPersonaOptions, static fn(array $a, array $b): int => strcasecmp($a['nombre'], $b['nombre']));
+
 $oficios = safe_query_all(
     $pdo,
     "SELECT o.id,
@@ -4612,14 +4710,25 @@ $renderVehiculoSubtabs = static function (
       <div class="tab-pane fade show active" id="<?= h($tabPrefix) ?>-resumen" role="tabpanel">
         <div class="inner-panel">
           <?php if ($unidadRecord !== null): ?>
-            <div class="section-block" style="margin-top:0">
-              <h3>Unidad combinada vinculada al conductor</h3>
-              <div class="field-grid"><?= render_field_cards($unidadRecord, ['orden_participacion', ['key' => 'veh_combo_placas', 'class' => 'span-2']]) ?></div>
-            </div>
+            <article class="record-card dosage-record vehicle-summary-record vehicle-combined-record">
+              <header class="dosage-record-head"><h5>Unidad combinada vinculada al conductor</h5></header>
+              <dl class="dosage-detail-grid vehicle-combined-grid"><?= render_record_field_lines($unidadRecord, ['orden_participacion', 'veh_combo_placas']) ?></dl>
+            </article>
           <?php endif; ?>
-          <div class="section-block" style="margin-top:0">
-            <h3><?= h($vehiculoTitulo) ?></h3>
-            <div class="field-grid"><?= render_field_cards($vehiculoRecord, $vehiculoFields) ?></div>
+          <div class="vehicle-summary-title"><?= h($vehiculoTitulo) ?></div>
+          <div class="vehicle-summary-block-grid">
+            <article class="record-card dosage-record vehicle-summary-record vehicle-description-record">
+              <header class="dosage-record-head"><h5>Descripción</h5></header>
+              <dl class="dosage-detail-grid vehicle-summary-grid"><?= render_record_field_lines($vehiculoRecord, ['veh_tipo', 'veh_placa', 'veh_categoria', 'veh_marca', 'veh_modelo', 'veh_carroceria', 'veh_color', 'veh_anio']) ?></dl>
+            </article>
+            <article class="record-card dosage-record vehicle-summary-record vehicle-measures-record">
+              <header class="dosage-record-head"><h5>Medidas</h5></header>
+              <dl class="dosage-detail-grid vehicle-summary-grid"><?= render_record_field_lines($vehiculoRecord, ['veh_largo_mm', 'veh_ancho_mm', 'veh_alto_mm']) ?></dl>
+            </article>
+            <article class="record-card dosage-record vehicle-summary-record vehicle-identification-record">
+              <header class="dosage-record-head"><h5>Identificación y registro</h5></header>
+              <dl class="dosage-detail-grid vehicle-summary-grid"><?= render_record_field_lines($vehiculoRecord, ['veh_nro_motor', 'veh_serie_vin', 'veh_notas', 'veh_creado_en', 'veh_actualizado_en']) ?></dl>
+            </article>
           </div>
         </div>
       </div>
@@ -4634,17 +4743,19 @@ $renderVehiculoSubtabs = static function (
               <?php endif; ?>
               <?php if ($documentoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_editar.php?id=<?= $documentoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="vehiculo-documento-modal" data-frame="vehiculo-documento-modal-frame" data-title="Documento de vehículo">Editar documento</a>
-                <span class="chip-simple">Documento #<?= $documentoVehiculoId ?><?= $documentoVehiculoCount > 1 ? ' · ' . $documentoVehiculoCount . ' registro(s)' : '' ?></span>
               <?php elseif ($involucradoVehiculoId > 0): ?>
                 <a class="btn-shell js-inline-open" href="documento_vehiculo_nuevo.php?invol_id=<?= $involucradoVehiculoId ?>&section=<?= urlencode((string) $slug) ?>&embed=1&return_to=<?= $returnToEncoded ?>" data-workbench="vehiculo-documento-modal" data-frame="vehiculo-documento-modal-frame" data-title="Documento de vehículo">+ Nuevo documento</a>
               <?php endif; ?>
             </div>
 
             <?php if ($sectionHasData): ?>
-              <div class="section-block" style="margin-top:0">
-                <h3><?= h((string) $section['label']) ?></h3>
-                <div class="field-grid"><?= render_field_cards($documentoVehiculo ?? [], $section['fields']) ?></div>
-              </div>
+              <article class="record-card dosage-record">
+                <header class="dosage-record-head"><h5>Registro de <?= h((string) $section['label']) ?></h5></header>
+                <dl class="dosage-detail-grid">
+                  <?= render_record_detail_line('Documento', '#' . $documentoVehiculoId) ?>
+                  <?= render_record_field_lines($documentoVehiculo ?? [], $section['fields']) ?>
+                </dl>
+              </article>
             <?php elseif ($documentoVehiculoId > 0): ?>
               <div class="empty-state">El documento existe, pero esta sección aún no tiene datos registrados.</div>
             <?php else: ?>
@@ -4726,6 +4837,7 @@ $policiaPersonaEditSections = [
 $abogadoSections = [
     'Datos personales' => [
         'apellido_paterno', 'apellido_materno', 'nombres',
+        'persona_rep_nom', 'condicion_representado',
     ],
     'Registro profesional' => [
         'colegiatura', 'registro', 'casilla_electronica',
@@ -5379,12 +5491,25 @@ include __DIR__ . '/sidebar.php';
   }
   body{background:linear-gradient(180deg,var(--page-grad-start) 0%,var(--page-grad-end) 100%);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
   .page{max-width:1380px;margin:10px auto;padding:0 10px 14px}
-  .topbar{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
-  .title-wrap h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--title-blue)}
-  .title-wrap p{margin:0;color:var(--muted);font-size:11px}
-  .sidpol-summary-trigger{display:inline-flex;align-items:center;gap:4px;margin:0;padding:1px 6px;border:1px solid #cbd8eb;border-radius:999px;background:#fff;color:#315a87;font:inherit;font-weight:800;line-height:1.35;cursor:pointer;box-shadow:0 2px 7px rgba(17,24,39,.05)}
+  .topbar{
+    position:relative;z-index:1000;isolation:isolate;overflow:visible;
+    display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:18px;margin-bottom:12px;padding:13px 15px;
+    border:1px solid rgba(166,184,210,.78);border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.96) 0%,rgba(246,250,255,.9) 62%,rgba(239,247,255,.94) 100%);
+    box-shadow:0 14px 34px rgba(35,58,94,.10),inset 0 1px 0 rgba(255,255,255,.9);backdrop-filter:blur(10px);
+  }
+  .topbar::before{content:"";position:absolute;inset:0 18px auto;height:3px;border-radius:0 0 999px 999px;background:linear-gradient(90deg,#0ea5a0 0%,#4f86e8 38%,#8b5cf6 68%,#e0a829 100%);opacity:.78}
+  .title-wrap{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;gap:5px 14px;min-width:0}
+  .case-identity-row{grid-column:1/-1;display:flex;align-items:center;gap:9px;min-width:0;margin-bottom:2px}
+  .case-identity-icon{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border:1px solid #bdd3ee;border-radius:11px;background:linear-gradient(145deg,#eff7ff,#dfeeff);font-size:17px;box-shadow:0 6px 14px rgba(37,99,235,.10)}
+  .case-identity-copy{display:grid;gap:1px;min-width:0}
+  .case-identity-copy span,.case-command-label,.top-actions-label{color:#77869a;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.075em}
+  .case-identity-copy strong{color:#203a5c;font-size:15px;font-weight:900;line-height:1.1}
+  .case-command-label{align-self:center;white-space:nowrap}
+  .title-heading-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .title-wrap p{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0;color:var(--muted);font-size:10.5px;font-weight:700}
+  .sidpol-summary-trigger{display:inline-flex;align-items:center;gap:6px;margin-left:5px;padding:5px 9px;border:1px solid #b9cdea;border-radius:9px;background:rgba(255,255,255,.9);color:#315a87;font:inherit;font-size:10px;font-weight:850;line-height:1.2;cursor:pointer;box-shadow:0 4px 10px rgba(17,24,39,.06)}
   .sidpol-summary-trigger:hover{border-color:#8fb3e0;background:#f5f9ff;color:#1d4f91}
-  .case-summary-modal{position:fixed;inset:0;z-index:1120;display:grid;place-items:start center;padding:92px 14px 20px;background:rgba(15,23,42,.26);backdrop-filter:blur(2px);overflow:auto}
+  .case-summary-modal{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:start center;padding:92px 14px 20px;background:rgba(15,23,42,.26);backdrop-filter:blur(2px);overflow:auto}
   .case-summary-modal[hidden]{display:none}
   .case-summary-dialog{width:min(390px,100%);border:1px solid #cbd8e8;border-radius:14px;background:#fff;box-shadow:0 24px 58px rgba(15,23,42,.28);overflow:hidden}
   .case-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #e2e8f0;background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%)}
@@ -5404,7 +5529,54 @@ include __DIR__ . '/sidebar.php';
   .case-summary-copychip{display:inline-flex;align-items:center;gap:4px;min-height:21px;padding:2px 6px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#334155;font-size:10.5px;font-weight:800;line-height:1;box-shadow:none;cursor:pointer}
   .case-summary-copychip:hover{background:#f2f7ff;border-color:#9fbbe0;color:#1d4f91}
   .case-summary-copychip.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
-  .top-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .top-actions{display:flex;align-content:center;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;max-width:395px;padding:10px 0 10px 18px;border-left:1px solid rgba(166,184,210,.65)}
+  .top-actions-label{flex:1 0 100%;text-align:right}
+  .top-actions .btn-shell{min-height:34px;padding:7px 10px;border-color:#cad7e8;background:rgba(255,255,255,.92);color:#334b69;box-shadow:0 5px 13px rgba(30,64,175,.06)}
+  .top-actions .btn-shell:hover{transform:translateY(-1px);border-color:#91add0;background:#fff;color:#1f4f89;box-shadow:0 8px 17px rgba(37,99,235,.11)}
+  .case-new-actions{position:relative;z-index:80}
+  .case-doc-actions{position:relative;z-index:79}
+  .case-manifest-actions{position:relative;z-index:78}
+  .case-command-button{min-height:38px;padding:8px 12px;border-radius:11px;font-size:11px;font-weight:850;letter-spacing:.015em;white-space:nowrap}
+  .case-command-icon{font-size:14px;line-height:1}
+  .case-new-trigger{cursor:pointer}
+  .case-new-trigger::after{content:"⌄";margin-left:1px;font-size:12px;line-height:1;transition:transform .16s ease}
+  .case-new-trigger[aria-expanded="true"]::after{transform:rotate(180deg)}
+  .case-new-menu{
+    position:absolute;z-index:90;top:calc(100% + 7px);left:0;width:238px;padding:7px;
+    border:1px solid #cbd8e8;border-radius:13px;background:#fff;
+    box-shadow:0 20px 48px rgba(15,23,42,.24);animation:caseNewMenuIn .15s ease-out both;
+  }
+  .case-new-menu[hidden]{display:none}
+  @keyframes caseNewMenuIn{from{opacity:0;transform:translateY(-5px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .case-new-item{
+    display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;min-height:40px;padding:7px 9px;
+    border-radius:9px;color:#24324a;text-decoration:none;font-size:11px;font-weight:800;line-height:1.2;
+  }
+  .case-new-item:hover{background:#eef6ff;color:#1d4ed8}
+  .case-new-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:#e8f1ff;font-size:15px}
+  .case-new-item:nth-child(2n) .case-new-icon{background:#ecfdf5}
+  .case-new-item small{display:block;margin-top:2px;color:#718096;font-size:9.5px;font-weight:650}
+  .case-doc-trigger{
+    min-height:38px;padding:8px 12px;border-color:#8b5cf6;border-radius:12px;
+    background:linear-gradient(135deg,#6d28d9,#8b5cf6 58%,#a78bfa);color:#fff;
+    box-shadow:0 9px 20px rgba(109,40,217,.20);font-size:11px;font-weight:850;cursor:pointer;
+  }
+  .case-doc-trigger::after{content:"⌄";font-size:12px;line-height:1;transition:transform .16s ease}
+  .case-doc-trigger:hover,.case-doc-trigger[aria-expanded="true"]{transform:translateY(-1px);border-color:#7c3aed;background:linear-gradient(135deg,#5b21b6,#7c3aed 58%,#8b5cf6);color:#fff;box-shadow:0 13px 25px rgba(109,40,217,.28)}
+  .case-doc-trigger[aria-expanded="true"]::after{transform:rotate(180deg)}
+  .case-manifest-trigger{
+    min-height:38px;padding:8px 12px;border-color:#f59e0b;border-radius:12px;
+    background:linear-gradient(135deg,#b45309,#d97706 58%,#f59e0b);color:#fff;
+    box-shadow:0 9px 20px rgba(217,119,6,.20);font-size:11px;font-weight:850;cursor:pointer;
+  }
+  .case-manifest-trigger::after{content:"⌄";font-size:12px;line-height:1;transition:transform .16s ease}
+  .case-manifest-trigger:hover,.case-manifest-trigger[aria-expanded="true"]{transform:translateY(-1px);border-color:#d97706;background:linear-gradient(135deg,#92400e,#b45309 58%,#d97706);color:#fff;box-shadow:0 13px 25px rgba(180,83,9,.28)}
+  .case-manifest-trigger[aria-expanded="true"]::after{transform:rotate(180deg)}
+  .case-manifest-menu{width:285px;padding:10px}
+  .case-manifest-form{display:grid;gap:8px}
+  .case-manifest-form label{margin:0;color:#334155;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+  .case-manifest-form select{width:100%;min-width:0;padding:8px 9px;border:1px solid #cbd8e8;border-radius:9px;background:#fff;color:#1f2937;font-size:11px;font-weight:700}
+  .case-manifest-empty{padding:8px;color:#64748b;font-size:10.5px;font-weight:700;line-height:1.35}
   .btn-shell{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;font-weight:700;font-size:11px;line-height:1.1;box-shadow:0 5px 14px rgba(17,24,39,.05)}
   .btn-shell.btn-nuevo:not(.participant-create-btn){
     gap:8px;
@@ -5446,6 +5618,12 @@ include __DIR__ . '/sidebar.php';
   }
   .btn-shell.btn-citacion{border-color:#60a5fa;background:linear-gradient(180deg,#f8fbff 0%,#edf5ff 100%);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 8px 18px rgba(59,130,246,.12);color:#1d4ed8}
   .btn-shell.btn-citacion:hover{border-color:#3b82f6;background:#e0efff;color:#1e40af}
+  .topbar .case-command-button{min-height:37px;padding:8px 12px;border-radius:11px;font-size:10.5px;letter-spacing:.025em;box-shadow:0 6px 14px rgba(30,41,59,.08);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}
+  .topbar .case-command-button:hover{transform:translateY(-1px)}
+  .topbar .case-doc-trigger{border-color:#b6a5ef;background:linear-gradient(180deg,#fbf9ff 0%,#f0ebff 100%);color:#6436b3;box-shadow:0 6px 14px rgba(109,40,217,.10)}
+  .topbar .case-doc-trigger:hover,.topbar .case-doc-trigger[aria-expanded="true"]{border-color:#8b5cf6;background:linear-gradient(180deg,#f5f1ff 0%,#e8ddff 100%);color:#5525a4;box-shadow:0 9px 19px rgba(109,40,217,.17)}
+  .topbar .case-manifest-trigger{border-color:#e8c16a;background:linear-gradient(180deg,#fffdf6 0%,#fff3d8 100%);color:#99620b;box-shadow:0 6px 14px rgba(180,83,9,.10)}
+  .topbar .case-manifest-trigger:hover,.topbar .case-manifest-trigger[aria-expanded="true"]{border-color:#d99d2b;background:linear-gradient(180deg,#fff9e9 0%,#ffe9bc 100%);color:#7c4a05;box-shadow:0 9px 19px rgba(180,83,9,.17)}
   .btn-shell.btn-peritaje{border-color:#ff9f43;background:linear-gradient(180deg,#fffaf3 0%,#fff1df 100%);box-shadow:0 0 0 1px rgba(255,159,67,.24),0 0 14px rgba(255,140,0,.22),0 8px 18px rgba(255,140,0,.12);color:#c2410c}
   .btn-shell.btn-peritaje:hover{border-color:#ff7a00;background:#ffedd5;color:#9a3412;box-shadow:0 0 0 1px rgba(255,122,0,.32),0 0 18px rgba(255,122,0,.28),0 10px 20px rgba(255,122,0,.16)}
   .btn-shell.btn-necropsia{border-color:#14b8a6;background:linear-gradient(180deg,#f1fffd 0%,#dcfdf7 100%);box-shadow:0 0 0 1px rgba(20,184,166,.22),0 0 14px rgba(13,148,136,.18),0 8px 18px rgba(15,118,110,.12);color:#0f766e}
@@ -5570,7 +5748,7 @@ include __DIR__ . '/sidebar.php';
   .line-card{background:#f7f8fb;border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:11.5px;font-weight:700;line-height:1.15;color:#314157}
   .line-card strong{color:#8b6a12}
   .tabs-shell{margin-top:10px}
-  .tabs-shell-main{display:flex;flex-direction:column}
+  .tabs-shell-main{position:relative;z-index:1;display:flex;flex-direction:column}
   .tabs-shell-main > .main-tabs{order:1}
   .tabs-shell-main > .tab-content{order:2}
   .tabs-shell-main > .general-tab-content{margin-top:0 !important}
@@ -6020,7 +6198,7 @@ include __DIR__ . '/sidebar.php';
   .geo-inline-actions{display:flex;gap:6px;flex-wrap:wrap}
   .geo-inline-status{display:flex;align-items:center;gap:6px;min-height:34px;padding:8px 10px;border:1px dashed #d6dfec;border-radius:10px;background:#fffdf5;color:#5f6674;font-size:11px;font-weight:700;line-height:1.35}
   .geo-inline-status.is-ready{border-style:solid;border-color:#b8d9c5;background:#f2fff7;color:#166534}
-  .geo-inline-modal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.52)}
+  .geo-inline-modal{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.52)}
   .geo-inline-modal.is-open{display:flex}
   .geo-inline-modal-card{width:min(960px,96vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 22px 60px rgba(15,23,42,.28)}
   .geo-inline-modal-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
@@ -6051,6 +6229,37 @@ include __DIR__ . '/sidebar.php';
   .edit-control:focus{outline:none;border-color:#d6b44c;box-shadow:0 0 0 3px rgba(214,180,76,.16)}
   textarea.edit-control{min-height:76px;resize:vertical}
   .editable-form[hidden],.editable-view[hidden]{display:none}
+  .person-primary-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:start;gap:12px;width:100%}
+  .person-primary-record{position:relative;height:auto;min-width:0;border-width:1px;border-top-width:4px;border-radius:14px;padding:12px;box-shadow:0 10px 22px rgba(15,23,42,.07)}
+  .person-primary-record:nth-child(1){border-color:#86b8f5;background:linear-gradient(180deg,#f8fbff 0%,#eef6ff 100%)}
+  .person-primary-record:nth-child(2){border-color:#69d9ba;background:linear-gradient(180deg,#f7fffc 0%,#ebfbf5 100%)}
+  .person-primary-record:nth-child(3){border-color:#e8c56e;background:linear-gradient(180deg,#fffdf8 0%,#fff7e7 100%)}
+  .person-primary-record .dosage-record-head{margin:-2px 0 11px;padding:0 0 9px}
+  .person-primary-record .dosage-detail{grid-template-columns:minmax(112px,42%) 10px minmax(0,1fr);gap:5px}
+  .person-primary-record .record-detail-value-wrap{gap:5px}
+  .participation-primary-record{border-top:4px solid #9b7be8;background:linear-gradient(180deg,#fcfaff 0%,#f5f0ff 100%);border-radius:14px;padding:12px;box-shadow:0 10px 22px rgba(91,44,160,.08)}
+  .participation-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px;row-gap:7px}
+  .participation-detail-grid .dosage-detail{grid-template-columns:minmax(150px,42%) 10px minmax(0,1fr);gap:6px}
+  .vehicle-summary-record{border-top:4px solid #38b98b;background:linear-gradient(180deg,#fbfffd 0%,#edf9f4 100%);border-radius:14px;padding:12px;box-shadow:0 10px 22px rgba(5,150,105,.08)}
+  .vehicle-summary-title{margin:11px 2px 8px;color:#31567f;font-size:13px;font-weight:850}
+  .vehicle-summary-block-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:12px}
+  .vehicle-summary-grid{grid-template-columns:1fr;row-gap:7px}
+  .vehicle-summary-grid .dosage-detail{grid-template-columns:minmax(106px,40%) 10px minmax(0,1fr);gap:5px}
+  .vehicle-measures-record{border-top-color:#52a9e5;background:linear-gradient(180deg,#f9fcff 0%,#edf6ff 100%)}
+  .vehicle-identification-record{border-top-color:#d6a130;background:linear-gradient(180deg,#fffdf8 0%,#fff7e8 100%)}
+  .vehicle-combined-record{border-top-color:#d6a130;background:linear-gradient(180deg,#fffdf8 0%,#fff7e8 100%)}
+  .vehicle-combined-grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}
+  .participant-registry-record{max-width:760px;border-top:4px solid #4aa8d8;border-radius:14px;padding:12px;background:linear-gradient(180deg,#fbfdff 0%,#edf7fc 100%);box-shadow:0 10px 22px rgba(14,116,144,.08)}
+  .participant-registry-record .dosage-detail-grid{gap:7px}
+  .participant-registry-record .dosage-detail{grid-template-columns:180px 12px minmax(0,1fr)}
+  .owner-registry-record{border-top-color:#818cf8;background:linear-gradient(180deg,#fcfbff 0%,#f1f0ff 100%)}
+  .persona-edit-modal:not([hidden]){position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(15,23,42,.58);backdrop-filter:blur(4px)}
+  .persona-edit-dialog{display:flex;flex-direction:column;width:min(980px,100%);max-height:calc(100vh - 44px);overflow:hidden;border:1px solid #cbd8e8;border-radius:18px;background:#f8fbff;box-shadow:0 28px 70px rgba(15,23,42,.32)}
+  .persona-edit-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-bottom:1px solid #d7e1ef;background:#fff}
+  .persona-edit-head span{display:block;margin-bottom:2px;color:#6b7a90;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}
+  .persona-edit-head h3{margin:0;color:#243b5c;font-size:16px;font-weight:850}
+  .persona-edit-body{display:grid;gap:9px;padding:13px 15px 17px;overflow:auto}
+  body.has-persona-edit-modal{overflow:hidden}
   .module-grid{display:grid;gap:6px}
   .module-card{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:9px 11px}
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
@@ -6264,7 +6473,7 @@ include __DIR__ . '/sidebar.php';
   .analysis-delete-btn:hover{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
   .analysis-compare-btn{border-color:#34d399;background:linear-gradient(135deg,#087f5b,#0f9f75);color:#fff;box-shadow:0 9px 20px rgba(5,150,105,.20)}
   .analysis-compare-btn:hover{border-color:#10b981;background:linear-gradient(135deg,#06694c,#0b8a65);color:#fff}
-  .analysis-compare-modal{position:fixed;inset:0;z-index:1110;display:grid;place-items:center;padding:22px;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);overflow:auto}
+  .analysis-compare-modal{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:22px;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);overflow:auto}
   .analysis-compare-modal[hidden]{display:none}
   .analysis-compare-dialog{width:min(1180px,100%);max-height:calc(100vh - 44px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;border:1px solid #cbd8e8;border-radius:20px;background:#fff;box-shadow:0 30px 80px rgba(15,23,42,.34)}
   .analysis-compare-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;border-bottom:1px solid #dbe4ef;background:linear-gradient(135deg,#f7fffb,#f5f8ff)}
@@ -6373,6 +6582,29 @@ include __DIR__ . '/sidebar.php';
   .inner-tabs .nav-link[data-bs-target$="-man"]::before{background:linear-gradient(180deg,#4f46e5 0%,#818cf8 100%)}
   .inner-tabs .nav-link[data-bs-target$="-occ"]::before{background:linear-gradient(180deg,#dc2626 0%,#fb7185 100%)}
   .inner-tabs .tab-mini{display:block;font-size:9px;font-weight:700;opacity:.70;margin-top:3px}
+  .tabs-header .nav-link:not(.active),
+  .inner-tabs .nav-link:not(.active){
+    opacity:.58;
+    filter:saturate(.64);
+  }
+  .tabs-header .nav-link,
+  .inner-tabs .nav-link{
+    transition-property:transform,box-shadow,border-color,background,color,opacity,filter;
+    transition-duration:.18s;
+    transition-timing-function:ease;
+  }
+  .tabs-header .nav-link:not(.active):hover,
+  .tabs-header .nav-link:not(.active):focus-visible,
+  .inner-tabs .nav-link:not(.active):hover,
+  .inner-tabs .nav-link:not(.active):focus-visible{
+    opacity:.94;
+    filter:saturate(.94);
+  }
+  .tabs-header .nav-link.active,
+  .inner-tabs .nav-link.active{
+    opacity:1;
+    filter:none;
+  }
   .inner-panel{
     border:2px solid #b7cfea;
     border-radius:15px;
@@ -6393,6 +6625,24 @@ include __DIR__ . '/sidebar.php';
   .record-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.3;font-weight:600}
   .record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .record-chipline{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+  .dosage-record{padding:12px 13px}
+  .dosage-record-head{padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid #dbe4ef}
+  .dosage-record-head h5{margin:0;font-size:13px;color:#8b6a12}
+  .dosage-detail-grid{display:grid;gap:5px;margin:0}
+  .dosage-detail{display:grid;grid-template-columns:150px 12px minmax(0,1fr);align-items:start;gap:7px;min-width:0}
+  .dosage-detail dt{margin:0;color:#43536a;font-size:11.5px;font-weight:750;line-height:1.3}
+  .dosage-detail-separator{color:#43536a;font-size:11.5px;font-weight:800;line-height:1.3;text-align:center}
+  .dosage-detail dd{margin:0;color:#17263d;font-size:11.5px;font-weight:750;line-height:1.3;overflow-wrap:anywhere}
+  .record-detail-value-wrap{display:inline-flex;align-items:flex-start;gap:7px;max-width:100%}
+  .record-detail-copy{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:24px;height:24px;padding:0;border:1px solid #c7d6e8;border-radius:8px;background:linear-gradient(180deg,#fff 0%,#edf4fc 100%);color:#42658f;box-shadow:0 4px 10px rgba(30,64,175,.09),inset 0 1px 0 rgba(255,255,255,.95);cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
+  .record-detail-copy svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .record-detail-copy:hover{transform:translateY(-1px);border-color:#7fb1e8;background:linear-gradient(180deg,#f8fbff 0%,#e3efff 100%);color:#1d5fa7;box-shadow:0 7px 14px rgba(37,99,235,.16)}
+  .record-detail-copy:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
+  .record-detail-copy.is-copied{border-color:#69c98d;background:linear-gradient(180deg,#effcf4 0%,#dff7e8 100%);color:#168144}
+  .record-detail-copy[data-copy-state]::after{content:attr(data-copy-state);position:absolute;z-index:20;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);padding:5px 7px;border-radius:7px;background:#17263d;color:#fff;font-size:9px;font-weight:800;line-height:1;white-space:nowrap;box-shadow:0 7px 16px rgba(15,23,42,.2);animation:copyTipIn .16s ease both}
+  .record-detail-copy[data-copy-state]::before{content:"";position:absolute;z-index:21;left:50%;bottom:calc(100% + 3px);width:7px;height:7px;background:#17263d;transform:translateX(-50%) rotate(45deg)}
+  @keyframes copyTipIn{from{opacity:0;transform:translateX(-50%) translateY(3px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  .dosage-record .record-actions{margin-top:10px}
   .itp-list{margin:0;padding-left:18px;color:#2d3b50;font-size:12px;font-weight:700;line-height:1.35}
   .itp-list li + li{margin-top:4px}
   .itp-builder{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fbfcfe}
@@ -6411,7 +6661,7 @@ include __DIR__ . '/sidebar.php';
   .modal-workbench{
     position:fixed;
     inset:0;
-    z-index:1090;
+    z-index:2147483000;
     margin:0;
     padding:24px;
     border:0;
@@ -6839,6 +7089,24 @@ include __DIR__ . '/sidebar.php';
     color:#8ec1ff;
     font-weight:800;
   }
+  html[data-theme-resolved="dark"] .case-new-menu{background:#111827;border-color:#334155;box-shadow:0 20px 50px rgba(0,0,0,.46)}
+  html[data-theme-resolved="dark"] .case-new-item{color:#dbe7f5}
+  html[data-theme-resolved="dark"] .case-new-item:hover{background:#1e3a5f;color:#bfdbfe}
+  html[data-theme-resolved="dark"] .case-new-icon{background:#1e3a8a}
+  html[data-theme-resolved="dark"] .case-new-item:nth-child(2n) .case-new-icon{background:#14532d}
+  html[data-theme-resolved="dark"] .case-new-item small{color:#9fb0c6}
+  html[data-theme-resolved="dark"] .case-doc-trigger{border-color:#a78bfa;background:linear-gradient(135deg,#5b21b6,#7c3aed 58%,#8b5cf6);color:#fff}
+  html[data-theme-resolved="dark"] .case-manifest-trigger{border-color:#f59e0b;background:linear-gradient(135deg,#92400e,#b45309 58%,#d97706);color:#fff}
+  html[data-theme-resolved="dark"] .case-manifest-form label{color:#cbd5e1}
+  html[data-theme-resolved="dark"] .case-manifest-form select{background:#0f172a;border-color:#475569;color:#e5edf8}
+  html[data-theme-resolved="dark"] .topbar{background:rgba(15,23,42,.82);border-color:#2a3852;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+  html[data-theme-resolved="dark"] .case-identity-icon{background:#17243a;border-color:#365071}
+  html[data-theme-resolved="dark"] .case-identity-copy strong{color:#e5edf8}
+  html[data-theme-resolved="dark"] .case-identity-copy span,
+  html[data-theme-resolved="dark"] .case-command-label,
+  html[data-theme-resolved="dark"] .top-actions-label{color:#91a4bd}
+  html[data-theme-resolved="dark"] .top-actions{border-left-color:#334155}
+  html[data-theme-resolved="dark"] .top-actions .btn-shell{background:#111827}
   html[data-theme-resolved="dark"] .data-card .value,
   html[data-theme-resolved="dark"] .field-value,
   html[data-theme-resolved="dark"] .diligencia-inline-box div,
@@ -6862,6 +7130,17 @@ include __DIR__ . '/sidebar.php';
     color:#9fb1ca;
     font-weight:600;
   }
+  html[data-theme-resolved="dark"] .dosage-record-head{border-bottom-color:#334155}
+  html[data-theme-resolved="dark"] .dosage-detail dt{color:#9fb1ca}
+  html[data-theme-resolved="dark"] .dosage-detail-separator{color:#9fb1ca}
+  html[data-theme-resolved="dark"] .dosage-detail dd{color:#e5edf8}
+  html[data-theme-resolved="dark"] .record-detail-copy{border-color:#405774;background:linear-gradient(180deg,#1d2b42 0%,#142036 100%);color:#9dc7f5;box-shadow:0 5px 12px rgba(0,0,0,.2)}
+  html[data-theme-resolved="dark"] .record-detail-copy:hover{border-color:#60a5fa;background:#1e3a5f;color:#dbeafe}
+  html[data-theme-resolved="dark"] .record-detail-copy.is-copied{border-color:#34d399;background:#123b30;color:#a7f3d0}
+  html[data-theme-resolved="dark"] .persona-edit-dialog{border-color:#334155;background:#0f172a;box-shadow:0 30px 75px rgba(0,0,0,.55)}
+  html[data-theme-resolved="dark"] .persona-edit-head{border-bottom-color:#334155;background:#111b30}
+  html[data-theme-resolved="dark"] .persona-edit-head span{color:#94a3b8}
+  html[data-theme-resolved="dark"] .persona-edit-head h3{color:#e5edf8}
   html[data-theme-resolved="dark"] .person-title h2,
   html[data-theme-resolved="dark"] .section-title,
   html[data-theme-resolved="dark"] .section-block h3,
@@ -7024,6 +7303,10 @@ include __DIR__ . '/sidebar.php';
     .field-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
   @media (max-width:980px){
+    .topbar{grid-template-columns:1fr;align-items:stretch;gap:10px}
+    .top-actions{width:100%;max-width:none;justify-content:flex-start;margin-left:0;padding:10px 0 0;border-left:0;border-top:1px solid rgba(188,198,216,.62)}
+    .top-actions-label{text-align:left}
+    html[data-theme-resolved="dark"] .top-actions{border-top-color:#334155}
     .g-3,.g-4,.g-6{grid-column:span 6}
     .ident-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     [data-edit-view="general-accidente"] > .summary-stack{grid-column:1 / -1}
@@ -7034,6 +7317,8 @@ include __DIR__ . '/sidebar.php';
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9{grid-column:span 6}
     .line-grid{grid-template-columns:1fr}
     .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .person-primary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    .vehicle-summary-block-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .general-grid{gap:5px}
     .diligencia-list-body{grid-template-columns:minmax(110px,160px) minmax(0,1fr)}
     .diligencia-list-date{grid-column:1/-1}
@@ -7045,6 +7330,10 @@ include __DIR__ . '/sidebar.php';
   @media (max-width:720px){
     .page{padding:0 8px 16px}
     .topbar{margin-bottom:8px}
+    .title-wrap{grid-template-columns:1fr}
+    .case-identity-row{align-items:flex-start;flex-wrap:wrap}
+    .sidpol-summary-trigger{margin-left:43px}
+    .case-command-label{margin-top:4px}
     .top-actions{gap:6px}
     .btn-shell{padding:6px 8px;font-size:11px}
     .panel,.tab-panel{padding:8px}
@@ -7063,12 +7352,21 @@ include __DIR__ . '/sidebar.php';
     [data-edit-view="general-accidente"] > .general-block-fechas .line-grid{grid-template-columns:1fr}
     .general-edit-card.g-3,.general-edit-card.g-4,.general-edit-card.g-6,.general-edit-card.g-9,.general-edit-card.g-12{grid-column:span 12}
     .field-grid{grid-template-columns:1fr}
+    .person-primary-grid{grid-template-columns:1fr!important}
+    .participation-detail-grid{grid-template-columns:1fr}
+    .vehicle-summary-block-grid,.vehicle-summary-grid,.vehicle-combined-grid{grid-template-columns:1fr}
+    .participant-registry-record .dosage-detail{grid-template-columns:118px 10px minmax(0,1fr)}
+    .dosage-detail{grid-template-columns:118px 10px minmax(0,1fr)}
     .analysis-two-cols{grid-template-columns:1fr}
     .analysis-preview{grid-template-columns:1fr}
     .analysis-inline-stage{height:280px}
     .general-checkbox-grid{grid-template-columns:1fr}
     .field-card.span-2{grid-column:span 1}
     .editable-toolbar{align-items:flex-start}
+    .persona-edit-modal:not([hidden]){padding:8px}
+    .persona-edit-dialog{max-height:calc(100vh - 16px);border-radius:13px}
+    .persona-edit-head{align-items:flex-start;flex-direction:column;padding:11px 12px}
+    .persona-edit-body{padding:10px}
     .person-title h2{font-size:16px}
     .tabs-header .nav-link{padding:6px 8px;font-size:11px}
     .tabs-header .tab-sub{font-size:9px}
@@ -7107,22 +7405,69 @@ include __DIR__ . '/sidebar.php';
 <div class="page">
   <div class="topbar">
     <div class="title-wrap">
-      <h1>Vista por pestañas del accidente</h1>
-      <p>
-        Accidente #<?= (int) $accidente_id ?> ·
+      <div class="case-identity-row">
+        <span class="case-identity-icon" aria-hidden="true">🚨</span>
+        <div class="case-identity-copy">
+          <span>Expediente del accidente</span>
+          <strong>Accidente #<?= (int) $accidente_id ?></strong>
+        </div>
         <button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)">
-          Registro SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?>
+          <span>SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></span>
           <span class="sidpol-summary-sep">·</span>
-          Folder <?= h($caseSummaryFolder !== '' ? $caseSummaryFolder : '—') ?>
+          <span>Folder <?= h($caseSummaryFolder !== '' ? $caseSummaryFolder : '—') ?></span>
         </button>
-      </p>
+      </div>
+      <div class="case-command-label">Acciones rápidas</div>
+      <div class="title-heading-row">
+        <div class="case-new-actions">
+          <button class="btn-shell btn-nuevo case-new-trigger case-command-button js-case-new-trigger" type="button" aria-expanded="false" aria-controls="case-new-menu">NUEVO</button>
+          <div class="case-new-menu" id="case-new-menu" hidden>
+            <a class="case-new-item" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👤</span><span>Persona involucrada<small>Registrar participante</small></span></a>
+            <a class="case-new-item" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🚘</span><span>Vehículo involucrado<small>Registrar unidad participante</small></span></a>
+            <a class="case-new-item" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👥</span><span>Familiar<small>Registrar familiar de fallecido</small></span></a>
+            <a class="case-new-item" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🔑</span><span>Propietario<small>Registrar propietario de vehículo</small></span></a>
+            <a class="case-new-item" href="abogado_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">⚖️</span><span>Abogado<small>Registrar defensa legal</small></span></a>
+            <a class="case-new-item" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Registrar interviniente</small></span></a>
+          </div>
+        </div>
+        <div class="case-doc-actions">
+          <button class="btn-shell case-doc-trigger case-command-button js-case-doc-trigger" type="button" aria-expanded="false" aria-controls="case-doc-menu"><span class="case-command-icon" aria-hidden="true">📁</span>DOCUMENTOS</button>
+          <div class="case-new-menu case-doc-menu" id="case-doc-menu" hidden>
+            <a class="case-new-item" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=oficios') ?>"><span class="case-new-icon" aria-hidden="true">📨</span><span>Nuevo oficio<small>Crear oficio para el accidente</small></span></a>
+            <a class="case-new-item" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=recibidos') ?>"><span class="case-new-icon" aria-hidden="true">📥</span><span>Nuevo documento recibido<small>Registrar documentación ingresada</small></span></a>
+          </div>
+        </div>
+        <a class="btn-shell btn-citacion case-command-button" href="citacion_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true">📅</span>CITACIONES</a>
+        <div class="case-manifest-actions">
+          <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true">📝</span>MANIFESTACIÓN</button>
+          <div class="case-new-menu case-manifest-menu" id="case-manifest-menu" hidden>
+            <?php if ($manifestacionPersonaOptions === []): ?>
+              <div class="case-manifest-empty">No hay personas vinculadas al accidente para crear una manifestación.</div>
+            <?php else: ?>
+              <form class="case-manifest-form js-case-manifest-form" action="documento_manifestacion_nuevo.php" method="get">
+                <label for="case-manifest-persona">Persona</label>
+                <select id="case-manifest-persona" name="persona_id" required>
+                  <option value="">Seleccionar persona...</option>
+                  <?php foreach ($manifestacionPersonaOptions as $manifestacionPersona): ?>
+                    <option value="<?= (int) $manifestacionPersona['persona_id'] ?>" data-rol-id="<?= (int) $manifestacionPersona['rol_id'] ?>"><?= h(manifestacion_persona_icono($manifestacionPersona['condicion']) . ' ' . $manifestacionPersona['nombre'] . ($manifestacionPersona['condicion'] !== '' ? ' — ' . $manifestacionPersona['condicion'] : '')) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <input type="hidden" name="rol_id" value="" class="js-case-manifest-role">
+                <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
+                <input type="hidden" name="return_to" value="<?= h('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>">
+              </form>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="top-actions">
+      <span class="top-actions-label">Navegación</span>
+      <button type="button" class="btn-shell js-history-back"><span aria-hidden="true">←</span>Volver atrás</button>
       <?php if ($googleMapsUrl !== ''): ?>
-        <a class="btn-shell" href="<?= h($googleMapsUrl) ?>" target="_blank" rel="noopener">Ver en Google Maps</a>
+        <a class="btn-shell" href="<?= h($googleMapsUrl) ?>" target="_blank" rel="noopener"><span aria-hidden="true">🗺️</span>Google Maps</a>
       <?php endif; ?>
-      <a class="btn-shell" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Volver a datos generales</a>
-      <a class="btn-shell" href="accidente_listar.php">Volver al listado</a>
+      <a class="btn-shell" href="accidente_listar.php"><span aria-hidden="true">☰</span>Listado</a>
     </div>
   </div>
 
@@ -8346,17 +8691,6 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade" id="participantes" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-participantes">
-          <div class="tabs-toolbar participant-primary-actions">
-            <a class="btn-shell participant-create-btn participant-create-person" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>">
-              <span class="participant-create-icon" aria-hidden="true">+</span>
-              <span class="participant-create-copy"><span class="participant-create-title">Nueva persona involucrada</span><span class="participant-create-sub">Registrar participante</span></span>
-            </a>
-            <a class="btn-shell participant-create-btn participant-create-vehicle" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>">
-              <span class="participant-create-icon" aria-hidden="true">+</span>
-              <span class="participant-create-copy"><span class="participant-create-title">Nuevo vehículo involucrado</span><span class="participant-create-sub">Registrar unidad participante</span></span>
-            </a>
-            <a class="btn-shell btn-citacion" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>">Citaciones</a>
-          </div>
           <div class="inline-workbench modal-workbench" id="vehiculo-documento-modal" role="dialog" aria-modal="true" aria-labelledby="vehiculo-documento-modal-title" hidden>
             <div class="modal-workbench-dialog">
               <div class="inline-head">
@@ -8529,42 +8863,48 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-content mt-2">
               <div class="tab-pane fade show active" id="<?= h($personPaneId) ?>-persona" role="tabpanel">
                 <div class="inner-panel">
-                  <div class="editable-shell" data-edit-shell="persona-<?= (int) $persona['involucrado_id'] ?>">
+                  <div class="editable-shell persona-primary-shell" data-edit-shell="persona-<?= (int) $persona['involucrado_id'] ?>">
                     <div class="editable-toolbar">
                       <div></div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="persona-<?= (int) $persona['involucrado_id'] ?>">Editar persona</button>
-                        <div class="editable-actions" data-edit-actions="persona-<?= (int) $persona['involucrado_id'] ?>" hidden>
-                          <button type="button" class="btn-shell js-edit-cancel" data-shell="persona-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
-                          <button type="submit" class="btn-shell btn-primary" form="persona-inline-form-<?= (int) $persona['involucrado_id'] ?>">Guardar</button>
-                        </div>
                       </div>
                     </div>
 
-                    <div class="inline-edit-error" id="persona-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
-
-                    <div class="editable-view" data-edit-view="persona-<?= (int) $persona['involucrado_id'] ?>">
+                    <div class="editable-view person-primary-grid" data-edit-view="persona-<?= (int) $persona['involucrado_id'] ?>">
                       <?php foreach ($personaSections as $sectionTitle => $sectionFields): ?>
-                        <div class="section-block">
-                          <h3><?= h($sectionTitle) ?></h3>
-                          <div class="field-grid"><?= render_field_cards($persona, $sectionFields) ?></div>
-                        </div>
+                        <article class="record-card dosage-record person-primary-record">
+                          <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
+                          <dl class="dosage-detail-grid"><?= render_record_field_lines($persona, $sectionFields) ?></dl>
+                        </article>
                       <?php endforeach; ?>
                     </div>
 
-                    <form class="editable-form js-inline-ajax-form js-persona-inline-form" id="persona-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="persona-<?= (int) $persona['involucrado_id'] ?>" data-error="persona-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
-                      <input type="hidden" name="action" value="save_persona_inline">
-                      <input type="hidden" name="persona_id" value="<?= (int) $persona['persona_id'] ?>">
-                      <input type="hidden" name="foto_path" value="<?= h((string) ($persona['foto_path'] ?? '')) ?>">
-                      <input type="hidden" name="api_fuente" value="<?= h((string) ($persona['api_fuente'] ?? '')) ?>">
-                      <input type="hidden" name="api_ref" value="<?= h((string) ($persona['api_ref'] ?? '')) ?>">
+                    <form class="editable-form persona-edit-modal js-inline-ajax-form js-persona-inline-form" id="persona-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="persona-<?= (int) $persona['involucrado_id'] ?>" data-error="persona-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
+                      <div class="persona-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="persona-edit-title-<?= (int) $persona['involucrado_id'] ?>">
+                        <header class="persona-edit-head">
+                          <div><span>Ficha principal</span><h3 id="persona-edit-title-<?= (int) $persona['involucrado_id'] ?>">Editar <?= h(person_label($persona)) ?></h3></div>
+                          <div class="editable-actions" data-edit-actions="persona-<?= (int) $persona['involucrado_id'] ?>" hidden>
+                            <button type="button" class="btn-shell js-edit-cancel" data-shell="persona-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
+                            <button type="submit" class="btn-shell btn-primary">Guardar cambios</button>
+                          </div>
+                        </header>
+                        <div class="persona-edit-body">
+                          <div class="inline-edit-error" id="persona-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
+                          <input type="hidden" name="action" value="save_persona_inline">
+                          <input type="hidden" name="persona_id" value="<?= (int) $persona['persona_id'] ?>">
+                          <input type="hidden" name="foto_path" value="<?= h((string) ($persona['foto_path'] ?? '')) ?>">
+                          <input type="hidden" name="api_fuente" value="<?= h((string) ($persona['api_fuente'] ?? '')) ?>">
+                          <input type="hidden" name="api_ref" value="<?= h((string) ($persona['api_ref'] ?? '')) ?>">
 
-                      <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
-                        <div class="section-block">
-                          <h3><?= h($sectionTitle) ?></h3>
-                          <div class="field-grid"><?= render_editable_fields($persona, $sectionFields, 'persona-' . (int) $persona['involucrado_id']) ?></div>
+                          <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
+                            <div class="section-block">
+                              <h3><?= h($sectionTitle) ?></h3>
+                              <div class="field-grid"><?= render_editable_fields($persona, $sectionFields, 'persona-' . (int) $persona['involucrado_id']) ?></div>
+                            </div>
+                          <?php endforeach; ?>
                         </div>
-                      <?php endforeach; ?>
+                      </div>
                     </form>
 
                   </div>
@@ -8573,33 +8913,39 @@ include __DIR__ . '/sidebar.php';
 
               <div class="tab-pane fade" id="<?= h($personPaneId) ?>-participacion" role="tabpanel">
                 <div class="inner-panel">
-                  <div class="editable-shell" data-edit-shell="participacion-<?= (int) $persona['involucrado_id'] ?>">
+                  <div class="editable-shell participation-primary-shell" data-edit-shell="participacion-<?= (int) $persona['involucrado_id'] ?>">
                     <div class="editable-toolbar">
                       <div></div>
                       <div class="editable-actions">
                         <button type="button" class="btn-shell js-edit-start" data-shell="participacion-<?= (int) $persona['involucrado_id'] ?>">Editar participación</button>
-                        <div class="editable-actions" data-edit-actions="participacion-<?= (int) $persona['involucrado_id'] ?>" hidden>
-                          <button type="button" class="btn-shell js-edit-cancel" data-shell="participacion-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
-                          <button type="submit" class="btn-shell btn-primary" form="participacion-inline-form-<?= (int) $persona['involucrado_id'] ?>">Guardar</button>
-                        </div>
                       </div>
                     </div>
-
-                    <div class="inline-edit-error" id="participacion-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
 
                     <div class="editable-view" data-edit-view="participacion-<?= (int) $persona['involucrado_id'] ?>">
-                      <div class="section-block">
-                        <h3>Participación en el accidente</h3>
-                        <div class="field-grid"><?= render_field_cards($persona, $involucradoFields) ?></div>
-                      </div>
+                      <article class="record-card dosage-record participation-primary-record">
+                        <header class="dosage-record-head"><h5>Registro de participación en el accidente</h5></header>
+                        <dl class="dosage-detail-grid participation-detail-grid"><?= render_record_field_lines($persona, $involucradoFields) ?></dl>
+                      </article>
                     </div>
 
-                    <form class="editable-form js-inline-ajax-form" id="participacion-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="participacion-<?= (int) $persona['involucrado_id'] ?>" data-error="participacion-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
-                      <input type="hidden" name="action" value="save_participacion_inline">
-                      <input type="hidden" name="involucrado_id" value="<?= (int) $persona['involucrado_id'] ?>">
-                      <div class="section-block">
-                        <h3>Participación en el accidente</h3>
-                        <div class="field-grid"><?= render_editable_fields($persona, $participacionEditFields, 'participacion-' . (int) $persona['involucrado_id']) ?></div>
+                    <form class="editable-form persona-edit-modal js-inline-ajax-form" id="participacion-inline-form-<?= (int) $persona['involucrado_id'] ?>" data-shell="participacion-<?= (int) $persona['involucrado_id'] ?>" data-error="participacion-inline-error-<?= (int) $persona['involucrado_id'] ?>" method="post" hidden>
+                      <div class="persona-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="participacion-edit-title-<?= (int) $persona['involucrado_id'] ?>">
+                        <header class="persona-edit-head">
+                          <div><span>Participación</span><h3 id="participacion-edit-title-<?= (int) $persona['involucrado_id'] ?>">Editar participación en el accidente</h3></div>
+                          <div class="editable-actions" data-edit-actions="participacion-<?= (int) $persona['involucrado_id'] ?>" hidden>
+                            <button type="button" class="btn-shell js-edit-cancel" data-shell="participacion-<?= (int) $persona['involucrado_id'] ?>">Cancelar</button>
+                            <button type="submit" class="btn-shell btn-primary">Guardar cambios</button>
+                          </div>
+                        </header>
+                        <div class="persona-edit-body">
+                          <div class="inline-edit-error" id="participacion-inline-error-<?= (int) $persona['involucrado_id'] ?>"></div>
+                          <input type="hidden" name="action" value="save_participacion_inline">
+                          <input type="hidden" name="involucrado_id" value="<?= (int) $persona['involucrado_id'] ?>">
+                          <div class="section-block">
+                            <h3>Participación en el accidente</h3>
+                            <div class="field-grid"><?= render_editable_fields($persona, $participacionEditFields, 'participacion-' . (int) $persona['involucrado_id']) ?></div>
+                          </div>
+                        </div>
                       </div>
                     </form>
                   </div>
@@ -8740,11 +9086,17 @@ include __DIR__ . '/sidebar.php';
                     <?php else: ?>
                       <div class="record-stack">
                         <?php foreach ($extras['lc'] as $lc): ?>
-                          <article class="record-card">
-                            <h5>Clase <?= h((string) ($lc['clase'] ?? '—')) ?><?php if (!empty($lc['categoria'])): ?> · Cat <?= h((string) $lc['categoria']) ?><?php endif; ?> · N° <?= h((string) ($lc['numero'] ?? '—')) ?></h5>
-                            <p>Vigente: <?= h(fecha_simple($lc['vigente_desde'] ?? null)) ?> a <?= h(fecha_simple($lc['vigente_hasta'] ?? null)) ?></p>
-                            <?php if (!empty($lc['expedido_por'])): ?><p>Expedido por: <?= h((string) $lc['expedido_por']) ?></p><?php endif; ?>
-                            <?php if (!empty($lc['restricciones'])): ?><p><?= nl2br(h((string) $lc['restricciones'])) ?></p><?php endif; ?>
+                          <article class="record-card dosage-record">
+                            <header class="dosage-record-head"><h5>Registro de licencia de conducir</h5></header>
+                            <dl class="dosage-detail-grid">
+                              <?= render_record_detail_line('Número', (string) ($lc['numero'] ?? '')) ?>
+                              <?= render_record_detail_line('Clase', (string) ($lc['clase'] ?? '')) ?>
+                              <?= render_record_detail_line('Categoría', (string) ($lc['categoria'] ?? '')) ?>
+                              <?= render_record_detail_line('Expedida por', (string) ($lc['expedido_por'] ?? '')) ?>
+                              <?= render_record_detail_line('Vigente desde', fecha_simple($lc['vigente_desde'] ?? null)) ?>
+                              <?= render_record_detail_line('Vigente hasta', fecha_simple($lc['vigente_hasta'] ?? null)) ?>
+                              <?php if (trim((string) ($lc['restricciones'] ?? '')) !== ''): ?><?= render_record_detail_line('Restricciones', (string) $lc['restricciones'], true) ?><?php endif; ?>
+                            </dl>
                             <div class="record-actions">
                               <a class="btn-shell js-inline-open" href="doc_lc_editar.php?id=<?= (int) $lc['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Licencia de conducir">Ver / Editar</a>
                             </div>
@@ -8767,13 +9119,15 @@ include __DIR__ . '/sidebar.php';
                     <?php else: ?>
                       <div class="record-stack">
                         <?php foreach ($extras['rml'] as $rml): ?>
-                          <article class="record-card">
-                            <h5>N° <?= h((string) ($rml['numero'] ?? '—')) ?> · <?= h(fecha_simple($rml['fecha'] ?? null)) ?></h5>
-                            <div class="record-chipline">
-                              <span class="chip-simple">Incapacidad: <?= h((string) (($rml['incapacidad_medico'] ?? '') !== '' ? $rml['incapacidad_medico'] : '—')) ?></span>
-                              <span class="chip-simple">Atención: <?= h((string) (($rml['atencion_facultativo'] ?? '') !== '' ? $rml['atencion_facultativo'] : '—')) ?></span>
-                            </div>
-                            <?php if (!empty($rml['observaciones'])): ?><p><?= nl2br(h((string) $rml['observaciones'])) ?></p><?php endif; ?>
+                          <article class="record-card dosage-record">
+                            <header class="dosage-record-head"><h5>Registro de reconocimiento médico legal</h5></header>
+                            <dl class="dosage-detail-grid">
+                              <?= render_record_detail_line('Número', (string) ($rml['numero'] ?? '')) ?>
+                              <?= render_record_detail_line('Fecha', fecha_simple($rml['fecha'] ?? null)) ?>
+                              <?= render_record_detail_line('Incapacidad médico legal', (string) ($rml['incapacidad_medico'] ?? '')) ?>
+                              <?= render_record_detail_line('Atención facultativa', (string) ($rml['atencion_facultativo'] ?? '')) ?>
+                              <?php if (trim((string) ($rml['observaciones'] ?? '')) !== ''): ?><?= render_record_detail_line('Observaciones', (string) $rml['observaciones'], true) ?><?php endif; ?>
+                            </dl>
                             <div class="record-actions">
                               <a class="btn-shell js-inline-open" href="documento_rml_editar.php?id=<?= (int) $rml['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="RML">Ver / Editar</a>
                             </div>
@@ -8796,14 +9150,28 @@ include __DIR__ . '/sidebar.php';
                     <?php else: ?>
                       <div class="record-stack">
                         <?php foreach ($extras['dos'] as $dos): ?>
-                          <article class="record-card">
-                            <h5>N° <?= h((string) ($dos['numero'] ?? '—')) ?> · Reg <?= h((string) ($dos['numero_registro'] ?? '—')) ?></h5>
-                            <div class="record-chipline">
-                              <span class="chip-simple"><?= h(fecha_hora_simple($dos['fecha_extraccion'] ?? null)) ?></span>
-                              <span class="chip-simple"><?= h((string) (($dos['resultado_cualitativo'] ?? '') !== '' ? $dos['resultado_cualitativo'] : 'Sin resultado')) ?></span>
-                              <?php if (!empty($dos['resultado_cuantitativo'])): ?><span class="chip-simple"><?= h((string) $dos['resultado_cuantitativo']) ?> g/L</span><?php endif; ?>
-                            </div>
-                            <?php if (!empty($dos['observaciones'])): ?><p><?= nl2br(h((string) $dos['observaciones'])) ?></p><?php endif; ?>
+                          <?php
+                            $dosajeFechaRaw = (string) ($dos['fecha_extraccion'] ?? '');
+                            $dosajeTimestamp = $dosajeFechaRaw !== '' ? strtotime($dosajeFechaRaw) : false;
+                            $dosajeCualitativo = trim((string) ($dos['resultado_cualitativo'] ?? ''));
+                            $dosajeCuantitativo = trim((string) ($dos['resultado_cuantitativo'] ?? ''));
+                            $dosajeLecturaCuantitativa = dosaje_cuantitativo_text($dosajeCuantitativo);
+                            $dosajeObservaciones = trim((string) ($dos['observaciones'] ?? ''));
+                          ?>
+                          <article class="record-card dosage-record">
+                            <header class="dosage-record-head">
+                              <h5>Registro de dosaje etílico</h5>
+                            </header>
+                            <dl class="dosage-detail-grid">
+                              <?= render_record_detail_line('Número', (string) ($dos['numero'] ?? '')) ?>
+                              <?= render_record_detail_line('Registro', (string) ($dos['numero_registro'] ?? '')) ?>
+                              <?= render_record_detail_line('Fecha', $dosajeTimestamp !== false ? date('d/m/Y', $dosajeTimestamp) : '—') ?>
+                              <?= render_record_detail_line('Hora extracción', $dosajeTimestamp !== false ? date('H:i', $dosajeTimestamp) : '—') ?>
+                              <?= render_record_detail_line('Resultado cualitativo', $dosajeCualitativo !== '' ? $dosajeCualitativo : 'Sin resultado') ?>
+                              <?= render_record_detail_line('Resultado cuantitativo', $dosajeCuantitativo !== '' ? $dosajeCuantitativo . ' g/L' : 'Sin resultado') ?>
+                              <?= render_record_detail_line('Lectura cuantitativa', $dosajeLecturaCuantitativa !== '' ? $dosajeLecturaCuantitativa : 'Sin lectura') ?>
+                              <?php if ($dosajeObservaciones !== ''): ?><?= render_record_detail_line('Observaciones', $dosajeObservaciones, true) ?><?php endif; ?>
+                            </dl>
                             <div class="record-actions">
                               <a class="btn-shell js-inline-open" href="documento_dosaje_editar.php?id=<?= (int) $dos['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Dosaje etílico">Ver / Editar</a>
                             </div>
@@ -8818,23 +9186,25 @@ include __DIR__ . '/sidebar.php';
               <?php if ($extras['show_man']): ?>
                 <div class="tab-pane fade" id="<?= h($personPaneId) ?>-man" role="tabpanel">
                   <div class="inner-panel">
-                    <div class="record-actions" style="margin-top:0">
-                      <a class="btn-shell js-inline-open" href="documento_manifestacion_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&rol_id=<?= (int) ($persona['rol_id'] ?? 0) ?>&accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?><?= $manifestDownloadUrl !== '' ? '&download_url=' . urlencode($manifestDownloadUrl) : '' ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">+ Nueva manifestación</a>
-                      <?php if ($manifestDownloadUrl !== ''): ?>
+                    <?php if ($manifestDownloadUrl !== ''): ?>
+                      <div class="record-actions" style="margin-top:0">
                         <a class="btn-shell btn-docx" href="<?= h($manifestDownloadUrl) ?>">DOCX</a>
-                      <?php endif; ?>
-                    </div>
+                      </div>
+                    <?php endif; ?>
                     <?php if (!$extras['man']): ?>
                       <div class="empty-state">No hay manifestaciones registradas para esta persona en este accidente.</div>
                     <?php else: ?>
                       <div class="record-stack">
                         <?php foreach ($extras['man'] as $man): ?>
-                          <article class="record-card">
-                            <h5><?= h((string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?> · <?= h(fecha_simple($man['fecha'] ?? null)) ?></h5>
-                            <div class="record-chipline">
-                              <span class="chip-simple"><?= h((string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?> - <?= h((string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?></span>
-                            </div>
-                            <?php if (!empty($man['observaciones'])): ?><p><?= nl2br(h((string) $man['observaciones'])) ?></p><?php endif; ?>
+                          <article class="record-card dosage-record">
+                            <header class="dosage-record-head"><h5>Registro de manifestación</h5></header>
+                            <dl class="dosage-detail-grid">
+                              <?= render_record_detail_line('Modalidad', (string) (($man['modalidad'] ?? '') !== '' ? $man['modalidad'] : 'Sin modalidad')) ?>
+                              <?= render_record_detail_line('Fecha', fecha_simple($man['fecha'] ?? null)) ?>
+                              <?= render_record_detail_line('Hora de inicio', (string) (($man['horario_inicio'] ?? '') !== '' ? substr((string) $man['horario_inicio'], 0, 5) : '--:--')) ?>
+                              <?= render_record_detail_line('Hora de término', (string) (($man['hora_termino'] ?? '') !== '' ? substr((string) $man['hora_termino'], 0, 5) : '--:--')) ?>
+                              <?php if (trim((string) ($man['observaciones'] ?? '')) !== ''): ?><?= render_record_detail_line('Observaciones', (string) $man['observaciones'], true) ?><?php endif; ?>
+                            </dl>
                             <div class="record-actions">
                               <a class="btn-shell js-inline-open" href="documento_manifestacion_editar.php?id=<?= (int) $man['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Manifestación">Ver / Editar</a>
                             </div>
@@ -8959,10 +9329,6 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="efectivo-policial" role="tabpanel">
         <div class="tab-panel policial-panel">
-          <div class="module-actions" style="margin-bottom:8px;">
-            <a class="btn-shell" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo efectivo policial</a>
-            <a class="btn-shell" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
-          </div>
           <?php if (!$policias): ?>
             <div class="empty-state">No hay efectivos policiales registrados para este accidente.</div>
           <?php else: ?>
@@ -9052,12 +9418,12 @@ include __DIR__ . '/sidebar.php';
 
                           <div class="inline-edit-error" id="policia-persona-inline-error-<?= (int) $row['id'] ?>"></div>
 
-                          <div class="editable-view" data-edit-view="policia-persona-<?= (int) $row['id'] ?>">
-                            <?php foreach ($policiaPersonaTabSections as $sectionTitle => $sectionFields): ?>
-                              <div class="section-block">
-                                <h3><?= h($sectionTitle) ?></h3>
-                                <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
-                              </div>
+                          <div class="editable-view person-primary-grid" data-edit-view="policia-persona-<?= (int) $row['id'] ?>">
+                            <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                              <article class="record-card dosage-record person-primary-record">
+                                <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
+                                <dl class="dosage-detail-grid"><?= render_record_field_lines($row, $sectionFields) ?></dl>
+                              </article>
                             <?php endforeach; ?>
                           </div>
 
@@ -9094,10 +9460,10 @@ include __DIR__ . '/sidebar.php';
                           <div class="inline-edit-error" id="policia-registro-inline-error-<?= (int) $row['id'] ?>"></div>
 
                           <div class="editable-view" data-edit-view="policia-registro-<?= (int) $row['id'] ?>">
-                            <div class="section-block">
-                              <h3>Registro policial</h3>
-                              <div class="field-grid"><?= render_field_cards($row, ['grado_policial', 'cip', ['key' => 'dependencia_policial', 'class' => 'span-2'], 'rol_funcion', ['key' => 'observaciones', 'class' => 'span-2']]) ?></div>
-                            </div>
+                            <article class="record-card dosage-record participant-registry-record police-registry-record">
+                              <header class="dosage-record-head"><h5>Registro policial</h5></header>
+                              <dl class="dosage-detail-grid"><?= render_record_field_lines($row, ['grado_policial', 'cip', 'dependencia_policial', 'rol_funcion', 'observaciones']) ?></dl>
+                            </article>
                           </div>
 
                           <form class="editable-form js-inline-ajax-form" id="policia-registro-inline-form-<?= (int) $row['id'] ?>" data-shell="policia-registro-<?= (int) $row['id'] ?>" data-error="policia-registro-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
@@ -9126,10 +9492,6 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="propietario-vehiculo" role="tabpanel">
         <div class="tab-panel propietario-panel">
-          <div class="module-actions" style="margin-bottom:8px;">
-            <a class="btn-shell" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo propietario</a>
-            <a class="btn-shell" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
-          </div>
           <?php if (!$propietarios): ?>
             <div class="empty-state">No hay propietarios de vehículo registrados para este accidente.</div>
           <?php else: ?>
@@ -9264,12 +9626,12 @@ include __DIR__ . '/sidebar.php';
 
                             <div class="inline-edit-error" id="propietario-persona-inline-error-<?= (int) $row['id'] ?>"></div>
 
-                            <div class="editable-view" data-edit-view="propietario-persona-<?= (int) $row['id'] ?>">
-                              <?php foreach ($policiaPersonaTabSections as $sectionTitle => $sectionFields): ?>
-                                <div class="section-block">
-                                  <h3><?= h($propietarioPersonaRol . ' · ' . $sectionTitle) ?></h3>
-                                  <div class="field-grid"><?= render_field_cards($propietarioPersonaRecord, $sectionFields) ?></div>
-                                </div>
+                            <div class="editable-view person-primary-grid" data-edit-view="propietario-persona-<?= (int) $row['id'] ?>">
+                              <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                                <article class="record-card dosage-record person-primary-record">
+                                  <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
+                                  <dl class="dosage-detail-grid"><?= render_record_field_lines($propietarioPersonaRecord, $sectionFields) ?></dl>
+                                </article>
                               <?php endforeach; ?>
                             </div>
 
@@ -9307,10 +9669,10 @@ include __DIR__ . '/sidebar.php';
                           <div class="inline-edit-error" id="propietario-registro-inline-error-<?= (int) $row['id'] ?>"></div>
 
                           <div class="editable-view" data-edit-view="propietario-registro-<?= (int) $row['id'] ?>">
-                            <div class="section-block">
-                              <h3>Registro propietario</h3>
-                              <div class="field-grid"><?= render_field_cards($propietarioRegistroRecord, $propietarioRecordViewFields) ?></div>
-                            </div>
+                            <article class="record-card dosage-record participant-registry-record owner-registry-record">
+                              <header class="dosage-record-head"><h5>Registro propietario</h5></header>
+                              <dl class="dosage-detail-grid"><?= render_record_field_lines($propietarioRegistroRecord, $propietarioRecordViewFields) ?></dl>
+                            </article>
                           </div>
 
                           <form class="editable-form js-inline-ajax-form" id="propietario-registro-inline-form-<?= (int) $row['id'] ?>" data-shell="propietario-registro-<?= (int) $row['id'] ?>" data-error="propietario-registro-inline-error-<?= (int) $row['id'] ?>" method="post" hidden>
@@ -9343,10 +9705,6 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="familiar-fallecido" role="tabpanel">
         <div class="tab-panel familiar-panel">
-          <div class="module-actions" style="margin-bottom:8px;">
-            <a class="btn-shell" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo familiar</a>
-            <a class="btn-shell" href="familiar_fallecido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
-          </div>
           <?php if (!$familiares): ?>
             <div class="empty-state">No hay familiares de fallecidos registrados para este accidente.</div>
           <?php else: ?>
@@ -9441,12 +9799,12 @@ include __DIR__ . '/sidebar.php';
 
                             <div class="inline-edit-error" id="familiar-inline-error-<?= (int) $row['id'] ?>"></div>
 
-                            <div class="editable-view" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
-                              <?php foreach ($policiaPersonaTabSections as $sectionTitle => $sectionFields): ?>
-                                <div class="section-block">
-                                  <h3><?= h('Familiar · ' . $sectionTitle) ?></h3>
-                                  <div class="field-grid"><?= render_field_cards($famRecord, $sectionFields) ?></div>
-                                </div>
+                            <div class="editable-view person-primary-grid" data-edit-view="familiar-persona-<?= (int) $row['id'] ?>">
+                              <?php foreach ($policiaPersonaSections as $sectionTitle => $sectionFields): ?>
+                                <article class="record-card dosage-record person-primary-record">
+                                  <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
+                                  <dl class="dosage-detail-grid"><?= render_record_field_lines($famRecord, $sectionFields) ?></dl>
+                                </article>
                               <?php endforeach; ?>
                             </div>
 
@@ -9487,10 +9845,6 @@ include __DIR__ . '/sidebar.php';
 
       <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="abogados" role="tabpanel">
         <div class="tab-panel abogados-panel">
-          <div class="module-actions" style="margin-bottom:8px;">
-            <a class="btn-shell" href="abogado_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nuevo abogado</a>
-            <a class="btn-shell" href="abogado_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
-          </div>
           <?php if (!$abogados): ?>
             <div class="empty-state">No hay abogados registrados para este accidente.</div>
           <?php else: ?>
@@ -9506,7 +9860,7 @@ include __DIR__ . '/sidebar.php';
                       $contactoAbogado .= $contactoAbogado !== '' ? ' · ' . $row['email'] : $row['email'];
                   }
                 ?>
-                <article class="module-card" data-collapsible-card>
+                <article class="module-card lawyer-record-card">
                   <header>
                     <div>
                       <h4>
@@ -9522,17 +9876,7 @@ include __DIR__ . '/sidebar.php';
                       </h4>
                       <p><?= h((string) (($row['persona_rep_nom'] ?? '') !== '' ? $row['persona_rep_nom'] : 'Sin persona asociada')) ?></p>
                     </div>
-                    <div class="module-card-controls">
-                      <span class="chip-simple">Registro #<?= (int) $row['id'] ?></span>
-                      <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
-                    </div>
                   </header>
-                  <div class="module-meta">
-                    <span class="chip-simple">Colegiatura: <?= h((string) (($row['colegiatura'] ?? '') !== '' ? $row['colegiatura'] : 'Sin colegiatura')) ?></span>
-                    <span class="chip-simple">Registro: <?= h((string) (($row['registro'] ?? '') !== '' ? $row['registro'] : 'Sin registro')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condición')) ?></span>
-                    <span class="chip-simple"><?= h($contactoAbogado !== '' ? $contactoAbogado : 'Sin contacto') ?></span>
-                  </div>
                   <div class="editable-shell" data-edit-shell="abogado-<?= (int) $row['id'] ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
@@ -9549,17 +9893,15 @@ include __DIR__ . '/sidebar.php';
                       </div>
                     </div>
 
-                    <div class="module-card-panel js-card-panel" hidden>
-                    <?php if (!empty($row['casilla_electronica'])): ?><p style="margin-top:10px;">Casilla electrónica: <?= h((string) $row['casilla_electronica']) ?></p><?php endif; ?>
-                    <?php if (!empty($row['domicilio_procesal'])): ?><p style="margin-top:10px;">Domicilio procesal: <?= nl2br(h((string) $row['domicilio_procesal'])) ?></p><?php endif; ?>
+                    <div class="module-card-panel">
                     <div class="inline-edit-error" id="abogado-inline-error-<?= (int) $row['id'] ?>"></div>
 
-                    <div class="editable-view" data-edit-view="abogado-<?= (int) $row['id'] ?>">
+                    <div class="editable-view person-primary-grid lawyer-primary-grid" data-edit-view="abogado-<?= (int) $row['id'] ?>">
                       <?php foreach ($abogadoSections as $sectionTitle => $sectionFields): ?>
-                        <div class="section-block">
-                          <h3><?= h($sectionTitle) ?></h3>
-                          <div class="field-grid"><?= render_field_cards($row, $sectionFields) ?></div>
-                        </div>
+                        <article class="record-card dosage-record person-primary-record lawyer-detail-record">
+                          <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
+                          <dl class="dosage-detail-grid"><?= render_record_field_lines($row, $sectionFields) ?></dl>
+                        </article>
                       <?php endforeach; ?>
                     </div>
 
@@ -9636,7 +9978,6 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell js-inline-open" href="oficio_registro_rapido.php?accidente_id=<?= (int) $accidente_id ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio - registro rápido">+ Nuevo oficio registro rápido</a>
 	                  <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio completo">Nuevo oficio completo</a>
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
@@ -9644,7 +9985,6 @@ include __DIR__ . '/sidebar.php';
 	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>">Paquete IA</a>
 	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>&format=word">Resumen Word IA</a>
 	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
-	                  <a class="btn-shell" href="oficios_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
 	                </div>
 
                 <?php if (!$oficios): ?>
@@ -9712,7 +10052,6 @@ include __DIR__ . '/sidebar.php';
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">+ Nuevo documento recibido</a>
-                  <a class="btn-shell" href="documento_recibido_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
                 </div>
 
                 <?php if (!$documentosRecibidos): ?>
@@ -9849,7 +10188,6 @@ include __DIR__ . '/sidebar.php';
           <div class="module-actions" style="margin-bottom:8px;">
             <button type="button" class="btn-shell btn-primary js-diligencias-ocr-open" data-accidente-id="<?= (int) $accidente_id ?>">Subir lista por imagen</button>
             <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
-            <a class="btn-shell" href="diligenciapendiente_listar.php?accidente_id=<?= (int) $accidente_id ?>">Ver listado completo</a>
           </div>
           <div class="diligencias-ocr-panel" id="diligencias-ocr-panel" hidden>
             <div class="diligencias-ocr-card">
@@ -10142,6 +10480,16 @@ include __DIR__ . '/sidebar.php';
 <script>
   (function () {
     const accId = <?= (int) $accidente_id ?>;
+    document.querySelectorAll('.case-summary-modal, .analysis-compare-modal, .modal-workbench').forEach((modal) => {
+      if (modal.parentElement !== document.body) document.body.appendChild(modal);
+    });
+    document.querySelector('.js-history-back')?.addEventListener('click', () => {
+      if (window.history.length > 1 && document.referrer !== '') {
+        window.history.back();
+        return;
+      }
+      window.location.href = 'accidente_listar.php';
+    });
     const caseSummaryModal = document.getElementById('case-summary-modal');
     const caseSummaryOpen = document.querySelector('.js-case-summary-open');
     const caseSummaryClose = document.querySelector('.js-case-summary-close');
@@ -10162,6 +10510,75 @@ include __DIR__ . '/sidebar.php';
         closeCaseSummary();
       }
     });
+    const caseNewTrigger = document.querySelector('.js-case-new-trigger');
+    const caseNewMenu = document.getElementById('case-new-menu');
+    const caseDocTrigger = document.querySelector('.js-case-doc-trigger');
+    const caseDocMenu = document.getElementById('case-doc-menu');
+    const caseManifestTrigger = document.querySelector('.js-case-manifest-trigger');
+    const caseManifestMenu = document.getElementById('case-manifest-menu');
+    const closeCaseNewMenu = (restoreFocus = false) => {
+      if (!caseNewMenu || !caseNewTrigger) return;
+      caseNewMenu.hidden = true;
+      caseNewTrigger.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) caseNewTrigger.focus();
+    };
+    const closeCaseDocMenu = (restoreFocus = false) => {
+      if (!caseDocMenu || !caseDocTrigger) return;
+      caseDocMenu.hidden = true;
+      caseDocTrigger.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) caseDocTrigger.focus();
+    };
+    const closeCaseManifestMenu = (restoreFocus = false) => {
+      if (!caseManifestMenu || !caseManifestTrigger) return;
+      caseManifestMenu.hidden = true;
+      caseManifestTrigger.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) caseManifestTrigger.focus();
+    };
+    caseNewTrigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (!caseNewMenu) return;
+      const shouldOpen = caseNewMenu.hidden;
+      closeCaseDocMenu();
+      closeCaseManifestMenu();
+      caseNewMenu.hidden = !shouldOpen;
+      caseNewTrigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    });
+    caseDocTrigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (!caseDocMenu) return;
+      const shouldOpen = caseDocMenu.hidden;
+      closeCaseNewMenu();
+      closeCaseManifestMenu();
+      caseDocMenu.hidden = !shouldOpen;
+      caseDocTrigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    });
+    caseManifestTrigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (!caseManifestMenu) return;
+      const shouldOpen = caseManifestMenu.hidden;
+      closeCaseNewMenu();
+      closeCaseDocMenu();
+      caseManifestMenu.hidden = !shouldOpen;
+      caseManifestTrigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      if (shouldOpen) caseManifestMenu.querySelector('select')?.focus();
+    });
+    caseNewMenu?.addEventListener('click', (event) => event.stopPropagation());
+    caseDocMenu?.addEventListener('click', (event) => event.stopPropagation());
+    caseManifestMenu?.addEventListener('click', (event) => event.stopPropagation());
+    const caseManifestPerson = document.getElementById('case-manifest-persona');
+    const caseManifestRole = document.querySelector('.js-case-manifest-role');
+    const caseManifestForm = document.querySelector('.js-case-manifest-form');
+    caseManifestPerson?.addEventListener('change', () => {
+      const selected = caseManifestPerson.options[caseManifestPerson.selectedIndex];
+      if (caseManifestRole) caseManifestRole.value = selected?.dataset.rolId || '';
+      if (!caseManifestPerson.value || !caseManifestForm) return;
+      caseManifestForm.requestSubmit();
+    });
+    document.addEventListener('click', () => {
+      closeCaseNewMenu();
+      closeCaseDocMenu();
+      closeCaseManifestMenu();
+    });
     document.addEventListener('keydown', (event) => {
       const key = String(event.key || '').toLowerCase();
       if (event.ctrlKey && event.altKey && key === 's') {
@@ -10176,6 +10593,21 @@ include __DIR__ . '/sidebar.php';
         event.preventDefault();
         closeCaseSummary();
         caseSummaryOpen?.focus();
+        return;
+      }
+      if (event.key === 'Escape' && caseNewMenu && !caseNewMenu.hidden) {
+        event.preventDefault();
+        closeCaseNewMenu(true);
+        return;
+      }
+      if (event.key === 'Escape' && caseDocMenu && !caseDocMenu.hidden) {
+        event.preventDefault();
+        closeCaseDocMenu(true);
+        return;
+      }
+      if (event.key === 'Escape' && caseManifestMenu && !caseManifestMenu.hidden) {
+        event.preventDefault();
+        closeCaseManifestMenu(true);
       }
     });
     const workbenchStates = new Map();
@@ -11547,8 +11979,17 @@ include __DIR__ . '/sidebar.php';
         initItpInlineForm(form);
       }
 
+      const formParent = form.parentNode;
+      const formNextSibling = form.nextSibling;
+      if (form.classList.contains('persona-edit-modal')) {
+        document.body.appendChild(form);
+      }
+
       view.hidden = true;
       form.hidden = false;
+      if (form.classList.contains('persona-edit-modal')) {
+        document.body.classList.add('has-persona-edit-modal');
+      }
       actions.hidden = false;
       opener.hidden = true;
       showInlineError(form, '');
@@ -11560,6 +12001,8 @@ include __DIR__ . '/sidebar.php';
         view,
         actions,
         opener,
+        formParent,
+        formNextSibling,
         initial: '',
         dirty: false,
       };
@@ -11608,6 +12051,16 @@ include __DIR__ . '/sidebar.php';
 
       state.view.hidden = false;
       state.form.hidden = true;
+      if (state.form.classList.contains('persona-edit-modal') && !document.querySelector('.persona-edit-modal:not([hidden])')) {
+        document.body.classList.remove('has-persona-edit-modal');
+      }
+      if (state.formParent) {
+        if (state.formNextSibling && state.formNextSibling.parentNode === state.formParent) {
+          state.formParent.insertBefore(state.form, state.formNextSibling);
+        } else {
+          state.formParent.appendChild(state.form);
+        }
+      }
       state.actions.hidden = true;
       state.opener.hidden = false;
       showInlineError(state.form, '');
@@ -12225,9 +12678,27 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    document.querySelectorAll('.persona-edit-modal').forEach((modal) => {
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          requestCloseEditShell(modal.dataset.shell || '');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const modal = document.querySelector('.persona-edit-modal:not([hidden])');
+      if (!modal) return;
+      event.preventDefault();
+      requestCloseEditShell(modal.dataset.shell || '');
+    });
+
     document.querySelectorAll('.js-copy-name').forEach((button) => {
       button.addEventListener('click', async () => {
         const originalText = button.textContent;
+        const originalLabel = button.getAttribute('aria-label') || 'Copiar';
+        const isRecordDetailCopy = button.classList.contains('record-detail-copy');
         const text = String(button.dataset.copyText || '').trim();
         if (!text) return;
 
@@ -12247,15 +12718,33 @@ include __DIR__ . '/sidebar.php';
           }
 
           button.classList.add('is-copied');
-          button.textContent = 'Copiado';
+          if (isRecordDetailCopy) {
+            button.dataset.copyState = 'Copiado';
+            button.setAttribute('aria-label', 'Copiado');
+          } else {
+            button.textContent = 'Copiado';
+          }
           window.setTimeout(() => {
             button.classList.remove('is-copied');
-            button.textContent = originalText || 'Copiar';
+            if (isRecordDetailCopy) {
+              delete button.dataset.copyState;
+              button.setAttribute('aria-label', originalLabel);
+            } else {
+              button.textContent = originalText || 'Copiar';
+            }
           }, 1400);
         } catch (error) {
-          button.textContent = 'Error';
+          if (isRecordDetailCopy) {
+            button.dataset.copyState = 'No se pudo copiar';
+          } else {
+            button.textContent = 'Error';
+          }
           window.setTimeout(() => {
-            button.textContent = originalText || 'Copiar';
+            if (isRecordDetailCopy) {
+              delete button.dataset.copyState;
+            } else {
+              button.textContent = originalText || 'Copiar';
+            }
           }, 1400);
         }
       });

@@ -299,7 +299,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <?php if ($embed): ?>
         <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
       <?php else: ?>
-        <a class="btn" href="<?= h($returnTo !== '' ? $returnTo : $listarHref) ?>"><?= h($returnLabel) ?></a>
+        <button class="btn" type="button" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) $preselectedAccidenteId ?>&tab=documentos';}">← Volver atrás</button>
         <a class="btn" href="index.php">Ir al panel</a>
         <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
       <?php endif; ?>

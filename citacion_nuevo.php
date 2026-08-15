@@ -111,7 +111,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
       <a class="btn primary" href="<?= h($returnTo) ?>">Volver a la diligencia pendiente</a>
     <?php endif; ?>
     <?php if (!str_contains($returnTo, 'diligenciapendiente_ver.php')): ?>
-      <a class="btn" href="<?= h($returnTo) ?>">← Volver a Participantes</a>
+      <a class="btn" href="<?= h($returnTo) ?>">&larr; Volver atr&aacute;s</a>
     <?php endif; ?>
     <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?>&return_to=<?= urlencode($returnTo) ?>">Ver citaciones</a>
     <button class="btn primary" type="submit" form="frmCitacion">Guardar citación</button>

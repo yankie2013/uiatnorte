@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if ($embed): ?>
         <button type="button" class="btn secondary" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cerrar</button>
       <?php else: ?>
-        <a href="documento_recibido_listar.php" class="btn secondary">Volver</a>
+        <button type="button" class="btn secondary" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) ($accidenteId ?? 0) ?>&tab=documentos&subtab=recibidos';}">← Volver atrás</button>
         <a href="index.php" class="btn secondary">Panel</a>
       <?php endif; ?>
     </div>

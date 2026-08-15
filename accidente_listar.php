@@ -657,6 +657,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .district-sidebar::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#6366f1,#22d3ee,transparent);opacity:.85}
 .district-sidebar-title{margin:0 0 11px;color:#475569;font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}
 .district-buttons{display:grid;gap:8px}
+.district-group{display:grid;gap:5px;min-width:0}
 .district-main{min-width:0}
 .station-clear{
   display:flex;align-items:center;justify-content:center;min-height:34px;margin-top:10px;padding:7px 10px;
@@ -670,7 +671,6 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .station-favorites:hover{border-color:#d4af37;color:#6f4b00;box-shadow:0 0 16px rgba(212,175,55,.24)}
 .station-favorites.active{background:linear-gradient(135deg,#d4af37,#facc15);border-color:#facc15;color:#111827;box-shadow:0 0 18px rgba(212,175,55,.32)}
 .district-btn{
-  --district-hue:220;
   position:relative;width:100%;display:flex;align-items:center;gap:9px;min-height:41px;padding:8px 11px;border-radius:12px;
   border:1px solid hsl(var(--district-hue) 72% 58% / .55);
   background:linear-gradient(135deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 96% / .88));
@@ -690,27 +690,27 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
   color:#fff;box-shadow:0 10px 24px hsl(var(--district-hue) 68% 30% / .38),0 0 22px hsl(var(--district-hue) 90% 55% / .32),inset 0 1px 0 rgba(255,255,255,.35);
 }
 .district-btn.active::before{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18),0 0 15px #fff}
-.station-row-shell{
-  --district-hue:220;position:relative;display:none;margin:0 0 12px;padding:13px 14px;border:1px solid hsl(var(--district-hue) 72% 58% / .42);
-  border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.98),hsl(var(--district-hue) 100% 97% / .92));
-  box-shadow:0 15px 34px hsl(var(--district-hue) 48% 28% / .14),inset 0 1px 0 #fff;overflow:hidden;
+.district-name{min-width:0;flex:1;overflow-wrap:anywhere}
+.district-chevron{flex:0 0 auto;font-size:13px;line-height:1;opacity:.58;transition:transform .18s ease,opacity .18s ease}
+.district-btn:hover .district-chevron{opacity:1;transform:translateX(2px)}
+.district-btn.active .district-chevron{opacity:1;transform:rotate(90deg)}
+.district-substations{
+  display:grid;gap:5px;margin:0 0 4px 11px;padding:7px 6px 7px 10px;
+  border-left:2px solid hsl(var(--district-hue) 82% 54% / .62);border-radius:0 10px 10px 0;
+  background:linear-gradient(90deg,hsl(var(--district-hue) 90% 55% / .09),transparent);
+  animation:districtSubstationsIn .2s ease-out both;
 }
-.station-row-shell::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,hsl(var(--district-hue) 90% 55%),#22d3ee,transparent);box-shadow:0 0 14px hsl(var(--district-hue) 90% 55% / .5)}
-.station-row-shell.active{display:block}
-.station-row-title{margin:0 0 10px;color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:950;text-transform:uppercase;letter-spacing:.12em}
-.station-panel{display:none}
-.station-panel.active{display:block}
-.station-buttons{display:flex;flex-wrap:wrap;gap:8px}
+@keyframes districtSubstationsIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .station-btn{
-  position:relative;display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:39px;padding:8px 12px;border-radius:12px;
-  border:1px solid hsl(var(--district-hue) 70% 58% / .48);background:linear-gradient(145deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 97%));
-  color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:900;line-height:1.25;text-decoration:none;
+  position:relative;display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:32px;padding:6px 8px;border-radius:9px;
+  border:1px solid hsl(var(--district-hue) 70% 58% / .42);background:linear-gradient(145deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 96%));
+  color:hsl(var(--district-hue) 72% 22%);font-size:9.5px;font-weight:850;line-height:1.2;text-decoration:none;
   box-shadow:0 7px 16px hsl(var(--district-hue) 50% 28% / .12),inset 0 1px 0 #fff;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
 }
 .station-btn::before{content:"";position:absolute;left:0;bottom:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,hsl(var(--district-hue) 90% 55%),transparent);opacity:.45}
-.station-count{flex:0 0 auto;min-width:25px;padding:3px 7px;border:1px solid hsl(var(--district-hue) 75% 55% / .2);border-radius:999px;background:hsl(var(--district-hue) 80% 50% / .12);color:inherit;font-size:10px;font-weight:950;text-align:center}
+.station-count{flex:0 0 auto;min-width:25px;padding:3px 7px;border:1px solid hsl(var(--district-hue) 75% 55% / .24);border-radius:999px;background:hsl(var(--district-hue) 80% 50% / .14);color:inherit;font-size:10px;font-weight:950;text-align:center}
 .station-btn.active .station-count{background:rgba(255,255,255,.2)}
-.station-btn:hover,.station-btn:focus-visible{transform:translateY(-2px);outline:none;border-color:hsl(var(--district-hue) 88% 54%);box-shadow:0 11px 24px hsl(var(--district-hue) 58% 28% / .22),0 0 18px hsl(var(--district-hue) 85% 52% / .16)}
+.station-btn:hover,.station-btn:focus-visible{transform:translateX(3px);outline:none;border-color:hsl(var(--district-hue) 88% 54%);box-shadow:0 8px 18px hsl(var(--district-hue) 58% 28% / .20),0 0 14px hsl(var(--district-hue) 85% 52% / .14)}
 .station-btn.active{background:linear-gradient(135deg,hsl(var(--district-hue) 82% 54%),hsl(var(--district-hue) 88% 35%));border-color:hsl(var(--district-hue) 92% 63%);color:#fff;box-shadow:0 10px 24px hsl(var(--district-hue) 68% 30% / .32),0 0 22px hsl(var(--district-hue) 90% 55% / .25)}
 html[data-theme-resolved="dark"] .district-sidebar{background:linear-gradient(160deg,rgba(8,15,31,.98),rgba(17,25,43,.94));border-color:rgba(99,102,241,.38);box-shadow:0 18px 46px rgba(0,0,0,.34),inset 0 1px 0 rgba(148,163,184,.12)}
 html[data-theme-resolved="dark"] .district-sidebar-title{color:#9fb0c6}
@@ -720,14 +720,14 @@ html[data-theme-resolved="dark"] .station-favorites{background:rgba(212,175,55,.
 html[data-theme-resolved="dark"] .station-favorites.active{background:linear-gradient(135deg,#e2c96c,#facc15);border-color:#facc15;color:#111827}
 html[data-theme-resolved="dark"] .district-btn{background:linear-gradient(145deg,rgba(8,15,31,.95),hsl(var(--district-hue) 42% 18% / .78));color:hsl(var(--district-hue) 82% 84%);border-color:hsl(var(--district-hue) 58% 55% / .52);box-shadow:0 8px 18px rgba(0,0,0,.28),0 0 14px hsl(var(--district-hue) 80% 50% / .08)}
 html[data-theme-resolved="dark"] .district-btn.active{color:#fff;background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%))}
-html[data-theme-resolved="dark"] .station-row-shell{background:linear-gradient(145deg,rgba(8,15,31,.97),hsl(var(--district-hue) 42% 17% / .84));border-color:hsl(var(--district-hue) 58% 55% / .42);box-shadow:0 16px 38px rgba(0,0,0,.3),0 0 22px hsl(var(--district-hue) 80% 50% / .08)}
-html[data-theme-resolved="dark"] .station-row-title{color:hsl(var(--district-hue) 78% 78%)}
+html[data-theme-resolved="dark"] .district-substations{background:linear-gradient(90deg,hsl(var(--district-hue) 70% 48% / .13),transparent);border-left-color:hsl(var(--district-hue) 72% 60% / .7)}
 html[data-theme-resolved="dark"] .station-btn{background:linear-gradient(145deg,rgba(15,23,42,.9),hsl(var(--district-hue) 38% 19% / .72));color:hsl(var(--district-hue) 78% 84%);border-color:hsl(var(--district-hue) 52% 55% / .48);box-shadow:0 8px 18px rgba(0,0,0,.24),0 0 14px hsl(var(--district-hue) 80% 50% / .07)}
 html[data-theme-resolved="dark"] .station-btn.active{background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%));color:#fff}
 @media(max-width:850px){
   .district-accident-layout{grid-template-columns:1fr}
   .district-sidebar{position:static}
   .district-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .district-substations{margin-left:8px}
 }
 .card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:14px;padding:14px;backdrop-filter:blur(8px)}
 
@@ -839,9 +839,6 @@ tbody tr:hover{box-shadow:inset 0 0 0 1px rgba(148,163,184,.08)}
 .chip-status-herido{background:#fff4e5;color:#b45309}
 .chip-status-fallecido{background:#fee2e2;color:#b91c1c}
 .chip-more{background:rgba(148,163,184,.16);color:#475569}
-.chip-diligencias-pendientes{background:#fff0f1;color:#b42318;border:1px solid #fecaca;text-decoration:none;box-shadow:0 4px 10px rgba(180,35,24,.08)}
-.chip-diligencias-pendientes:hover{background:#ffe4e6;color:#991b1b}
-.chip-diligencias-pendientes.is-zero{background:rgba(148,163,184,.12);color:#64748b;border-color:rgba(148,163,184,.3);box-shadow:none}
 .th-people{min-width:320px}
 html[data-theme-resolved="dark"] .cell-primary,
 html[data-theme-resolved="dark"] .inv-name{color:#e5edf8}
@@ -960,7 +957,7 @@ html[data-theme-resolved="dark"]{
   border-radius:14px;
   background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.96));
   box-shadow:0 10px 24px rgba(15,23,42,.07), inset 4px 0 0 rgba(37,99,235,.22);
-  overflow:hidden;
+  overflow:visible;
   transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
 .acc-card .acc-card-main{cursor:default}
@@ -972,8 +969,6 @@ html[data-theme-resolved="dark"]{
   border-color:rgba(212,175,55,.62);
   box-shadow:0 12px 28px rgba(212,175,55,.14), inset 4px 0 0 #d4af37;
 }
-html[data-theme-resolved="dark"] .chip-diligencias-pendientes{background:#3b171d;color:#fecdd3;border-color:#7f1d2d}
-html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background:#172033;color:#94a3b8;border-color:#334155}
 .acc-card.last-opened{
   border-color:rgba(212,175,55,.70);
   box-shadow:0 14px 32px rgba(212,175,55,.18), inset 4px 0 0 #d4af37;
@@ -1005,6 +1000,7 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
 }
 .acc-card-left{display:flex;flex-direction:column;gap:8px;min-width:0}
 .acc-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.acc-head-priority{display:inline-flex;align-items:center;min-width:auto}
 .acc-report{
   display:inline-flex;
   align-items:center;
@@ -1014,6 +1010,11 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
   font-weight:700;
   color:#475569;
   background:#eef2f7;
+}
+.acc-folder-select{
+  width:auto;min-width:58px;height:26px;padding:2px 22px 2px 8px;
+  border-radius:999px;border:1px solid #f2c94c;background:#fff8dc;
+  color:#7c5a00;font-size:12px;font-weight:800;cursor:pointer;
 }
 .tipo-reg-chip{
   display:inline-flex;
@@ -1028,20 +1029,23 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
 }
 .tipo-reg-carpeta{color:#92400e;background:#fef3c7;border-color:#fde68a}
 .tipo-reg-intervencion{color:#155e75;background:#cffafe;border-color:#a5f3fc}
-.acc-place{font-size:15px;font-weight:700;line-height:1.35;color:#14213d}
+.acc-place{display:flex;align-items:flex-start;gap:6px;font-size:15px;font-weight:700;line-height:1.35;color:#14213d}
+.acc-place-icon,.acc-meta-icon{flex:0 0 auto;line-height:1.2}
+.acc-place-icon{font-size:15px;margin-top:1px}
 .acc-meta{display:flex;flex-wrap:wrap;gap:10px 14px}
 .acc-meta-item{display:flex;flex-direction:column;gap:2px;min-width:110px}
-.acc-meta-label{font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
+.acc-meta-label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
+.acc-meta-icon{font-size:12px}
 .acc-meta-value{font-size:13px;font-weight:600;color:#334155}
 .acc-card-center{display:flex;flex-direction:column;gap:8px}
-.acc-mini-counts{display:flex;flex-wrap:wrap;gap:6px}
-.acc-mini-counts.is-secondary{opacity:.72}
 .acc-involved{display:flex;flex-direction:column;gap:7px;min-width:0}
 .acc-involved-title{font-size:11px;font-weight:800;color:#7b8794;text-transform:uppercase;letter-spacing:.04em}
 .acc-involved-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:start;min-width:0}
 .acc-involved-icon{font-size:16px;line-height:1.15;text-align:center}
 .acc-involved-body{min-width:0}
 .acc-involved-name{font-size:12px;font-weight:800;line-height:1.25;color:#24324a;overflow-wrap:anywhere}
+.acc-involved-name.is-deceased{color:#b42318}
+.acc-involved-name.is-injured{color:#a16207}
 .acc-involved-meta{font-size:10px;font-weight:650;line-height:1.35;color:#64748b;overflow-wrap:anywhere}
 .acc-involved-meta .vehicle-kind{font-weight:850;color:#334155}
 .acc-involved-meta .vehicle-plate-summary{font-weight:850;color:#475569}
@@ -1052,43 +1056,32 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
 .acc-summary-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .acc-hint{font-size:12px;font-weight:600;color:#64748b}
 .acc-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;justify-content:space-between;min-height:100%}
-.acc-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.acc-gps-btn{
-  min-width:42px;
-  height:34px;
-  padding:0 10px;
-  border-radius:10px;
-  border:1px solid #b7e4c7;
-  background:linear-gradient(180deg,#f0fff5 0%,#dcfce7 100%);
-  color:#166534;
-  font-size:11px;
-  font-weight:900;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 8px 18px rgba(22,101,52,.12);
+.acc-top-actions{position:relative;display:flex;align-items:center;justify-content:flex-end}
+.acc-actions-trigger{
+  width:36px;height:34px;padding:0;border:1px solid var(--field-bd);border-radius:10px;
+  background:var(--pill-bg);color:var(--fg);font-size:20px;font-weight:900;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 7px 16px rgba(15,23,42,.09);transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease;
 }
-.acc-gps-btn:hover{background:#bbf7d0;border-color:#86efac;color:#14532d}
-.acc-docx-btn{
-  min-width:72px;
-  height:34px;
-  padding:0 10px;
-  border-radius:10px;
-  border:1px solid #bfdbfe;
-  background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%);
-  color:#1d4ed8;
-  font-size:11px;
-  font-weight:900;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 8px 18px rgba(37,99,235,.12);
+.acc-actions-trigger:hover,.acc-actions-trigger[aria-expanded="true"]{transform:translateY(-1px);border-color:#93c5fd;color:#1d4ed8;box-shadow:0 9px 20px rgba(37,99,235,.16)}
+.acc-actions-menu{
+  position:absolute;z-index:30;top:calc(100% + 7px);right:0;width:190px;padding:6px;
+  border:1px solid rgba(148,163,184,.34);border-radius:12px;background:var(--panel-bg);
+  box-shadow:0 18px 40px rgba(15,23,42,.20);animation:accActionsIn .14s ease-out both;
 }
-.acc-docx-btn:hover{background:#bfdbfe;border-color:#93c5fd;color:#1e3a8a}
+.acc-actions-menu[hidden]{display:none}
+@keyframes accActionsIn{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.acc-actions-item{
+  width:100%;min-height:34px;padding:7px 9px;border:0;border-radius:8px;background:transparent;color:var(--fg);
+  display:flex;align-items:center;gap:8px;text-align:left;text-decoration:none;font-size:11px;font-weight:800;cursor:pointer;
+}
+.acc-actions-item:hover{background:#eff6ff;color:#1d4ed8}
+.acc-actions-item.is-gps:hover{background:#ecfdf3;color:#166534}
+.acc-actions-item.is-danger{color:#b42318}
+.acc-actions-item.is-danger:hover{background:#fef2f2;color:#991b1b}
+.acc-actions-divider{height:1px;margin:5px 4px;background:rgba(148,163,184,.28)}
+.acc-actions-form{display:block;margin:0}
 .acc-card .col-folder{min-width:auto}
-.acc-inline-form{display:inline}
 
 html[data-theme-resolved="dark"] .acc-card{
   background:linear-gradient(180deg,rgba(15,20,34,.96),rgba(17,25,43,.96));
@@ -1115,37 +1108,25 @@ html[data-theme-resolved="dark"] .acc-card-list.has-district-color .acc-card:hov
 html[data-theme-resolved="dark"] .acc-place,
 html[data-theme-resolved="dark"] .vehicle-plate{color:#e5edf8}
 html[data-theme-resolved="dark"] .acc-report{background:#1e293b;color:#cbd5e1}
+html[data-theme-resolved="dark"] .acc-folder-select{background:#3b2f0b;color:#fde68a;border-color:#a16207}
 html[data-theme-resolved="dark"] .tipo-reg-carpeta{background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.34);color:#fcd34d}
 html[data-theme-resolved="dark"] .tipo-reg-intervencion{background:rgba(6,182,212,.16);border-color:rgba(6,182,212,.34);color:#67e8f9}
 html[data-theme-resolved="dark"] .acc-meta-value,
 html[data-theme-resolved="dark"] .vehicle-extra{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-hint{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-involved-name{color:#e5edf8}
+html[data-theme-resolved="dark"] .acc-involved-name.is-deceased{color:#f87171}
+html[data-theme-resolved="dark"] .acc-involved-name.is-injured{color:#facc15}
 html[data-theme-resolved="dark"] .acc-involved-meta,
 html[data-theme-resolved="dark"] .acc-involved-empty{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-involved-meta .vehicle-kind,
 html[data-theme-resolved="dark"] .acc-involved-meta .vehicle-plate-summary{color:#cbd5e1}
 html[data-theme-resolved="dark"] .acc-involved-more{color:#9fb0c6}
-html[data-theme-resolved="dark"] .acc-gps-btn{
-  background:rgba(22,101,52,.28);
-  border-color:rgba(134,239,172,.42);
-  color:#bbf7d0;
-}
-html[data-theme-resolved="dark"] .acc-gps-btn:hover{
-  background:rgba(22,163,74,.38);
-  border-color:rgba(134,239,172,.62);
-  color:#dcfce7;
-}
-html[data-theme-resolved="dark"] .acc-docx-btn{
-  background:rgba(30,64,175,.28);
-  border-color:rgba(147,197,253,.42);
-  color:#bfdbfe;
-}
-html[data-theme-resolved="dark"] .acc-docx-btn:hover{
-  background:rgba(37,99,235,.38);
-  border-color:rgba(147,197,253,.62);
-  color:#dbeafe;
-}
+html[data-theme-resolved="dark"] .acc-actions-menu{background:#111827;border-color:#334155;box-shadow:0 18px 42px rgba(0,0,0,.42)}
+html[data-theme-resolved="dark"] .acc-actions-item:hover{background:#1e3a8a;color:#dbeafe}
+html[data-theme-resolved="dark"] .acc-actions-item.is-gps:hover{background:#14532d;color:#dcfce7}
+html[data-theme-resolved="dark"] .acc-actions-item.is-danger{color:#fca5a5}
+html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#450a0a;color:#fecaca}
 
 @media(max-width:980px){
   .acc-card-main{
@@ -1199,24 +1180,55 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
             $districtPosition++;
             $districtActive = $distrito !== '' && lower_u($distrito) === lower_u($districtName);
           ?>
-          <a
-            class="district-btn <?= $districtActive ? 'active' : '' ?>"
-            style="--district-hue:<?= (int)$districtHue ?>"
-            href="<?=h(url_filtro_accidente([
-              'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
-              'comisaria_id' => null,
-              'estado' => 'todos',
-              'favoritos' => null,
-              'q' => null,
-              'desde' => null,
-              'hasta' => null,
-              'persona' => null,
-              'vehiculo' => null,
-              'registro_sidpol' => null,
-              'nro_informe_policial' => null,
-              'tipo_registro' => null,
-            ]))?>"
-          ><?=h($districtName)?></a>
+          <div class="district-group" style="--district-hue:<?= (int)$districtHue ?>">
+            <a
+              class="district-btn <?= $districtActive ? 'active' : '' ?>"
+              href="<?=h(url_filtro_accidente([
+                'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
+                'comisaria_id' => null,
+                'estado' => 'todos',
+                'favoritos' => null,
+                'q' => null,
+                'desde' => null,
+                'hasta' => null,
+                'persona' => null,
+                'vehiculo' => null,
+                'registro_sidpol' => null,
+                'nro_informe_policial' => null,
+                'tipo_registro' => null,
+              ]))?>"
+            ><span class="district-name"><?=h($districtName)?></span><span class="district-chevron" aria-hidden="true">›</span></a>
+            <?php if ($districtActive): ?>
+              <div class="district-substations" aria-label="Comisarías de <?=h($districtName)?>">
+                <?php foreach ($districtComisarias as $station): ?>
+                  <?php
+                    $stationId = (string)($station['id'] ?? '');
+                    $stationActive = $comisaria_id === $stationId;
+                  ?>
+                  <a
+                    class="station-btn <?= $stationActive ? 'active' : '' ?>"
+                    href="<?=h(url_filtro_accidente([
+                      'comisaria_id' => $stationId,
+                      'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
+                      'estado' => 'todos',
+                      'favoritos' => null,
+                      'q' => null,
+                      'desde' => null,
+                      'hasta' => null,
+                      'persona' => null,
+                      'vehiculo' => null,
+                      'registro_sidpol' => null,
+                      'nro_informe_policial' => null,
+                      'tipo_registro' => null,
+                    ]))?>"
+                  >
+                    <span><?=h((string)($station['comisaria'] ?? 'Comisaría'))?></span>
+                    <span class="station-count"><?= (int)($station['accidentes_total'] ?? 0) ?></span>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </div>
         <?php endforeach; ?>
       </div>
       <a class="station-clear <?= $comisaria_id === '' && $distrito === '' && $favoritos !== '1' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente(['comisaria_id' => null, 'distrito' => null, 'favoritos' => null]))?>">Todos los accidentes</a>
@@ -1237,49 +1249,6 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
     </aside>
 
     <main class="district-main">
-      <section class="station-row-shell <?= $distrito !== '' ? 'active' : '' ?>" id="stationRow" aria-label="Comisarías disponibles">
-        <?php $districtPosition = 0; ?>
-        <?php foreach ($comisariasPorDistrito as $districtName => $districtComisarias): ?>
-          <?php
-            $districtName = (string)$districtName;
-            $districtHue = $districtHues[$districtPosition % count($districtHues)];
-            $districtPosition++;
-            $districtActive = $distrito !== '' && lower_u($distrito) === lower_u($districtName);
-          ?>
-          <section class="station-panel <?= $districtActive ? 'active' : '' ?>" data-district-panel="<?=h($districtName)?>" data-hue="<?= (int)$districtHue ?>">
-            <h2 class="station-row-title">Comisarías de <?=h($districtName)?></h2>
-            <div class="station-buttons">
-              <?php foreach ($districtComisarias as $station): ?>
-                <?php
-                  $stationId = (string)($station['id'] ?? '');
-                  $stationActive = $comisaria_id === $stationId && $districtActive;
-                ?>
-                <a
-                  class="station-btn <?= $stationActive ? 'active' : '' ?>"
-                  href="<?=h(url_filtro_accidente([
-                    'comisaria_id' => $stationId,
-                    'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
-                    'estado' => 'todos',
-                    'favoritos' => null,
-                    'q' => null,
-                    'desde' => null,
-                    'hasta' => null,
-                    'persona' => null,
-                    'vehiculo' => null,
-                    'registro_sidpol' => null,
-                    'nro_informe_policial' => null,
-                    'tipo_registro' => null,
-                  ]))?>"
-                >
-                  <span><?=h((string)($station['comisaria'] ?? 'Comisaría'))?></span>
-                  <span class="station-count"><?= (int)($station['accidentes_total'] ?? 0) ?></span>
-                </a>
-              <?php endforeach; ?>
-            </div>
-          </section>
-        <?php endforeach; ?>
-      </section>
-
   <div class="card">
     <form method="get" class="filters" id="filterForm">
       <div class="filter-primary">
@@ -1299,7 +1268,6 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
         </button>
         <div class="filter-action-buttons">
           <button class="btn small" type="submit">Filtrar</button>
-          <a class="btn small" href="accidente_listar.php?limpiar_recuerdo=1">Limpiar</a>
         </div>
       </div>
 
@@ -1391,22 +1359,37 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
+                <div class="col-folder folder-cell acc-head-priority">
+                  <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
+                          data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
+                          aria-pressed="<?= $isPrior ? 'true' : 'false' ?>">
+                    <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '&#9733;' : '&#9734;' ?></span>
+                  </button>
+                </div>
                 <a class="sidpol-link" href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>" title="Ver detalles">
                   <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
                 </a>
                 <span class="acc-report"><?=h($r['nro_informe_policial'] ?? '-')?></span>
+                <select class="select-folder acc-folder-select" data-id="<?=$r['id']?>" aria-label="Número de Folder" title="Número de Folder">
+                  <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
+                </select>
+                <span class="estado-badge <?=$cls?>"
+                      data-id="<?=$r['id']?>"
+                      data-estado="<?=h($estado)?>">
+                  <?=h($estado)?>
+                </span>
                 <?php if ($tipoRegistro !== ''): ?>
                   <span class="tipo-reg-chip <?=h($tipoRegistroClass)?>"><?=h($tipoRegistro)?></span>
                 <?php endif; ?>
               </div>
-              <div class="acc-place"><?=h($r['lugar'])?></div>
+              <div class="acc-place"><span class="acc-place-icon" aria-hidden="true">📍</span><span><?=h($r['lugar'])?></span></div>
               <div class="acc-meta">
                 <div class="acc-meta-item">
-                  <span class="acc-meta-label">Fecha</span>
+                  <span class="acc-meta-label"><span class="acc-meta-icon" aria-hidden="true">📅</span>Fecha</span>
                   <span class="acc-meta-value"><?=h(fecha_lista_corta($r['fecha_accidente'] ?? ''))?></span>
                 </div>
                 <div class="acc-meta-item">
-                  <span class="acc-meta-label">Comisaria</span>
+                  <span class="acc-meta-label"><span class="acc-meta-icon" aria-hidden="true">🏢</span>Comisaria</span>
                   <span class="acc-meta-value"><?=h($r['comisaria'] ?? '-')?></span>
                 </div>
               </div>
@@ -1420,6 +1403,8 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
                 <?php else: foreach ($personasPreview as $personaPreview):
                   $vehiculoPersona = is_array($personaPreview['vehiculo'] ?? null) ? $personaPreview['vehiculo'] : null;
                   $rolPreview = trim((string)($personaPreview['rol'] ?? ''));
+                  $lesionPreview = trim((string)($personaPreview['lesion'] ?? ''));
+                  $claseLesionNombre = $lesionPreview === 'Fallecido' ? 'is-deceased' : ($lesionPreview === 'Herido' ? 'is-injured' : '');
                   $tipoPreview = trim((string)($vehiculoPersona['tipo'] ?? ''));
                   $marcaModeloPreview = trim((string)($vehiculoPersona['marca_modelo'] ?? ''));
                   $placaPreview = trim((string)($vehiculoPersona['placa'] ?? ''));
@@ -1429,7 +1414,7 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
                   <div class="acc-involved-row">
                     <span class="acc-involved-icon" aria-hidden="true"><?=h(involucrado_icono_resumen($rolPreview, $tipoPreview))?></span>
                     <div class="acc-involved-body">
-                      <div class="acc-involved-name"><?=h($personaPreview['nombre'])?></div>
+                      <div class="acc-involved-name <?=h($claseLesionNombre)?>"><?=h($personaPreview['nombre'])?></div>
                       <div class="acc-involved-meta">
                         <?php foreach ($metaPartes as $parteIndex => $parte): ?><?= $parteIndex > 0 ? ' · ' : '' ?><span class="<?= $parteIndex === 1 && $tipoPreview !== '' ? 'vehicle-kind' : ($placaPreview !== '' && $parte === $placaPreview ? 'vehicle-plate-summary' : '') ?>"><?=h($parte)?></span><?php endforeach; ?>
                       </div>
@@ -1440,43 +1425,28 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
                   <div class="acc-involved-more">👥 +<?=$personasRestantes?> persona<?=$personasRestantes === 1 ? '' : 's'?> más</div>
                 <?php endif; ?>
               </div>
-              <div class="acc-mini-counts is-secondary">
-                <span class="chip chip-more"><?=count($personasDetalle)?> persona(s)</span>
-                <span class="chip chip-more"><?=count($vehiculosResumen)?> vehiculo(s)</span>
-                <?php $diligenciasPendientesTotal = (int)($r['diligencias_pendientes'] ?? 0); ?>
-                <a class="chip chip-diligencias-pendientes <?= $diligenciasPendientesTotal === 0 ? 'is-zero' : '' ?>" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=diligencias-pendientes" title="Ver diligencias pendientes">
-                  <?= $diligenciasPendientesTotal ?> diligencia<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?> pendiente<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?>
-                </a>
-              </div>
             </div>
 
             <div class="acc-card-right">
               <div class="acc-top-actions">
-                <?php if ($hasGps): ?>
-                  <a class="acc-gps-btn" href="<?= h($gpsUrl) ?>" target="_blank" rel="noopener noreferrer" title="Ver ubicación GPS en Google Maps" aria-label="Ver ubicación GPS en Google Maps">GPS</a>
-                <?php endif; ?>
-                <a class="acc-docx-btn" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>
-                <div class="col-folder folder-cell">
-                  <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
-                          data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
-                          aria-pressed="<?= $isPrior ? 'true' : 'false' ?>">
-                    <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '&#9733;' : '&#9734;' ?></span>
-                  </button>
-                  <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
-                    <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
-                  </select>
+                <button class="acc-actions-trigger js-acc-actions-trigger" type="button" aria-expanded="false" aria-controls="acc-actions-<?= (int)$r['id'] ?>" title="Más acciones" aria-label="Más acciones">&#8942;</button>
+                <div class="acc-actions-menu" id="acc-actions-<?= (int)$r['id'] ?>" hidden>
+                  <?php if ($hasGps): ?>
+                    <a class="acc-actions-item is-gps" href="<?= h($gpsUrl) ?>" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">📍</span>Ver GPS</a>
+                  <?php endif; ?>
+                  <a class="acc-actions-item" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>"><span aria-hidden="true">📄</span>Carátula</a>
+                  <div class="acc-actions-divider" aria-hidden="true"></div>
+                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=oficios"><span aria-hidden="true">📨</span>Oficios</a>
+                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=recibidos"><span aria-hidden="true">📥</span>Documentos recibidos</a>
+                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=actas"><span aria-hidden="true">📝</span>Actas</a>
+                  <div class="acc-actions-divider" aria-hidden="true"></div>
+                  <form class="acc-actions-form" action="accidente_eliminar.php" method="post"
+                        onsubmit="return confirm('Eliminar este accidente de forma permanente?');">
+                    <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                    <button class="acc-actions-item is-danger" type="submit"><span aria-hidden="true">🗑️</span>Eliminar</button>
+                  </form>
                 </div>
-                <form class="acc-inline-form" action="accidente_eliminar.php" method="post"
-                      onsubmit="return confirm('Eliminar este accidente de forma permanente?');">
-                  <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                  <button class="btn danger small btn-x" title="Eliminar" aria-label="Eliminar">&times;</button>
-                </form>
               </div>
-              <span class="estado-badge <?=$cls?>"
-                    data-id="<?=$r['id']?>"
-                    data-estado="<?=h($estado)?>">
-                <?=h($estado)?>
-              </span>
             </div>
           </div>
         </article>
@@ -1586,12 +1556,6 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
           data-estado="<?=h($estado)?>">
       <?=h($estado)?>
     </span>
-    <?php $diligenciasPendientesTotal = (int)($r['diligencias_pendientes'] ?? 0); ?>
-    <div style="margin-top:7px">
-      <a class="chip chip-diligencias-pendientes <?= $diligenciasPendientesTotal === 0 ? 'is-zero' : '' ?>" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=diligencias-pendientes" title="Ver diligencias pendientes">
-        <?= $diligenciasPendientesTotal ?> pendiente<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?>
-      </a>
-    </div>
   </td>
   <td class="td-actions" role="cell">
     <a class="btn small" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>
@@ -1665,17 +1629,6 @@ document.querySelectorAll('.select-folder').forEach((select) => {
   select.dataset.lastValue = select.value || '';
 });
 
-// Mantiene visible la fila de comisarias del distrito seleccionado.
-(function(){
-  const stationRow = document.getElementById('stationRow');
-  if (!stationRow) return;
-  const activePanel = stationRow.querySelector('.station-panel.active');
-  if (activePanel) {
-    stationRow.style.setProperty('--district-hue', activePanel.dataset.hue || '220');
-    stationRow.classList.add('active');
-  }
-})();
-
 // Busqueda progresiva: los textos filtran mientras se escriben; los selects filtran al cambiar.
 (function(){
   const form = document.getElementById('filterForm');
@@ -1726,12 +1679,47 @@ document.querySelectorAll('.select-folder').forEach((select) => {
 
   document.addEventListener('keydown', (e)=>{
     if(e.key !== 'Escape') return;
-    const menuOpen = document.querySelector('.estado-menu');
+    const menuOpen = document.querySelector('.estado-menu, .acc-actions-menu:not([hidden])');
     if(menuOpen) return;
     if(!hasActiveFilters()) return;
     e.preventDefault();
     clearTimeout(submitTimer);
     window.location.href = 'accidente_listar.php';
+  });
+})();
+
+// Menú compacto de acciones de cada tarjeta.
+(function(){
+  const triggers = [...document.querySelectorAll('.js-acc-actions-trigger')];
+
+  function closeAll(except = null){
+    triggers.forEach(trigger=>{
+      if (trigger === except) return;
+      const menu = document.getElementById(trigger.getAttribute('aria-controls'));
+      trigger.setAttribute('aria-expanded', 'false');
+      if (menu) menu.hidden = true;
+    });
+  }
+
+  triggers.forEach(trigger=>{
+    trigger.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const menu = document.getElementById(trigger.getAttribute('aria-controls'));
+      if (!menu) return;
+      const open = trigger.getAttribute('aria-expanded') === 'true';
+      closeAll(trigger);
+      trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+      menu.hidden = open;
+    });
+  });
+
+  document.addEventListener('click', (e)=>{
+    if (e.target.closest('.acc-top-actions')) return;
+    closeAll();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key !== 'Escape') return;
+    closeAll();
   });
 })();
 

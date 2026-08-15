@@ -64,7 +64,7 @@ $ctx = $service->context($accidenteId);
 <div class="wrap">
   <div class="head">
     <div><h1 style="margin:0;font-size:1.25rem"><?= $id > 0 ? 'Editar' : 'Nueva' ?> acta de entrega de vehiculo</h1><div class="help">Selecciona la placa e indica la hora de entrega.</div></div>
-    <?php if ($embed): ?><button class="btn" type="button" onclick="window.parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else: ?><a class="btn" href="accidente_vista_tabs.php?accidente_id=<?= $accidenteId ?>&tab=documentos">Volver</a><?php endif; ?>
+    <?php if ($embed): ?><button class="btn" type="button" onclick="window.parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else: ?><button class="btn" type="button" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>&tab=documentos&subtab=actas';}">← Volver atrás</button><?php endif; ?>
   </div>
   <?php foreach ($errors as $error): ?><div class="error"><?= h($error) ?></div><?php endforeach; ?>
   <form method="post" class="grid">
