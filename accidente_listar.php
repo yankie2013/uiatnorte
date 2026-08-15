@@ -86,6 +86,31 @@ function vehiculo_tipo_resumen(array $veh): string {
   return 'vehiculo';
 }
 
+function involucrado_prioridad_resumen(?string $rol): int {
+  $norm = lower_u(trim((string)$rol));
+  $norm = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $norm);
+  if (str_contains($norm, 'conduc')) return 1;
+  if (str_contains($norm, 'peaton')) return 2;
+  foreach (['ocupante', 'pasajero', 'copiloto', 'acompanante'] as $tipo) {
+    if (str_contains($norm, $tipo)) return 3;
+  }
+  return 4;
+}
+
+function involucrado_icono_resumen(?string $rol, ?string $tipoVehiculo): string {
+  $rolNorm = lower_u(trim((string)$rol));
+  $tipoNorm = lower_u(trim((string)$tipoVehiculo));
+  $norm = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $rolNorm.' '.$tipoNorm);
+  if (str_contains($rolNorm, 'peat')) return '🚶';
+  if (!str_contains($rolNorm, 'conduc')) return '👤';
+  if (str_contains($norm, 'moto') && !str_contains($norm, 'trimoto') && !str_contains($norm, 'mototaxi')) return '🏍️';
+  if (str_contains($norm, 'trimoto') || str_contains($norm, 'mototaxi')) return '🛺';
+  if (str_contains($norm, 'camion') || str_contains($norm, 'remolc')) return '🚚';
+  if (str_contains($norm, 'omnibus') || str_contains($norm, 'bus')) return '🚌';
+  if (str_contains($norm, 'bicicleta')) return '🚲';
+  return '🚘';
+}
+
 function occupied_folder_map(PDO $pdo): array {
   $sql = "SELECT id, folder
             FROM accidentes
@@ -461,6 +486,7 @@ $accidenteIds = array_values(array_unique(array_map(static fn($row) => (int)($ro
 if ($accidenteIds !== []) {
   $marks = implode(',', array_fill(0, count($accidenteIds), '?'));
   $sqlInv = "SELECT ip.accidente_id,
+                    ip.vehiculo_id,
                     p.nombres, p.apellido_paterno, p.apellido_materno,
                     ip.lesion,
                     rp.Nombre AS rol_nombre
@@ -491,6 +517,7 @@ if ($accidenteIds !== []) {
       'nombre' => $nombre,
       'rol' => ($rolNombre !== '' ? $rolNombre : 'Persona'),
       'lesion' => $lesionUi,
+      'vehiculo_id' => (int)($inv['vehiculo_id'] ?? 0),
     ];
 
     $rolUi = normalizar_rol_resumen($rolNombre);
@@ -503,6 +530,7 @@ if ($accidenteIds !== []) {
     ];
   }
   $sqlVeh = "SELECT iv.accidente_id,
+                    iv.vehiculo_id,
                     iv.orden_participacion,
                     iv.tipo AS vinculo_tipo,
                     v.placa,
@@ -526,6 +554,7 @@ if ($accidenteIds !== []) {
     if ($accId <= 0) continue;
 
     $vehiculosResumenPorAccidente[$accId][] = [
+      'vehiculo_id' => (int)($veh['vehiculo_id'] ?? 0),
       'orden' => trim((string)($veh['orden_participacion'] ?? '')),
       'placa' => placa_visible($veh['placa'] ?? ''),
       'tipo' => vehiculo_tipo_resumen($veh),
@@ -535,6 +564,18 @@ if ($accidenteIds !== []) {
       ], static fn($part) => $part !== ''))),
     ];
   }
+
+  foreach ($personasDetallePorAccidente as $accId => &$personas) {
+    $vehiculosPorId = [];
+    foreach ($vehiculosResumenPorAccidente[$accId] ?? [] as $vehiculo) {
+      if (($vehiculo['vehiculo_id'] ?? 0) > 0) $vehiculosPorId[(int)$vehiculo['vehiculo_id']] = $vehiculo;
+    }
+    foreach ($personas as &$persona) {
+      $persona['vehiculo'] = $vehiculosPorId[(int)($persona['vehiculo_id'] ?? 0)] ?? null;
+    }
+    unset($persona);
+  }
+  unset($personas);
 }
 ?>
 <!doctype html>
@@ -922,7 +963,7 @@ html[data-theme-resolved="dark"]{
   overflow:hidden;
   transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
-.acc-card .acc-card-main{cursor:pointer}
+.acc-card .acc-card-main{cursor:default}
 .acc-card:hover{
   border-color:rgba(37,99,235,.38);
   box-shadow:0 14px 30px rgba(15,23,42,.10), inset 4px 0 0 rgba(37,99,235,.42);
@@ -951,7 +992,6 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
   box-shadow:0 13px 30px hsl(var(--district-hue) 58% 28% / .18),0 0 18px hsl(var(--district-hue) 88% 54% / .12),inset 4px 0 0 hsl(var(--district-hue) 92% 55%);
 }
 .acc-card-list.has-district-color .acc-card .acc-card-main:hover{background:hsl(var(--district-hue) 90% 55% / .035)}
-.acc-card-list.has-district-color .acc-detail{border-top-color:hsl(var(--district-hue) 60% 60% / .30)}
 .acc-card button,
 .acc-card select,
 .acc-card a,
@@ -995,13 +1035,24 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
 .acc-meta-value{font-size:13px;font-weight:600;color:#334155}
 .acc-card-center{display:flex;flex-direction:column;gap:8px}
 .acc-mini-counts{display:flex;flex-wrap:wrap;gap:6px}
+.acc-mini-counts.is-secondary{opacity:.72}
+.acc-involved{display:flex;flex-direction:column;gap:7px;min-width:0}
+.acc-involved-title{font-size:11px;font-weight:800;color:#7b8794;text-transform:uppercase;letter-spacing:.04em}
+.acc-involved-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:start;min-width:0}
+.acc-involved-icon{font-size:16px;line-height:1.15;text-align:center}
+.acc-involved-body{min-width:0}
+.acc-involved-name{font-size:12px;font-weight:800;line-height:1.25;color:#24324a;overflow-wrap:anywhere}
+.acc-involved-meta{font-size:10px;font-weight:650;line-height:1.35;color:#64748b;overflow-wrap:anywhere}
+.acc-involved-meta .vehicle-kind{font-weight:850;color:#334155}
+.acc-involved-meta .vehicle-plate-summary{font-weight:850;color:#475569}
+.acc-involved-more{align-self:flex-start;color:#64748b;font-size:11px;font-weight:800}
+.acc-involved-empty{font-size:12px;font-weight:650;color:#64748b}
 .acc-summary-block{display:flex;flex-direction:column;gap:6px}
 .acc-summary-title{font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
 .acc-summary-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .acc-hint{font-size:12px;font-weight:600;color:#64748b}
 .acc-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;justify-content:space-between;min-height:100%}
 .acc-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.acc-bottom-actions{display:flex;justify-content:flex-end;width:100%}
 .acc-gps-btn{
   min-width:42px;
   height:34px;
@@ -1038,34 +1089,6 @@ html[data-theme-resolved="dark"] .chip-diligencias-pendientes.is-zero{background
 .acc-docx-btn:hover{background:#bfdbfe;border-color:#93c5fd;color:#1e3a8a}
 .acc-card .col-folder{min-width:auto}
 .acc-inline-form{display:inline}
-.acc-toggle{
-  width:34px;height:34px;border-radius:8px;border:1px solid var(--field-bd);
-  background:var(--pill-bg);color:var(--fg);font-size:18px;font-weight:700;cursor:pointer;
-}
-.acc-toggle[aria-expanded="true"]{background:#e8f1ff;color:#1d4ed8;border-color:#bfdbfe}
-.acc-detail{
-  border-top:1px solid var(--tbl-bd);
-  padding:14px 16px 16px;
-  background:linear-gradient(180deg,#f3e8ff 0%,#eef7ff 100%);
-}
-.acc-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
-.acc-panel{
-  border:1px solid rgba(148,163,184,.18);
-  background:linear-gradient(180deg,#fff7ed 0%,#fffbeb 100%);
-  border-radius:12px;
-  padding:12px;
-}
-.acc-panel-title{font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:10px}
-.detail-list{display:flex;flex-direction:column;gap:10px}
-.person-detail,.vehicle-detail{display:flex;flex-direction:column;gap:5px}
-.vehicle-main{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.vehicle-plate{font-size:14px;font-weight:800;color:#14213d}
-.vehicle-type{
-  display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;
-  background:#eef2ff;color:#3730a3;font-size:11px;font-weight:700;
-}
-.vehicle-extra{font-size:12px;color:#64748b}
-.empty-soft{font-size:12px;color:#64748b}
 
 html[data-theme-resolved="dark"] .acc-card{
   background:linear-gradient(180deg,rgba(15,20,34,.96),rgba(17,25,43,.96));
@@ -1097,7 +1120,12 @@ html[data-theme-resolved="dark"] .tipo-reg-intervencion{background:rgba(6,182,21
 html[data-theme-resolved="dark"] .acc-meta-value,
 html[data-theme-resolved="dark"] .vehicle-extra{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-hint{color:#9fb0c6}
-html[data-theme-resolved="dark"] .acc-detail{background:linear-gradient(180deg,rgba(88,28,135,.32),rgba(14,116,144,.20))}
+html[data-theme-resolved="dark"] .acc-involved-name{color:#e5edf8}
+html[data-theme-resolved="dark"] .acc-involved-meta,
+html[data-theme-resolved="dark"] .acc-involved-empty{color:#9fb0c6}
+html[data-theme-resolved="dark"] .acc-involved-meta .vehicle-kind,
+html[data-theme-resolved="dark"] .acc-involved-meta .vehicle-plate-summary{color:#cbd5e1}
+html[data-theme-resolved="dark"] .acc-involved-more{color:#9fb0c6}
 html[data-theme-resolved="dark"] .acc-gps-btn{
   background:rgba(22,101,52,.28);
   border-color:rgba(134,239,172,.42);
@@ -1118,14 +1146,6 @@ html[data-theme-resolved="dark"] .acc-docx-btn:hover{
   border-color:rgba(147,197,253,.62);
   color:#dbeafe;
 }
-html[data-theme-resolved="dark"] .acc-panel{
-  background:linear-gradient(180deg,rgba(69,26,3,.42),rgba(66,32,6,.34));
-  border-color:rgba(251,191,36,.22);
-}
-html[data-theme-resolved="dark"] .vehicle-type{background:#1e3a8a;color:#dbeafe}
-html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
-  background:#1e3a8a;color:#dbeafe;border-color:#3b82f6;
-}
 
 @media(max-width:980px){
   .acc-card-main{
@@ -1145,8 +1165,6 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
     min-height:100%;
   }
   .acc-top-actions{justify-content:flex-end}
-  .acc-bottom-actions{justify-content:flex-end}
-  .acc-detail-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -1354,6 +1372,12 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
           $personasResumen = $personasResumenPorAccidente[(int)$r['id']] ?? [];
           $vehiculosResumen = $vehiculosResumenPorAccidente[(int)$r['id']] ?? [];
           $vehiculosPreview = array_slice($vehiculosResumen, 0, 2);
+          $personasVisuales = $personasDetalle;
+          usort($personasVisuales, static function(array $a, array $b): int {
+            return involucrado_prioridad_resumen($a['rol'] ?? '') <=> involucrado_prioridad_resumen($b['rol'] ?? '');
+          });
+          $personasPreview = array_slice($personasVisuales, 0, 3);
+          $personasRestantes = max(0, count($personasVisuales) - count($personasPreview));
           $isPrior = !empty($r['priority']) && (int)$r['priority']===1;
           $folderVal = ($estado === 'Resuelto' || $r['folder'] === null ? '' : (string)$r['folder']);
           $tipoRegistro = tipo_registro_label($r['tipo_registro'] ?? '');
@@ -1389,7 +1413,34 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
             </div>
 
             <div class="acc-card-center">
-              <div class="acc-mini-counts">
+              <div class="acc-involved">
+                <div class="acc-involved-title">Involucrados</div>
+                <?php if ($personasPreview === []): ?>
+                  <div class="acc-involved-empty">Sin personas registradas</div>
+                <?php else: foreach ($personasPreview as $personaPreview):
+                  $vehiculoPersona = is_array($personaPreview['vehiculo'] ?? null) ? $personaPreview['vehiculo'] : null;
+                  $rolPreview = trim((string)($personaPreview['rol'] ?? ''));
+                  $tipoPreview = trim((string)($vehiculoPersona['tipo'] ?? ''));
+                  $marcaModeloPreview = trim((string)($vehiculoPersona['marca_modelo'] ?? ''));
+                  $placaPreview = trim((string)($vehiculoPersona['placa'] ?? ''));
+                  if ($placaPreview === 'SIN PLACA') $placaPreview = '';
+                  $metaPartes = array_values(array_filter([$rolPreview, $tipoPreview, $marcaModeloPreview, $placaPreview], static fn($v) => $v !== ''));
+                ?>
+                  <div class="acc-involved-row">
+                    <span class="acc-involved-icon" aria-hidden="true"><?=h(involucrado_icono_resumen($rolPreview, $tipoPreview))?></span>
+                    <div class="acc-involved-body">
+                      <div class="acc-involved-name"><?=h($personaPreview['nombre'])?></div>
+                      <div class="acc-involved-meta">
+                        <?php foreach ($metaPartes as $parteIndex => $parte): ?><?= $parteIndex > 0 ? ' · ' : '' ?><span class="<?= $parteIndex === 1 && $tipoPreview !== '' ? 'vehicle-kind' : ($placaPreview !== '' && $parte === $placaPreview ? 'vehicle-plate-summary' : '') ?>"><?=h($parte)?></span><?php endforeach; ?>
+                      </div>
+                    </div>
+                  </div>
+                <?php endforeach; endif; ?>
+                <?php if ($personasRestantes > 0): ?>
+                  <div class="acc-involved-more">👥 +<?=$personasRestantes?> persona<?=$personasRestantes === 1 ? '' : 's'?> más</div>
+                <?php endif; ?>
+              </div>
+              <div class="acc-mini-counts is-secondary">
                 <span class="chip chip-more"><?=count($personasDetalle)?> persona(s)</span>
                 <span class="chip chip-more"><?=count($vehiculosResumen)?> vehiculo(s)</span>
                 <?php $diligenciasPendientesTotal = (int)($r['diligencias_pendientes'] ?? 0); ?>
@@ -1397,7 +1448,6 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                   <?= $diligenciasPendientesTotal ?> diligencia<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?> pendiente<?= $diligenciasPendientesTotal === 1 ? '' : 's' ?>
                 </a>
               </div>
-              <div class="acc-hint">Pulsa la caja o + para ver personas y vehiculos</div>
             </div>
 
             <div class="acc-card-right">
@@ -1427,53 +1477,6 @@ html[data-theme-resolved="dark"] .acc-toggle[aria-expanded="true"]{
                     data-estado="<?=h($estado)?>">
                 <?=h($estado)?>
               </span>
-              <div class="acc-bottom-actions">
-                <button class="acc-toggle js-toggle-card" type="button" aria-expanded="false" aria-controls="acc-detail-<?= (int)$r['id'] ?>">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="acc-detail" id="acc-detail-<?= (int)$r['id'] ?>" hidden>
-            <div class="acc-detail-grid">
-              <section class="acc-panel">
-                <div class="acc-panel-title">Personas involucradas</div>
-                <?php if ($personasDetalle === []): ?>
-                  <div class="empty-soft">No hay personas registradas.</div>
-                <?php else: ?>
-                  <div class="detail-list">
-                    <?php foreach ($personasDetalle as $personaItem): ?>
-                      <div class="person-detail">
-                        <span class="inv-name"><?=h($personaItem['nombre'])?></span>
-                        <div class="inv-chips">
-                          <span class="chip <?=h(chip_rol_class($personaItem['rol'] ?? ''))?>"><?=h($personaItem['rol'])?></span>
-                          <span class="chip <?=h(chip_lesion_class($personaItem['lesion'] ?? ''))?>"><?=h($personaItem['lesion'])?></span>
-                        </div>
-                      </div>
-                    <?php endforeach; ?>
-                  </div>
-                <?php endif; ?>
-              </section>
-
-              <section class="acc-panel">
-                <div class="acc-panel-title">Vehiculos involucrados</div>
-                <?php if ($vehiculosResumen === []): ?>
-                  <div class="empty-soft">No hay vehiculos registrados.</div>
-                <?php else: ?>
-                  <div class="detail-list">
-                    <?php foreach ($vehiculosResumen as $vehiculoItem): ?>
-                      <div class="vehicle-detail">
-                        <div class="vehicle-main">
-                          <span class="vehicle-plate"><?=h($vehiculoItem['placa'])?></span>
-                          <span class="vehicle-type"><?=h($vehiculoItem['tipo'])?></span>
-                        </div>
-                        <div class="vehicle-extra">
-                          <?=h(trim(($vehiculoItem['orden'] !== '' ? $vehiculoItem['orden'].' | ' : '').($vehiculoItem['marca_modelo'] !== '' ? $vehiculoItem['marca_modelo'] : 'Sin marca/modelo')))?>
-                        </div>
-                      </div>
-                    <?php endforeach; ?>
-                  </div>
-                <?php endif; ?>
-              </section>
             </div>
           </div>
         </article>
@@ -1643,6 +1646,7 @@ function renderFolderSelect(select) {
     option.selected = current === value;
     select.appendChild(option);
   }
+
 }
 
 function refreshFolderSelects(map) {
@@ -1730,48 +1734,6 @@ document.querySelectorAll('.select-folder').forEach((select) => {
     window.location.href = 'accidente_listar.php';
   });
 })();
-
-function toggleAccidentCard(btn){
-  const detail = document.getElementById(btn.getAttribute('aria-controls'));
-  if(!detail) return;
-  const expanded = btn.getAttribute('aria-expanded') === 'true';
-  if(!expanded){
-    document.querySelectorAll('.js-toggle-card[aria-expanded="true"]').forEach(openBtn=>{
-      if(openBtn === btn) return;
-      const openDetail = document.getElementById(openBtn.getAttribute('aria-controls'));
-      openBtn.setAttribute('aria-expanded', 'false');
-      openBtn.textContent = '+';
-      if(openDetail) openDetail.hidden = true;
-    });
-  }
-  btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-  btn.textContent = expanded ? '+' : '-';
-  detail.hidden = expanded;
-}
-
-document.querySelectorAll('.js-toggle-card').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    toggleAccidentCard(btn);
-  });
-});
-
-document.querySelectorAll('.acc-card .acc-card-main').forEach(cardMain=>{
-  cardMain.addEventListener('click', (e)=>{
-    if(e.target.closest('a, button, select, input, textarea, label, form, .estado-badge')) return;
-    const btn = cardMain.closest('.acc-card')?.querySelector('.js-toggle-card');
-    if(btn) toggleAccidentCard(btn);
-  });
-});
-
-document.addEventListener('keydown', (e)=>{
-  if(e.key !== 'Escape') return;
-  document.querySelectorAll('.js-toggle-card[aria-expanded="true"]').forEach(btn=>{
-    const detail = document.getElementById(btn.getAttribute('aria-controls'));
-    btn.setAttribute('aria-expanded', 'false');
-    btn.textContent = '+';
-    if(detail) detail.hidden = true;
-  });
-});
 
 // MenÃº estilo badge para cambiar estado
 (function(){
