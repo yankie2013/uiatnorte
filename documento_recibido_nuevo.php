@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
+<?php if (!$embed) include __DIR__ . '/sidebar.php'; ?>
 <div class="wrap">
   <div class="head">
     <div>

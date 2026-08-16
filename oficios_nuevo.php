@@ -831,11 +831,17 @@ async function applyPlantillaPreset(asuntoId) {
     syncPersonaDestinoManual();
     await refreshAsuntoPreview();
     await toggleBoxesPorAsunto();
-    openAccordionSection(accordionSections[1] || accordionSections[0]);
   } catch (error) {
     if (plantillaHint) plantillaHint.textContent = error.message || 'No se pudo cargar la configuracion de la plantilla.';
     console.error(error);
   } finally {
+    openAccordionSection(accordionSections[0]);
+    if (numInp) {
+      requestAnimationFrame(() => {
+        numInp.focus({ preventScroll: true });
+        numInp.select();
+      });
+    }
     applyingPlantilla = false;
   }
 }
