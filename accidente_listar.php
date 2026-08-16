@@ -608,45 +608,6 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .wrap{max-width:1200px;margin:20px auto;padding:14px}
 .title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-.quick-status{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  margin:0 0 12px;
-}
-.neon-state{
-  --neon:#22d3ee;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:38px;
-  padding:9px 16px;
-  border:1px solid var(--neon);
-  border-radius:12px;
-  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
-  color:var(--fg);
-  font-size:12px;
-  font-weight:900;
-  text-decoration:none;
-  text-transform:uppercase;
-  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 0 14px rgba(34,211,238,.18);
-  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
-}
-.neon-state:hover,
-.neon-state:focus-visible{
-  transform:translateY(-1px);
-  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 0 18px var(--neon),0 8px 24px rgba(15,23,42,.18);
-  outline:none;
-}
-.neon-state.active{
-  color:#071019;
-  background:linear-gradient(90deg,var(--neon),#ffffff);
-  box-shadow:0 0 0 1px rgba(255,255,255,.4) inset,0 0 22px var(--neon),0 10px 28px rgba(15,23,42,.2);
-}
-.neon-pending{--neon:#ff4fd8}
-.neon-resolved{--neon:#39ff88}
-.neon-dilig{--neon:#ffd166}
 .district-accident-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px;align-items:start}
 .district-sidebar{
   position:sticky;top:14px;padding:13px;border:1px solid rgba(99,102,241,.26);border-radius:18px;
@@ -730,6 +691,7 @@ html[data-theme-resolved="dark"] .station-btn.active{background:linear-gradient(
   .district-substations{margin-left:8px}
 }
 .card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:14px;padding:14px;backdrop-filter:blur(8px)}
+.filter-card{margin-bottom:14px}
 
 label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
 input,select{width:100%;padding:8px 10px;border:1px solid var(--field-bd);border-radius:10px;background:var(--field-bg);color:var(--fg)}
@@ -960,7 +922,11 @@ html[data-theme-resolved="dark"]{
   overflow:visible;
   transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
-.acc-card .acc-card-main{cursor:default}
+.acc-card .acc-card-main{cursor:pointer}
+.acc-card:focus-visible{
+  outline:3px solid rgba(37,99,235,.38);
+  outline-offset:3px;
+}
 .acc-card:hover{
   border-color:rgba(37,99,235,.38);
   box-shadow:0 14px 30px rgba(15,23,42,.10), inset 4px 0 0 rgba(37,99,235,.42);
@@ -1162,11 +1128,86 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
     </nav>
   </div>
 
-  <nav class="quick-status" aria-label="Accesos rapidos por estado">
-    <a class="neon-state neon-pending <?= $estadoFiltro === 'Pendiente' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Pendiente'))?>">Pendiente</a>
-    <a class="neon-state neon-resolved <?= $estadoFiltro === 'Resuelto' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Resuelto'))?>">Resueltos</a>
-    <a class="neon-state neon-dilig <?= $estadoFiltro === 'Con diligencias' ? 'active' : '' ?>" href="<?=h(url_estado_accidente('Con diligencias'))?>">Con diligencias</a>
-  </nav>
+  <div class="card filter-card">
+    <form method="get" class="filters" id="filterForm">
+      <div class="filter-primary">
+        <div class="col-6">
+          <label>Persona</label>
+          <input type="text" name="persona" placeholder="Nombres o apellidos" value="<?=h($_GET['persona']??'')?>">
+        </div>
+        <div class="col-6">
+          <label>Vehículo (placa)</label>
+          <input type="text" name="vehiculo" placeholder="Placa" value="<?=h($_GET['vehiculo']??'')?>">
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="advancedFilters">
+          <span>Más filtros</span><span class="filter-toggle-icon">⌄</span>
+        </button>
+        <div class="filter-action-buttons">
+          <button class="btn small" type="submit">Filtrar</button>
+        </div>
+      </div>
+
+      <div class="filter-advanced" id="advancedFilters">
+        <div class="col-3">
+          <label>Registro SIDPOL</label>
+          <input type="text" name="registro_sidpol" placeholder="Ej: 2025-ABC-123" value="<?=h($_GET['registro_sidpol']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>N&deg; informe policial</label>
+          <input type="text" name="nro_informe_policial" placeholder="Ej: 105-2025" value="<?=h($_GET['nro_informe_policial']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>Distrito</label>
+          <input type="text" name="distrito" placeholder="Distrito" value="<?=h($_GET['distrito']??'')?>">
+        </div>
+        <div class="col-3">
+          <label>Comisaria</label>
+          <select name="comisaria_id">
+            <option value="">-- Todas --</option>
+            <?php foreach($comisarias as $c): ?>
+              <option value="<?=$c['id']?>" <?=($comisaria_id==$c['id']?'selected':'')?>><?=h($c['nombre'])?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Estado</label>
+          <select name="estado">
+            <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
+              <option value="<?=h($estadoValue)?>" <?=($estadoFiltro===$estadoValue?'selected':'')?>><?=h($estadoLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Tipo de registro</label>
+          <select name="tipo_registro">
+            <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
+              <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-4">
+          <label>Ordenar por</label>
+          <select name="orden">
+            <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
+              <option value="<?=h($ordenValue)?>" <?=($orden===$ordenValue?'selected':'')?>><?=h($ordenLabel)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <?php if ($favoritos === '1'): ?>
+        <input type="hidden" name="favoritos" value="1">
+      <?php endif; ?>
+    </form>
+
+    <?php if ($restoredLastFilters): ?>
+      <div class="memory-note">Mostrando la última búsqueda realizada.</div>
+    <?php elseif (!$hasIncomingFilters && $ultimoAccidenteAbiertoId > 0): ?>
+      <div class="memory-note">Último accidente abierto resaltado arriba.</div>
+    <?php endif; ?>
+  </div>
 
   <div class="district-accident-layout">
     <aside class="district-sidebar" aria-label="Distritos">
@@ -1250,85 +1291,6 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 
     <main class="district-main">
   <div class="card">
-    <form method="get" class="filters" id="filterForm">
-      <div class="filter-primary">
-        <div class="col-6">
-          <label>Persona</label>
-          <input type="text" name="persona" placeholder="Nombres o apellidos" value="<?=h($_GET['persona']??'')?>">
-        </div>
-        <div class="col-6">
-          <label>Vehículo (placa)</label>
-          <input type="text" name="vehiculo" placeholder="Placa" value="<?=h($_GET['vehiculo']??'')?>">
-        </div>
-      </div>
-
-      <div class="filter-actions">
-        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="advancedFilters">
-          <span>Más filtros</span><span class="filter-toggle-icon">⌄</span>
-        </button>
-        <div class="filter-action-buttons">
-          <button class="btn small" type="submit">Filtrar</button>
-        </div>
-      </div>
-
-      <div class="filter-advanced" id="advancedFilters">
-        <div class="col-3">
-          <label>Registro SIDPOL</label>
-          <input type="text" name="registro_sidpol" placeholder="Ej: 2025-ABC-123" value="<?=h($_GET['registro_sidpol']??'')?>">
-        </div>
-        <div class="col-3">
-          <label>N&deg; informe policial</label>
-          <input type="text" name="nro_informe_policial" placeholder="Ej: 105-2025" value="<?=h($_GET['nro_informe_policial']??'')?>">
-        </div>
-        <div class="col-3">
-          <label>Distrito</label>
-          <input type="text" name="distrito" placeholder="Distrito" value="<?=h($_GET['distrito']??'')?>">
-        </div>
-        <div class="col-3">
-          <label>Comisaria</label>
-          <select name="comisaria_id">
-            <option value="">-- Todas --</option>
-            <?php foreach($comisarias as $c): ?>
-              <option value="<?=$c['id']?>" <?=($comisaria_id==$c['id']?'selected':'')?>><?=h($c['nombre'])?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="col-4">
-          <label>Estado</label>
-          <select name="estado">
-            <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
-              <option value="<?=h($estadoValue)?>" <?=($estadoFiltro===$estadoValue?'selected':'')?>><?=h($estadoLabel)?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="col-4">
-          <label>Tipo de registro</label>
-          <select name="tipo_registro">
-            <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
-              <option value="<?=h($tipoValue)?>" <?=($tipo_registro===$tipoValue?'selected':'')?>><?=h($tipoLabel)?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="col-4">
-          <label>Ordenar por</label>
-          <select name="orden">
-            <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
-              <option value="<?=h($ordenValue)?>" <?=($orden===$ordenValue?'selected':'')?>><?=h($ordenLabel)?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-      </div>
-      <?php if ($favoritos === '1'): ?>
-        <input type="hidden" name="favoritos" value="1">
-      <?php endif; ?>
-    </form>
-
-    <?php if ($restoredLastFilters): ?>
-      <div class="memory-note">Mostrando la última búsqueda realizada.</div>
-    <?php elseif (!$hasIncomingFilters && $ultimoAccidenteAbiertoId > 0): ?>
-      <div class="memory-note">Último accidente abierto resaltado arriba.</div>
-    <?php endif; ?>
-
     <div class="acc-card-list <?= $selectedDistrictHue !== null ? 'has-district-color' : '' ?>" id="cards-list" role="list" aria-label="Lista de accidentes"<?= $selectedDistrictHue !== null ? ' style="--district-hue:' . (int)$selectedDistrictHue . '"' : '' ?>>
       <?php if (!$rows): ?>
         <div class="empty">Sin resultados</div>
@@ -1355,7 +1317,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -1685,6 +1647,28 @@ document.querySelectorAll('.select-folder').forEach((select) => {
     e.preventDefault();
     clearTimeout(submitTimer);
     window.location.href = 'accidente_listar.php';
+  });
+})();
+
+// Toda la tarjeta abre el detalle, excepto cuando se usa uno de sus controles.
+(function(){
+  const interactiveSelector = 'a, button, select, input, form, label, .estado-badge, .acc-actions-menu';
+
+  document.querySelectorAll('.acc-card[data-url]').forEach(card => {
+    const openCard = () => {
+      window.location.href = card.dataset.url;
+    };
+
+    card.addEventListener('click', event => {
+      if (event.target.closest(interactiveSelector)) return;
+      openCard();
+    });
+
+    card.addEventListener('keydown', event => {
+      if (event.target !== card || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      openCard();
+    });
   });
 })();
 
