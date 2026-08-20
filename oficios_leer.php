@@ -78,6 +78,7 @@ body{background:var(--page);color:var(--text)}body.is-embed{margin:0}.wrap{max-w
     <div class="row"><div class="label">Grado y cargo</div><div><?= h($detail['grado_cargo_nombre'] ?? '-') ?></div></div>
     <div class="row"><div class="label">Accidente</div><div><?= !empty($detail['registro_sidpol']) ? h('SIDPOL ' . $detail['registro_sidpol']) : h('Accidente ' . ($detail['accidente_id'] ?? '-')) ?><?php if (!empty($detail['lugar'])): ?> - <?= h($detail['lugar']) ?><?php endif; ?><?php if (!empty($detail['fecha_accidente'])): ?> (<?= h($detail['fecha_accidente']) ?>)<?php endif; ?></div></div>
     <div class="row"><div class="label">Tipo de asunto</div><div><?= h($detail['asunto_tipo'] ?? '-') ?></div></div>
+    <div class="row"><div class="label">Categoría</div><div><?= h($detail['categoria'] ?? '') ?: '-' ?></div></div>
     <div class="row"><div class="label">Asunto</div><div><?= h($detail['asunto_nombre'] ?? '-') ?></div></div>
     <div class="row"><div class="label">Nombre oficial del año</div><div><?= h(trim((string) (($detail['anio_nom'] ?? '') . ' - ' . ($detail['nombre_anio'] ?? '')))) ?></div></div>
     <div class="row"><div class="label">Referencia</div><div><?= h($detail['referencia_texto'] ?? '') ?: '-' ?></div></div>

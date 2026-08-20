@@ -481,7 +481,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
             <tr>
               <th>SIDPOL</th>
               <th>N&uacute;mero</th>
-              <th>Entidad / Asunto</th>
+              <th>Categoría / Entidad / Asunto</th>
               <th>Referencia</th>
               <th>Fecha</th>
               <th>Estado</th>
@@ -526,6 +526,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                   <div class="muted">ID <?= h($row['id']) ?></div>
                 </td>
                 <td data-label="Entidad / Asunto">
+                  <div class="cell-subtitle"><?= h($row['categoria'] ?: 'Sin categoría') ?></div>
                   <div class="cell-title"><?= h($row['entidad'] ?: ($row['persona_destino_manual'] ?: '-')) ?></div>
                   <div class="cell-subtitle"><?= h($row['asunto_nombre'] ?: '-') ?></div>
                   <?php if ($vehiculo !== ''): ?><div class="cell-subtitle">Veh&iacute;culo: <?= h($vehiculo) ?></div><?php endif; ?>

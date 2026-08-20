@@ -101,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'persona_destino_manual' => $_POST['persona_destino_manual'] ?? '',
         'tipo' => $_POST['tipo'] ?? 'SOLICITAR',
         'asunto_id' => $_POST['asunto_id'] ?? '',
+        'categoria' => $_POST['categoria'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
         'diligencias_solicitadas' => $_POST['diligencias_solicitadas'] ?? '',
         'referencia_texto' => $_POST['referencia_texto'] ?? '',
@@ -219,6 +220,7 @@ if (!$embed) {
 <title>Nuevo Oficio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
+<link rel="stylesheet" href="assets/css/creatable_combobox.css">
 <style>
 :root{color-scheme:light;--page:#f4f7fb;--card:#fff;--panel:#fbfdff;--field:#fff;--button:#fff;--preview:#f8fbff;--actions:rgba(255,255,255,.86);--text:#0f172a;--form-text:#0f172a;--form-muted:#4b6285;--muted:#64748b;--border:#d7deea;--section-title:#17315e;--primary:#1d4ed8;--primary-soft:#e8f0ff;--gold:#c88912;--danger:#b91c1c;--ok:#166534}
 html[data-theme-resolved="dark"]{color-scheme:dark;--page:#0b1220;--card:#101a2c;--panel:#0d1728;--field:#111d31;--button:#16243b;--preview:#0d192b;--actions:rgba(15,25,43,.9);--text:#e5edf8;--form-text:#e5edf8;--form-muted:#9fb0c6;--muted:#94a3b8;--border:#30415f;--section-title:#dbeafe;--primary:#60a5fa;--primary-soft:#172554;--gold:#facc15;--danger:#fecaca;--ok:#bbf7d0}
@@ -324,6 +326,13 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <?php endforeach; ?>
         </select>
         <?php if ($sidpolGet !== ''): ?><div class="muted">Preseleccionado por SIDPOL: <?= h($sidpolGet) ?></div><?php endif; ?>
+      </div>
+
+      <div class="c12">
+        <label for="categoria">Categoría</label>
+        <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias_documento']), JSON_UNESCAPED_UNICODE)) ?>">
+          <input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar una categoría" role="combobox" aria-autocomplete="list" aria-expanded="false">
+        </div>
       </div>
 
       <div class="c12">
@@ -1286,6 +1295,7 @@ document.addEventListener('click', (event) => {
   if (combo && combo.contains(event.target)) return;
   closeEntidadSuggestions();
 });
-</script>
+ </script>
+<script src="assets/js/documento_recibido_categoria.js"></script>
 </body>
 </html>

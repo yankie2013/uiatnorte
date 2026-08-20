@@ -72,6 +72,33 @@ final class DocumentoRecibidoRepository
         return $this->pdo->query('SELECT DISTINCT tipo_documento FROM documentos_recibidos ORDER BY tipo_documento')->fetchAll(PDO::FETCH_COLUMN);
     }
 
+    public function distinctCategorias(): array
+    {
+        $queries = [];
+        if ($this->columnExists('documentos_recibidos', 'categoria')) {
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos WHERE categoria IS NOT NULL AND categoria <> ''";
+        }
+        if ($this->columnExists('oficios', 'categoria')) {
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios WHERE categoria IS NOT NULL AND categoria <> ''";
+        }
+        if ($queries === []) {
+            return [];
+        }
+
+        return $this->pdo->query('SELECT DISTINCT categoria FROM (' . implode(' UNION ALL ', $queries) . ') categorias_compartidas ORDER BY categoria')
+            ->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public function distinctEntidades(): array
+    {
+        return $this->distinctColumnValues('entidad_persona');
+    }
+
+    public function distinctNumerosDocumento(): array
+    {
+        return $this->distinctColumnValues('numero_documento');
+    }
+
     public function search(array $filters): array
     {
         $fechaRecepcionExpr = $this->resolvedDateExpression('dr', 'fecha_recepcion', 'fecha');
@@ -205,6 +232,10 @@ final class DocumentoRecibidoRepository
             'numero_documento' => $payload['numero_documento'] ?? null,
         ];
 
+        if ($this->columnExists('documentos_recibidos', 'categoria')) {
+            $data['categoria'] = $payload['categoria'] ?? null;
+        }
+
         if ($this->columnExists('documentos_recibidos', 'fecha_recepcion')) {
             $data['fecha_recepcion'] = $payload['fecha_recepcion'] ?? null;
         }
@@ -261,6 +292,17 @@ final class DocumentoRecibidoRepository
             return "{$alias}.{$fallbackColumn}";
         }
         return 'NULL';
+    }
+
+    private function distinctColumnValues(string $column): array
+    {
+        $allowed = ['entidad_persona', 'numero_documento'];
+        if (!in_array($column, $allowed, true) || !$this->columnExists('documentos_recibidos', $column)) {
+            return [];
+        }
+
+        return $this->pdo->query("SELECT DISTINCT `{$column}` FROM documentos_recibidos WHERE `{$column}` IS NOT NULL AND `{$column}` <> '' ORDER BY `{$column}`")
+            ->fetchAll(PDO::FETCH_COLUMN);
     }
 
     private function columnExists(string $table, string $column): bool

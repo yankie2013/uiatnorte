@@ -651,6 +651,7 @@ CREATE TABLE `documentos_recibidos` (
   `asunto` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
   `entidad_persona` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
   `tipo_documento` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `categoria` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `numero_documento` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `fecha` date NOT NULL,
   `fecha_recepcion` date DEFAULT NULL,
@@ -1547,6 +1548,7 @@ CREATE TABLE `oficios` (
   `persona_destino_manual` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `grado_cargo_id` int DEFAULT NULL,
   `asunto_id` int NOT NULL,
+  `categoria` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `motivo` text COLLATE utf8mb4_general_ci NOT NULL,
   `referencia_texto` varchar(300) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `oficial_ano_id` int NOT NULL,
@@ -2568,7 +2570,8 @@ ALTER TABLE `diligencias_pendientes`
 ALTER TABLE `documentos_recibidos`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_doc_accidente` (`accidente_id`),
-  ADD KEY `idx_doc_oficio` (`referencia_oficio_id`);
+  ADD KEY `idx_doc_oficio` (`referencia_oficio_id`),
+  ADD KEY `idx_documentos_recibidos_categoria` (`categoria`);
 
 --
 -- Indices de la tabla `documento_dosaje`
@@ -2719,6 +2722,7 @@ ALTER TABLE `oficios`
   ADD KEY `fk_ofi_oficial_ano` (`oficial_ano_id`),
   ADD KEY `idx_ofi_entidad` (`entidad_id_destino`),
   ADD KEY `idx_ofi_asunto` (`asunto_id`),
+  ADD KEY `idx_oficios_categoria` (`categoria`),
   ADD KEY `idx_ofi_estado` (`estado`),
   ADD KEY `idx_ofi_fecha` (`fecha_emision`),
   ADD KEY `fk_ofi_accidente` (`accidente_id`),

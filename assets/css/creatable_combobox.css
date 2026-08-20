@@ -1,0 +1,6 @@
+.category-combobox{position:relative}
+.category-options{position:absolute;z-index:100;top:calc(100% + 4px);left:0;right:0;max-height:230px;overflow-y:auto;margin:0;padding:5px;list-style:none;border:1px solid var(--border,#d7deea);border-radius:9px;background:var(--card,var(--panel,#fff));box-shadow:0 12px 30px rgba(15,23,42,.22)}
+.category-options[hidden]{display:none}
+.category-option{width:100%;padding:9px 10px;border:0;border-radius:7px;background:transparent;color:var(--text,#0f172a);font:inherit;text-align:left;cursor:pointer}
+.category-option:hover,.category-option.is-active{background:rgba(29,78,216,.10);color:var(--primary,#1d4ed8)}
+.category-empty{padding:9px 10px;color:var(--muted,#64748b);font-size:.84rem}

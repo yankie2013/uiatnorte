@@ -9,6 +9,17 @@ use InvalidArgumentException;
 final class DocumentoRecibidoService
 {
     private const ESTADOS = ['Pendiente', 'Revisado', 'Archivado'];
+    private const CATEGORIAS_INICIALES = [
+        'Cámara',
+        'Peritaje',
+        'Dosaje',
+        'Toxicológico',
+        'Actuados',
+        'Informe médico',
+        'Protocolo de necropsia',
+        'Boletín informativo',
+        'Reporte SOAT',
+    ];
 
     public function __construct(private DocumentoRecibidoRepository $repository)
     {
@@ -29,6 +40,9 @@ final class DocumentoRecibidoService
             'oficios' => $oficios,
             'asuntos' => $this->repository->asuntosByIds($asuntoIds),
             'estados' => self::ESTADOS,
+            'categorias' => $this->categorias(),
+            'entidades' => $this->opcionesUnicas($this->repository->distinctEntidades()),
+            'numeros_documento' => $this->opcionesUnicas($this->repository->distinctNumerosDocumento()),
         ];
     }
 
@@ -124,6 +138,7 @@ final class DocumentoRecibidoService
             'asunto' => $row['asunto'] ?? '',
             'entidad_persona' => $row['entidad_persona'] ?? '',
             'tipo_documento' => $row['tipo_documento'] ?? '',
+            'categoria' => $row['categoria'] ?? '',
             'numero_documento' => $row['numero_documento'] ?? '',
             'fecha_recepcion' => $fechaRecepcion ?? ($row === null ? $today : ($fechaLegacy ?? $today)),
             'fecha_documento' => $fechaDocumento ?? ($fechaLegacy ?? ''),
@@ -139,9 +154,19 @@ final class DocumentoRecibidoService
         $estado = trim((string) ($input['estado'] ?? ''));
         $fechaRecepcion = $this->nullable($input['fecha_recepcion'] ?? date('Y-m-d')) ?? date('Y-m-d');
         $fechaDocumento = $this->nullable($input['fecha_documento'] ?? null);
+        $categoria = $this->nullable($input['categoria'] ?? null);
 
         if ($estado !== '' && !in_array($estado, self::ESTADOS, true)) {
             throw new InvalidArgumentException('Estado invalido.');
+        }
+        if ($categoria !== null && mb_strlen($categoria) > 100) {
+            throw new InvalidArgumentException('La categoría admite hasta 100 caracteres.');
+        }
+        if (mb_strlen(trim((string) ($input['entidad_persona'] ?? ''))) > 200) {
+            throw new InvalidArgumentException('La entidad o persona remitente admite hasta 200 caracteres.');
+        }
+        if (mb_strlen(trim((string) ($input['numero_documento'] ?? ''))) > 100) {
+            throw new InvalidArgumentException('El número de documento y siglas admite hasta 100 caracteres.');
         }
 
         $anexos = [];
@@ -161,6 +186,7 @@ final class DocumentoRecibidoService
             'asunto' => $this->nullable($input['asunto'] ?? null),
             'entidad_persona' => $this->nullable($input['entidad_persona'] ?? null),
             'tipo_documento' => $this->nullable($input['tipo_documento'] ?? null),
+            'categoria' => $categoria,
             'numero_documento' => $this->nullable($input['numero_documento'] ?? null),
             'fecha_recepcion' => $fechaRecepcion,
             'fecha_documento' => $fechaDocumento,
@@ -176,5 +202,23 @@ final class DocumentoRecibidoService
     {
         $value = trim((string) ($value ?? ''));
         return $value === '' ? null : $value;
+    }
+
+    private function categorias(): array
+    {
+        return $this->opcionesUnicas([...self::CATEGORIAS_INICIALES, ...$this->repository->distinctCategorias()]);
+    }
+
+    private function opcionesUnicas(array $opciones): array
+    {
+        $unicas = [];
+        foreach ($opciones as $opcion) {
+            $opcion = trim((string) $opcion);
+            if ($opcion !== '') {
+                $unicas[mb_strtolower($opcion, 'UTF-8')] = $opcion;
+            }
+        }
+        natcasesort($unicas);
+        return array_values($unicas);
     }
 }

@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;border-radius:9px;text-decoration:none;font:inherit;font-weight:750;border:1px solid transparent;cursor:pointer}.btn.secondary{background:var(--panel);border-color:var(--border);color:var(--text)}.btn.primary{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;box-shadow:0 7px 16px rgba(15,159,145,.22)}
   .form-stack{display:grid;gap:14px}.form-section{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:15px}.section-head{margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}.section-head h2{margin:0;font-size:.96rem}.section-head p{margin:3px 0 0;font-size:.82rem;color:var(--muted)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}.full{grid-column:1/-1}
   label{display:block;font-size:.86rem;font-weight:750;margin-bottom:6px}input[type="text"],input[type="date"],select,textarea{width:100%;min-height:42px;padding:10px 11px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:inherit;font-size:.92rem;outline:none;transition:border-color .15s,box-shadow .15s}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}input[readonly]{background:var(--soft);color:var(--muted)}textarea{min-height:105px;resize:vertical;line-height:1.45}
+  .category-combobox{position:relative}.category-options{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:230px;overflow-y:auto;margin:0;padding:5px;list-style:none;border:1px solid var(--border);border-radius:9px;background:var(--panel);box-shadow:0 12px 30px rgba(15,23,42,.18)}.category-options[hidden]{display:none}.category-option{width:100%;padding:9px 10px;border:0;border-radius:7px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}.category-option:hover,.category-option.is-active{background:var(--soft);color:var(--primary)}.category-empty{padding:9px 10px;color:var(--muted);font-size:.84rem}
   .help{font-size:.78rem;color:var(--muted);margin-top:5px;line-height:1.35}.error{background:#fff1f1;padding:11px 13px;border-radius:10px;border:1px solid #f2b8b8;color:#8a1f1f;margin-bottom:14px}.form-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px}
   .annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{min-height:38px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);background:rgba(15,159,145,.11);color:var(--primary-dark);box-shadow:0 0 0 2px rgba(15,159,145,.08)}.annex-add{white-space:nowrap}.annex-panels{margin-top:12px}.annex-panel{padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--soft)}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.annex-panel-title{font-size:.84rem;font-weight:850}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;padding:5px}.annex-remove:disabled{display:none}
   .ai-section{border-color:rgba(15,159,145,.38);background:linear-gradient(145deg,rgba(15,159,145,.07),var(--panel) 58%)}.ai-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ai-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(15,159,145,.13);color:var(--primary-dark);font-size:.7rem;font-weight:850;letter-spacing:.04em}.scan-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:14px}.scan-upload{display:grid;gap:9px}.scan-file{width:100%;padding:11px;border:1px dashed var(--primary);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;font-size:.83rem}.scan-paste{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;outline:none}.scan-paste:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}.scan-preview{display:none;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.scan-preview.is-visible{display:block}.scan-controls{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px}.scan-status{min-height:20px;color:var(--muted);font-size:.82rem;line-height:1.4}.scan-status.is-success{color:#087d55}.scan-status.is-error{color:#b42318}.scan-result{display:none;width:100%;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--border);font-size:.78rem;color:var(--muted);line-height:1.45}.scan-result.is-visible{display:block}.scan-result strong{color:var(--text)}
@@ -137,12 +138,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="section-head"><h2>Datos del documento</h2><p>Información que permitirá reconocerlo rápidamente en el listado.</p></div>
       <div class="form-grid">
     <div class="full">
+      <label for="categoria">Categoría</label>
+      <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias']), JSON_UNESCAPED_UNICODE)) ?>">
+        <input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar una categoría" role="combobox" aria-autocomplete="list" aria-expanded="false">
+      </div>
+    </div>
+    <div class="full">
       <label for="asunto">Asunto</label>
       <input id="asunto" type="text" name="asunto" value="<?= h($data['asunto']) ?>" placeholder="Ej.: Remisión de resultado de dosaje etílico">
     </div>
     <div>
       <label for="entidad_persona">Entidad o persona remitente</label>
-      <input id="entidad_persona" type="text" name="entidad_persona" value="<?= h($data['entidad_persona']) ?>" placeholder="Nombre de la entidad o persona">
+      <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['entidades']), JSON_UNESCAPED_UNICODE)) ?>">
+        <input id="entidad_persona" type="text" name="entidad_persona" value="<?= h($data['entidad_persona']) ?>" maxlength="200" autocomplete="off" placeholder="Nombre de la entidad o persona" role="combobox" aria-autocomplete="list" aria-expanded="false">
+      </div>
     </div>
     <div>
       <label for="tipo_documento">Tipo de documento</label>
@@ -150,7 +159,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <div>
       <label for="numero_documento">Número de documento y siglas</label>
-      <input id="numero_documento" type="text" name="numero_documento" value="<?= h($data['numero_documento']) ?>" placeholder="Número y año, si corresponde">
+      <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['numeros_documento']), JSON_UNESCAPED_UNICODE)) ?>">
+        <input id="numero_documento" type="text" name="numero_documento" value="<?= h($data['numero_documento']) ?>" maxlength="100" autocomplete="off" placeholder="Número y año, si corresponde" role="combobox" aria-autocomplete="list" aria-expanded="false">
+      </div>
     </div>
     <div>
       <label for="estado">Estado</label>
@@ -214,6 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </form>
 </div>
+<script src="assets/js/documento_recibido_categoria.js"></script>
 <script>
 (function () {
   const tabs = document.getElementById('anexos_tabs');

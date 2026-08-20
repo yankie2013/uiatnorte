@@ -91,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'persona_destino_manual' => $_POST['persona_destino_manual'] ?? '',
         'tipo' => $_POST['tipo'] ?? 'SOLICITAR',
         'asunto_id' => $_POST['asunto_id'] ?? '',
+        'categoria' => $_POST['categoria'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
         'diligencias_solicitadas' => $_POST['diligencias_solicitadas'] ?? '',
         'referencia_texto' => $_POST['referencia_texto'] ?? '',
@@ -172,6 +173,7 @@ if (!$embed) {
 <title>Editar Oficio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
+<link rel="stylesheet" href="assets/css/creatable_combobox.css">
 <style>
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--danger:#fecaca;--ok:#bbf7d0}}
@@ -209,6 +211,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="c12"><label for="categoria">Categoría</label><div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias_documento']), JSON_UNESCAPED_UNICODE)) ?>"><input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar una categoría" role="combobox" aria-autocomplete="list" aria-expanded="false"></div></div>
       <div class="c2"><label>Año*</label><input type="number" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>" required></div>
       <div class="c3"><label>Número*</label><div class="field-row"><input type="number" name="numero_oficio" id="numero_oficio" value="<?= h($data['numero_oficio']) ?>"><button class="btn mini" type="button" onclick="recalcularNumero()">↻</button></div></div>
       <div class="c3"><label>Fecha de emisión*</label><input type="date" name="fecha_emision" id="fecha_emision" value="<?= h($data['fecha_emision']) ?>" required></div>
@@ -285,5 +288,6 @@ function openCreate(kind){ const entidadId=entidadSel.value||''; const tipo=tipo
 window.closeModal=closeModal; window.openCreate=openCreate;
 fechaInp.addEventListener('change',()=>{ const year=(fechaInp.value||'').slice(0,4); if(year){ anioInp.value=year; recalcularNumero().catch(console.error); } }); accSel.addEventListener('change',()=>{ toggleBoxesPorAsunto().catch(console.error); }); if(entidadTextInp){ const syncEntidadAndReload=async()=>{ syncEntidadDestino(); renderEntidadSuggestions(entidadTextInp.value||''); await handleEntidadSelectionChange(); }; entidadTextInp.addEventListener('input',()=>{ syncEntidadAndReload().catch(console.error); }); entidadTextInp.addEventListener('change',()=>{ syncEntidadAndReload().catch(console.error); }); entidadTextInp.addEventListener('focus',()=>{ renderEntidadSuggestions(entidadTextInp.value||''); }); } tipoSel.addEventListener('change', async()=>{ await loadAsuntos(entidadSel.value||'',tipoSel.value||'SOLICITAR',asuntoSel.value||''); await refreshAsuntoPreview(); await toggleBoxesPorAsunto(); }); if(personaTextInp){ personaTextInp.addEventListener('input', syncPersonaDestinoManual); personaTextInp.addEventListener('change', syncPersonaDestinoManual); } if(camaraRangoDesdeInp){ camaraRangoDesdeInp.addEventListener('input', syncCamaraRangeIntoMotivo); camaraRangoHastaInp.addEventListener('input', syncCamaraRangeIntoMotivo); } asuntoSel.addEventListener('change', async()=>{ await refreshAsuntoPreview(); await toggleBoxesPorAsunto(); }); document.querySelector('form.card').addEventListener('submit', (event)=>{ syncEntidadDestino(); if(!entidadSel.value){ if(entidadTextInp){ entidadTextInp.setCustomValidity('Selecciona una entidad de la lista.'); entidadTextInp.reportValidity(); } event.preventDefault(); return; } syncPersonaDestinoManual(); if(asuntoEsCamaraVideo()) syncCamaraRangeIntoMotivo(); else if(motivoTxt) motivoTxt.value=stripCamaraRangeLine(motivoTxt.value); }); document.addEventListener('DOMContentLoaded', async()=>{ syncEntidadDestino(); syncPersonaDestinoManual(); hydrateCamaraRangeFromMotivo(); renderEntidadSuggestions(entidadTextInp ? entidadTextInp.value : ''); closeEntidadSuggestions(); await loadAsuntos(entidadSel.value||'',tipoSel.value||'SOLICITAR',asuntoSel.value || ''); await refreshAsuntoPreview().catch(()=>{}); await toggleBoxesPorAsunto(); }); document.addEventListener('click',(event)=>{ if(!entidadTextInp || !entidadOptionsBox) return; const combo=entidadTextInp.closest('.combo-menu'); if(combo && combo.contains(event.target)) return; closeEntidadSuggestions(); });
 </script>
+<script src="assets/js/documento_recibido_categoria.js"></script>
 </body>
 </html>

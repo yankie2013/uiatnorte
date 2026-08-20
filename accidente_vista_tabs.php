@@ -4453,6 +4453,7 @@ $oficios = safe_query_all(
             o.anio,
             o.fecha_emision,
             o.estado,
+            COALESCE(o.categoria, '') AS categoria,
             o.referencia_texto,
             o.motivo,
             COALESCE(o.persona_destino_manual, '') AS persona_destino_manual,
@@ -9978,7 +9979,6 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell js-inline-open" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos') ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio completo">Nuevo oficio completo</a>
 	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
 	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
 	                  <a class="btn-shell btn-docx" href="word_caratula_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Carátula resumen</a>
@@ -10020,6 +10020,7 @@ include __DIR__ . '/sidebar.php';
                           </select>
                         </header>
                         <div class="module-meta">
+                          <span class="chip-simple"><?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?></span>
                           <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
                           <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
@@ -10050,10 +10051,6 @@ include __DIR__ . '/sidebar.php';
 
             <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
               <div class="inner-panel">
-                <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">+ Nuevo documento recibido</a>
-                </div>
-
                 <?php if (!$documentosRecibidos): ?>
                   <div class="empty-state">No hay documentos recibidos registrados para este accidente.</div>
                 <?php else: ?>
@@ -10069,8 +10066,7 @@ include __DIR__ . '/sidebar.php';
                       <article class="module-card">
                         <header>
                           <div>
-                            <h4><?= h($documentoIcon) ?> <?= h((string) (($row['asunto'] ?? '') !== '' ? $row['asunto'] : 'Documento recibido #' . (int) $row['id'])) ?></h4>
-                            <p><?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></p>
+                            <h4><?= h($documentoIcon) ?> <?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?> — <?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></h4>
                           </div>
                           <span class="chip-simple <?= h($docEstadoClass) ?>"><?= h($docEstado !== '' ? $docEstado : 'Sin estado') ?></span>
                         </header>

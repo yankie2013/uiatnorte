@@ -497,6 +497,23 @@ final class OficioRepository
         return (int) $st->fetchColumn() > 0;
     }
 
+    public function categoriasCompartidas(): array
+    {
+        $queries = [];
+        if ($this->columnExists('oficios', 'categoria')) {
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios WHERE categoria IS NOT NULL AND categoria <> ''";
+        }
+        if ($this->columnExists('documentos_recibidos', 'categoria')) {
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos WHERE categoria IS NOT NULL AND categoria <> ''";
+        }
+        if ($queries === []) {
+            return [];
+        }
+
+        return $this->pdo->query('SELECT DISTINCT categoria FROM (' . implode(' UNION ALL ', $queries) . ') categorias_compartidas ORDER BY categoria')
+            ->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     public function personasInformeMedicoByAccidente(int $accidenteId): array
     {
         if ($accidenteId <= 0 || !$this->columnExists('involucrados_personas', 'lesion')) {
@@ -549,6 +566,7 @@ final class OficioRepository
             'COALESCE(s.nombre,\'\') AS asunto_nombre',
             'COALESCE(s.tipo,\'\') AS asunto_tipo'
         ];
+        $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             'LEFT JOIN accidentes a ON a.id = o.accidente_id',
@@ -636,6 +654,10 @@ final class OficioRepository
             $columns[] = 'diligencias_solicitadas';
             $values[] = $payload['diligencias_solicitadas'] ?? null;
         }
+        if ($this->columnExists('oficios', 'categoria')) {
+            $columns[] = 'categoria';
+            $values[] = $payload['categoria'] ?? null;
+        }
         $placeholders = implode(',', array_fill(0, count($columns), '?'));
         $sql = 'INSERT INTO oficios (' . implode(',', $columns) . ') VALUES (' . $placeholders . ')';
         $st = $this->pdo->prepare($sql);
@@ -677,6 +699,10 @@ final class OficioRepository
         if ($this->columnExists('oficios', 'diligencias_solicitadas')) {
             $sets[] = 'diligencias_solicitadas = ?';
             $values[] = $payload['diligencias_solicitadas'] ?? null;
+        }
+        if ($this->columnExists('oficios', 'categoria')) {
+            $sets[] = 'categoria = ?';
+            $values[] = $payload['categoria'] ?? null;
         }
         $values[] = $id;
         $sql = 'UPDATE oficios SET ' . implode(', ', $sets) . ' WHERE id = ? LIMIT 1';

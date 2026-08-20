@@ -10,6 +10,7 @@ final class OficioService
 {
     private const ESTADOS = ['BORRADOR', 'FIRMADO', 'ENVIADO', 'ANULADO', 'ARCHIVADO'];
     private const TIPOS = ['SOLICITAR', 'REMITIR'];
+    private const CATEGORIAS_INICIALES = ['Cámara', 'Peritaje', 'Dosaje', 'Toxicológico', 'Actuados', 'Informe médico', 'Protocolo de necropsia', 'Boletín informativo', 'Reporte SOAT'];
 
     public function __construct(private OficioRepository $repository)
     {
@@ -39,6 +40,7 @@ final class OficioService
             'accidentes' => $this->repository->accidentes(),
             'tipos' => self::TIPOS,
             'estados' => self::ESTADOS,
+            'categorias_documento' => $this->categoriasCompartidas(),
             'preselected_accidente_id' => $preselectedAccidenteId,
         ];
     }
@@ -113,6 +115,7 @@ final class OficioService
             'persona_destino_manual' => $row['persona_destino_manual'] ?? '',
             'tipo' => $this->asuntoTipo($row['asunto_id'] ?? null) ?: 'SOLICITAR',
             'asunto_id' => $row['asunto_id'] ?? '',
+            'categoria' => $row['categoria'] ?? '',
             'motivo' => $row['motivo'] ?? '',
             'diligencias_solicitadas' => $row['diligencias_solicitadas'] ?? '',
             'referencia_texto' => $row['referencia_texto'] ?? '',
@@ -607,6 +610,7 @@ final class OficioService
         $vehiculoId = ($input['involucrado_vehiculo_id'] ?? '') !== '' ? (int) $input['involucrado_vehiculo_id'] : null;
         $personaInvId = ($input['involucrado_persona_id'] ?? '') !== '' ? (int) $input['involucrado_persona_id'] : null;
         $estado = strtoupper(trim((string) ($input['estado'] ?? 'BORRADOR')));
+        $categoria = trim((string) ($input['categoria'] ?? ''));
 
         if ($fecha === '') {
             throw new InvalidArgumentException('La fecha de emisión es obligatoria.');
@@ -633,12 +637,18 @@ final class OficioService
         if ((int) ($asuntoInfo['entidad_id'] ?? 0) !== $entidadId) {
             throw new InvalidArgumentException('El asunto no corresponde a la entidad destino seleccionada.');
         }
+        if ($categoria === '') {
+            $categoria = $this->inferirCategoria((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+        }
         if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
         $asuntoRules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
         if ($asuntoRules['requires_fallecido'] && $personaInvId === null) {
             throw new InvalidArgumentException('Selecciona la persona fallecida para este asunto.');
+        }
+        if (mb_strlen($categoria) > 100) {
+            throw new InvalidArgumentException('La categoría admite hasta 100 caracteres.');
         }
         if ($asuntoRules['requires_persona_medica'] && $personaInvId === null) {
             throw new InvalidArgumentException('Selecciona la persona herida, lesionada o fallecida para el informe medico.');
@@ -687,6 +697,7 @@ final class OficioService
             'persona_destino_manual' => ($personaId === null && $personaDestinoManual !== '') ? $personaDestinoManual : null,
             'grado_cargo_id' => $gradoCargoId,
             'asunto_id' => $asuntoId,
+            'categoria' => $categoria !== '' ? $categoria : null,
             'motivo' => $motivo,
             'diligencias_solicitadas' => $diligenciasSolicitadas !== '' ? $diligenciasSolicitadas : null,
             'referencia_texto' => $referencia !== '' ? $referencia : null,
@@ -694,6 +705,35 @@ final class OficioService
             'estado' => $estado,
             'involucrado_persona_id' => $personaInvId,
         ];
+    }
+
+    private function categoriasCompartidas(): array
+    {
+        $unicas = [];
+        foreach ([...self::CATEGORIAS_INICIALES, ...$this->repository->categoriasCompartidas()] as $categoria) {
+            $categoria = trim((string) $categoria);
+            if ($categoria !== '') {
+                $unicas[mb_strtolower($categoria, 'UTF-8')] = $categoria;
+            }
+        }
+        natcasesort($unicas);
+        return array_values($unicas);
+    }
+
+    private function inferirCategoria(string $nombre, string $detalle): string
+    {
+        $texto = mb_strtolower($nombre . ' ' . $detalle, 'UTF-8');
+        $texto = strtr($texto, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n']);
+        if (str_contains($texto, 'necropsia') || str_contains($texto, 'autopsia')) return 'Protocolo de necropsia';
+        if (str_contains($texto, 'peritaje') || str_contains($texto, 'pericial')) return 'Peritaje';
+        if (str_contains($texto, 'dosaje')) return 'Dosaje';
+        if (str_contains($texto, 'toxicolog')) return 'Toxicológico';
+        if (str_contains($texto, 'informe medico')) return 'Informe médico';
+        if (str_contains($texto, 'soat')) return 'Reporte SOAT';
+        if (str_contains($texto, 'boletin')) return 'Boletín informativo';
+        if (str_contains($texto, 'camara') || str_contains($texto, 'videovigilancia')) return 'Cámara';
+        if (str_contains($texto, 'actuado') || str_contains($texto, 'diligencia')) return 'Actuados';
+        return '';
     }
 
     private function asuntoRequiereVehiculo(string $nombre, string $detalle): bool
