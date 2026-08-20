@@ -37,13 +37,17 @@ CREATE TABLE IF NOT EXISTS actas_visualizacion_documentos (
 CREATE TABLE IF NOT EXISTS actas_visualizacion_discos (
   id INT NOT NULL AUTO_INCREMENT,
   acta_visualizacion_id INT NOT NULL,
+  oficio_id INT NULL,
   numero INT NOT NULL,
+  tipo_medio VARCHAR(20) NULL,
   marca VARCHAR(120) NULL,
   numero_serie VARCHAR(180) NULL,
+  capacidad VARCHAR(100) NULL,
   observaciones VARCHAR(500) NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uq_acta_visualizacion_disco (acta_visualizacion_id, numero),
-  KEY idx_acta_visualizacion_disco_acta (acta_visualizacion_id)
+  KEY idx_acta_visualizacion_disco_acta (acta_visualizacion_id),
+  KEY idx_acta_visualizacion_disco_oficio (oficio_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS actas_visualizacion_archivos (

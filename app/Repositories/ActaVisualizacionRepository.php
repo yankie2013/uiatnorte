@@ -89,22 +89,44 @@ final class ActaVisualizacionRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function cameraDocuments(int $accidenteId): array
+    public function cameraOffices(int $accidenteId): array
     {
         $st = $this->pdo->prepare(
-            "SELECT CONVERT('OFICIO' USING utf8mb4) COLLATE utf8mb4_general_ci fuente, o.id fuente_id,
-                    CONVERT(CONCAT('Oficio ',o.numero,'/',o.anio,' - ',COALESCE(oa.nombre,''),' - ',COALESCE(o.motivo,'')) USING utf8mb4) COLLATE utf8mb4_general_ci descripcion
-               FROM oficios o LEFT JOIN oficio_asunto oa ON oa.id=o.asunto_id
-              WHERE o.accidente_id=? AND (LOWER(CONVERT(CONCAT_WS(' ',oa.nombre,oa.detalle,o.motivo,o.referencia_texto) USING utf8mb4)) COLLATE utf8mb4_general_ci) REGEXP 'camara|video|vigilancia'
-              UNION ALL
-             SELECT CONVERT('RESPUESTA' USING utf8mb4) COLLATE utf8mb4_general_ci, dr.id,
-                    CONVERT(CONCAT('Respuesta ',COALESCE(dr.numero_documento,''),' - ',COALESCE(dr.asunto,''),' - ',COALESCE(dr.entidad_persona,'')) USING utf8mb4) COLLATE utf8mb4_general_ci
-               FROM documentos_recibidos dr LEFT JOIN oficios o ON o.id=dr.referencia_oficio_id LEFT JOIN oficio_asunto oa ON oa.id=o.asunto_id
-              WHERE dr.accidente_id=? AND (LOWER(CONVERT(CONCAT_WS(' ',dr.asunto,dr.tipo_documento,dr.contenido,oa.nombre,oa.detalle,o.motivo) USING utf8mb4)) COLLATE utf8mb4_general_ci) REGEXP 'camara|video|vigilancia'
-           ORDER BY fuente, fuente_id DESC"
+            "SELECT o.id oficio_id, o.numero, o.anio, COALESCE(o.categoria,'') categoria,
+                    COALESCE(e.nombre,'') entidad_destino, COALESCE(oa.nombre,'') asunto,
+                    dr.id respuesta_id, COALESCE(dr.numero_documento,'') respuesta_numero,
+                    COALESCE(dr.siglas_documento,'') respuesta_siglas,
+                    COALESCE(dr.asunto,'') respuesta_asunto, COALESCE(dr.entidad_persona,'') respuesta_entidad
+               FROM oficios o
+          LEFT JOIN oficio_asunto oa ON oa.id=o.asunto_id
+          LEFT JOIN oficio_entidad e ON e.id=o.entidad_id_destino
+               JOIN documentos_recibidos dr ON dr.referencia_oficio_id=o.id AND dr.accidente_id=o.accidente_id
+              WHERE o.accidente_id=?
+                AND LOWER(CONVERT(CONCAT_WS(' ',o.categoria,oa.nombre,oa.detalle,o.motivo,o.referencia_texto) USING utf8mb4)) COLLATE utf8mb4_general_ci
+                    REGEXP 'c.mara|video|videovigilancia|vigilancia'
+           ORDER BY o.anio DESC,o.numero DESC,dr.id DESC"
         );
-        $st->execute([$accidenteId, $accidenteId]);
-        return $st->fetchAll(PDO::FETCH_ASSOC);
+        $st->execute([$accidenteId]);
+        $groups = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $officeId = (int) $row['oficio_id'];
+            if (!isset($groups[$officeId])) {
+                $officeNumber = 'Oficio N° '.$row['numero'].'-'.$row['anio'];
+                $groups[$officeId] = [
+                    'oficio_id'=>$officeId,
+                    'titulo'=>trim(($row['categoria'] ?: 'Cámara').' — '.($row['entidad_destino'] ?: 'Entidad no registrada')),
+                    'descripcion'=>$officeNumber.($row['asunto'] ? ' · '.$row['asunto'] : ''),
+                    'documento'=>['fuente'=>'OFICIO','fuente_id'=>$officeId,'descripcion'=>$officeNumber.' - '.$row['entidad_destino']],
+                    'respuestas'=>[],
+                ];
+            }
+            $responseNumber = trim($row['respuesta_numero'].'-'.$row['respuesta_siglas'], '-');
+            $groups[$officeId]['respuestas'][] = [
+                'fuente'=>'RESPUESTA','fuente_id'=>(int)$row['respuesta_id'], 'oficio_id'=>$officeId,
+                'descripcion'=>'Documento recibido'.($responseNumber ? ' N° '.$responseNumber : '').' - '.trim($row['respuesta_asunto'].' - '.$row['respuesta_entidad'], ' -'),
+            ];
+        }
+        return array_values($groups);
     }
 
     public function save(?int $id, array $main, array $participants, array $documents, array $disks): int
@@ -124,11 +146,11 @@ final class ActaVisualizacionRepository
             foreach ($participants as $p) $participantSt->execute([$id,$p['fuente'],$p['fuente_id'],$p['nombre'],$p['condicion']]);
             $documentSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_documentos(acta_visualizacion_id,fuente,fuente_id,descripcion) VALUES(?,?,?,?)');
             foreach ($documents as $d) $documentSt->execute([$id,$d['fuente'],$d['fuente_id'],$d['descripcion']]);
-            $diskSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_discos(acta_visualizacion_id,numero,marca,numero_serie,observaciones) VALUES(?,?,?,?,?)');
+            $diskSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_discos(acta_visualizacion_id,oficio_id,numero,tipo_medio,marca,numero_serie,capacidad,observaciones) VALUES(?,?,?,?,?,?,?,?)');
             $fileSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_archivos(disco_id,nombre_archivo,tipo_archivo,peso,duracion,observaciones) VALUES(?,?,?,?,?,?)');
             $descriptionSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_descripciones(archivo_id,orden,tiempo,detalle,captura_path) VALUES(?,?,?,?,?)');
             foreach ($disks as $index => $disk) {
-                $diskSt->execute([$id,$index+1,$disk['marca'],$disk['numero_serie'],$disk['observaciones']]);
+                $diskSt->execute([$id,$disk['oficio_id'],$index+1,$disk['tipo_medio'],$disk['marca'],$disk['numero_serie'],$disk['capacidad'],$disk['observaciones']]);
                 $diskId = (int) $this->pdo->lastInsertId();
                 foreach ($disk['archivos'] as $file) {
                     $fileSt->execute([$diskId,$file['nombre_archivo'],$file['tipo_archivo'],$file['peso'],$file['duracion'],$file['observaciones']]);

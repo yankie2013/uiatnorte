@@ -116,8 +116,10 @@ $videoDescriptions = [];
 foreach ($disks as $diskIndex => $disk) {
     $number = (int) ($disk['numero'] ?? ($diskIndex + 1));
     $diskLetter = chr(65 + ($diskIndex % 26));
-    $diskHeader = "{$diskLetter}. DISCO {$number}, marca " . (trim((string) ($disk['marca'] ?? '')) ?: 'no consignada')
+    $mediumType = strtoupper(trim((string)($disk['tipo_medio'] ?? ''))) ?: 'DISCO';
+    $diskHeader = "{$diskLetter}. {$mediumType} {$number}, marca " . (trim((string) ($disk['marca'] ?? '')) ?: 'no consignada')
         . ', serie N° ' . (trim((string) ($disk['numero_serie'] ?? '')) ?: 'no consignada')
+        . ', capacidad ' . (trim((string) ($disk['capacidad'] ?? '')) ?: 'no consignada')
         . (trim((string) ($disk['observaciones'] ?? '')) !== '' ? ', ' . trim((string) $disk['observaciones']) : '');
     $diskLines[] = $diskHeader;
     foreach (($disk['archivos'] ?? []) as $fileIndex => $file) {
@@ -207,8 +209,10 @@ $values = [
 for ($i = 1; $i <= 10; $i++) {
     $disk = $disks[$i - 1] ?? [];
     $values["disco_{$i}_numero"] = $disk['numero'] ?? '';
+    $values["disco_{$i}_tipo"] = $disk['tipo_medio'] ?? 'DISCO';
     $values["disco_{$i}_marca"] = $disk['marca'] ?? '';
     $values["disco_{$i}_serie"] = $disk['numero_serie'] ?? '';
+    $values["disco_{$i}_capacidad"] = $disk['capacidad'] ?? '';
     $values["disco_{$i}_observaciones"] = $disk['observaciones'] ?? '';
     $values["disco_{$i}_archivos"] = isset($disk['archivos']) ? avv_join($disk['archivos'], static fn(array $file): string => trim((string) ($file['nombre_archivo'] ?? ''))) : '';
 }
