@@ -52,6 +52,7 @@ final class DocumentoRecibidoService
             'rows' => $this->repository->search($filters),
             'accidentes' => $this->repository->accidentes(),
             'tipos' => array_filter($this->repository->distinctTipos(), static fn($v) => (string) $v !== ''),
+            'categorias' => $this->categorias(),
             'estados' => self::ESTADOS,
         ];
     }

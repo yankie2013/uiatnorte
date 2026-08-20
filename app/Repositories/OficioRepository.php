@@ -558,7 +558,7 @@ final class OficioRepository
     {
         $select = [
             'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
-            'COALESCE(e.siglas, e.nombre) AS entidad',
+            'COALESCE(NULLIF(e.siglas, \'\'), e.nombre) AS entidad',
             'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
             'a.registro_sidpol',
             'a.id AS accid',
@@ -611,6 +611,10 @@ final class OficioRepository
         if (!empty($filters['estado'])) {
             $sql .= ' AND o.estado = ?';
             $params[] = $filters['estado'];
+        }
+        if (!empty($filters['categoria'])) {
+            $sql .= ' AND o.categoria = ?';
+            $params[] = $filters['categoria'];
         }
         if (!empty($filters['q'])) {
             $like = '%' . $filters['q'] . '%';

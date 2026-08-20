@@ -32,6 +32,7 @@ final class DocumentoRecibidoRepository
         $hasContenido = $this->columnExists('oficios', 'contenido');
         $hasEntidadDestino = $this->columnExists('oficios', 'entidad_id_destino') && $this->tableExists('oficio_entidad');
         $cols = 'o.id, o.numero, o.anio, o.asunto_id, o.motivo, o.referencia_texto';
+        $cols .= $this->columnExists('oficios', 'categoria') ? ", COALESCE(o.categoria, '') AS categoria" : ", '' AS categoria";
         if ($hasContenido) {
             $cols .= ', o.contenido';
         }
@@ -129,6 +130,10 @@ final class DocumentoRecibidoRepository
         if (!empty($filters['tipo_documento'])) {
             $where[] = 'dr.tipo_documento LIKE ?';
             $params[] = '%' . $filters['tipo_documento'] . '%';
+        }
+        if (!empty($filters['categoria'])) {
+            $where[] = 'dr.categoria = ?';
+            $params[] = $filters['categoria'];
         }
         if (!empty($filters['estado'])) {
             $where[] = 'dr.estado = ?';

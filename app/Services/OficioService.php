@@ -51,6 +51,7 @@ final class OficioService
             'rows' => $this->repository->search($filters),
             'entidades' => $this->repository->entidades(),
             'estados' => self::ESTADOS,
+            'categorias' => $this->categoriasCompartidas(),
         ];
     }
 

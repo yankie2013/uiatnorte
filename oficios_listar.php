@@ -35,6 +35,7 @@ $entidadId = trim((string) ($_GET['entidad_id'] ?? ''));
 $sidpol = trim((string) ($_GET['sidpol'] ?? ''));
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $estado = trim((string) ($_GET['estado'] ?? ''));
+$categoria = trim((string) ($_GET['categoria'] ?? ''));
 $msg = trim((string) ($_GET['msg'] ?? ''));
 
 $filters = [
@@ -44,6 +45,7 @@ $filters = [
     'sidpol' => $sidpol,
     'accidente_id' => $accidenteId,
     'estado' => $estado,
+    'categoria' => $categoria,
 ];
 $ctx = $service->listado($filters);
 $rows = $ctx['rows'];
@@ -126,6 +128,9 @@ if ($sidpol !== '') {
 if ($estado !== '') {
     $activeFilters[] = ['label' => 'Estado', 'value' => $estado, 'clear' => 'estado'];
 }
+if ($categoria !== '') {
+    $activeFilters[] = ['label' => 'Categoría', 'value' => $categoria, 'clear' => 'categoria'];
+}
 
 $clearFiltersUrl = build_url([
     'q' => null,
@@ -133,6 +138,7 @@ $clearFiltersUrl = build_url([
     'entidad_id' => null,
     'sidpol' => null,
     'estado' => null,
+    'categoria' => null,
 ]);
 
 include __DIR__ . '/sidebar.php';
@@ -294,6 +300,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
   padding:4px 7px;border-radius:999px;border:1px solid var(--border);
   background:var(--card-soft);color:var(--text);text-decoration:none;font-size:.7rem;font-weight:700;
 }
+.tool.tool-documento-recibido{border:2px solid #0284c7;background:#e0f2fe;color:#075985;box-shadow:0 0 0 2px rgba(14,165,233,.12),0 5px 12px rgba(2,132,199,.14)}.tool.tool-documento-recibido:hover{border-color:#0369a1;background:#bae6fd;color:#0c4a6e}
 .tools{gap:5px}
 .action-links{margin-top:6px;gap:5px;align-items:center;flex-wrap:nowrap}
 .action-links form{margin:0}
@@ -402,7 +409,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
         <div class="filter-title">
           <div>
             <strong>Filtros de b&uacute;squeda</strong>
-            <div class="small">Puedes combinar texto, a&ntilde;o, entidad, SIDPOL y estado.</div>
+            <div class="small">Puedes combinar texto, categoría, a&ntilde;o, entidad, SIDPOL y estado.</div>
           </div>
           <?php if ($activeFilters): ?><div class="small"><?= count($activeFilters) ?> filtro(s) activo(s)</div><?php endif; ?>
         </div>
@@ -430,6 +437,15 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
             <div class="field">
               <label for="sidpol">SIDPOL</label>
               <input id="sidpol" type="text" name="sidpol" value="<?= h($sidpol) ?>" placeholder="Ej. 32813425">
+            </div>
+            <div class="field">
+              <label for="categoria">Categoría</label>
+              <select id="categoria" name="categoria">
+                <option value="">Todas</option>
+                <?php foreach ($ctx['categorias'] as $item): ?>
+                  <option value="<?= h($item) ?>" <?= $categoria === $item ? 'selected' : '' ?>><?= h($item) ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="field">
               <label for="estado">Estado</label>
@@ -556,6 +572,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                     <?php if ($isInformacionCertificadoUper): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= h($row['id']) ?>">UPER</a><?php endif; ?>
                     <?php if ($isInformacionDiligencias): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= h($row['id']) ?>">Diligencias</a><?php endif; ?>
                     <?php if ($isInformeMedico): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informe_medico.php?oficio_id=<?= h($row['id']) ?>">Informe medico</a><?php endif; ?>
+                    <a class="tool tool-documento-recibido" href="documento_recibido_nuevo.php?accidente_id=<?= h($row['accid']) ?>&referencia_oficio_id=<?= h($row['id']) ?>&return_to=<?= urlencode($returnTo) ?>">Documento recibido</a>
                   </div>
                   <div class="action-links">
                     <a class="btn sm" href="oficios_leer.php?id=<?= h($row['id']) ?>">Ver</a>

@@ -15,6 +15,7 @@ $msg = trim((string)($_GET['msg'] ?? ''));
 $filters = [
     'accidente_id' => $_GET['accidente_id'] ?? '',
     'tipo_documento' => trim((string) ($_GET['tipo_documento'] ?? '')),
+    'categoria' => trim((string) ($_GET['categoria'] ?? '')),
     'estado' => $_GET['estado'] ?? '',
     'q' => trim((string) ($_GET['q'] ?? '')),
 ];
@@ -62,6 +63,10 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.95rem}thead 
     <select name="tipo_documento">
       <option value="">Tipo documento</option>
       <?php foreach($ctx['tipos'] as $t): ?><option value="<?= h($t) ?>" <?= ($filters['tipo_documento'] === $t) ? 'selected' : '' ?>><?= h($t) ?></option><?php endforeach; ?>
+    </select>
+    <select name="categoria">
+      <option value="">Todas las categorías</option>
+      <?php foreach($ctx['categorias'] as $categoria): ?><option value="<?= h($categoria) ?>" <?= ($filters['categoria'] === $categoria) ? 'selected' : '' ?>><?= h($categoria) ?></option><?php endforeach; ?>
     </select>
     <select name="estado">
       <option value="">Estado</option>

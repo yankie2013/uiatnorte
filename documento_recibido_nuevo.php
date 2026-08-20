@@ -15,8 +15,22 @@ $service = new DocumentoRecibidoService(new DocumentoRecibidoRepository($pdo));
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $accidenteId = isset($_GET['accidente_id']) && $_GET['accidente_id'] !== '' ? (int) $_GET['accidente_id'] : null;
+$referenciaOficioId = isset($_GET['referencia_oficio_id']) && $_GET['referencia_oficio_id'] !== '' ? (int) $_GET['referencia_oficio_id'] : null;
 $ctx = $service->formContext($accidenteId);
-$data = $service->defaultData(['accidente_id' => $accidenteId ?: '']);
+$oficioReferenciado = null;
+if ($referenciaOficioId) {
+    foreach ($ctx['oficios'] as $oficioItem) {
+        if ((int) ($oficioItem['id'] ?? 0) === $referenciaOficioId) {
+            $oficioReferenciado = $oficioItem;
+            break;
+        }
+    }
+}
+$data = $service->defaultData([
+    'accidente_id' => $accidenteId ?: '',
+    'referencia_oficio_id' => $oficioReferenciado['id'] ?? '',
+    'categoria' => $oficioReferenciado['categoria'] ?? '',
+]);
 $accidenteFijo = null;
 if ($accidenteId) {
     foreach ($ctx['accidentes'] as $accidenteItem) {
@@ -38,6 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newId = $service->crear($_POST);
         if ($embed) {
             echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"documento_recibido.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
+            exit;
+        }
+        if ($returnTo !== '') {
+            header('Location: ' . $returnTo);
             exit;
         }
         $redir = 'documento_recibido_listar.php?msg=creado';

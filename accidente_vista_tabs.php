@@ -39,7 +39,9 @@ $pdo->exec("SET NAMES utf8mb4");
 $accidenteRepo = new AccidenteRepository($pdo);
 $accidenteService = new AccidenteService($accidenteRepo);
 $oficioService = new OficioService(new OficioRepository($pdo));
-$oficioEstados = $oficioService->formContext()['estados'] ?? ['BORRADOR', 'FIRMADO', 'ENVIADO', 'ANULADO', 'ARCHIVADO'];
+$oficioContext = $oficioService->formContext();
+$oficioEstados = $oficioContext['estados'] ?? ['BORRADOR', 'FIRMADO', 'ENVIADO', 'ANULADO', 'ARCHIVADO'];
+$categoriasDocumentales = $oficioContext['categorias_documento'] ?? [];
 $googleMapsApiKey = trim((string) app_config('services.google_maps.js_api_key', ''));
 
 function h($value): string
@@ -4457,7 +4459,7 @@ $oficios = safe_query_all(
             o.referencia_texto,
             o.motivo,
             COALESCE(o.persona_destino_manual, '') AS persona_destino_manual,
-            COALESCE(e.siglas, e.nombre) AS entidad,
+            COALESCE(NULLIF(e.siglas, ''), e.nombre) AS entidad,
             COALESCE(a2.nombre, '') AS asunto_nombre,
             COALESCE(a2.detalle, '') AS asunto_detalle,
             COALESCE(iv.orden_participacion, '') AS veh_ut,
@@ -5633,6 +5635,7 @@ include __DIR__ . '/sidebar.php';
   .btn-shell.danger:hover{border-color:#dc2626;background:#fecaca;color:#991b1b}
   .btn-shell.btn-docx{border-color:#a855f7;border-radius:8px;background:linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%);box-shadow:0 0 0 1px rgba(168,85,247,.34),0 0 16px rgba(168,85,247,.35),0 8px 18px rgba(109,40,217,.14);color:#6d28d9;text-shadow:0 0 10px rgba(168,85,247,.22)}
   .btn-shell.btn-docx:hover{border-color:#d946ef;background:linear-gradient(180deg,#f5d0fe 0%,#e9d5ff 100%);box-shadow:0 0 0 1px rgba(217,70,239,.44),0 0 22px rgba(217,70,239,.42),0 10px 22px rgba(109,40,217,.2);color:#581c87}
+  .btn-shell.btn-documento-recibido{border:2px solid #0284c7;background:linear-gradient(180deg,#f0f9ff 0%,#dff4ff 100%);color:#075985;box-shadow:0 0 0 2px rgba(14,165,233,.15),0 7px 16px rgba(2,132,199,.17)}.btn-shell.btn-documento-recibido:hover{border-color:#0369a1;background:#bae6fd;color:#0c4a6e;box-shadow:0 0 0 3px rgba(14,165,233,.2),0 9px 20px rgba(2,132,199,.22)}
   .panel{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:6px 8px;box-shadow:0 10px 26px rgba(17,24,39,.08);backdrop-filter:blur(8px)}
   .main-module-panel{
     --module-accent:#2563eb;
@@ -6285,6 +6288,7 @@ include __DIR__ . '/sidebar.php';
   .module-card-panel{margin-top:8px}
   .module-card-panel[hidden]{display:none}
   .module-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .module-category-filter{display:inline-flex;align-items:center;gap:7px;margin:0;padding:5px 8px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#52627a;font-size:11px;font-weight:800}.module-category-filter select{min-height:30px;max-width:220px;padding:4px 28px 4px 8px;border:1px solid #cbd8e8;border-radius:7px;background:#fff;color:#26364d;font:inherit}
   .summary-sheet{display:grid;gap:10px}
   .summary-block-card{
     --summary-accent:#8b5cf6;
@@ -7981,6 +7985,10 @@ include __DIR__ . '/sidebar.php';
     <div class="tab-content mt-2">
       <div class="tab-pane fade" id="resumen-integral" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-resumen">
+          <div class="module-actions" style="margin:0 0 12px;">
+            <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>">Paquete IA</a>
+            <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>&format=word">Resumen Word IA</a>
+          </div>
           <div class="summary-sheet">
             <article class="module-card summary-block-card summary-block-card--intervention">
               <header>
@@ -9979,12 +9987,13 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-	                  <a class="btn-shell btn-peritaje" href="oficio_peritaje_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Peritaje rápido</a>
-	                  <a class="btn-shell btn-necropsia" href="oficio_protocolo_express.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Necropsia rapida</a>
-	                  <a class="btn-shell btn-docx" href="word_caratula_accidente.php?accidente_id=<?= (int) $accidente_id ?>">Carátula resumen</a>
-	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>">Paquete IA</a>
-	                  <a class="btn-shell btn-docx" href="exportar_accidente_ia.php?accidente_id=<?= (int) $accidente_id ?>&format=word">Resumen Word IA</a>
-	                  <a class="btn-shell btn-docx" href="asistente_ia_oficio.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Generar oficio con IA</a>
+	                  <label class="module-category-filter">Categoría
+	                    <select class="js-document-category-filter" data-list="oficios">
+	                      <option value="">Todas</option>
+	                      <option value="__sin_categoria__">Sin categoría</option>
+	                      <?php foreach ($categoriasDocumentales as $categoriaFiltro): ?><option value="<?= h((string) $categoriaFiltro) ?>"><?= h((string) $categoriaFiltro) ?></option><?php endforeach; ?>
+	                    </select>
+	                  </label>
 	                </div>
 
                 <?php if (!$oficios): ?>
@@ -9995,6 +10004,14 @@ include __DIR__ . '/sidebar.php';
                       <?php
                         $oficioIcon = oficio_icon($row);
                         $oficioEstadoClass = oficio_status_class((string) ($row['estado'] ?? ''));
+                        $oficioCategoria = trim((string) ($row['categoria'] ?? '')) ?: 'Sin categoría';
+                        $oficioEntidad = trim((string) ($row['entidad'] ?? ''));
+                        if ($oficioEntidad === '') {
+                            $oficioEntidad = trim((string) ($row['persona_destino_manual'] ?? '')) ?: 'Sin entidad destino';
+                        }
+                        $oficioNumeroCompleto = 'Oficio N° ' . trim((string) ($row['numero'] ?? ''))
+                          . '-' . trim((string) ($row['anio'] ?? ''))
+                          . '-DIRNOS-DIRTTSV/DIVPIAT-UIAT-NORTE';
                         $oficioDownloadText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '') . ' ' . ($row['motivo'] ?? '')), 'UTF-8');
                         $oficioTipo = strtoupper(trim((string) ($row['asunto_tipo'] ?? '')));
                         $oficioEsCamara = (str_contains($oficioDownloadText, 'camara') || str_contains($oficioDownloadText, 'cámara') || str_contains($oficioDownloadText, 'camaras') || str_contains($oficioDownloadText, 'cámaras')) && (str_contains($oficioDownloadText, 'video') || str_contains($oficioDownloadText, 'vigilancia'));
@@ -10007,11 +10024,11 @@ include __DIR__ . '/sidebar.php';
                         $oficioEsInformacionDiligencias = (str_contains($oficioDownloadText, 'informacion') || str_contains($oficioDownloadText, 'información')) && str_contains($oficioDownloadText, 'diligenc');
                         $oficioEsInformeMedico = str_contains($oficioDownloadText, 'informe') && (str_contains($oficioDownloadText, 'medico') || str_contains($oficioDownloadText, 'médico'));
                       ?>
-                      <article class="module-card">
+                      <article class="module-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>">
                         <header>
                           <div>
-                            <h4><?= h($oficioIcon) ?> Oficio <?= h((string) ($row['numero'] ?? '')) ?>/<?= h((string) ($row['anio'] ?? '')) ?></h4>
-                            <p><?= h((string) (($row['entidad'] ?? '') !== '' ? $row['entidad'] : (($row['persona_destino_manual'] ?? '') !== '' ? $row['persona_destino_manual'] : 'Sin destino'))) ?></p>
+                            <h4><?= h($oficioIcon) ?> <?= h($oficioCategoria) ?> — <?= h($oficioEntidad) ?></h4>
+                            <p><?= h($oficioNumeroCompleto) ?></p>
                           </div>
                           <select class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
                             <?php foreach ($oficioEstados as $estadoOpt): ?>
@@ -10020,7 +10037,6 @@ include __DIR__ . '/sidebar.php';
                           </select>
                         </header>
                         <div class="module-meta">
-                          <span class="chip-simple"><?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?></span>
                           <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
                           <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
@@ -10038,6 +10054,7 @@ include __DIR__ . '/sidebar.php';
                           <?php if ($oficioEsInformacionCertificadoUper): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= (int) $row['id'] ?>">Descargar UPER</a><?php endif; ?>
                           <?php if ($oficioEsInformacionDiligencias): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= (int) $row['id'] ?>">Descargar diligencias</a><?php endif; ?>
                           <?php if ($oficioEsInformeMedico): ?><a class="btn-shell btn-docx" href="word_oficio_informe_medico.php?oficio_id=<?= (int) $row['id'] ?>">Descargar informe medico</a><?php endif; ?>
+                          <a class="btn-shell btn-documento-recibido js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&referencia_oficio_id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=documentos')) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">Documento recibido</a>
                           <a class="btn-shell js-inline-open" href="oficios_leer.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Ver oficio">Ver</a>
                           <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Editar oficio">Editar</a>
                           <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio">Eliminar</a>
@@ -10051,6 +10068,15 @@ include __DIR__ . '/sidebar.php';
 
             <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
               <div class="inner-panel">
+                <div class="module-actions" style="margin-bottom:8px;">
+                  <label class="module-category-filter">Categoría
+                    <select class="js-document-category-filter" data-list="recibidos">
+                      <option value="">Todas</option>
+                      <option value="__sin_categoria__">Sin categoría</option>
+                      <?php foreach ($categoriasDocumentales as $categoriaFiltro): ?><option value="<?= h((string) $categoriaFiltro) ?>"><?= h((string) $categoriaFiltro) ?></option><?php endforeach; ?>
+                    </select>
+                  </label>
+                </div>
                 <?php if (!$documentosRecibidos): ?>
                   <div class="empty-state">No hay documentos recibidos registrados para este accidente.</div>
                 <?php else: ?>
@@ -10063,7 +10089,7 @@ include __DIR__ . '/sidebar.php';
                           ? 'chip-status-ok'
                           : (mb_strtolower($docEstado, 'UTF-8') === 'archivado' ? 'chip-testigo' : 'chip-status-warn');
                       ?>
-                      <article class="module-card">
+                      <article class="module-card" data-document-list="recibidos" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>">
                         <header>
                           <div>
                             <h4><?= h($documentoIcon) ?> <?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?> — <?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></h4>
@@ -13228,6 +13254,18 @@ include __DIR__ . '/sidebar.php';
       });
     });
   })();
+</script>
+<script>
+document.querySelectorAll('.js-document-category-filter').forEach((select) => {
+  select.addEventListener('change', () => {
+    const list = select.dataset.list || '';
+    const selected = select.value;
+    document.querySelectorAll('[data-document-list="' + list + '"]').forEach((card) => {
+      const category = (card.dataset.category || '').trim();
+      card.hidden = selected === '__sin_categoria__' ? category !== '' : (selected !== '' && category !== selected);
+    });
+  });
+});
 </script>
 </body>
 </html>
