@@ -93,7 +93,8 @@ final class ActaVisualizacionRepository
     {
         $st = $this->pdo->prepare(
             "SELECT o.id oficio_id, o.numero, o.anio, COALESCE(o.categoria,'') categoria,
-                    COALESCE(e.nombre,'') entidad_destino, COALESCE(oa.nombre,'') asunto,
+                    COALESCE(NULLIF(e.siglas,''),e.nombre,'') entidad_destino, COALESCE(oa.nombre,'') asunto,
+                    COALESCE(o.motivo,'') motivo,
                     dr.id respuesta_id, COALESCE(dr.numero_documento,'') respuesta_numero,
                     COALESCE(dr.siglas_documento,'') respuesta_siglas,
                     COALESCE(dr.asunto,'') respuesta_asunto, COALESCE(dr.entidad_persona,'') respuesta_entidad
@@ -116,6 +117,9 @@ final class ActaVisualizacionRepository
                     'oficio_id'=>$officeId,
                     'titulo'=>trim(($row['categoria'] ?: 'Cámara').' — '.($row['entidad_destino'] ?: 'Entidad no registrada')),
                     'descripcion'=>$officeNumber.($row['asunto'] ? ' · '.$row['asunto'] : ''),
+                    'numero_completo'=>'Oficio N° '.$row['numero'].'-'.$row['anio'].'-DIRNOS-DIRTTSV/DIVPIAT-UIAT-NORTE',
+                    'entidad_destino'=>$row['entidad_destino'],
+                    'solicitud'=>trim($row['motivo'] ?: $row['asunto']),
                     'documento'=>['fuente'=>'OFICIO','fuente_id'=>$officeId,'descripcion'=>$officeNumber.' - '.$row['entidad_destino']],
                     'respuestas'=>[],
                 ];
@@ -123,6 +127,9 @@ final class ActaVisualizacionRepository
             $responseNumber = trim($row['respuesta_numero'].'-'.$row['respuesta_siglas'], '-');
             $groups[$officeId]['respuestas'][] = [
                 'fuente'=>'RESPUESTA','fuente_id'=>(int)$row['respuesta_id'], 'oficio_id'=>$officeId,
+                'numero_completo'=>$responseNumber,
+                'asunto'=>$row['respuesta_asunto'],
+                'entidad'=>$row['respuesta_entidad'],
                 'descripcion'=>'Documento recibido'.($responseNumber ? ' N° '.$responseNumber : '').' - '.trim($row['respuesta_asunto'].' - '.$row['respuesta_entidad'], ' -'),
             ];
         }

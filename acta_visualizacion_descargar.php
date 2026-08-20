@@ -109,6 +109,32 @@ $participantsDetail = avv_join($participants, static fn(array $item): string => 
 $documentsDetail = avv_join($documents, static fn(array $item): string => trim((string) ($item['descripcion'] ?? '')));
 $officesDetail = avv_join($offices, static fn(array $item): string => trim((string) ($item['descripcion'] ?? '')));
 $responsesDetail = avv_join($responses, static fn(array $item): string => trim((string) ($item['descripcion'] ?? '')));
+$cameraOfficesById = [];
+foreach ($repo->cameraOffices((int)$row['accidente_id']) as $cameraOffice) {
+    $cameraOfficesById[(int)$cameraOffice['oficio_id']] = $cameraOffice;
+}
+$officeOrder = [];
+foreach ($disks as $disk) {
+    $officeId = (int)($disk['oficio_id'] ?? 0);
+    if ($officeId > 0 && isset($cameraOfficesById[$officeId]) && !in_array($officeId, $officeOrder, true)) $officeOrder[] = $officeId;
+}
+$officeNarratives = [];
+foreach ($officeOrder as $officeIndex => $officeId) {
+    $office = $cameraOfficesById[$officeId];
+    $responseLabels = array_values(array_filter(array_map(static function(array $response): string {
+        $number = trim((string)($response['numero_completo'] ?? ''));
+        $entity = trim((string)($response['entidad'] ?? ''));
+        return trim(($number !== '' ? 'documento N° '.$number : 'documento recibido').($entity !== '' ? ' remitido por '.$entity : ''));
+    }, $office['respuestas'] ?? [])));
+    $officeFiles = 0;
+    foreach ($disks as $disk) if ((int)($disk['oficio_id'] ?? 0) === $officeId) $officeFiles += count($disk['archivos'] ?? []);
+    $request = rtrim(trim((string)($office['solicitud'] ?? '')), '.');
+    $officeNarratives[] = 'OFICIO '.($officeIndex + 1).'. Con '.($office['numero_completo'] ?? 'el oficio indicado')
+        .', se solicitó a '.($office['entidad_destino'] ?: 'la entidad destinataria')
+        .($request !== '' ? ' '.lcfirst($request) : ' las grabaciones de sus cámaras de videovigilancia')
+        .($responseLabels ? ', recibiéndose '.implode(' y ', $responseLabels) : '')
+        .', mediante '.($officeFiles === 1 ? 'el cual se remitió un archivo de video' : 'los cuales se remitieron '.$officeFiles.' archivos de video').'.';
+}
 $filesTotal = 0;
 $diskLines = [];
 $fileLines = [];
@@ -172,9 +198,12 @@ $fiscalParagraph = $fiscalName !== ''
         . (trim((string) ($accident['fiscal_cargo'] ?? '')) !== '' ? ', ' . trim((string) $accident['fiscal_cargo']) : '')
         . ($fiscalOffice !== '' ? " de {$fiscalOffice}" : '') . '.'
     : 'Representante del Ministerio Público no consignado.';
-$officeParagraph = $documentsDetail !== ''
+$structuredOfficesDetail = implode("\n\n", $officeNarratives);
+$officeParagraph = $structuredOfficesDetail !== ''
+    ? "Se deja constancia de los oficios y respuestas vinculados con cámaras de videovigilancia:\n\n{$structuredOfficesDetail}"
+    : ($documentsDetail !== ''
     ? "Se deja constancia de los oficios y respuestas vinculados con cámaras de videovigilancia:\n{$documentsDetail}"
-    : 'No se seleccionaron oficios ni respuestas vinculados con cámaras de videovigilancia.';
+    : 'No se seleccionaron oficios ni respuestas vinculados con cámaras de videovigilancia.');
 $diskParagraph = $diskLines
     ? 'Seguidamente se procede con el deslacrado y visualización de los medios de almacenamiento, detallándose los discos, archivos y momentos observados:'
     : 'No se registraron discos para la diligencia.';
@@ -233,13 +262,7 @@ foreach ($videoDescriptions as $descriptionIndex => $description) {
     $tpl->setValue("archivo_encabezado#{$i}", $description['archivo_encabezado'] !== '' ? htmlspecialchars((string) $description['archivo_encabezado'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '__UIAT_QUITAR_PARRAFO__');
     $tpl->setValue("descripcion_tiempo#{$i}", $description['tiempo'] !== '' ? 'Tiempo observado: ' . htmlspecialchars((string) $description['tiempo'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '');
     $tpl->setValue("descripcion_detalle#{$i}", htmlspecialchars((string) $description['detalle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
-    $path = trim((string) ($videoDescriptions[$i - 1]['captura_path'] ?? ''));
-    $absolutePath = $path !== '' ? __DIR__ . '/' . ltrim(str_replace('\\', '/', $path), '/') : '';
-    if ($absolutePath !== '' && is_file($absolutePath)) {
-        $tpl->setImageValue("descripcion_captura#{$i}", ['path'=>$absolutePath,'width'=>500,'height'=>300,'ratio'=>true]);
-    } else {
-        $tpl->setValue("descripcion_captura#{$i}", '');
-    }
+    $tpl->setValue("descripcion_captura#{$i}", '__UIAT_QUITAR_PARRAFO__');
 }
 $tmp = tempnam(sys_get_temp_dir(), 'acta_visualizacion_');
 $tpl->saveAs($tmp);
