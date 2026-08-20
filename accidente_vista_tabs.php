@@ -6273,7 +6273,7 @@ include __DIR__ . '/sidebar.php';
   .module-card{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:9px 11px}
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
   .module-card h4{margin:0;font-size:14px;font-weight:800;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .oficio-recibido-check{display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
+  .document-link-check{display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
   .module-card p{margin:0;color:var(--muted);font-weight:600;font-size:11px;line-height:1.25}
   .module-card h4.license-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .module-card p.license-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
@@ -10035,7 +10035,7 @@ include __DIR__ . '/sidebar.php';
                           <div>
                             <h4>
                               <?= h($oficioIcon) ?> <?= h($oficioCategoria) ?> — <?= h($oficioEntidad) ?>
-                              <?php if (!empty($row['tiene_documento_recibido'])): ?><span class="oficio-recibido-check" role="img" aria-label="Documento recibido registrado" title="Documento recibido registrado">✅</span><?php endif; ?>
+                              <?php if (!empty($row['tiene_documento_recibido'])): ?><span class="document-link-check" role="img" aria-label="Documento recibido registrado" title="Documento recibido registrado">✅</span><?php endif; ?>
                             </h4>
                             <p><?= h($oficioNumeroCompleto) ?></p>
                           </div>
@@ -10101,7 +10101,10 @@ include __DIR__ . '/sidebar.php';
                       <article class="module-card" data-document-list="recibidos" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>">
                         <header>
                           <div>
-                            <h4><?= h($documentoIcon) ?> <?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?> — <?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?></h4>
+                            <h4>
+                              <?= h($documentoIcon) ?> <?= h((string) (($row['categoria'] ?? '') !== '' ? $row['categoria'] : 'Sin categoría')) ?> — <?= h((string) (($row['entidad_persona'] ?? '') !== '' ? $row['entidad_persona'] : 'Sin entidad / persona')) ?>
+                              <?php if (!empty($row['referencia_oficio_id'])): ?><span class="document-link-check" role="img" aria-label="Oficio vinculado" title="Oficio vinculado">✅</span><?php endif; ?>
+                            </h4>
                           </div>
                           <span class="chip-simple <?= h($docEstadoClass) ?>"><?= h($docEstado !== '' ? $docEstado : 'Sin estado') ?></span>
                         </header>
