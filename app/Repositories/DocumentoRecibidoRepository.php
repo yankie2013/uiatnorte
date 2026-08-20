@@ -94,9 +94,9 @@ final class DocumentoRecibidoRepository
         return $this->distinctColumnValues('entidad_persona');
     }
 
-    public function distinctNumerosDocumento(): array
+    public function distinctSiglasDocumento(): array
     {
-        return $this->distinctColumnValues('numero_documento');
+        return $this->distinctColumnValues('siglas_documento');
     }
 
     public function search(array $filters): array
@@ -135,9 +135,14 @@ final class DocumentoRecibidoRepository
             $params[] = $filters['estado'];
         }
         if (!empty($filters['q'])) {
-            $where[] = '(dr.asunto LIKE ? OR dr.entidad_persona LIKE ? OR dr.numero_documento LIKE ? OR dr.contenido LIKE ?)';
+            $siglasSearch = $this->columnExists('documentos_recibidos', 'siglas_documento') ? ' OR dr.siglas_documento LIKE ?' : '';
+            $where[] = '(dr.asunto LIKE ? OR dr.entidad_persona LIKE ? OR dr.numero_documento LIKE ?' . $siglasSearch . ' OR dr.contenido LIKE ?)';
             $like = '%' . $filters['q'] . '%';
-            array_push($params, $like, $like, $like, $like);
+            array_push($params, $like, $like, $like);
+            if ($siglasSearch !== '') {
+                $params[] = $like;
+            }
+            $params[] = $like;
         }
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -232,6 +237,10 @@ final class DocumentoRecibidoRepository
             'numero_documento' => $payload['numero_documento'] ?? null,
         ];
 
+        if ($this->columnExists('documentos_recibidos', 'siglas_documento')) {
+            $data['siglas_documento'] = $payload['siglas_documento'] ?? null;
+        }
+
         if ($this->columnExists('documentos_recibidos', 'categoria')) {
             $data['categoria'] = $payload['categoria'] ?? null;
         }
@@ -296,7 +305,7 @@ final class DocumentoRecibidoRepository
 
     private function distinctColumnValues(string $column): array
     {
-        $allowed = ['entidad_persona', 'numero_documento'];
+        $allowed = ['entidad_persona', 'siglas_documento'];
         if (!in_array($column, $allowed, true) || !$this->columnExists('documentos_recibidos', $column)) {
             return [];
         }

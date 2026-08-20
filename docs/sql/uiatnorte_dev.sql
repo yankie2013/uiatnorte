@@ -653,6 +653,7 @@ CREATE TABLE `documentos_recibidos` (
   `tipo_documento` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `categoria` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `numero_documento` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `siglas_documento` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `fecha` date NOT NULL,
   `fecha_recepcion` date DEFAULT NULL,
   `fecha_documento` date DEFAULT NULL,
@@ -2571,7 +2572,8 @@ ALTER TABLE `documentos_recibidos`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_doc_accidente` (`accidente_id`),
   ADD KEY `idx_doc_oficio` (`referencia_oficio_id`),
-  ADD KEY `idx_documentos_recibidos_categoria` (`categoria`);
+  ADD KEY `idx_documentos_recibidos_categoria` (`categoria`),
+  ADD KEY `idx_documentos_recibidos_siglas` (`siglas_documento`);
 
 --
 -- Indices de la tabla `documento_dosaje`

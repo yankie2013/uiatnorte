@@ -87,6 +87,7 @@ $schema = [
         'tipo_documento' => ['type' => 'string'],
         'fecha_documento' => ['type' => 'string'],
         'numero_documento' => ['type' => 'string'],
+        'siglas_documento' => ['type' => 'string'],
         'siglas_unidad' => ['type' => 'string'],
         'entidad_persona' => ['type' => 'string'],
         'asunto' => ['type' => 'string'],
@@ -97,6 +98,7 @@ $schema = [
         'tipo_documento',
         'fecha_documento',
         'numero_documento',
+        'siglas_documento',
         'siglas_unidad',
         'entidad_persona',
         'asunto',
@@ -111,7 +113,8 @@ Analiza la imagen de un documento administrativo o policial peruano y extrae ún
 Reglas:
 - tipo_documento: clase documental en mayúsculas, por ejemplo OFICIO, INFORME, CARTA, ACTA o CERTIFICADO.
 - fecha_documento: fecha de emisión en formato YYYY-MM-DD. Si no es legible, devuelve cadena vacía.
-- numero_documento: copia el identificador COMPLETO impreso después de “N°”, incluyendo número, año y siglas de la unidad. No lo confundas con números citados en el cuerpo.
+- numero_documento: copia solamente el número o correlativo y el año, sin las siglas de la unidad.
+- siglas_documento: copia solamente las siglas que acompañan al número del documento.
 - siglas_unidad: copia solamente la parte de siglas o código institucional contenida en el número del documento.
 - entidad_persona: dependencia, institución o persona QUE EMITE el documento. Prioriza el membrete superior y la firma. No uses al destinatario indicado después de “SEÑOR”. Ejemplo: si el membrete dice “Comisaría de Collique”, esa es la entidad remitente.
 - asunto: transcribe o resume en una sola línea el texto rotulado “ASUNTO”.
@@ -190,7 +193,7 @@ if (!is_array($result)) {
     responder_json(['ok' => false, 'message' => 'No se pudieron ordenar los datos detectados.'], 502);
 }
 
-$fields = ['tipo_documento', 'fecha_documento', 'numero_documento', 'siglas_unidad', 'entidad_persona', 'asunto', 'contenido'];
+$fields = ['tipo_documento', 'fecha_documento', 'numero_documento', 'siglas_documento', 'siglas_unidad', 'entidad_persona', 'asunto', 'contenido'];
 $clean = [];
 foreach ($fields as $field) {
     $clean[$field] = trim((string) ($result[$field] ?? ''));

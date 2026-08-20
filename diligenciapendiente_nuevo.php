@@ -56,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $accidenteId > 0) {
         if ($doc) {
             $docAsunto = trim((string) ($doc['asunto'] ?? ''));
             $docNumero = trim((string) ($doc['numero_documento'] ?? ''));
+            $docSiglas = trim((string) ($doc['siglas_documento'] ?? ''));
+            if ($docSiglas !== '') {
+                $docNumero = trim($docNumero . ' ' . $docSiglas);
+            }
             $docTipo = trim((string) ($doc['tipo_documento'] ?? ''));
             $docEntidad = trim((string) ($doc['entidad_persona'] ?? ''));
             $docContenido = trim((string) ($doc['contenido'] ?? ''));

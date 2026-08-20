@@ -42,7 +42,7 @@ final class DocumentoRecibidoService
             'estados' => self::ESTADOS,
             'categorias' => $this->categorias(),
             'entidades' => $this->opcionesUnicas($this->repository->distinctEntidades()),
-            'numeros_documento' => $this->opcionesUnicas($this->repository->distinctNumerosDocumento()),
+            'siglas_documento' => $this->opcionesUnicas($this->repository->distinctSiglasDocumento()),
         ];
     }
 
@@ -140,6 +140,7 @@ final class DocumentoRecibidoService
             'tipo_documento' => $row['tipo_documento'] ?? '',
             'categoria' => $row['categoria'] ?? '',
             'numero_documento' => $row['numero_documento'] ?? '',
+            'siglas_documento' => $row['siglas_documento'] ?? '',
             'fecha_recepcion' => $fechaRecepcion ?? ($row === null ? $today : ($fechaLegacy ?? $today)),
             'fecha_documento' => $fechaDocumento ?? ($fechaLegacy ?? ''),
             'contenido' => $row['contenido'] ?? '',
@@ -166,7 +167,10 @@ final class DocumentoRecibidoService
             throw new InvalidArgumentException('La entidad o persona remitente admite hasta 200 caracteres.');
         }
         if (mb_strlen(trim((string) ($input['numero_documento'] ?? ''))) > 100) {
-            throw new InvalidArgumentException('El número de documento y siglas admite hasta 100 caracteres.');
+            throw new InvalidArgumentException('El número de documento admite hasta 100 caracteres.');
+        }
+        if (mb_strlen(trim((string) ($input['siglas_documento'] ?? ''))) > 100) {
+            throw new InvalidArgumentException('Las siglas admiten hasta 100 caracteres.');
         }
 
         $anexos = [];
@@ -188,6 +192,7 @@ final class DocumentoRecibidoService
             'tipo_documento' => $this->nullable($input['tipo_documento'] ?? null),
             'categoria' => $categoria,
             'numero_documento' => $this->nullable($input['numero_documento'] ?? null),
+            'siglas_documento' => $this->nullable($input['siglas_documento'] ?? null),
             'fecha_recepcion' => $fechaRecepcion,
             'fecha_documento' => $fechaDocumento,
             'fecha' => $fechaDocumento ?? $fechaRecepcion,

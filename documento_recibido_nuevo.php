@@ -17,10 +17,22 @@ $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $accidenteId = isset($_GET['accidente_id']) && $_GET['accidente_id'] !== '' ? (int) $_GET['accidente_id'] : null;
 $ctx = $service->formContext($accidenteId);
 $data = $service->defaultData(['accidente_id' => $accidenteId ?: '']);
+$accidenteFijo = null;
+if ($accidenteId) {
+    foreach ($ctx['accidentes'] as $accidenteItem) {
+        if ((int) ($accidenteItem['id'] ?? 0) === $accidenteId) {
+            $accidenteFijo = $accidenteItem;
+            break;
+        }
+    }
+}
 $caseSummaryContext = case_summary_widget_context($pdo, (int) ($data['accidente_id'] ?? 0));
 $errores = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($accidenteId) {
+        $_POST['accidente_id'] = (string) $accidenteId;
+    }
     $data = $service->defaultData($_POST);
     try {
         $newId = $service->crear($_POST);
@@ -59,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .category-combobox{position:relative}.category-options{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:230px;overflow-y:auto;margin:0;padding:5px;list-style:none;border:1px solid var(--border);border-radius:9px;background:var(--panel);box-shadow:0 12px 30px rgba(15,23,42,.18)}.category-options[hidden]{display:none}.category-option{width:100%;padding:9px 10px;border:0;border-radius:7px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}.category-option:hover,.category-option.is-active{background:var(--soft);color:var(--primary)}.category-empty{padding:9px 10px;color:var(--muted);font-size:.84rem}
   .help{font-size:.78rem;color:var(--muted);margin-top:5px;line-height:1.35}.error{background:#fff1f1;padding:11px 13px;border-radius:10px;border:1px solid #f2b8b8;color:#8a1f1f;margin-bottom:14px}.form-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:2px}
   .annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{min-height:38px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);background:rgba(15,159,145,.11);color:var(--primary-dark);box-shadow:0 0 0 2px rgba(15,159,145,.08)}.annex-add{white-space:nowrap}.annex-panels{margin-top:12px}.annex-panel{padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--soft)}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.annex-panel-title{font-size:.84rem;font-weight:850}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;padding:5px}.annex-remove:disabled{display:none}
-  .ai-section{border-color:rgba(15,159,145,.38);background:linear-gradient(145deg,rgba(15,159,145,.07),var(--panel) 58%)}.ai-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ai-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(15,159,145,.13);color:var(--primary-dark);font-size:.7rem;font-weight:850;letter-spacing:.04em}.scan-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:14px}.scan-upload{display:grid;gap:9px}.scan-file{width:100%;padding:11px;border:1px dashed var(--primary);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;font-size:.83rem}.scan-paste{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;outline:none}.scan-paste:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}.scan-preview{display:none;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.scan-preview.is-visible{display:block}.scan-controls{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px}.scan-status{min-height:20px;color:var(--muted);font-size:.82rem;line-height:1.4}.scan-status.is-success{color:#087d55}.scan-status.is-error{color:#b42318}.scan-result{display:none;width:100%;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--border);font-size:.78rem;color:var(--muted);line-height:1.45}.scan-result.is-visible{display:block}.scan-result strong{color:var(--text)}
+  .ai-section{border-color:rgba(15,159,145,.38);background:linear-gradient(145deg,rgba(15,159,145,.07),var(--panel) 58%)}.ai-toggle{display:flex;width:100%;align-items:center;gap:10px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.ai-toggle-copy{flex:1}.ai-toggle-icon{display:grid;place-items:center;width:30px;height:30px;border:1px solid rgba(15,159,145,.35);border-radius:50%;color:var(--primary-dark);font-size:1rem;font-weight:900;transition:transform .18s ease}.ai-section.is-expanded .ai-toggle-icon{transform:rotate(180deg)}.ai-section:not(.is-expanded) .section-head{margin-bottom:0;padding-bottom:0;border-bottom:0}.ai-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ai-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(15,159,145,.13);color:var(--primary-dark);font-size:.7rem;font-weight:850;letter-spacing:.04em}.scan-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:14px}.scan-grid[hidden]{display:none}.scan-upload{display:grid;gap:9px}.scan-file{width:100%;padding:11px;border:1px dashed var(--primary);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;font-size:.83rem}.scan-paste{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;outline:none}.scan-paste:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}.scan-preview{display:none;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.scan-preview.is-visible{display:block}.scan-controls{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px}.scan-status{min-height:20px;color:var(--muted);font-size:.82rem;line-height:1.4}.scan-status.is-success{color:#087d55}.scan-status.is-error{color:#b42318}.scan-result{display:none;width:100%;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--border);font-size:.78rem;color:var(--muted);line-height:1.45}.scan-result.is-visible{display:block}.scan-result strong{color:var(--text)}
   @media (prefers-color-scheme:dark){.error{background:#37191f;border-color:#73333e;color:#fecaca}.scan-status.is-success{color:#5eead4}.scan-status.is-error{color:#fca5a5}}@media (max-width:680px){body,body.is-embed{padding:8px}.wrap,body.is-embed .wrap{padding:8px}.form-grid,.scan-grid{grid-template-columns:1fr}.full{grid-column:auto}.form-actions{align-items:stretch}.form-actions .btn{flex:1}}
 </style>
 </head>
@@ -90,12 +102,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <form method="POST" class="form-stack" novalidate>
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
-    <section class="form-section ai-section">
+    <section class="form-section ai-section" id="analisis_inteligente">
       <div class="section-head">
-        <div class="ai-title-row"><h2>Escanear documento</h2><span class="ai-badge">ANÁLISIS INTELIGENTE</span></div>
-        <p>Sube una foto legible y completaremos automáticamente los campos. Podrás corregirlos antes de guardar.</p>
+        <button class="ai-toggle" id="analisis_inteligente_toggle" type="button" aria-expanded="false" aria-controls="analisis_inteligente_contenido">
+          <span class="ai-toggle-copy"><span class="ai-title-row"><h2>Escanear documento</h2><span class="ai-badge">ANÁLISIS INTELIGENTE</span></span><p>Opcional. Presiona para escanear y completar automáticamente los campos.</p></span>
+          <span class="ai-toggle-icon" aria-hidden="true">⌄</span>
+        </button>
       </div>
-      <div class="scan-grid">
+      <div class="scan-grid" id="analisis_inteligente_contenido" hidden>
         <div class="scan-upload">
           <input class="scan-file" id="documento_scan_imagen" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
           <div class="scan-paste" id="documento_scan_pegar" tabindex="0">También puedes pegar una imagen aquí con Ctrl+V</div>
@@ -115,12 +129,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="form-grid">
     <div class="full">
       <label for="accidente_id">Accidente</label>
+      <?php if ($accidenteFijo): ?>
+        <input type="hidden" id="accidente_id" name="accidente_id" value="<?= (int) $accidenteFijo['id'] ?>">
+        <input type="text" value="Accidente #<?= (int) $accidenteFijo['id'] ?><?= !empty($accidenteFijo['sidpol']) ? ' · SIDPOL ' . h((string) $accidenteFijo['sidpol']) : '' ?>" readonly aria-label="Accidente asociado">
+        <div class="help">Este documento quedará vinculado al accidente actual.</div>
+      <?php else: ?>
       <select id="accidente_id" name="accidente_id">
         <option value="">Sin accidente asociado</option>
         <?php foreach ($ctx['accidentes'] as $a): ?>
-          <option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id'] === (string)$a['id']) ? 'selected' : '' ?>><?= h($a['id']) ?> - <?= h(($a['sidpol'] ?? '')) ?><?= !empty($a['lugar']) ? (' - '.h($a['lugar'])) : '' ?></option>
+          <option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id'] === (string)$a['id']) ? 'selected' : '' ?>>Accidente #<?= h($a['id']) ?><?= !empty($a['sidpol']) ? (' · SIDPOL ' . h((string) $a['sidpol'])) : '' ?></option>
         <?php endforeach; ?>
       </select>
+      <?php endif; ?>
     </div>
     <div>
       <label for="fecha_recepcion">Fecha de recepción</label>
@@ -158,9 +178,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input id="tipo_documento" type="text" name="tipo_documento" value="<?= h($data['tipo_documento']) ?>" placeholder="Ej.: Oficio, informe, certificado">
     </div>
     <div>
-      <label for="numero_documento">Número de documento y siglas</label>
-      <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['numeros_documento']), JSON_UNESCAPED_UNICODE)) ?>">
-        <input id="numero_documento" type="text" name="numero_documento" value="<?= h($data['numero_documento']) ?>" maxlength="100" autocomplete="off" placeholder="Número y año, si corresponde" role="combobox" aria-autocomplete="list" aria-expanded="false">
+      <label for="numero_documento">Número de documento</label>
+      <input id="numero_documento" type="text" name="numero_documento" value="<?= h($data['numero_documento']) ?>" maxlength="100" placeholder="Número y año, si corresponde">
+    </div>
+    <div>
+      <label for="siglas_documento">Siglas</label>
+      <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['siglas_documento']), JSON_UNESCAPED_UNICODE)) ?>">
+        <input id="siglas_documento" type="text" name="siglas_documento" value="<?= h($data['siglas_documento']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar siglas" role="combobox" aria-autocomplete="list" aria-expanded="false">
       </div>
     </div>
     <div>
@@ -315,6 +339,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   refresh();
   activate(0, false);
+})();
+
+(function () {
+  const section = document.getElementById('analisis_inteligente');
+  const toggle = document.getElementById('analisis_inteligente_toggle');
+  const content = document.getElementById('analisis_inteligente_contenido');
+  if (!section || !toggle || !content) return;
+
+  toggle.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    content.hidden = expanded;
+    section.classList.toggle('is-expanded', !expanded);
+    if (!expanded) document.getElementById('documento_scan_imagen')?.focus();
+  });
 })();
 
 (function () {
@@ -523,6 +562,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         applyValue('tipo_documento', data.tipo_documento),
         applyValue('fecha_documento', data.fecha_documento),
         applyValue('numero_documento', data.numero_documento),
+        applyValue('siglas_documento', data.siglas_documento || data.siglas_unidad),
         applyValue('entidad_persona', data.entidad_persona),
         applyValue('asunto', data.asunto),
         applyValue('contenido', data.contenido)

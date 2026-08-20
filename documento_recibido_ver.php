@@ -52,7 +52,8 @@ if ($returnTo === '') {
   <div class="card"><div class="lbl">Entidad o persona remitente</div><div class="val"><?= h($row['entidad_persona']) ?: '-' ?></div></div>
   <div class="card"><div class="lbl">Tipo de documento</div><div class="val"><?= h($row['tipo_documento']) ?: '-' ?></div></div>
   <div class="card"><div class="lbl">Categoría</div><div class="val"><?= h($row['categoria'] ?? '') ?: '-' ?></div></div>
-  <div class="card"><div class="lbl">Número de documento y siglas</div><div class="val"><?= h($row['numero_documento']) ?: '-' ?></div></div>
+  <div class="card"><div class="lbl">Número de documento</div><div class="val"><?= h($row['numero_documento']) ?: '-' ?></div></div>
+  <div class="card"><div class="lbl">Siglas</div><div class="val"><?= h($row['siglas_documento'] ?? '') ?: '-' ?></div></div>
   <div class="card"><div class="lbl">Fecha del documento</div><div class="val"><?= h($row['fecha_documento_resuelta'] ?? $row['fecha_documento'] ?? $row['fecha'] ?? '') ?: '-' ?></div></div>
   <div class="card"><div class="lbl">Fecha de recepción</div><div class="val"><?= h($row['fecha_recepcion_resuelta'] ?? $row['fecha_recepcion'] ?? $row['fecha'] ?? '') ?: '-' ?></div></div>
   <div class="card"><div class="lbl">Accidente</div><div class="val"><?= !empty($row['accidente_id']) ? ('#' . (int)$row['accidente_id']) : '-' ?></div></div>

@@ -10072,7 +10072,7 @@ include __DIR__ . '/sidebar.php';
                         </header>
                         <div class="module-meta">
                           <span class="chip-simple"><?= h((string) (($row['tipo_documento'] ?? '') !== '' ? $row['tipo_documento'] : 'Sin tipo')) ?></span>
-                          <span class="chip-simple">N° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : '—')) ?></span>
+                          <span class="chip-simple">N° <?= h((string) (($row['numero_documento'] ?? '') !== '' ? $row['numero_documento'] : '—')) ?><?= !empty($row['siglas_documento']) ? ' · ' . h((string) $row['siglas_documento']) : '' ?></span>
                           <span class="chip-simple">Recepcion: <?= h(fecha_simple($row['fecha_recepcion_resuelta'] ?? $row['fecha_recepcion'] ?? $row['fecha'] ?? null)) ?></span>
                           <span class="chip-simple">Documento: <?= h(fecha_simple($row['fecha_documento_resuelta'] ?? $row['fecha_documento'] ?? $row['fecha'] ?? null)) ?></span>
                           <?php if (!empty($row['oficio_numero']) || !empty($row['oficio_anio'])): ?><span class="chip-simple">Oficio <?= h((string) ($row['oficio_numero'] ?? '')) ?>/<?= h((string) ($row['oficio_anio'] ?? '')) ?></span><?php endif; ?>

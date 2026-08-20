@@ -510,6 +510,7 @@ function exp_ai_download_word(array $export, string $baseFilename): void
     exp_ai_word_add_record_list($section, 'Sin documentos recibidos registrados.', $docs['documentos_recibidos'] ?? [], [
         'Tipo documento' => 'tipo_documento',
         'Numero documento' => 'numero_documento',
+        'Siglas' => 'siglas_documento',
         'Entidad/persona' => 'entidad_persona',
         'Asunto' => 'asunto',
         'Contenido' => 'contenido',
