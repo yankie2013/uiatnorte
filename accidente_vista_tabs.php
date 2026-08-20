@@ -4465,6 +4465,11 @@ $oficios = safe_query_all(
             COALESCE(iv.orden_participacion, '') AS veh_ut,
             COALESCE(v.placa, '') AS veh_placa,
             o.involucrado_persona_id AS inv_per_id,
+            EXISTS (
+                SELECT 1
+                  FROM documentos_recibidos dr
+                 WHERE dr.referencia_oficio_id = o.id
+            ) AS tiene_documento_recibido,
             TRIM(CONCAT(COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, ''), ' ', COALESCE(p.nombres, ''))) AS persona_nombre
        FROM oficios o
   LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
@@ -6268,6 +6273,7 @@ include __DIR__ . '/sidebar.php';
   .module-card{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:9px 11px}
   .module-card header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
   .module-card h4{margin:0;font-size:14px;font-weight:800;line-height:1.15;color:#8b6a12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .oficio-recibido-check{display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
   .module-card p{margin:0;color:var(--muted);font-weight:600;font-size:11px;line-height:1.25}
   .module-card h4.license-story-title{display:block;margin:0 0 6px;color:#e11d1d;font-size:10pt;font-weight:900;line-height:1.2;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .module-card p.license-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
@@ -10027,7 +10033,10 @@ include __DIR__ . '/sidebar.php';
                       <article class="module-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>">
                         <header>
                           <div>
-                            <h4><?= h($oficioIcon) ?> <?= h($oficioCategoria) ?> — <?= h($oficioEntidad) ?></h4>
+                            <h4>
+                              <?= h($oficioIcon) ?> <?= h($oficioCategoria) ?> — <?= h($oficioEntidad) ?>
+                              <?php if (!empty($row['tiene_documento_recibido'])): ?><span class="oficio-recibido-check" role="img" aria-label="Documento recibido registrado" title="Documento recibido registrado">✅</span><?php endif; ?>
+                            </h4>
                             <p><?= h($oficioNumeroCompleto) ?></p>
                           </div>
                           <select class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
