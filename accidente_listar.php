@@ -239,6 +239,7 @@ $filterKeys = [
   'estado',
   'orden',
   'favoritos',
+  'ver_todos',
 ];
 
 if (isset($_GET['limpiar_recuerdo'])) {
@@ -256,13 +257,10 @@ foreach ($filterKeys as $filterKey) {
 }
 
 $restoredLastFilters = false;
-if (!$hasIncomingFilters && !empty($_SESSION['accidente_listar_ultimo_filtro']) && is_array($_SESSION['accidente_listar_ultimo_filtro'])) {
-  $_GET = array_merge($_GET, $_SESSION['accidente_listar_ultimo_filtro']);
-  $restoredLastFilters = true;
-}
 
 $ultimoAccidenteAbiertoId = (int)($_SESSION['accidente_ultimo_abierto'] ?? 0);
 $favoritos = trim((string)($_GET['favoritos'] ?? '')) === '1' ? '1' : '';
+$verTodos = trim((string)($_GET['ver_todos'] ?? '')) === '1' ? '1' : '';
 
 $q        = trim($_GET['q'] ?? '');
 $desde    = trim($_GET['desde'] ?? '');
@@ -317,6 +315,7 @@ $currentFilters = [
   'estado' => $estadoFiltro,
   'orden' => $orden,
   'favoritos' => $favoritos,
+  'ver_todos' => $verTodos,
 ];
 
 if ($hasIncomingFilters) {
@@ -333,8 +332,8 @@ $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC
 $comisariasPorDistrito = [];
 $sqlComisariasDistrito = "SELECT c.id, c.nombre AS comisaria, d.nombre AS distrito, COUNT(a.id) AS accidentes_total
                             FROM comisarias c
-                       LEFT JOIN comisaria_distrito cd ON cd.comisaria_id = c.id
-                       LEFT JOIN ubigeo_distrito d
+                            JOIN comisaria_distrito cd ON cd.comisaria_id = c.id
+                            JOIN ubigeo_distrito d
                               ON d.cod_dep = cd.cod_dep
                              AND d.cod_prov = cd.cod_prov
                              AND d.cod_dist = cd.cod_dist
@@ -343,10 +342,27 @@ $sqlComisariasDistrito = "SELECT c.id, c.nombre AS comisaria, d.nombre AS distri
                         ORDER BY COALESCE(d.nombre, 'Sin distrito asignado'), c.nombre";
 foreach ($pdo->query($sqlComisariasDistrito)->fetchAll(PDO::FETCH_ASSOC) as $comisariaDistrito) {
   $distritoNombre = trim((string)($comisariaDistrito['distrito'] ?? ''));
-  if ($distritoNombre === '') {
-    $distritoNombre = 'Sin distrito asignado';
-  }
+  if ($distritoNombre === '') continue;
   $comisariasPorDistrito[$distritoNombre][] = $comisariaDistrito;
+}
+$districtSelected = false;
+if ($distrito !== '') {
+  foreach (array_keys($comisariasPorDistrito) as $availableDistrict) {
+    if (lower_u((string)$availableDistrict) === lower_u($distrito)) {
+      $distrito = (string)$availableDistrict;
+      $districtSelected = true;
+      break;
+    }
+  }
+}
+$stationSelected = false;
+if ($districtSelected && $comisaria_id !== '') {
+  foreach ($comisariasPorDistrito[$distrito] as $districtStation) {
+    if ((string)($districtStation['id'] ?? '') === $comisaria_id) {
+      $stationSelected = true;
+      break;
+    }
+  }
 }
 $districtHues = [326, 266, 220, 190, 158, 42, 18, 350, 286, 205, 132, 62];
 $selectedDistrictHue = null;
@@ -361,10 +377,17 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
    QUERY BASE
 ============================ */
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
-$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria,
+$sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria, ud.nombre AS distrito,
+               fa.nombre AS fiscalia, TRIM(CONCAT_WS(' ', fi.nombres, fi.apellido_paterno, fi.apellido_materno)) AS fiscal,
                COALESCE(dpc.diligencias_pendientes, 0) AS diligencias_pendientes
         FROM accidentes a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
+        LEFT JOIN ubigeo_distrito ud
+               ON ud.cod_dep = a.cod_dep
+              AND ud.cod_prov = a.cod_prov
+              AND ud.cod_dist = a.cod_dist
+        LEFT JOIN fiscalia fa ON fa.id = a.fiscalia_id
+        LEFT JOIN fiscales fi ON fi.id = a.fiscal_id
         LEFT JOIN (
           SELECT accidente_id, COUNT(*) AS diligencias_pendientes
             FROM diligencias_pendientes
@@ -474,17 +497,36 @@ $folderOrder = $estadoFiltro === 'todos' && $orden !== 'folder_asc'
   ? $manualFolderOrder . ', '
   : '';
 $sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
-$st=$pdo->prepare($sql);
-$st->execute($params);
-$rows=$st->fetchAll(PDO::FETCH_ASSOC);
+$rows = [];
+if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
+  $st=$pdo->prepare($sql);
+  $st->execute($params);
+  $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+}
 $occupiedFolders = occupied_folder_map($pdo);
 
 $personasResumenPorAccidente = [];
 $personasDetallePorAccidente = [];
 $vehiculosResumenPorAccidente = [];
+$modalidadesPorAccidente = [];
 $accidenteIds = array_values(array_unique(array_map(static fn($row) => (int)($row['id'] ?? 0), $rows)));
 if ($accidenteIds !== []) {
   $marks = implode(',', array_fill(0, count($accidenteIds), '?'));
+  $sqlModalidades = "SELECT am.accidente_id, m.nombre
+                       FROM accidente_modalidad am
+                       JOIN modalidad_accidente m ON m.id = am.modalidad_id
+                      WHERE am.accidente_id IN ($marks)
+                      ORDER BY am.accidente_id ASC, m.nombre ASC";
+  $stModalidades = $pdo->prepare($sqlModalidades);
+  $stModalidades->execute($accidenteIds);
+  while ($modalidadRow = $stModalidades->fetch(PDO::FETCH_ASSOC)) {
+    $modalidadAccidenteId = (int)($modalidadRow['accidente_id'] ?? 0);
+    $modalidadNombre = trim((string)($modalidadRow['nombre'] ?? ''));
+    if ($modalidadAccidenteId > 0 && $modalidadNombre !== '') {
+      $modalidadesPorAccidente[$modalidadAccidenteId][] = $modalidadNombre;
+    }
+  }
+
   $sqlInv = "SELECT ip.accidente_id,
                     ip.vehiculo_id,
                     p.nombres, p.apellido_paterno, p.apellido_materno,
@@ -604,20 +646,89 @@ html[data-theme-resolved="dark"]{
 
 /* ===== Layout base ===== */
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* ligera reducciÃ³n global */
-.wrap{max-width:1200px;margin:20px auto;padding:14px}
+body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--fg);font:13px system-ui} /* ligera reducciÃ³n global */
+.wrap{max-width:1480px;margin:20px auto;padding:14px}
 .title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-.district-accident-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px;align-items:start}
+.browse-panel{padding:20px}
+.browse-heading{margin:0;font-size:22px;font-weight:900}
+.browse-copy{margin:5px 0 18px;color:rgba(var(--muted-rgb),1);font-size:13px}
+.browse-back{margin-bottom:16px}
+.district-tree{display:grid;grid-template-columns:minmax(190px,260px) 70px minmax(0,1fr);align-items:center;gap:0;margin-top:24px;overflow:hidden}
+.district-tree-root{
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:center;min-height:116px;padding:20px;
+  border:2px solid hsl(var(--district-hue) 78% 53%);border-radius:20px;
+  background:linear-gradient(135deg,hsl(var(--district-hue) 80% 55%),hsl(var(--district-hue) 86% 34%));
+  color:#fff;font-size:19px;font-weight:950;text-align:center;text-transform:uppercase;
+  box-shadow:0 16px 34px hsl(var(--district-hue) 60% 28% / .28),inset 0 1px 0 rgba(255,255,255,.35);
+  animation:treeRootIn .32s ease-out both;
+}
+.district-tree-trunk{position:relative;align-self:stretch;min-height:130px}
+.district-tree-trunk::before{content:"";position:absolute;left:0;top:50%;width:50%;height:3px;background:hsl(var(--district-hue) 72% 52% / .72);transform:translateY(-50%)}
+.district-tree-trunk::after{content:"";position:absolute;right:0;top:10%;bottom:10%;width:3px;border-radius:99px;background:hsl(var(--district-hue) 72% 52% / .72)}
+.district-tree-branches{display:grid;gap:13px;padding:6px 0}
+.district-tree-branch{position:relative;padding-left:34px;animation:treeBranchIn .36s ease-out both}
+.district-tree-branch::before{content:"";position:absolute;left:0;top:50%;width:34px;height:3px;background:hsl(var(--district-hue) 72% 52% / .72);transform:translateY(-50%)}
+.district-tree .station-btn{min-height:68px;font-size:14px}
+.district-tree-branch:nth-child(2){animation-delay:.05s}.district-tree-branch:nth-child(3){animation-delay:.10s}.district-tree-branch:nth-child(4){animation-delay:.15s}.district-tree-branch:nth-child(n+5){animation-delay:.20s}
+@keyframes treeRootIn{from{opacity:0;transform:translateX(-18px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes treeBranchIn{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+
+/* Selector de comisaría inspirado en un cuaderno abierto */
+.station-browser{border:0;background:transparent;box-shadow:none;backdrop-filter:none;padding:8px 0 30px}
+.station-browser-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:8px}
+.outside-click-hint{color:rgba(var(--muted-rgb),1);font-size:12px;font-weight:750;white-space:nowrap}
+.station-browser .district-tree{display:flex;align-items:center;justify-content:center;min-height:330px;margin:12px auto 0;padding:28px 24px;overflow:visible;isolation:isolate}
+.station-browser .district-tree-root{
+  position:relative;z-index:10;flex:0 0 270px;min-height:250px;padding:34px 28px 34px 45px;border:1px solid hsl(var(--district-hue) 88% 62%);
+  border-radius:9px 22px 22px 9px;background:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.23),transparent 28%),
+    linear-gradient(145deg,hsl(var(--district-hue) 84% 56%),hsl(var(--district-hue) 88% 33%));
+  box-shadow:10px 16px 36px hsl(var(--district-hue) 60% 24% / .25),inset 12px 0 16px rgba(0,0,0,.14),inset 2px 0 rgba(255,255,255,.2);
+  animation:notebookCoverIn .45s cubic-bezier(.2,.8,.2,1) both;
+}
+.station-browser .district-tree-root::before{content:"";position:absolute;left:19px;top:17px;bottom:17px;width:4px;border-radius:99px;background:rgba(255,255,255,.5);box-shadow:-7px 0 0 rgba(0,0,0,.12)}
+.station-browser .district-tree-root::after{content:"";position:absolute;z-index:-1;left:8px;right:-9px;bottom:-9px;height:18px;border-radius:0 0 13px 6px;background:repeating-linear-gradient(0deg,#fff 0 2px,#dbe2ea 2px 3px);transform:skewX(-28deg);transform-origin:left top;box-shadow:0 7px 12px rgba(15,23,42,.12)}
+.notebook-icon{display:block;margin-bottom:18px;font-size:30px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+.notebook-kicker{display:block;margin-bottom:8px;font-size:10px;font-weight:900;letter-spacing:.18em;opacity:.72}
+.station-browser .district-tree-root .district-title{font-size:23px;line-height:1.12;overflow-wrap:anywhere}
+.station-browser .district-tree-trunk{display:none}
+.station-browser .district-tree-branches{
+  position:relative;z-index:4;display:grid;grid-template-columns:repeat(2,minmax(220px,300px));gap:14px 16px;
+  width:auto;margin-left:-14px;padding:18px 0 18px 0;
+}
+.station-browser .district-tree-branches::before,.station-browser .district-tree-branches::after{
+  content:"";position:absolute;z-index:-2;left:-7px;right:16px;height:82%;top:9%;border-radius:4px 17px 17px 4px;background:#f8fafc;border:1px solid #dce3ec;box-shadow:7px 10px 22px rgba(15,23,42,.10);transform:rotate(-1.4deg)
+}
+.station-browser .district-tree-branches::after{z-index:-1;left:-2px;right:7px;background:#fff;transform:rotate(.9deg)}
+.station-browser .district-tree-branch{padding:0;animation:notebookPageOut .52s cubic-bezier(.18,.86,.28,1) both;transform-origin:left center}
+.station-browser .district-tree-branch::before{display:none}
+.station-browser .district-tree-branch:nth-child(2){animation-delay:.07s}.station-browser .district-tree-branch:nth-child(3){animation-delay:.14s}.station-browser .district-tree-branch:nth-child(4){animation-delay:.21s}.station-browser .district-tree-branch:nth-child(n+5){animation-delay:.28s}
+.station-browser .station-btn{
+  min-height:76px;width:100%;padding:14px 16px 14px 22px;border:1px solid hsl(var(--district-hue) 60% 67% / .55);border-radius:5px 15px 15px 5px;
+  background:linear-gradient(100deg,#fff,hsl(var(--district-hue) 100% 98%));color:hsl(var(--district-hue) 62% 23%);font-size:13px;
+  box-shadow:5px 7px 16px rgba(15,23,42,.09),inset 4px 0 hsl(var(--district-hue) 80% 55% / .25);transform:none;
+}
+.station-browser .station-btn:hover,.station-browser .station-btn:focus-visible{transform:translateX(7px) rotate(.35deg);box-shadow:9px 12px 24px hsl(var(--district-hue) 50% 28% / .16);background:#fff}
+.station-symbol{flex:0 0 auto;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:hsl(var(--district-hue) 82% 54% / .12);font-size:17px}
+.station-label{flex:1;min-width:0}
+.station-label small{display:block;margin-top:3px;color:#7b8794;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.station-browser .station-count{min-width:31px;padding:5px 8px;background:hsl(var(--district-hue) 82% 54% / .12)}
+@keyframes notebookCoverIn{from{opacity:0;transform:translateX(-25px) rotateY(-16deg)}to{opacity:1;transform:none}}
+@keyframes notebookPageOut{from{opacity:0;transform:translateX(-110px) scaleX(.72) rotate(-3deg)}to{opacity:1;transform:none}}
+html[data-theme-resolved="dark"] .station-browser .district-tree-branches::before{background:#111827;border-color:#334155}
+html[data-theme-resolved="dark"] .station-browser .district-tree-branches::after{background:#172033;border-color:#334155}
+html[data-theme-resolved="dark"] .station-browser .station-btn{background:linear-gradient(100deg,#172033,hsl(var(--district-hue) 35% 17%));color:hsl(var(--district-hue) 78% 86%);border-color:hsl(var(--district-hue) 48% 52% / .5)}
+.district-accident-layout{display:block}
 .district-sidebar{
-  position:sticky;top:14px;padding:13px;border:1px solid rgba(99,102,241,.26);border-radius:18px;
+  position:relative;padding:0;border:0;border-radius:18px;
   background:linear-gradient(155deg,rgba(255,255,255,.96),rgba(237,242,255,.82));
-  box-shadow:0 18px 42px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.95);
+  box-shadow:none;
   overflow:hidden;
 }
-.district-sidebar::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#6366f1,#22d3ee,transparent);opacity:.85}
-.district-sidebar-title{margin:0 0 11px;color:#475569;font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}
-.district-buttons{display:grid;gap:8px}
+.district-sidebar::before{display:none}
+.district-sidebar-title{margin:0 0 14px;color:#475569;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}
+.district-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
 .district-group{display:grid;gap:5px;min-width:0}
 .district-main{min-width:0}
 .station-clear{
@@ -632,40 +743,45 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui} /* liger
 .station-favorites:hover{border-color:#d4af37;color:#6f4b00;box-shadow:0 0 16px rgba(212,175,55,.24)}
 .station-favorites.active{background:linear-gradient(135deg,#d4af37,#facc15);border-color:#facc15;color:#111827;box-shadow:0 0 18px rgba(212,175,55,.32)}
 .district-btn{
-  position:relative;width:100%;display:flex;align-items:center;gap:9px;min-height:41px;padding:8px 11px;border-radius:12px;
-  border:1px solid hsl(var(--district-hue) 72% 58% / .55);
-  background:linear-gradient(135deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 96% / .88));
-  color:hsl(var(--district-hue) 72% 22%);font-size:10.5px;font-weight:950;text-align:left;text-transform:uppercase;
-  text-decoration:none;box-shadow:0 7px 16px hsl(var(--district-hue) 55% 30% / .12),inset 0 1px 0 rgba(255,255,255,.9);cursor:pointer;
-  overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+  position:relative;isolation:isolate;width:100%;display:flex;align-items:center;justify-content:center;min-height:116px;padding:22px;border-radius:28px;
+  border:1px solid hsl(var(--district-hue) 75% 68% / .48);
+  background:
+    radial-gradient(circle at 18% 5%,rgba(255,255,255,.96),transparent 28%),
+    radial-gradient(circle at 88% 100%,hsl(var(--district-hue) 92% 72% / .23),transparent 44%),
+    linear-gradient(145deg,rgba(255,255,255,.74),hsl(var(--district-hue) 100% 97% / .52));
+  color:hsl(var(--district-hue) 68% 23%);font-size:18px;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:.015em;
+  text-decoration:none;box-shadow:inset 0 1px 1px rgba(255,255,255,.98),inset 0 -12px 28px hsl(var(--district-hue) 65% 55% / .07),0 12px 26px rgba(15,23,42,.09);cursor:pointer;
+  overflow:hidden;backdrop-filter:blur(20px) saturate(155%);-webkit-backdrop-filter:blur(20px) saturate(155%);
+  transition:transform .24s cubic-bezier(.2,.75,.25,1),box-shadow .24s ease,border-color .24s ease,background .24s ease;
 }
-.district-btn::before{content:"";flex:0 0 auto;width:8px;height:8px;border-radius:999px;background:hsl(var(--district-hue) 90% 55%);box-shadow:0 0 0 4px hsl(var(--district-hue) 90% 55% / .13),0 0 12px hsl(var(--district-hue) 90% 50% / .65)}
-.district-btn::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:hsl(var(--district-hue) 90% 55%);box-shadow:0 0 12px hsl(var(--district-hue) 90% 50% / .7);opacity:.75}
+.district-btn::before{content:"";position:absolute;z-index:-1;left:7%;right:7%;top:5px;height:43%;border-radius:24px 24px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.68),rgba(255,255,255,.08));filter:blur(.2px);pointer-events:none}
+.district-btn::after{content:"";position:absolute;z-index:2;top:-115%;left:-35%;width:32%;height:330%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.82),transparent);transform:rotate(24deg);opacity:.7;transition:left .55s ease;pointer-events:none}
 .district-btn:hover,.district-btn:focus-visible{
-  transform:translateX(3px);outline:none;border-color:hsl(var(--district-hue) 85% 52%);
-  box-shadow:0 10px 22px hsl(var(--district-hue) 60% 30% / .22),0 0 18px hsl(var(--district-hue) 85% 52% / .18);
+  transform:translateY(-5px) scale(1.012);outline:none;border-color:hsl(var(--district-hue) 82% 60% / .68);
+  background:radial-gradient(circle at 18% 5%,#fff,transparent 30%),linear-gradient(145deg,rgba(255,255,255,.9),hsl(var(--district-hue) 100% 96% / .72));
+  box-shadow:inset 0 1px 1px #fff,inset 0 -12px 28px hsl(var(--district-hue) 70% 55% / .09),0 18px 34px hsl(var(--district-hue) 52% 30% / .17),0 0 25px hsl(var(--district-hue) 82% 58% / .10);
 }
+.district-btn:hover::after,.district-btn:focus-visible::after{left:118%}
 .district-btn.active{
   border-color:hsl(var(--district-hue) 92% 63%);
   background:linear-gradient(135deg,hsl(var(--district-hue) 82% 54%),hsl(var(--district-hue) 88% 35%));
   color:#fff;box-shadow:0 10px 24px hsl(var(--district-hue) 68% 30% / .38),0 0 22px hsl(var(--district-hue) 90% 55% / .32),inset 0 1px 0 rgba(255,255,255,.35);
 }
-.district-btn.active::before{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18),0 0 15px #fff}
-.district-name{min-width:0;flex:1;overflow-wrap:anywhere}
+.district-btn.active::before{background:linear-gradient(180deg,rgba(255,255,255,.58),rgba(255,255,255,.08));box-shadow:none}
+.district-name{position:relative;z-index:1;min-width:0;width:100%;overflow-wrap:anywhere;text-align:center}
 .district-chevron{flex:0 0 auto;font-size:13px;line-height:1;opacity:.58;transition:transform .18s ease,opacity .18s ease}
 .district-btn:hover .district-chevron{opacity:1;transform:translateX(2px)}
 .district-btn.active .district-chevron{opacity:1;transform:rotate(90deg)}
 .district-substations{
-  display:grid;gap:5px;margin:0 0 4px 11px;padding:7px 6px 7px 10px;
-  border-left:2px solid hsl(var(--district-hue) 82% 54% / .62);border-radius:0 10px 10px 0;
-  background:linear-gradient(90deg,hsl(var(--district-hue) 90% 55% / .09),transparent);
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0;padding:0;
+  border:0;border-radius:0;background:transparent;
   animation:districtSubstationsIn .2s ease-out both;
 }
 @keyframes districtSubstationsIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .station-btn{
-  position:relative;display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:32px;padding:6px 8px;border-radius:9px;
+  position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:100px;padding:18px 20px;border-radius:16px;
   border:1px solid hsl(var(--district-hue) 70% 58% / .42);background:linear-gradient(145deg,rgba(255,255,255,.96),hsl(var(--district-hue) 100% 96%));
-  color:hsl(var(--district-hue) 72% 22%);font-size:9.5px;font-weight:850;line-height:1.2;text-decoration:none;
+  color:hsl(var(--district-hue) 72% 22%);font-size:16px;font-weight:900;line-height:1.25;text-decoration:none;
   box-shadow:0 7px 16px hsl(var(--district-hue) 50% 28% / .12),inset 0 1px 0 #fff;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
 }
 .station-btn::before{content:"";position:absolute;left:0;bottom:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,hsl(var(--district-hue) 90% 55%),transparent);opacity:.45}
@@ -679,7 +795,7 @@ html[data-theme-resolved="dark"] .station-clear{background:#172033;border-color:
 html[data-theme-resolved="dark"] .station-clear.active{background:#e2e8f0;border-color:#e2e8f0;color:#0f172a}
 html[data-theme-resolved="dark"] .station-favorites{background:rgba(212,175,55,.12);border-color:rgba(212,175,55,.46);color:#facc15}
 html[data-theme-resolved="dark"] .station-favorites.active{background:linear-gradient(135deg,#e2c96c,#facc15);border-color:#facc15;color:#111827}
-html[data-theme-resolved="dark"] .district-btn{background:linear-gradient(145deg,rgba(8,15,31,.95),hsl(var(--district-hue) 42% 18% / .78));color:hsl(var(--district-hue) 82% 84%);border-color:hsl(var(--district-hue) 58% 55% / .52);box-shadow:0 8px 18px rgba(0,0,0,.28),0 0 14px hsl(var(--district-hue) 80% 50% / .08)}
+html[data-theme-resolved="dark"] .district-btn{background:radial-gradient(circle at 18% 5%,rgba(255,255,255,.14),transparent 28%),linear-gradient(145deg,rgba(30,41,59,.74),hsl(var(--district-hue) 40% 18% / .64));color:hsl(var(--district-hue) 82% 88%);border-color:hsl(var(--district-hue) 58% 58% / .42);box-shadow:inset 0 1px rgba(255,255,255,.18),0 12px 28px rgba(0,0,0,.24)}
 html[data-theme-resolved="dark"] .district-btn.active{color:#fff;background:linear-gradient(135deg,hsl(var(--district-hue) 76% 48%),hsl(var(--district-hue) 80% 35%))}
 html[data-theme-resolved="dark"] .district-substations{background:linear-gradient(90deg,hsl(var(--district-hue) 70% 48% / .13),transparent);border-left-color:hsl(var(--district-hue) 72% 60% / .7)}
 html[data-theme-resolved="dark"] .station-btn{background:linear-gradient(145deg,rgba(15,23,42,.9),hsl(var(--district-hue) 38% 19% / .72));color:hsl(var(--district-hue) 78% 84%);border-color:hsl(var(--district-hue) 52% 55% / .48);box-shadow:0 8px 18px rgba(0,0,0,.24),0 0 14px hsl(var(--district-hue) 80% 50% / .07)}
@@ -688,10 +804,175 @@ html[data-theme-resolved="dark"] .station-btn.active{background:linear-gradient(
   .district-accident-layout{grid-template-columns:1fr}
   .district-sidebar{position:static}
   .district-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .district-substations{margin-left:8px}
+  .district-substations{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .district-tree{grid-template-columns:minmax(150px,210px) 46px minmax(0,1fr)}
+  .district-tree-branch{padding-left:22px}.district-tree-branch::before{width:22px}
+  .station-browser .district-tree{align-items:flex-start;padding-inline:4px}
+  .station-browser .district-tree-root{flex-basis:220px;min-height:225px}
+  .station-browser .district-tree-branches{grid-template-columns:minmax(220px,310px)}
+}
+@media(max-width:560px){
+  .browse-panel{padding:14px}
+  .district-buttons,.district-substations{grid-template-columns:1fr}
+  .district-btn,.station-btn{min-height:88px;font-size:15px}
+  .district-tree{display:flex;flex-direction:column;align-items:stretch;overflow:visible}
+  .district-tree-root{min-height:82px}
+  .district-tree-trunk{width:3px;min-height:34px;align-self:center;background:hsl(var(--district-hue) 72% 52% / .72)}
+  .district-tree-trunk::before,.district-tree-trunk::after{display:none}
+  .district-tree-branches{gap:12px}
+  .district-tree-branch{padding:16px 0 0}
+  .district-tree-branch::before{left:50%;top:0;width:3px;height:16px;transform:translateX(-50%)}
+  .station-browser-head{display:block}.outside-click-hint{display:block;margin-top:8px;white-space:normal}
+  .station-browser .district-tree{display:flex;align-items:stretch;padding:10px 2px}
+  .station-browser .district-tree-root{flex-basis:auto;min-height:150px;padding:28px 24px 28px 42px}
+  .station-browser .district-tree-branches{grid-template-columns:1fr;width:calc(100% - 20px);margin:-9px auto 0;padding:26px 12px 14px}
+  .station-browser .district-tree-branch{padding:0}
+}
+
+/* Selector Liquid Glass: piezas independientes, sin anchos rígidos ni solapamientos */
+.station-browser{width:100%;min-width:0;padding:8px 0 28px}
+.station-browser .district-tree{
+  position:relative;display:grid;grid-template-columns:minmax(190px,240px) minmax(0,680px);gap:clamp(42px,6vw,86px);
+  align-items:center;justify-content:center;width:100%;max-width:1040px;min-height:260px;margin:10px auto 0;padding:28px 18px;overflow:visible;
+}
+.station-browser .district-tree-root{
+  position:relative;z-index:3;display:flex;min-width:0;min-height:150px;padding:26px 22px;border:1px solid rgba(255,255,255,.62);border-radius:34px;
+  background:
+    radial-gradient(circle at 23% 16%,rgba(255,255,255,.7),transparent 20%),
+    radial-gradient(circle at 80% 85%,hsl(var(--district-hue) 92% 68% / .58),transparent 44%),
+    linear-gradient(145deg,hsl(var(--district-hue) 88% 61% / .92),hsl(var(--district-hue) 88% 43% / .88));
+  color:#fff;box-shadow:inset 0 1px 1px rgba(255,255,255,.75),inset 0 -12px 28px rgba(15,23,42,.12),0 18px 35px hsl(var(--district-hue) 60% 30% / .23);
+  backdrop-filter:blur(20px) saturate(145%);-webkit-backdrop-filter:blur(20px) saturate(145%);
+  animation:liquidDistrictIn .42s cubic-bezier(.16,.8,.22,1) both;
+}
+.station-browser .district-tree-root::before{content:"";position:absolute;inset:6px;border:1px solid rgba(255,255,255,.28);border-radius:28px;box-shadow:inset 0 0 18px rgba(255,255,255,.15);pointer-events:none}
+.station-browser .district-tree-root::after{content:"";position:absolute;left:auto;right:-52px;top:50%;bottom:auto;width:55px;height:22px;border:0;border-radius:999px;background:linear-gradient(90deg,hsl(var(--district-hue) 80% 56% / .72),transparent);box-shadow:none;filter:blur(8px);transform:translateY(-50%);pointer-events:none}
+.station-browser .district-tree-root>span{position:relative;z-index:1;width:100%}
+.station-browser .notebook-icon{margin:0 0 12px;font-size:25px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.12))}
+.station-browser .notebook-kicker{margin-bottom:7px;font-size:9px;letter-spacing:.2em}
+.station-browser .district-tree-root .district-title{display:block;font-size:21px;line-height:1.15}
+.station-browser .district-tree-root::after,.station-browser .district-tree-root::before{box-sizing:border-box}
+.station-browser .district-tree-trunk{display:none}
+.station-browser .district-tree-branches{
+  position:relative;z-index:2;display:grid;grid-template-columns:repeat(2,minmax(190px,1fr));gap:14px;width:100%;min-width:0;margin:0;padding:0;
+}
+.station-browser .district-tree-branches::before,.station-browser .district-tree-branches::after{display:none}
+.station-browser .district-tree-branch{min-width:0;padding:0;transform-origin:-65px 50%;animation:aladdinRelease .62s cubic-bezier(.16,.84,.25,1) both}
+.station-browser .district-tree-branch::before{display:none}
+.station-browser .district-tree-branch:nth-child(2){animation-delay:.08s}.station-browser .district-tree-branch:nth-child(3){animation-delay:.16s}.station-browser .district-tree-branch:nth-child(4){animation-delay:.24s}.station-browser .district-tree-branch:nth-child(n+5){animation-delay:.30s}
+.station-browser .station-btn{
+  position:relative;isolation:isolate;width:100%;min-width:0;min-height:78px;padding:13px 14px;border:1px solid hsl(var(--district-hue) 70% 67% / .48);border-radius:24px;
+  background:linear-gradient(135deg,rgba(255,255,255,.76),hsl(var(--district-hue) 100% 96% / .6));color:hsl(var(--district-hue) 64% 23%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -8px 18px hsl(var(--district-hue) 70% 55% / .06),0 10px 24px rgba(15,23,42,.10);
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);overflow:hidden;transform:none;
+}
+.station-browser .station-btn::after{content:"";position:absolute;z-index:-1;left:-20%;top:-80%;width:70%;height:210%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);transform:rotate(24deg);transition:left .42s ease}
+.station-browser .station-btn:hover::after,.station-browser .station-btn:focus-visible::after{left:105%}
+.station-browser .station-btn:hover,.station-browser .station-btn:focus-visible{transform:translateY(-4px) scale(1.018);border-color:hsl(var(--district-hue) 80% 58% / .68);background:linear-gradient(135deg,rgba(255,255,255,.92),hsl(var(--district-hue) 100% 96% / .76));box-shadow:inset 0 1px 1px #fff,0 16px 30px hsl(var(--district-hue) 48% 30% / .17)}
+.station-browser .station-symbol{background:hsl(var(--district-hue) 80% 56% / .13);border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 1px rgba(255,255,255,.8)}
+.station-browser .station-label{overflow-wrap:anywhere}
+@keyframes liquidDistrictIn{from{opacity:0;transform:scale(.82);filter:blur(10px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes aladdinRelease{
+  0%{opacity:0;transform:translateX(-145px) translateY(26px) scale(.08,.32) rotate(-9deg);filter:blur(18px)}
+  55%{opacity:.78;transform:translateX(10px) translateY(-8px) scale(1.04,.92) rotate(1.5deg);filter:blur(2px)}
+  100%{opacity:1;transform:none;filter:blur(0)}
+}
+html[data-theme-resolved="dark"] .station-browser .station-btn{background:linear-gradient(135deg,rgba(30,41,59,.8),hsl(var(--district-hue) 38% 18% / .72));color:hsl(var(--district-hue) 78% 88%);border-color:hsl(var(--district-hue) 55% 58% / .48)}
+@media(max-width:850px){
+  .station-browser .district-tree{grid-template-columns:minmax(160px,210px) minmax(0,1fr);gap:36px;padding-inline:8px}
+  .station-browser .district-tree-branches{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .station-browser .district-tree{display:grid;grid-template-columns:1fr;gap:30px;padding:10px 0}
+  .station-browser .district-tree-root{width:min(100%,280px);min-height:125px;justify-self:center}
+  .station-browser .district-tree-root::after{right:50%;top:auto;bottom:-30px;width:22px;height:34px;transform:translateX(50%) rotate(90deg)}
+  .station-browser .district-tree-branches{grid-template-columns:1fr}
+  .station-browser .district-tree-branch{transform-origin:50% -30px}
+  @keyframes aladdinRelease{0%{opacity:0;transform:translateY(-90px) scale(.1,.28);filter:blur(16px)}60%{opacity:.8;transform:translateY(8px) scale(1.03,.94);filter:blur(2px)}100%{opacity:1;transform:none;filter:blur(0)}}
+}
+
+/* Navegador curvo maestro-detalle de distritos y comisarías */
+.district-browser-stage{display:grid;grid-template-columns:minmax(310px,400px) minmax(380px,680px);gap:clamp(34px,6vw,86px);align-items:center;justify-content:center;min-height:540px;padding:8px 10px 24px}
+.district-wheel-wrap{position:relative;min-width:0}
+.district-wheel-wrap::before,.district-wheel-wrap::after{content:"";position:absolute;z-index:4;left:0;right:0;height:76px;pointer-events:none}
+.district-wheel-wrap::before{top:0;background:linear-gradient(var(--bg),transparent)}
+.district-wheel-wrap::after{bottom:0;background:linear-gradient(transparent,var(--bg))}
+.district-wheel{height:500px;overflow-y:auto;overflow-x:hidden;padding:199px 34px 199px 10px;scroll-snap-type:y mandatory;scroll-behavior:smooth;scrollbar-width:none;overscroll-behavior:contain}
+.district-wheel::-webkit-scrollbar{display:none}
+.district-wheel-item{display:flex;align-items:center;justify-content:center;width:calc(100% - 44px);min-height:88px;margin:11px auto;padding:15px 20px;border:1px solid hsl(var(--wheel-hue) 65% 66% / .34);border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.58),hsl(var(--wheel-hue) 100% 96% / .34));color:hsl(var(--wheel-hue) 56% 29%);font-size:14px;font-weight:900;line-height:1.15;text-align:center;text-decoration:none;text-transform:uppercase;box-shadow:inset 0 1px rgba(255,255,255,.9),0 8px 18px rgba(15,23,42,.07);backdrop-filter:blur(18px) saturate(145%);scroll-snap-align:center;cursor:pointer;opacity:var(--wheel-opacity,.35);filter:saturate(var(--wheel-saturation,.45)) blur(var(--wheel-blur,0));transform:translateX(var(--wheel-x,-22px)) scale(var(--wheel-scale,.78));transition:transform .2s ease,opacity .2s ease,filter .2s ease,box-shadow .2s ease}
+.district-wheel-item.is-active{min-height:106px;border-color:hsl(var(--wheel-hue) 78% 61% / .62);background:radial-gradient(circle at 18% 5%,rgba(255,255,255,.92),transparent 30%),linear-gradient(145deg,hsl(var(--wheel-hue) 87% 63% / .94),hsl(var(--wheel-hue) 80% 43% / .9));color:#fff;font-size:18px;opacity:1;filter:none;transform:translateX(18px) scale(1);box-shadow:inset 0 1px rgba(255,255,255,.85),0 18px 34px hsl(var(--wheel-hue) 55% 28% / .24),0 0 26px hsl(var(--wheel-hue) 80% 58% / .13)}
+.district-wheel-item:focus-visible{outline:3px solid hsl(var(--wheel-hue) 80% 58% / .3);outline-offset:2px}
+.district-detail{min-width:0}
+.district-detail-head{margin-bottom:16px}
+.district-detail-kicker{font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--muted-rgb),1)}
+.district-detail-name{margin:4px 0 0;font-size:22px;font-weight:950;color:var(--fg)}
+.district-station-panel{display:none;gap:12px}
+.district-station-panel.is-active{display:grid;animation:stationPanelReveal .34s ease-out both}
+.district-station-panel .station-btn{min-height:72px;font-size:13px}
+.district-station-empty{padding:25px;border:1px dashed var(--field-bd);border-radius:22px;color:rgba(var(--muted-rgb),1);text-align:center}
+@keyframes stationPanelReveal{from{opacity:0;transform:translateX(25px);filter:blur(7px)}to{opacity:1;transform:none;filter:none}}
+html[data-theme-resolved="dark"] .district-wheel-item{background:linear-gradient(145deg,rgba(30,41,59,.68),hsl(var(--wheel-hue) 35% 18% / .46));color:hsl(var(--wheel-hue) 48% 78%)}
+@media(max-width:760px){
+  .district-browser-stage{grid-template-columns:1fr;gap:8px;min-height:0;padding-inline:0}
+  .district-wheel{height:300px;padding:101px 18px}
+  .district-wheel-wrap::before,.district-wheel-wrap::after{height:52px}
+  .district-detail{padding:0 8px}.district-detail-head{text-align:center}
 }
 .card{background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:14px;padding:14px;backdrop-filter:blur(8px)}
 .filter-card{margin-bottom:14px}
+.filter-card.filter-glass{position:relative;isolation:isolate;overflow:hidden;padding:18px 20px;border:1px solid rgba(255,255,255,.55);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.68),rgba(255,255,255,.34));box-shadow:inset 0 1px rgba(255,255,255,.95),0 16px 34px rgba(15,23,42,.08);backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+.filter-card.filter-glass::before{content:"";position:absolute;z-index:-1;left:-80px;top:-100px;width:300px;height:210px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);pointer-events:none}
+.filter-card.filter-glass::after{content:"";position:absolute;z-index:-1;right:-80px;bottom:-120px;width:330px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.1),transparent 70%);pointer-events:none}
+.filter-glass-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:15px}
+.filter-glass-title{display:flex;align-items:center;gap:10px;margin:0;font-size:15px;font-weight:900}
+.filter-glass-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(255,255,255,.72);border-radius:12px;background:linear-gradient(145deg,rgba(255,255,255,.85),rgba(238,242,255,.55));box-shadow:inset 0 1px #fff,0 7px 15px rgba(15,23,42,.08)}
+.filter-mode-chip{padding:6px 11px;border:1px solid rgba(99,102,241,.18);border-radius:999px;background:rgba(99,102,241,.08);color:#4f46e5;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.filter-glass .filters{margin-bottom:0}
+.filter-glass label{margin-bottom:7px;color:#59677a;font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase}
+.filter-glass input,.filter-glass select{min-height:44px;border:1px solid rgba(148,163,184,.28);border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.8),rgba(248,250,252,.58));box-shadow:inset 0 1px 2px rgba(255,255,255,.9),0 5px 13px rgba(15,23,42,.045);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.filter-glass input:focus,.filter-glass select:focus{outline:none;border-color:rgba(99,102,241,.5);background:rgba(255,255,255,.92);box-shadow:0 0 0 4px rgba(99,102,241,.1),inset 0 1px #fff}
+.filter-glass .filter-actions{padding-top:3px}
+.filter-glass .filter-toggle{min-height:38px;padding:7px 13px;border-color:rgba(148,163,184,.28);border-radius:13px;background:rgba(255,255,255,.48);box-shadow:inset 0 1px rgba(255,255,255,.85),0 5px 12px rgba(15,23,42,.05)}
+.filter-submit{min-height:39px!important;padding:8px 18px!important;border:1px solid rgba(255,255,255,.5)!important;border-radius:14px!important;background:linear-gradient(135deg,#6366f1,#06b6d4)!important;color:#fff!important;box-shadow:inset 0 1px rgba(255,255,255,.35),0 9px 19px rgba(79,70,229,.2);transition:transform .16s ease,box-shadow .16s ease}
+.filter-submit:hover{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.4),0 13px 24px rgba(79,70,229,.27)}
+.filter-glass .filter-advanced{margin-top:4px;padding:16px;border:1px solid rgba(148,163,184,.18);border-radius:20px;background:rgba(255,255,255,.28);box-shadow:inset 0 1px rgba(255,255,255,.6)}
+html[data-theme-resolved="dark"] .filter-card.filter-glass{border-color:rgba(148,163,184,.2);background:linear-gradient(145deg,rgba(30,41,59,.72),rgba(15,23,42,.55));box-shadow:inset 0 1px rgba(255,255,255,.09),0 16px 36px rgba(0,0,0,.22)}
+html[data-theme-resolved="dark"] .filter-glass-icon,html[data-theme-resolved="dark"] .filter-glass input,html[data-theme-resolved="dark"] .filter-glass select{background:linear-gradient(145deg,rgba(51,65,85,.78),rgba(30,41,59,.65));border-color:rgba(148,163,184,.22)}
+html[data-theme-resolved="dark"] .filter-glass label{color:#9fb0c6}
+@media(max-width:620px){.filter-card.filter-glass{padding:15px;border-radius:21px}.filter-glass-head{align-items:flex-start}.filter-mode-chip{display:none}.filter-glass .filter-actions{align-items:stretch}.filter-glass .filter-action-buttons{margin-left:auto}}
+.card.station-browser{border:0;background:transparent;box-shadow:none;backdrop-filter:none;padding:4px 0 24px}
+.card.district-browser-home{border:0;background:transparent;box-shadow:none;backdrop-filter:none;padding:28px 22px 38px}
+.district-browser-home .district-sidebar{overflow:visible;background:transparent;box-shadow:none}
+.district-browser-home .district-group{position:relative}
+.district-browser-home .district-group:hover,.district-browser-home .district-group:focus-within{z-index:10}
+@media(max-width:560px){.card.district-browser-home{padding:18px 10px 28px}}
+
+/* Selector curvo de comisarías, inspirado en Stage Manager */
+.station-stage-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:22px;align-items:start}
+.station-stage-layout.no-orbit{grid-template-columns:minmax(0,1fr)}
+.station-stage-content{min-width:0}
+.station-stage-content .acc-card-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+.station-orbit{position:sticky;top:18px;display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px 12px 18px;border:1px solid var(--panel-bd);border-radius:32px;background:linear-gradient(160deg,rgba(255,255,255,.48),rgba(255,255,255,.18));box-shadow:inset 0 1px rgba(255,255,255,.75),0 16px 32px rgba(15,23,42,.08);backdrop-filter:blur(20px) saturate(140%);overflow:hidden}
+.station-orbit::before{content:"";position:absolute;inset:12% auto 12% -78px;width:150px;border:1px solid hsl(var(--district-hue) 65% 58% / .2);border-radius:50%;pointer-events:none}
+.station-orbit-title{position:relative;z-index:1;margin:0 0 4px;color:rgba(var(--muted-rgb),1);font-size:9px;font-weight:900;letter-spacing:.14em;text-align:center;text-transform:uppercase}
+.station-orbit-btn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:58px;padding:10px 11px;border:1px solid hsl(var(--district-hue) 55% 65% / .3);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.62),hsl(var(--district-hue) 100% 97% / .4));color:hsl(var(--district-hue) 55% 28%);font-size:10px;font-weight:850;line-height:1.2;text-align:center;text-decoration:none;opacity:var(--orbit-opacity,.55);filter:saturate(var(--orbit-saturation,.55));transform:translateX(var(--orbit-x,0)) scale(var(--orbit-scale,.9));box-shadow:inset 0 1px rgba(255,255,255,.9),0 7px 15px rgba(15,23,42,.07);transition:transform .22s ease,opacity .22s ease,filter .22s ease,box-shadow .22s ease}
+.station-orbit-btn:hover,.station-orbit-btn:focus-visible{opacity:.9;filter:saturate(.9);transform:translateX(10px) scale(.97);outline:none;box-shadow:0 11px 22px rgba(15,23,42,.12)}
+.station-orbit-btn.active{min-height:68px;border-color:hsl(var(--district-hue) 76% 58% / .65);background:radial-gradient(circle at 18% 5%,rgba(255,255,255,.9),transparent 32%),linear-gradient(145deg,hsl(var(--district-hue) 86% 62% / .9),hsl(var(--district-hue) 78% 43% / .86));color:#fff;font-size:11px;opacity:1;filter:none;transform:translateX(15px) scale(1);box-shadow:inset 0 1px rgba(255,255,255,.8),0 14px 28px hsl(var(--district-hue) 55% 30% / .23)}
+.station-orbit-count{position:absolute;right:7px;bottom:6px;min-width:20px;padding:2px 5px;border-radius:999px;background:rgba(255,255,255,.2);font-size:8px;text-align:center}
+html[data-theme-resolved="dark"] .station-orbit{background:linear-gradient(160deg,rgba(30,41,59,.72),rgba(15,23,42,.5))}
+html[data-theme-resolved="dark"] .station-orbit-btn:not(.active){background:linear-gradient(145deg,rgba(30,41,59,.7),hsl(var(--district-hue) 34% 17% / .5));color:hsl(var(--district-hue) 45% 78%)}
+@media(max-width:1150px){
+  .station-stage-content .acc-card-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+  .station-stage-layout{grid-template-columns:1fr;gap:14px}
+  .station-orbit{position:static;display:flex;flex-direction:row;gap:9px;padding:11px;overflow-x:auto;border-radius:24px;scroll-snap-type:x proximity}
+  .station-orbit::before{display:none}.station-orbit-title{display:none}
+  .station-orbit-btn,.station-orbit-btn.active{flex:0 0 155px;min-height:56px;transform:none;opacity:var(--orbit-opacity,.55);scroll-snap-align:center}
+  .station-orbit-btn.active{opacity:1}
+  .station-orbit-btn:hover,.station-orbit-btn:focus-visible{transform:translateY(-2px)}
+  .station-stage-content .acc-card-list{grid-template-columns:minmax(0,1fr)}
+}
 
 label{display:block;font-weight:700;margin-bottom:6px;font-size:13px}
 input,select{width:100%;padding:8px 10px;border:1px solid var(--field-bd);border-radius:10px;background:var(--field-bg);color:var(--fg)}
@@ -912,14 +1193,14 @@ html[data-theme-resolved="dark"]{
 }
 
 /* ===== Cards de accidentes ===== */
-.acc-card-list{display:flex;flex-direction:column;gap:14px}
+.acc-card-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
 .table-wrap{display:none}
 .acc-card{
   border:1px solid rgba(148,163,184,.38);
   border-radius:14px;
   background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.96));
   box-shadow:0 10px 24px rgba(15,23,42,.07), inset 4px 0 0 rgba(37,99,235,.22);
-  overflow:visible;
+  overflow:visible;min-width:0;height:100%;
   transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
 }
 .acc-card .acc-card-main{cursor:pointer}
@@ -958,14 +1239,13 @@ html[data-theme-resolved="dark"]{
 .acc-card a,
 .acc-card .estado-badge{cursor:pointer}
 .acc-card-main{
-  display:grid;
-  grid-template-columns:minmax(0,1.5fr) minmax(220px,.9fr) auto;
-  gap:14px;
-  padding:14px 16px;
-  align-items:start;
+  position:relative;display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"left" "center";
+  gap:16px;padding:18px;align-items:start;height:100%;
 }
-.acc-card-left{display:flex;flex-direction:column;gap:8px;min-width:0}
-.acc-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.acc-card-left{grid-area:left;display:flex;flex-direction:column;gap:12px;min-width:0}
+.acc-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-right:40px}
 .acc-head-priority{display:inline-flex;align-items:center;min-width:auto}
 .acc-report{
   display:inline-flex;
@@ -998,12 +1278,18 @@ html[data-theme-resolved="dark"]{
 .acc-place{display:flex;align-items:flex-start;gap:6px;font-size:15px;font-weight:700;line-height:1.35;color:#14213d}
 .acc-place-icon,.acc-meta-icon{flex:0 0 auto;line-height:1.2}
 .acc-place-icon{font-size:15px;margin-top:1px}
+.acc-place-district{color:#64748b;font-weight:750}
+html[data-theme-resolved="dark"] .acc-place-district{color:#a8b6c9}
+.acc-modality{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.acc-modality-label{font-size:10px;font-weight:850;color:#7b8794;text-transform:uppercase;letter-spacing:.04em}
+.acc-modality-chip{display:inline-flex;align-items:center;min-height:23px;padding:3px 9px;border:1px solid rgba(99,102,241,.2);border-radius:999px;background:rgba(99,102,241,.08);color:#4338ca;font-size:10px;font-weight:800;line-height:1.15}
+html[data-theme-resolved="dark"] .acc-modality-chip{border-color:rgba(129,140,248,.3);background:rgba(99,102,241,.16);color:#c7d2fe}
 .acc-meta{display:flex;flex-wrap:wrap;gap:10px 14px}
 .acc-meta-item{display:flex;flex-direction:column;gap:2px;min-width:110px}
 .acc-meta-label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
 .acc-meta-icon{font-size:12px}
 .acc-meta-value{font-size:13px;font-weight:600;color:#334155}
-.acc-card-center{display:flex;flex-direction:column;gap:8px}
+.acc-card-center{grid-area:center;display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid rgba(148,163,184,.25)}
 .acc-involved{display:flex;flex-direction:column;gap:7px;min-width:0}
 .acc-involved-title{font-size:11px;font-weight:800;color:#7b8794;text-transform:uppercase;letter-spacing:.04em}
 .acc-involved-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:start;min-width:0}
@@ -1017,11 +1303,17 @@ html[data-theme-resolved="dark"]{
 .acc-involved-meta .vehicle-plate-summary{font-weight:850;color:#475569}
 .acc-involved-more{align-self:flex-start;color:#64748b;font-size:11px;font-weight:800}
 .acc-involved-empty{font-size:12px;font-weight:650;color:#64748b}
+.acc-prosecution{display:grid;gap:7px;margin-top:5px;padding-top:12px;border-top:1px dashed rgba(148,163,184,.3)}
+.acc-prosecution-row{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px;align-items:start}
+.acc-prosecution-icon{font-size:13px;line-height:1.3;text-align:center}
+.acc-prosecution-label{display:block;margin-bottom:1px;color:#7b8794;font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+.acc-prosecution-value{display:block;color:#334155;font-size:11px;font-weight:750;line-height:1.3;overflow-wrap:anywhere}
+html[data-theme-resolved="dark"] .acc-prosecution-value{color:#dbe5f2}
 .acc-summary-block{display:flex;flex-direction:column;gap:6px}
 .acc-summary-title{font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
 .acc-summary-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .acc-hint{font-size:12px;font-weight:600;color:#64748b}
-.acc-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;justify-content:space-between;min-height:100%}
+.acc-card-right{position:absolute;z-index:5;top:14px;right:14px;display:flex;align-items:flex-end}
 .acc-top-actions{position:relative;display:flex;align-items:center;justify-content:flex-end}
 .acc-actions-trigger{
   width:36px;height:34px;padding:0;border:1px solid var(--field-bd);border-radius:10px;
@@ -1094,24 +1386,18 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-gps:hover{background:#1453
 html[data-theme-resolved="dark"] .acc-actions-item.is-danger{color:#fca5a5}
 html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#450a0a;color:#fecaca}
 
-@media(max-width:980px){
-  .acc-card-main{
-    grid-template-columns:minmax(0,1fr) auto;
-    grid-template-areas:
-      "left right"
-      "center center";
-    align-items:start;
-  }
-  .acc-card-left{grid-area:left}
-  .acc-card-center{grid-area:center}
-  .acc-card-right{
-    grid-area:right;
-    align-self:start;
-    justify-self:end;
-    align-items:flex-end;
-    min-height:100%;
-  }
-  .acc-top-actions{justify-content:flex-end}
+@media(max-width:1050px){
+  .acc-card-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .title{align-items:flex-start;flex-direction:column}
+  .acc-card-list{grid-template-columns:minmax(0,1fr);gap:14px}
+  .acc-card-main{gap:12px;padding:14px}
+  .acc-card-right{top:10px;right:10px}
+  .acc-head{gap:6px}
+  .col-folder{min-width:auto;gap:6px}
+  .acc-meta{display:grid;grid-template-columns:1fr}
+  .acc-actions-menu{position:fixed;top:auto;right:14px;bottom:14px;left:14px;width:auto}
 }
 </style>
 </head>
@@ -1128,7 +1414,12 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
     </nav>
   </div>
 
-  <div class="card filter-card">
+  <?php if ($stationSelected || $favoritos === '1' || $verTodos === '1'): ?>
+  <div class="card filter-card filter-glass">
+    <div class="filter-glass-head">
+      <h2 class="filter-glass-title"><span class="filter-glass-icon" aria-hidden="true">⌕</span><span>Buscar accidentes</span></h2>
+      <span class="filter-mode-chip"><?php if ($favoritos === '1'): ?>Favoritos<?php elseif ($verTodos === '1'): ?>Todos los accidentes<?php else: ?>Comisaría seleccionada<?php endif; ?></span>
+    </div>
     <form method="get" class="filters" id="filterForm">
       <div class="filter-primary">
         <div class="col-6">
@@ -1146,7 +1437,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           <span>Más filtros</span><span class="filter-toggle-icon">⌄</span>
         </button>
         <div class="filter-action-buttons">
-          <button class="btn small" type="submit">Filtrar</button>
+          <button class="btn small filter-submit" type="submit">Aplicar filtros</button>
         </div>
       </div>
 
@@ -1200,6 +1491,9 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
       <?php if ($favoritos === '1'): ?>
         <input type="hidden" name="favoritos" value="1">
       <?php endif; ?>
+      <?php if ($verTodos === '1'): ?>
+        <input type="hidden" name="ver_todos" value="1">
+      <?php endif; ?>
     </form>
 
     <?php if ($restoredLastFilters): ?>
@@ -1208,11 +1502,17 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
       <div class="memory-note">Último accidente abierto resaltado arriba.</div>
     <?php endif; ?>
   </div>
+  <?php endif; ?>
 
-  <div class="district-accident-layout">
-    <aside class="district-sidebar" aria-label="Distritos">
-      <h2 class="district-sidebar-title">Distritos</h2>
+  <?php if (!$districtSelected && $favoritos !== '1' && $verTodos !== '1'): ?>
+  <section class="card browse-panel district-browser-home" aria-label="Seleccionar distrito">
+    <div class="district-sidebar" aria-label="Distritos">
       <div class="district-buttons">
+        <div class="district-group district-special" style="--district-hue:42">
+          <a class="district-btn" href="accidente_listar.php?favoritos=1&amp;estado=todos">
+            <span class="district-name">★ Favoritos</span>
+          </a>
+        </div>
         <?php $districtPosition = 0; ?>
         <?php foreach ($comisariasPorDistrito as $districtName => $districtComisarias): ?>
           <?php
@@ -1223,7 +1523,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           ?>
           <div class="district-group" style="--district-hue:<?= (int)$districtHue ?>">
             <a
-              class="district-btn <?= $districtActive ? 'active' : '' ?>"
+              class="district-btn"
               href="<?=h(url_filtro_accidente([
                 'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
                 'comisaria_id' => null,
@@ -1238,58 +1538,71 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                 'nro_informe_policial' => null,
                 'tipo_registro' => null,
               ]))?>"
-            ><span class="district-name"><?=h($districtName)?></span><span class="district-chevron" aria-hidden="true">›</span></a>
-            <?php if ($districtActive): ?>
-              <div class="district-substations" aria-label="Comisarías de <?=h($districtName)?>">
-                <?php foreach ($districtComisarias as $station): ?>
-                  <?php
-                    $stationId = (string)($station['id'] ?? '');
-                    $stationActive = $comisaria_id === $stationId;
-                  ?>
-                  <a
-                    class="station-btn <?= $stationActive ? 'active' : '' ?>"
-                    href="<?=h(url_filtro_accidente([
-                      'comisaria_id' => $stationId,
-                      'distrito' => $districtName !== 'Sin distrito asignado' ? $districtName : null,
-                      'estado' => 'todos',
-                      'favoritos' => null,
-                      'q' => null,
-                      'desde' => null,
-                      'hasta' => null,
-                      'persona' => null,
-                      'vehiculo' => null,
-                      'registro_sidpol' => null,
-                      'nro_informe_policial' => null,
-                      'tipo_registro' => null,
-                    ]))?>"
-                  >
-                    <span><?=h((string)($station['comisaria'] ?? 'Comisaría'))?></span>
-                    <span class="station-count"><?= (int)($station['accidentes_total'] ?? 0) ?></span>
-                  </a>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
+            ><span class="district-name"><?=h($districtName)?></span></a>
+          </div>
+        <?php endforeach; ?>
+        <div class="district-group district-special" style="--district-hue:205">
+          <a class="district-btn" href="accidente_listar.php?ver_todos=1&amp;estado=todos">
+            <span class="district-name">Ver todos</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <?php elseif ($districtSelected && !$stationSelected): ?>
+  <section class="card browse-panel station-browser" aria-label="Seleccionar distrito y comisaría" style="--district-hue:<?= (int)($selectedDistrictHue ?? 220) ?>" data-close-url="accidente_listar.php">
+    <a class="btn browse-back" href="accidente_listar.php">← Cerrar distrito</a>
+    <div class="district-browser-stage">
+      <div class="district-wheel-wrap">
+        <div class="district-wheel" id="districtWheel" role="listbox" aria-label="Seleccionar distrito">
+          <a class="district-wheel-item district-wheel-shortcut" role="option" aria-selected="false" data-mode="favoritos" href="accidente_listar.php?favoritos=1&amp;estado=todos" style="--wheel-hue:42">★ Favoritos</a>
+          <?php foreach ($comisariasPorDistrito as $wheelIndex => $wheelStations):
+            $wheelDistrict = (string)$wheelIndex;
+            $wheelActive = lower_u($wheelDistrict) === lower_u($distrito);
+            $wheelHueIndex = array_search($wheelDistrict, array_keys($comisariasPorDistrito), true);
+            $wheelHue = $districtHues[((int)$wheelHueIndex) % count($districtHues)];
+          ?>
+            <button type="button" class="district-wheel-item <?=$wheelActive ? 'is-active' : ''?>" role="option" aria-selected="<?=$wheelActive ? 'true' : 'false'?>" data-district="<?=h($wheelDistrict)?>" style="--wheel-hue:<?= (int)$wheelHue ?>">
+              <?=h($wheelDistrict)?>
+            </button>
+          <?php endforeach; ?>
+          <a class="district-wheel-item district-wheel-shortcut" role="option" aria-selected="false" data-mode="todos" href="accidente_listar.php?ver_todos=1&amp;estado=todos" style="--wheel-hue:205">Ver todos</a>
+        </div>
+      </div>
+      <div class="district-detail">
+        <?php foreach ($comisariasPorDistrito as $panelDistrict => $panelStations):
+          $panelDistrict = (string)$panelDistrict;
+          $panelActive = lower_u($panelDistrict) === lower_u($distrito);
+          $panelHueIndex = array_search($panelDistrict, array_keys($comisariasPorDistrito), true);
+          $panelHue = $districtHues[((int)$panelHueIndex) % count($districtHues)];
+        ?>
+          <div class="district-station-panel <?=$panelActive ? 'is-active' : ''?>" data-station-panel="<?=h($panelDistrict)?>" style="--district-hue:<?= (int)$panelHue ?>">
+            <?php if ($panelStations === []): ?>
+              <div class="district-station-empty">No hay comisarías registradas.</div>
+            <?php else: foreach ($panelStations as $station): $stationId = (string)$station['id']; ?>
+              <a class="station-btn" href="<?=h(url_filtro_accidente([
+                'comisaria_id' => $stationId, 'distrito' => $panelDistrict, 'estado' => 'todos',
+                'favoritos' => null, 'q' => null, 'desde' => null, 'hasta' => null,
+                'persona' => null, 'vehiculo' => null, 'registro_sidpol' => null,
+                'nro_informe_policial' => null, 'tipo_registro' => null,
+              ]))?>">
+                <span class="station-symbol" aria-hidden="true">🏛️</span>
+                <span class="station-label"><?=h((string)$station['comisaria'])?><small>Comisaría</small></span>
+                <span class="station-count" title="Accidentes registrados"><?= (int)$station['accidentes_total'] ?></span>
+              </a>
+            <?php endforeach; endif; ?>
           </div>
         <?php endforeach; ?>
       </div>
-      <a class="station-clear <?= $comisaria_id === '' && $distrito === '' && $favoritos !== '1' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente(['comisaria_id' => null, 'distrito' => null, 'favoritos' => null]))?>">Todos los accidentes</a>
-      <a class="station-clear station-favorites <?= $favoritos === '1' ? 'active' : '' ?>" href="<?=h(url_filtro_accidente([
-        'favoritos' => '1',
-        'comisaria_id' => null,
-        'distrito' => null,
-        'estado' => 'todos',
-        'q' => null,
-        'desde' => null,
-        'hasta' => null,
-        'persona' => null,
-        'vehiculo' => null,
-        'registro_sidpol' => null,
-        'nro_informe_policial' => null,
-        'tipo_registro' => null,
-      ]))?>">Favoritos</a>
-    </aside>
+    </div>
+  </section>
 
+  <?php else: ?>
+  <div class="district-accident-layout">
     <main class="district-main">
+      <div class="station-stage-layout no-orbit" style="--district-hue:<?= (int)($selectedDistrictHue ?? 220) ?>">
+        <div class="station-stage-content">
   <div class="card">
     <div class="acc-card-list <?= $selectedDistrictHue !== null ? 'has-district-color' : '' ?>" id="cards-list" role="list" aria-label="Lista de accidentes"<?= $selectedDistrictHue !== null ? ' style="--district-hue:' . (int)$selectedDistrictHue . '"' : '' ?>>
       <?php if (!$rows): ?>
@@ -1301,6 +1614,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           $personasDetalle = $personasDetallePorAccidente[(int)$r['id']] ?? [];
           $personasResumen = $personasResumenPorAccidente[(int)$r['id']] ?? [];
           $vehiculosResumen = $vehiculosResumenPorAccidente[(int)$r['id']] ?? [];
+          $modalidadesAccidente = $modalidadesPorAccidente[(int)$r['id']] ?? [];
           $vehiculosPreview = array_slice($vehiculosResumen, 0, 2);
           $personasVisuales = $personasDetalle;
           usort($personasVisuales, static function(array $a, array $b): int {
@@ -1344,7 +1658,21 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <span class="tipo-reg-chip <?=h($tipoRegistroClass)?>"><?=h($tipoRegistro)?></span>
                 <?php endif; ?>
               </div>
-              <div class="acc-place"><span class="acc-place-icon" aria-hidden="true">📍</span><span><?=h($r['lugar'])?></span></div>
+              <div class="acc-place">
+                <span class="acc-place-icon" aria-hidden="true">📍</span>
+                <span><?=h($r['lugar'])?><?php if (trim((string)($r['distrito'] ?? '')) !== ''): ?> <span class="acc-place-district">- <?=h($r['distrito'])?></span><?php endif; ?></span>
+              </div>
+              <?php if ($modalidadesAccidente !== []): ?>
+                <div class="acc-modality" aria-label="Tipo de accidente">
+                  <span class="acc-modality-label">Modalidad</span>
+                  <?php foreach (array_slice($modalidadesAccidente, 0, 2) as $modalidadAccidente): ?>
+                    <span class="acc-modality-chip"><?=h($modalidadAccidente)?></span>
+                  <?php endforeach; ?>
+                  <?php if (count($modalidadesAccidente) > 2): ?>
+                    <span class="acc-modality-chip" title="<?=h(implode(', ', $modalidadesAccidente))?>">+<?=count($modalidadesAccidente) - 2?></span>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
               <div class="acc-meta">
                 <div class="acc-meta-item">
                   <span class="acc-meta-label"><span class="acc-meta-icon" aria-hidden="true">📅</span>Fecha</span>
@@ -1387,6 +1715,22 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <div class="acc-involved-more">👥 +<?=$personasRestantes?> persona<?=$personasRestantes === 1 ? '' : 's'?> más</div>
                 <?php endif; ?>
               </div>
+              <?php if (trim((string)($r['fiscalia'] ?? '')) !== '' || trim((string)($r['fiscal'] ?? '')) !== ''): ?>
+                <div class="acc-prosecution">
+                  <?php if (trim((string)($r['fiscalia'] ?? '')) !== ''): ?>
+                    <div class="acc-prosecution-row">
+                      <span class="acc-prosecution-icon" aria-hidden="true">⚖️</span>
+                      <span><span class="acc-prosecution-label">Fiscalía</span><span class="acc-prosecution-value"><?=h($r['fiscalia'])?></span></span>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (trim((string)($r['fiscal'] ?? '')) !== ''): ?>
+                    <div class="acc-prosecution-row">
+                      <span class="acc-prosecution-icon" aria-hidden="true">👤</span>
+                      <span><span class="acc-prosecution-label">Fiscal a cargo</span><span class="acc-prosecution-value"><?=h($r['fiscal'])?></span></span>
+                    </div>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
             </div>
 
             <div class="acc-card-right">
@@ -1533,11 +1877,102 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
       </table>
     </div>
   </div>
+        </div>
+      </div>
     </main>
   </div>
+  <?php endif; ?>
 </div>
 
 <script>
+const stationBrowser = document.querySelector('.station-browser[data-close-url]');
+if (stationBrowser) {
+  stationBrowser.addEventListener('click', (event) => {
+    if (event.target.closest('.station-btn, .district-browser-stage, .browse-back')) return;
+    window.location.assign(stationBrowser.dataset.closeUrl);
+  });
+}
+
+const districtWheel = document.getElementById('districtWheel');
+if (districtWheel) {
+  const wheelItems = Array.from(districtWheel.querySelectorAll('.district-wheel-item'));
+  const detailName = document.getElementById('districtDetailName');
+  let wheelFrame = 0;
+  let activeDistrict = '';
+
+  function selectWheelDistrict(item) {
+    if (!item) return;
+    const district = item.dataset.district || '';
+    if (!district) return;
+    activeDistrict = district;
+    wheelItems.forEach((candidate) => {
+      const active = candidate === item;
+      candidate.classList.toggle('is-active', active);
+      candidate.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.district-station-panel').forEach((panel) => {
+      panel.classList.toggle('is-active', panel.dataset.stationPanel === district);
+    });
+    if (detailName) detailName.textContent = district;
+    const url = new URL(window.location.href);
+    url.searchParams.set('distrito', district);
+    url.searchParams.set('estado', 'todos');
+    url.searchParams.delete('comisaria_id');
+    history.replaceState(null, '', url);
+  }
+
+  function paintDistrictWheel() {
+    wheelFrame = 0;
+    const wheelBox = districtWheel.getBoundingClientRect();
+    const center = wheelBox.top + wheelBox.height / 2;
+    let nearest = null;
+    let nearestDistance = Infinity;
+    wheelItems.forEach((item) => {
+      const box = item.getBoundingClientRect();
+      const signedDistance = (box.top + box.height / 2) - center;
+      const distance = Math.abs(signedDistance);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = item;
+      }
+      const ratio = Math.min(1, distance / (wheelBox.height * .46));
+      item.style.setProperty('--wheel-x', `${30 - ratio * 56}px`);
+      item.style.setProperty('--wheel-scale', String(1 - ratio * .22));
+      item.style.setProperty('--wheel-opacity', String(1 - ratio * .68));
+      item.style.setProperty('--wheel-saturation', String(1 - ratio * .62));
+      item.style.setProperty('--wheel-blur', `${Math.max(0, ratio - .72) * 4}px`);
+    });
+    if (nearest && (nearest.dataset.district || '') !== activeDistrict) selectWheelDistrict(nearest);
+  }
+
+  function requestWheelPaint() {
+    if (!wheelFrame) wheelFrame = requestAnimationFrame(paintDistrictWheel);
+  }
+
+  districtWheel.addEventListener('scroll', requestWheelPaint, {passive:true});
+  districtWheel.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const currentIndex = Math.max(0, wheelItems.findIndex((item) => item.classList.contains('is-active')));
+    const nextIndex = Math.max(0, Math.min(wheelItems.length - 1, currentIndex + (event.key === 'ArrowDown' ? 1 : -1)));
+    const nextItem = wheelItems[nextIndex];
+    if (nextItem) districtWheel.scrollTo({top:nextItem.offsetTop - (districtWheel.clientHeight - nextItem.offsetHeight) / 2, behavior:'smooth'});
+  });
+  wheelItems.forEach((item) => item.addEventListener('click', () => {
+    districtWheel.scrollTo({top:item.offsetTop - (districtWheel.clientHeight - item.offsetHeight) / 2, behavior:'smooth'});
+  }));
+  window.addEventListener('resize', requestWheelPaint);
+
+  const initialWheelItem = wheelItems.find((item) => item.classList.contains('is-active')) || wheelItems[0];
+  if (initialWheelItem) {
+    activeDistrict = initialWheelItem.dataset.district || '';
+    requestAnimationFrame(() => {
+      districtWheel.scrollTop = initialWheelItem.offsetTop - (districtWheel.clientHeight - initialWheelItem.offsetHeight) / 2;
+      paintDistrictWheel();
+    });
+  }
+}
+
 let occupiedFolders = new Map(Object.entries(<?= json_encode($occupiedFolders, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>).map(([folder, id]) => [String(folder), String(id)]));
 
 function updateOccupiedFolders(map) {
