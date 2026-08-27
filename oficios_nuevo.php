@@ -317,15 +317,15 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <section class="office-section accordion-section is-expanded" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="true"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
     <div class="office-accordion-body grid">
-      <div class="c12">
-        <label>Accidente asociado*</label>
-        <select name="accidente_id" id="accidente_id" required>
-          <option value="">Selecciona el accidente</option>
-          <?php foreach ($ctx['accidentes'] as $accidente): ?>
-            <option value="<?= h($accidente['id']) ?>" <?= (string) $data['accidente_id'] === (string) $accidente['id'] ? 'selected' : '' ?>><?= h($accidente['label']) ?></option>
+      <input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>">
+
+      <div class="c4">
+        <label for="tipo">Tipo de asunto*</label>
+        <select name="tipo" id="tipo" required>
+          <?php foreach ($ctx['tipos'] as $tipo): ?>
+            <option value="<?= h($tipo) ?>" <?= $data['tipo'] === $tipo ? 'selected' : '' ?>><?= h($tipo === 'REMITIR' ? 'Remite' : 'Solicita') ?></option>
           <?php endforeach; ?>
         </select>
-        <?php if ($sidpolGet !== ''): ?><div class="muted">Preseleccionado por SIDPOL: <?= h($sidpolGet) ?></div><?php endif; ?>
       </div>
 
       <div class="c12">
@@ -446,16 +446,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
       <div class="office-accordion-body grid">
-      <div class="c4">
-        <label>Tipo de asunto</label>
-        <select name="tipo" id="tipo">
-          <?php foreach ($ctx['tipos'] as $tipo): ?>
-            <option value="<?= h($tipo) ?>" <?= $data['tipo'] === $tipo ? 'selected' : '' ?>><?= h($tipo) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="c8">
+      <div class="c12">
         <label>Asunto*</label>
         <div class="field-row">
           <select name="asunto_id" id="asunto_id" required>

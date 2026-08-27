@@ -36,6 +36,10 @@ $sidpol = trim((string) ($_GET['sidpol'] ?? ''));
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $estado = trim((string) ($_GET['estado'] ?? ''));
 $categoria = trim((string) ($_GET['categoria'] ?? ''));
+$tipo = strtoupper(trim((string) ($_GET['tipo'] ?? '')));
+if (!in_array($tipo, ['SOLICITAR', 'REMITIR'], true)) {
+    $tipo = '';
+}
 $msg = trim((string) ($_GET['msg'] ?? ''));
 
 $filters = [
@@ -46,6 +50,7 @@ $filters = [
     'accidente_id' => $accidenteId,
     'estado' => $estado,
     'categoria' => $categoria,
+    'tipo' => $tipo,
 ];
 $ctx = $service->listado($filters);
 $rows = $ctx['rows'];
@@ -131,6 +136,9 @@ if ($estado !== '') {
 if ($categoria !== '') {
     $activeFilters[] = ['label' => 'Categoría', 'value' => $categoria, 'clear' => 'categoria'];
 }
+if ($tipo !== '') {
+    $activeFilters[] = ['label' => 'Tipo de asunto', 'value' => $tipo === 'REMITIR' ? 'Remite' : 'Solicita', 'clear' => 'tipo'];
+}
 
 $clearFiltersUrl = build_url([
     'q' => null,
@@ -139,6 +147,7 @@ $clearFiltersUrl = build_url([
     'sidpol' => null,
     'estado' => null,
     'categoria' => null,
+    'tipo' => null,
 ]);
 
 include __DIR__ . '/sidebar.php';
@@ -409,7 +418,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
         <div class="filter-title">
           <div>
             <strong>Filtros de b&uacute;squeda</strong>
-            <div class="small">Puedes combinar texto, categoría, a&ntilde;o, entidad, SIDPOL y estado.</div>
+            <div class="small">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad, SIDPOL y estado.</div>
           </div>
           <?php if ($activeFilters): ?><div class="small"><?= count($activeFilters) ?> filtro(s) activo(s)</div><?php endif; ?>
         </div>
@@ -444,6 +453,15 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 <option value="">Todas</option>
                 <?php foreach ($ctx['categorias'] as $item): ?>
                   <option value="<?= h($item) ?>" <?= $categoria === $item ? 'selected' : '' ?>><?= h($item) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field">
+              <label for="tipo">Tipo de asunto</label>
+              <select id="tipo" name="tipo">
+                <option value="">Todos</option>
+                <?php foreach ($ctx['tipos'] as $item): ?>
+                  <option value="<?= h($item) ?>" <?= $tipo === $item ? 'selected' : '' ?>><?= h($item === 'REMITIR' ? 'Remite' : 'Solicita') ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

@@ -616,6 +616,10 @@ final class OficioRepository
             $sql .= ' AND o.categoria = ?';
             $params[] = $filters['categoria'];
         }
+        if (!empty($filters['tipo'])) {
+            $sql .= ' AND s.tipo = ?';
+            $params[] = $filters['tipo'];
+        }
         if (!empty($filters['q'])) {
             $like = '%' . $filters['q'] . '%';
             $sql .= ' AND (o.numero LIKE ? OR COALESCE(o.referencia_texto,\'\') LIKE ? OR COALESCE(a.registro_sidpol,\'\') LIKE ? OR COALESCE(s.detalle,\'\') LIKE ? OR COALESCE(s.nombre,\'\') LIKE ? OR COALESCE(e.nombre,\'\') LIKE ? OR COALESCE(e.siglas,\'\') LIKE ? OR COALESCE(v.placa,\'\') LIKE ?)';

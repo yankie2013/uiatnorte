@@ -10000,6 +10000,13 @@ include __DIR__ . '/sidebar.php';
 	                      <?php foreach ($categoriasDocumentales as $categoriaFiltro): ?><option value="<?= h((string) $categoriaFiltro) ?>"><?= h((string) $categoriaFiltro) ?></option><?php endforeach; ?>
 	                    </select>
 	                  </label>
+	                  <label class="module-category-filter">Tipo de asunto
+	                    <select class="js-document-type-filter" data-list="oficios">
+	                      <option value="">Todos</option>
+	                      <option value="SOLICITAR">Solicita</option>
+	                      <option value="REMITIR">Remite</option>
+	                    </select>
+	                  </label>
 	                </div>
 
                 <?php if (!$oficios): ?>
@@ -10030,7 +10037,7 @@ include __DIR__ . '/sidebar.php';
                         $oficioEsInformacionDiligencias = (str_contains($oficioDownloadText, 'informacion') || str_contains($oficioDownloadText, 'información')) && str_contains($oficioDownloadText, 'diligenc');
                         $oficioEsInformeMedico = str_contains($oficioDownloadText, 'informe') && (str_contains($oficioDownloadText, 'medico') || str_contains($oficioDownloadText, 'médico'));
                       ?>
-                      <article class="module-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>">
+                      <article class="module-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>" data-type="<?= h($oficioTipo) ?>">
                         <header>
                           <div>
                             <h4>
@@ -13268,15 +13275,25 @@ include __DIR__ . '/sidebar.php';
   })();
 </script>
 <script>
-document.querySelectorAll('.js-document-category-filter').forEach((select) => {
-  select.addEventListener('change', () => {
-    const list = select.dataset.list || '';
-    const selected = select.value;
-    document.querySelectorAll('[data-document-list="' + list + '"]').forEach((card) => {
-      const category = (card.dataset.category || '').trim();
-      card.hidden = selected === '__sin_categoria__' ? category !== '' : (selected !== '' && category !== selected);
-    });
+function applyDocumentFilters(list) {
+  const categorySelect = document.querySelector('.js-document-category-filter[data-list="' + list + '"]');
+  const typeSelect = document.querySelector('.js-document-type-filter[data-list="' + list + '"]');
+  const selectedCategory = categorySelect ? categorySelect.value : '';
+  const selectedType = typeSelect ? typeSelect.value : '';
+
+  document.querySelectorAll('[data-document-list="' + list + '"]').forEach((card) => {
+    const category = (card.dataset.category || '').trim();
+    const type = (card.dataset.type || '').trim();
+    const categoryMatches = selectedCategory === '__sin_categoria__'
+      ? category === ''
+      : (selectedCategory === '' || category === selectedCategory);
+    const typeMatches = selectedType === '' || type === selectedType;
+    card.hidden = !categoryMatches || !typeMatches;
   });
+}
+
+document.querySelectorAll('.js-document-category-filter, .js-document-type-filter').forEach((select) => {
+  select.addEventListener('change', () => applyDocumentFilters(select.dataset.list || ''));
 });
 </script>
 </body>
