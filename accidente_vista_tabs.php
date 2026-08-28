@@ -9097,7 +9097,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
                       <a class="btn-shell js-inline-open" href="doc_lc_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Licencia de conducir">+ Nueva licencia</a>
-                      <a class="btn-shell btn-mtc-license" href="https://licencias.mtc.gob.pe/#/search" target="_blank" rel="noopener noreferrer" title="Consultar licencia de conducir en el MTC"><span aria-hidden="true">↗</span> Consultar MTC</a>
+                      <a class="btn-shell btn-mtc-license" href="https://licencias.mtc.gob.pe/#/index" target="_blank" rel="noopener noreferrer" title="Consultar licencia de conducir en el MTC"><span aria-hidden="true">↗</span> Consultar MTC</a>
                     </div>
                     <?php if (!$extras['lc']): ?>
                       <div class="empty-state">No hay licencias registradas para esta persona.</div>
