@@ -12,6 +12,26 @@ function lower_u(string $value): string {
   return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
 }
 
+function modalidades_oracion(array $modalidades): string {
+  $items = array_values(array_filter(array_map(
+    static fn($value) => lower_u(trim((string)$value)),
+    $modalidades
+  ), static fn($value) => $value !== ''));
+  if ($items === []) return '';
+
+  $primera = array_shift($items);
+  if (function_exists('mb_substr') && function_exists('mb_strtoupper')) {
+    $primera = mb_strtoupper(mb_substr($primera, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($primera, 1, null, 'UTF-8');
+  } else {
+    $primera = ucfirst($primera);
+  }
+  if ($items === []) return $primera;
+  if (count($items) === 1) return $primera . ' y ' . $items[0];
+
+  $ultima = array_pop($items);
+  return $primera . ', ' . implode(', ', $items) . ' y ' . $ultima;
+}
+
 function normalizar_rol_resumen(?string $rol): ?string {
   $rol = trim((string)$rol);
   if ($rol === '') return null;
@@ -235,6 +255,7 @@ $filterKeys = [
   'vehiculo',
   'registro_sidpol',
   'nro_informe_policial',
+  'anio',
   'tipo_registro',
   'estado',
   'orden',
@@ -271,6 +292,14 @@ $distrito  = trim($_GET['distrito'] ?? '');
 $vehiculo  = trim($_GET['vehiculo'] ?? '');
 $registro_sidpol = trim($_GET['registro_sidpol'] ?? ''); // <-- NUEVO
 $nro_informe_policial = trim($_GET['nro_informe_policial'] ?? '');
+$anio = trim((string)($_GET['anio'] ?? ''));
+$aniosDisponibles = array_map(
+  static fn($value) => (string)$value,
+  $pdo->query("SELECT DISTINCT YEAR(fecha_accidente) AS anio FROM accidentes WHERE fecha_accidente IS NOT NULL ORDER BY anio DESC")->fetchAll(PDO::FETCH_COLUMN)
+);
+if ($anio !== '' && (!preg_match('/^\d{4}$/', $anio) || !in_array($anio, $aniosDisponibles, true))) {
+  $anio = '';
+}
 $tipoRegistroOpciones = [
   '' => 'TODOS',
   'Carpeta' => 'CARPETA',
@@ -311,6 +340,7 @@ $currentFilters = [
   'vehiculo' => $vehiculo,
   'registro_sidpol' => $registro_sidpol,
   'nro_informe_policial' => $nro_informe_policial,
+  'anio' => $anio,
   'tipo_registro' => $tipo_registro,
   'estado' => $estadoFiltro,
   'orden' => $orden,
@@ -372,6 +402,15 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
     break;
   }
 }
+$clearFilterParams = [];
+if ($favoritos === '1') {
+  $clearFilterParams = ['favoritos' => '1', 'estado' => 'todos'];
+} elseif ($verTodos === '1') {
+  $clearFilterParams = ['ver_todos' => '1', 'estado' => 'todos'];
+} elseif ($stationSelected) {
+  $clearFilterParams = ['distrito' => $distrito, 'comisaria_id' => $comisaria_id];
+}
+$clearFiltersUrl = 'accidente_listar.php' . ($clearFilterParams !== [] ? ('?' . http_build_query($clearFilterParams)) : '');
 
 /* ============================
    QUERY BASE
@@ -410,6 +449,11 @@ if($registro_sidpol !== ''){
 if($nro_informe_policial !== ''){
   $sql .= " AND a.nro_informe_policial LIKE ?";
   $params[] = "%$nro_informe_policial%";
+}
+if($anio !== ''){
+  $sql .= " AND a.fecha_accidente >= ? AND a.fecha_accidente < ?";
+  $params[] = $anio . '-01-01 00:00:00';
+  $params[] = ((int)$anio + 1) . '-01-01 00:00:00';
 }
 if($tipo_registro !== ''){
   $sql .= " AND a.tipo_registro = ?";
@@ -935,6 +979,9 @@ html[data-theme-resolved="dark"] .district-wheel-item{background:linear-gradient
 .filter-glass .filter-toggle{min-height:38px;padding:7px 13px;border-color:rgba(148,163,184,.28);border-radius:13px;background:rgba(255,255,255,.48);box-shadow:inset 0 1px rgba(255,255,255,.85),0 5px 12px rgba(15,23,42,.05)}
 .filter-submit{min-height:39px!important;padding:8px 18px!important;border:1px solid rgba(255,255,255,.5)!important;border-radius:14px!important;background:linear-gradient(135deg,#6366f1,#06b6d4)!important;color:#fff!important;box-shadow:inset 0 1px rgba(255,255,255,.35),0 9px 19px rgba(79,70,229,.2);transition:transform .16s ease,box-shadow .16s ease}
 .filter-submit:hover{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.4),0 13px 24px rgba(79,70,229,.27)}
+.filter-clear{display:inline-flex;align-items:center;justify-content:center;min-height:39px!important;padding:8px 15px!important;border:1px solid rgba(148,163,184,.3)!important;border-radius:14px!important;background:rgba(255,255,255,.46)!important;color:#475569!important;text-decoration:none;box-shadow:inset 0 1px rgba(255,255,255,.72),0 7px 16px rgba(15,23,42,.06);transition:transform .16s ease,background .16s ease}
+.filter-clear:hover{transform:translateY(-2px);background:rgba(255,255,255,.72)!important}
+html[data-theme-resolved="dark"] .filter-clear{border-color:rgba(148,163,184,.2)!important;background:rgba(30,41,59,.55)!important;color:#cbd5e1!important}
 .filter-glass .filter-advanced{margin-top:4px;padding:16px;border:1px solid rgba(148,163,184,.18);border-radius:20px;background:rgba(255,255,255,.28);box-shadow:inset 0 1px rgba(255,255,255,.6)}
 html[data-theme-resolved="dark"] .filter-card.filter-glass{border-color:rgba(148,163,184,.2);background:linear-gradient(145deg,rgba(30,41,59,.72),rgba(15,23,42,.55));box-shadow:inset 0 1px rgba(255,255,255,.09),0 16px 36px rgba(0,0,0,.22)}
 html[data-theme-resolved="dark"] .filter-glass-icon,html[data-theme-resolved="dark"] .filter-glass input,html[data-theme-resolved="dark"] .filter-glass select{background:linear-gradient(145deg,rgba(51,65,85,.78),rgba(30,41,59,.65));border-color:rgba(148,163,184,.22)}
@@ -1282,8 +1329,8 @@ html[data-theme-resolved="dark"]{
 html[data-theme-resolved="dark"] .acc-place-district{color:#a8b6c9}
 .acc-modality{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .acc-modality-label{font-size:10px;font-weight:850;color:#7b8794;text-transform:uppercase;letter-spacing:.04em}
-.acc-modality-chip{display:inline-flex;align-items:center;min-height:23px;padding:3px 9px;border:1px solid rgba(99,102,241,.2);border-radius:999px;background:rgba(99,102,241,.08);color:#4338ca;font-size:10px;font-weight:800;line-height:1.15}
-html[data-theme-resolved="dark"] .acc-modality-chip{border-color:rgba(129,140,248,.3);background:rgba(99,102,241,.16);color:#c7d2fe}
+.acc-modality-value{color:#334155;font-size:12px;font-weight:750;line-height:1.35}
+html[data-theme-resolved="dark"] .acc-modality-value{color:#cbd5e1}
 .acc-meta{display:flex;flex-wrap:wrap;gap:10px 14px}
 .acc-meta-item{display:flex;flex-direction:column;gap:2px;min-width:110px}
 .acc-meta-label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
@@ -1437,6 +1484,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           <span>Más filtros</span><span class="filter-toggle-icon">⌄</span>
         </button>
         <div class="filter-action-buttons">
+          <a class="btn small filter-clear" href="<?=h($clearFiltersUrl)?>">Limpiar</a>
           <button class="btn small filter-submit" type="submit">Aplicar filtros</button>
         </div>
       </div>
@@ -1463,7 +1511,16 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             <?php endforeach; ?>
           </select>
         </div>
-        <div class="col-4">
+        <div class="col-3">
+          <label>Año</label>
+          <select name="anio">
+            <option value="">TODOS</option>
+            <?php foreach($aniosDisponibles as $anioDisponible): ?>
+              <option value="<?=h($anioDisponible)?>" <?=($anio===$anioDisponible?'selected':'')?>><?=h($anioDisponible)?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-3">
           <label>Estado</label>
           <select name="estado">
             <?php foreach($estadoOpciones as $estadoValue => $estadoLabel): ?>
@@ -1471,7 +1528,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             <?php endforeach; ?>
           </select>
         </div>
-        <div class="col-4">
+        <div class="col-3">
           <label>Tipo de registro</label>
           <select name="tipo_registro">
             <?php foreach($tipoRegistroOpciones as $tipoValue => $tipoLabel): ?>
@@ -1479,7 +1536,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             <?php endforeach; ?>
           </select>
         </div>
-        <div class="col-4">
+        <div class="col-3">
           <label>Ordenar por</label>
           <select name="orden">
             <?php foreach($ordenOpciones as $ordenValue => $ordenLabel): ?>
@@ -1665,12 +1722,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
               <?php if ($modalidadesAccidente !== []): ?>
                 <div class="acc-modality" aria-label="Tipo de accidente">
                   <span class="acc-modality-label">Modalidad</span>
-                  <?php foreach (array_slice($modalidadesAccidente, 0, 2) as $modalidadAccidente): ?>
-                    <span class="acc-modality-chip"><?=h($modalidadAccidente)?></span>
-                  <?php endforeach; ?>
-                  <?php if (count($modalidadesAccidente) > 2): ?>
-                    <span class="acc-modality-chip" title="<?=h(implode(', ', $modalidadesAccidente))?>">+<?=count($modalidadesAccidente) - 2?></span>
-                  <?php endif; ?>
+                  <span class="acc-modality-value"><?=h(modalidades_oracion($modalidadesAccidente))?></span>
                 </div>
               <?php endif; ?>
               <div class="acc-meta">

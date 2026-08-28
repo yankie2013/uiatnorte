@@ -328,10 +328,85 @@ html[data-theme-resolved="dark"] .card{background:
   .header{padding-left:74px}.header::before{left:20px;width:11px;height:11px;box-shadow:18px 0 #febc2e,36px 0 #28c840}
   .hero-title{font-size:45px}.kpis-area,.actions-area{padding-inline:16px}.tiles-grid{grid-template-columns:1fr}
 }
+/* ---------- Centro de mando Liquid Glass ---------- */
+.card{min-height:auto;max-width:none!important;overflow:hidden}
+.command-intro{position:relative;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:28px;align-items:stretch;padding:34px 32px 18px;overflow:hidden}
+.command-intro::before{content:"";position:absolute;width:430px;height:430px;right:-150px;top:-245px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.23),rgba(56,189,248,.09) 45%,transparent 70%);filter:blur(3px);pointer-events:none}
+.welcome-panel,.case-orbit{position:relative;border:1px solid var(--dash-border);background:linear-gradient(135deg,rgba(255,255,255,.46),rgba(255,255,255,.16));box-shadow:inset 0 1px rgba(255,255,255,.7),0 18px 45px rgba(30,64,110,.1);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+.welcome-panel{min-height:210px;padding:34px 36px;border-radius:30px;overflow:hidden}
+.welcome-panel::after{content:"";position:absolute;width:240px;height:240px;right:-60px;bottom:-150px;border-radius:50%;background:linear-gradient(145deg,rgba(34,211,238,.3),rgba(99,102,241,.18));filter:blur(2px)}
+.welcome-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--dash-border);border-radius:999px;background:rgba(255,255,255,.22);color:var(--dash-muted);font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.welcome-kicker::before{content:"";width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.12)}
+.welcome-title{position:relative;z-index:1;max-width:700px;margin:20px 0 10px;color:var(--dash-fg);font-size:clamp(30px,3.5vw,52px);font-weight:750;line-height:1.02;letter-spacing:-.045em}
+.welcome-copy{position:relative;z-index:1;max-width:660px;margin:0;color:var(--dash-muted);font-size:15px;line-height:1.55}
+.welcome-actions{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.primary-action,.secondary-action{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 17px;border-radius:15px;font-size:13px;font-weight:850;text-decoration:none;transition:transform .22s ease,box-shadow .22s ease,background .22s ease}
+.primary-action{color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:inset 0 1px rgba(255,255,255,.35),0 12px 24px rgba(79,70,229,.24)}
+.secondary-action{color:var(--dash-fg);border:1px solid var(--dash-border);background:rgba(255,255,255,.2)}
+.primary-action:hover,.secondary-action:hover{transform:translateY(-3px)}
+.case-orbit{display:grid;place-items:center;min-height:210px;border-radius:30px;overflow:hidden}
+.orbit-ring{position:relative;display:grid;place-items:center;width:154px;height:154px;border-radius:50%;background:conic-gradient(from 15deg,#22d3ee,#6366f1 44%,#a855f7 72%,rgba(255,255,255,.2) 72%);box-shadow:0 20px 44px rgba(79,70,229,.22);animation:orbitBreathe 4s ease-in-out infinite}
+.orbit-ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:linear-gradient(145deg,var(--dash-glass-strong),var(--dash-glass));box-shadow:inset 0 1px rgba(255,255,255,.7)}
+.orbit-content{position:relative;text-align:center}.orbit-content strong{display:block;color:var(--dash-fg);font-size:46px;line-height:.9;letter-spacing:-.06em}.orbit-content span{display:block;margin-top:9px;color:var(--dash-muted);font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.orbit-note{position:absolute;right:18px;bottom:17px;left:18px;color:var(--dash-muted);font-size:11px;text-align:center}
+.section-heading{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:18px}.section-heading .actions-title{margin:0}.section-note{color:var(--dash-muted);font-size:12px}
+.kpis-area{padding-top:18px}.kpi-card{isolation:isolate;min-height:135px}
+.kpi-card::before{content:"";position:absolute;z-index:-1;width:95px;height:95px;right:-35px;bottom:-40px;border-radius:50%;background:var(--kpi-glow,rgba(59,130,246,.14));filter:blur(5px);transition:transform .35s ease}.kpi-card:hover::before{transform:scale(1.28)}
+.kpi-card:nth-child(1){--kpi-glow:rgba(14,165,233,.2)}.kpi-resuelto{--kpi-glow:rgba(16,185,129,.22)}.kpi-pendiente{--kpi-glow:rgba(244,63,94,.18)}.kpi-dil{--kpi-glow:rgba(139,92,246,.22)}
+.actions-area{border-top:0;padding-top:24px}.tiles-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tile{position:relative;min-height:82px;padding-right:48px;overflow:hidden}
+.tile::after{content:"\2192";position:absolute;right:18px;top:50%;display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--dash-border);border-radius:10px;background:rgba(255,255,255,.18);color:var(--dash-fg);font-size:15px;transform:translateY(-50%);transition:transform .22s ease,background .22s ease}.tile:hover::after{transform:translate(4px,-50%);background:rgba(255,255,255,.36)}
+.footer{display:flex;justify-content:space-between;gap:12px}.footer::after{content:"Sistema operativo";color:#22a06b;font-weight:800}
+html[data-theme-resolved="dark"] .welcome-panel,html[data-theme-resolved="dark"] .case-orbit{background:linear-gradient(135deg,rgba(30,41,59,.7),rgba(15,23,42,.38));box-shadow:inset 0 1px rgba(255,255,255,.1),0 18px 45px rgba(0,0,0,.18)}
+html[data-theme-resolved="dark"] .welcome-kicker,html[data-theme-resolved="dark"] .secondary-action{background:rgba(15,23,42,.3)}
+@keyframes orbitBreathe{0%,100%{transform:scale(.97) rotate(-1deg)}50%{transform:scale(1.03) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.orbit-ring{animation:none}.tile,.primary-action,.secondary-action{transition:none}}
+@media(max-width:1100px){.command-intro{grid-template-columns:1fr}.case-orbit{min-height:190px}.tiles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.command-intro{padding:22px 16px 8px}.welcome-panel{padding:26px 22px}.welcome-actions{display:grid}.primary-action,.secondary-action{justify-content:center}.section-heading{align-items:start;flex-direction:column;gap:5px}.kpis-row,.tiles-grid{grid-template-columns:1fr}.footer::after{display:none}}
 </style>
+<link rel="stylesheet" href="assets/dashboard-modern.css?v=20260828-1">
 </head>
-<body>
-<div class="wrap">
+<body class="modern-dashboard-body">
+<div class="dashboard-shell">
+  <main class="dashboard-main">
+    <header class="modern-topbar">
+      <div>
+        <span class="today-label" id="dashboardDate">Panel general</span>
+        <h1>Buenos dias, <?= htmlspecialchars($yo['nombre'] ?? $yo['email'], ENT_QUOTES, 'UTF-8') ?></h1>
+      </div>
+      <div class="topbar-actions">
+        <a class="topbar-search" href="accidente_listar.php" aria-label="Buscar accidentes"><span>⌕</span> Buscar expediente</a>
+        <a class="profile-chip" href="logout.php" title="Cerrar sesion"><span class="profile-avatar"><?= htmlspecialchars(mb_strtoupper(mb_substr($yo['nombre'] ?? $yo['email'], 0, 1)), ENT_QUOTES, 'UTF-8') ?></span><span class="profile-copy"><strong><?= htmlspecialchars($yo['nombre'] ?? $yo['email'], ENT_QUOTES, 'UTF-8') ?></strong><small>Cerrar sesion</small></span></a>
+      </div>
+    </header>
+
+    <section class="dashboard-content">
+      <section class="metrics-section" aria-labelledby="metrics-title">
+        <div class="modern-section-heading"><div><span>Vista general</span><h2 id="metrics-title">Estado de expedientes</h2></div><a href="accidente_listar.php">Ver detalle →</a></div>
+        <div class="modern-metrics-grid">
+          <article class="modern-metric metric-total"><div class="metric-top"><span class="metric-icon">◫</span><small>Total</small><b>100%</b></div><strong><?= number_format($tot) ?></strong><p>Accidentes registrados</p><div class="metric-line"><i style="width:100%"></i></div></article>
+          <article class="modern-metric metric-resolved"><div class="metric-top"><span class="metric-icon">✓</span><small>Resueltos</small><b><?= $pct_res ?>%</b></div><strong><?= number_format($res) ?></strong><p>Casos finalizados</p><div class="metric-line"><i style="width:<?= $pct_res ?>%"></i></div></article>
+          <article class="modern-metric metric-pending"><div class="metric-top"><span class="metric-icon">◷</span><small>Pendientes</small><b><?= $pct_pen ?>%</b></div><strong><?= number_format($pen) ?></strong><p>Requieren seguimiento</p><div class="metric-line"><i style="width:<?= $pct_pen ?>%"></i></div></article>
+          <article class="modern-metric metric-process"><div class="metric-top"><span class="metric-icon">↗</span><small>Diligencias</small><b><?= $pct_dil ?>%</b></div><strong><?= number_format($dil) ?></strong><p>En proceso operativo</p><div class="metric-line"><i style="width:<?= $pct_dil ?>%"></i></div></article>
+        </div>
+      </section>
+
+      <section class="quick-section" aria-labelledby="quick-title">
+        <div class="modern-section-heading"><div><span>Herramientas</span><h2 id="quick-title">Accesos rapidos</h2></div><small>Selecciona un modulo para comenzar</small></div>
+        <div class="modern-quick-grid">
+          <a class="quick-card quick-featured" href="accidente_listar.php"><span class="quick-icon">◫</span><div><strong>Lista de accidentes</strong><small>Consulta y gestiona todos los casos</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="persona_listar.php"><span class="quick-icon mint">♙</span><div><strong>Personas</strong><small>DNI, CE y pasaportes</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="vehiculo_listar.php"><span class="quick-icon cyan">▰</span><div><strong>Vehiculos</strong><small>Registro vehicular</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="oficios_listar.php"><span class="quick-icon violet">◇</span><div><strong>Oficios</strong><small>Registro y consulta</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="comisarias_listar.php"><span class="quick-icon rose">▥</span><div><strong>Comisarias</strong><small>Administracion</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="oficio_entidades_listar.php"><span class="quick-icon amber">▤</span><div><strong>Entidades</strong><small>Directorio y contactos</small></div><span class="quick-arrow">→</span></a>
+          <a class="quick-card" href="enlaces_interes_listar.php"><span class="quick-icon blue">↗</span><div><strong>Enlaces de interes</strong><small>Accesos y consultas</small></div><span class="quick-arrow">→</span></a>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="wrap legacy-dashboard" hidden>
   <div class="container">
     <div class="card" role="region" aria-label="Panel UIAT Norte">
 
@@ -347,8 +422,25 @@ html[data-theme-resolved="dark"] .card{background:
         </div>
       </div>
 
+      <section class="command-intro" aria-labelledby="welcome-title">
+        <div class="welcome-panel">
+          <div class="welcome-kicker">Centro de operaciones</div>
+          <h1 class="welcome-title" id="welcome-title">Todo bajo control, <?= htmlspecialchars($yo['nombre'] ?? $yo['email'], ENT_QUOTES, 'UTF-8') ?>.</h1>
+          <p class="welcome-copy">Gestiona accidentes, personas, vehiculos y documentos desde un solo espacio claro y agil.</p>
+          <div class="welcome-actions">
+            <a class="primary-action" href="accidente_listar.php"><span aria-hidden="true">+</span> Gestionar accidentes</a>
+            <a class="secondary-action" href="oficios_listar.php">Consultar oficios <span aria-hidden="true">&#8594;</span></a>
+          </div>
+        </div>
+        <div class="case-orbit" aria-label="<?= number_format($tot) ?> accidentes registrados">
+          <div class="orbit-ring" aria-hidden="true"><div class="orbit-content"><strong><?= number_format($tot) ?></strong><span>casos totales</span></div></div>
+          <div class="orbit-note">Resumen actualizado de la base de datos</div>
+        </div>
+      </section>
+
       <!-- KPIs -->
       <div class="kpis-area">
+        <div class="section-heading"><div class="actions-title">Estado de los casos</div><div class="section-note">Distribucion general de accidentes registrados</div></div>
         <div class="kpis-row" role="list">
           <div class="kpi-card" role="listitem" aria-label="Total Accidentes">
             <div class="kpi-label">Total Accidentes</div>
@@ -393,7 +485,7 @@ html[data-theme-resolved="dark"] .card{background:
 
       <!-- Actions (tiles) - Lista de Accidentes first and styled gold; personas/vehículos green; others garnet -->
       <div class="actions-area">
-        <div class="actions-title">Acciones rápidas</div>
+        <div class="section-heading"><div class="actions-title">Acciones rápidas</div><div class="section-note">Accesos frecuentes del sistema</div></div>
         <div class="tiles-grid" role="list">
           <!-- 1) Lista de Accidentes — dorado -->
           <a class="tile tile-gold" href="accidente_listar.php" role="listitem" aria-label="Lista de Accidentes">
