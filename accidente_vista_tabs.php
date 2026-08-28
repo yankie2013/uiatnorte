@@ -5626,6 +5626,8 @@ include __DIR__ . '/sidebar.php';
   }
   .btn-shell.btn-citacion{border-color:#60a5fa;background:linear-gradient(180deg,#f8fbff 0%,#edf5ff 100%);box-shadow:0 0 0 1px rgba(96,165,250,.18),0 8px 18px rgba(59,130,246,.12);color:#1d4ed8}
   .btn-shell.btn-citacion:hover{border-color:#3b82f6;background:#e0efff;color:#1e40af}
+  .btn-shell.btn-mtc-license{border-color:#38bdf8;background:linear-gradient(180deg,#f0f9ff 0%,#e0f2fe 100%);color:#0369a1;box-shadow:0 0 0 1px rgba(56,189,248,.15),0 7px 17px rgba(14,165,233,.12)}
+  .btn-shell.btn-mtc-license:hover{transform:translateY(-1px);border-color:#0284c7;background:#bae6fd;color:#075985;box-shadow:0 0 0 1px rgba(14,165,233,.24),0 10px 20px rgba(2,132,199,.18)}
   .topbar .case-command-button{min-height:37px;padding:8px 12px;border-radius:11px;font-size:10.5px;letter-spacing:.025em;box-shadow:0 6px 14px rgba(30,41,59,.08);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}
   .topbar .case-command-button:hover{transform:translateY(-1px)}
   .topbar .case-doc-trigger{border-color:#b6a5ef;background:linear-gradient(180deg,#fbf9ff 0%,#f0ebff 100%);color:#6436b3;box-shadow:0 6px 14px rgba(109,40,217,.10)}
@@ -9095,6 +9097,7 @@ include __DIR__ . '/sidebar.php';
                   <div class="inner-panel">
                     <div class="record-actions" style="margin-top:0">
                       <a class="btn-shell js-inline-open" href="doc_lc_nuevo.php?persona_id=<?= (int) $persona['persona_id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="workbench-<?= (int) $persona['involucrado_id'] ?>" data-frame="workbench-frame-<?= (int) $persona['involucrado_id'] ?>" data-title="Licencia de conducir">+ Nueva licencia</a>
+                      <a class="btn-shell btn-mtc-license" href="https://licencias.mtc.gob.pe/#/search" target="_blank" rel="noopener noreferrer" title="Consultar licencia de conducir en el MTC"><span aria-hidden="true">↗</span> Consultar MTC</a>
                     </div>
                     <?php if (!$extras['lc']): ?>
                       <div class="empty-state">No hay licencias registradas para esta persona.</div>
