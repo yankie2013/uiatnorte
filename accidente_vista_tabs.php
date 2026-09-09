@@ -5344,6 +5344,13 @@ if (!empty($A['fecha_accidente']) && strtotime((string) $A['fecha_accidente'])) 
 }
 $caseSummaryDistrict = compact_text((string) ($A['dist_nom'] ?? ($A['distrito_nombre'] ?? '')));
 $caseSummaryJurisdiction = compact_text((string) ($summaryAccidentRecord['comisaria_nombre'] ?? ''));
+$caseHeaderDate = '—';
+if (!empty($A['fecha_accidente']) && ($caseHeaderTimestamp = strtotime((string) $A['fecha_accidente'])) !== false) {
+    $caseHeaderMonths = [1 => 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    $caseHeaderDate = date('d', $caseHeaderTimestamp) . ' ' . $caseHeaderMonths[(int) date('n', $caseHeaderTimestamp)] . ' ' . date('Y', $caseHeaderTimestamp);
+}
+$caseHeaderStatusKey = mb_strtolower(trim((string) ($A['estado'] ?? '')), 'UTF-8');
+$caseHeaderStatusClass = $caseHeaderStatusKey === 'pendiente' ? 'status-pendiente' : ($caseHeaderStatusKey === 'resuelto' ? 'status-resuelto' : ($caseHeaderStatusKey === 'con diligencias' ? 'status-diligencias' : ''));
 $caseSummaryParticipantRows = [];
 $caseSummaryVehicleText = static function (array $vehicle): string {
     $parts = [];
@@ -5506,6 +5513,13 @@ include __DIR__ . '/sidebar.php';
     box-shadow:0 14px 34px rgba(35,58,94,.10),inset 0 1px 0 rgba(255,255,255,.9);backdrop-filter:blur(10px);
   }
   .topbar::before{content:"";position:absolute;inset:0 18px auto;height:3px;border-radius:0 0 999px 999px;background:linear-gradient(90deg,#0ea5a0 0%,#4f86e8 38%,#8b5cf6 68%,#e0a829 100%);opacity:.78}
+  .accident-case-header{display:grid;grid-template-columns:22fr 28fr 25fr 25fr;min-height:188px;margin:0 0 12px;border:1px solid #cad8e9;border-radius:17px;background:linear-gradient(135deg,#fff 0%,#fbfdff 58%,#f3f7fc 100%);box-shadow:0 8px 24px rgba(35,58,94,.08);overflow:hidden}
+  .accident-case-block{display:flex;flex-direction:column;justify-content:center;gap:13px;min-width:0;padding:16px 18px}.accident-case-block+.accident-case-block{border-left:1px solid #dbe4ef}
+  .accident-case-item{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:start;gap:11px;min-width:0}.accident-case-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#edf4fd;color:#4775ad}.accident-case-icon svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .accident-case-icon--modal{color:#172a48;background:#eef2f7}.accident-case-icon--place{color:#ed3457;background:#fff0f3}.accident-case-icon--date{color:#30a973;background:#edfbf4}.accident-case-icon--direction{color:#8751d1;background:#f5efff}.accident-case-icon--record{width:58px;height:58px;color:#3d6fa9;background:linear-gradient(145deg,#f4f8fd,#e8f0fa);box-shadow:0 7px 18px rgba(55,91,136,.10)}.accident-case-icon--record svg{width:31px;height:31px}
+  .accident-case-eyebrow{margin:0 0 3px;color:#526b8a;font-size:10px;font-weight:900;letter-spacing:.08em;line-height:1.2;text-transform:uppercase}.accident-case-value{margin:0;color:#102344;font-size:14px;font-weight:800;line-height:1.28;overflow-wrap:anywhere}.accident-case-subvalue{margin:3px 0 0;color:#263b59;font-size:11px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+  .accident-case-ident{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:start;gap:13px}.accident-case-type{margin:0 0 8px;color:#355c8d;font-size:11px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.accident-case-sidpol-label{margin:0;color:#102344;font-size:15px;font-weight:900;line-height:1}.accident-case-sidpol{max-width:100%;margin:4px 0 0;color:#081a37;font-size:clamp(25px,2.35vw,34px);font-weight:950;letter-spacing:-.035em;line-height:1;overflow-wrap:anywhere}.accident-case-station{margin:14px 0 0;padding-top:11px;border-top:1px solid #cfdbe9;color:#263b59;font-size:12px;font-weight:800;line-height:1.3}
+  .accident-case-status{margin-bottom:1px}.accident-case-status .quick-status-select{display:block;width:100%;min-height:36px;border-radius:10px;font-size:12px;text-align:center;text-align-last:center}.accident-case-meta,.accident-case-authority{display:grid;grid-template-columns:minmax(108px,.8fr) 9px minmax(0,1.2fr);gap:4px 7px;padding:8px 10px;border:1px solid #dce5f0;border-radius:10px;background:rgba(244,248,253,.8);font-size:10.5px;line-height:1.25}.accident-case-meta dt{margin:0;color:#415a79;font-weight:900;text-transform:uppercase}.accident-case-meta dd{margin:0;color:#263b59;font-weight:800;overflow-wrap:anywhere}.accident-case-authority strong{color:#415a79;font-weight:900;text-transform:uppercase}.accident-case-authority span{color:#263b59;font-weight:800;overflow-wrap:anywhere}.accident-case-meta .sep,.accident-case-authority .sep{color:#59708d;font-weight:900}
   .title-wrap{display:grid;grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;gap:5px 14px;min-width:0}
   .case-identity-row{grid-column:1/-1;display:flex;align-items:center;gap:9px;min-width:0;margin-bottom:2px}
   .case-identity-icon{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border:1px solid #bdd3ee;border-radius:11px;background:linear-gradient(145deg,#eff7ff,#dfeeff);font-size:17px;box-shadow:0 6px 14px rgba(37,99,235,.10)}
@@ -7113,6 +7127,7 @@ include __DIR__ . '/sidebar.php';
   html[data-theme-resolved="dark"] .case-manifest-form label{color:#cbd5e1}
   html[data-theme-resolved="dark"] .case-manifest-form select{background:#0f172a;border-color:#475569;color:#e5edf8}
   html[data-theme-resolved="dark"] .topbar{background:rgba(15,23,42,.82);border-color:#2a3852;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+  html[data-theme-resolved="dark"] .accident-case-header{border-color:#2b3b55;background:linear-gradient(135deg,#111b2e 0%,#0f172a 62%,#121e33 100%);box-shadow:0 12px 28px rgba(0,0,0,.25)}html[data-theme-resolved="dark"] .accident-case-block+.accident-case-block{border-left-color:#2b3b55}html[data-theme-resolved="dark"] .accident-case-eyebrow{color:#90a7c3}html[data-theme-resolved="dark"] .accident-case-value,html[data-theme-resolved="dark"] .accident-case-sidpol-label,html[data-theme-resolved="dark"] .accident-case-sidpol{color:#eef5ff}html[data-theme-resolved="dark"] .accident-case-subvalue,html[data-theme-resolved="dark"] .accident-case-station{color:#c4d1e2}html[data-theme-resolved="dark"] .accident-case-station{border-top-color:#33445e}html[data-theme-resolved="dark"] .accident-case-icon{background:#18263d}html[data-theme-resolved="dark"] .accident-case-meta,html[data-theme-resolved="dark"] .accident-case-authority{border-color:#2c3d57;background:rgba(18,29,49,.85)}html[data-theme-resolved="dark"] .accident-case-meta dt,html[data-theme-resolved="dark"] .accident-case-authority strong{color:#9eb1c9}html[data-theme-resolved="dark"] .accident-case-meta dd,html[data-theme-resolved="dark"] .accident-case-authority span{color:#d8e2ef}
   html[data-theme-resolved="dark"] .case-identity-icon{background:#17243a;border-color:#365071}
   html[data-theme-resolved="dark"] .case-identity-copy strong{color:#e5edf8}
   html[data-theme-resolved="dark"] .case-identity-copy span,
@@ -7313,6 +7328,11 @@ include __DIR__ . '/sidebar.php';
   }
   @media (max-width:1200px){
     .page{max-width:1200px}
+    .accident-case-header{grid-template-columns:1fr 1fr;min-height:0}
+    .accident-case-block{min-height:180px}
+    .accident-case-block:nth-child(3){border-left:0;border-top:1px solid #dbe4ef}
+    .accident-case-block:nth-child(4){border-top:1px solid #dbe4ef}
+    html[data-theme-resolved="dark"] .accident-case-block:nth-child(3),html[data-theme-resolved="dark"] .accident-case-block:nth-child(4){border-top-color:#2b3b55}
     .field-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
   @media (max-width:980px){
@@ -7341,6 +7361,7 @@ include __DIR__ . '/sidebar.php';
     .diligencia-inline-row{grid-template-columns:1fr}
   }
   @media (max-width:720px){
+    .accident-case-header{grid-template-columns:1fr;min-height:0}.accident-case-block{min-height:0;padding:14px}.accident-case-block+.accident-case-block{border-left:0;border-top:1px solid #dbe4ef}.accident-case-sidpol{font-size:30px}html[data-theme-resolved="dark"] .accident-case-block+.accident-case-block{border-top-color:#2b3b55}
     .page{padding:0 8px 16px}
     .topbar{margin-bottom:8px}
     .title-wrap{grid-template-columns:1fr}
@@ -7408,6 +7429,13 @@ include __DIR__ . '/sidebar.php';
     .vehicle-story-row{grid-template-columns:minmax(110px,1fr) 14px minmax(0,1fr);gap:6px}
     .vehicle-story-key,.vehicle-story-sep,.vehicle-story-value{font-size:14px}
     .vehicle-docs-story-title,.vehicle-docs-story-text{font-size:14px}
+  }
+  @media (max-width:440px){
+    .accident-case-ident{grid-template-columns:46px minmax(0,1fr);gap:10px}
+    .accident-case-icon--record{width:46px;height:46px}.accident-case-icon--record svg{width:27px;height:27px}
+    .accident-case-item{grid-template-columns:36px minmax(0,1fr);gap:9px}.accident-case-icon{width:36px;height:36px}.accident-case-icon svg{width:22px;height:22px}
+    .accident-case-sidpol{font-size:26px}
+    .accident-case-meta,.accident-case-authority{grid-template-columns:minmax(92px,.72fr) 7px minmax(0,1.28fr);padding:8px;font-size:10px}
   }
   @media (prefers-reduced-motion: reduce){
     .tab-panel.driver-panel::before{animation:none}
@@ -7483,6 +7511,24 @@ include __DIR__ . '/sidebar.php';
       <a class="btn-shell" href="accidente_listar.php"><span aria-hidden="true">☰</span>Listado</a>
     </div>
   </div>
+
+  <section class="accident-case-header" aria-label="Resumen del accidente">
+    <div class="accident-case-block"><div class="accident-case-ident"><span class="accident-case-icon accident-case-icon--record" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg></span><div><p class="accident-case-type">Siniestro de tránsito</p><p class="accident-case-sidpol-label">SIDPOL</p><p class="accident-case-sidpol"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></p><p class="accident-case-station"><?= h(compact_text((string) ($A['comisaria_nom'] ?? '')) ?: '—') ?></p></div></div></div>
+    <div class="accident-case-block">
+      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--modal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16v-4l2-4h5l2 4v4M12 16v-4l2-4h5l2 4v4M5 16h5M14 16h5"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/><path d="m10 5 2-2 2 2M12 3v4"/></svg></span><div><p class="accident-case-eyebrow">Modalidad</p><p class="accident-case-value"><?= h($modsConcat !== '' ? $modsConcat : '—') ?></p></div></div>
+      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--modal" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></svg></span><div><p class="accident-case-eyebrow">Consecuencias</p><p class="accident-case-value"><?= h($consConcat !== '' ? $consConcat : '—') ?></p></div></div>
+    </div>
+    <div class="accident-case-block">
+      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--place" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><p class="accident-case-eyebrow">Lugar</p><p class="accident-case-value"><?= h(compact_text((string) ($A['lugar'] ?? '')) ?: '—') ?></p><p class="accident-case-subvalue"><?= h($ubicacion !== '' ? $ubicacion : '—') ?></p></div></div>
+      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--date" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg></span><div><p class="accident-case-eyebrow">Fecha y hora del accidente</p><p class="accident-case-value"><?= h($caseHeaderDate) ?> · <?= h($caseSummaryTime) ?> h</p></div></div>
+      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--direction" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8z"/></svg></span><div><p class="accident-case-eyebrow">Sentido / dirección</p><p class="accident-case-value"><?= h(compact_text((string) ($A['sentido'] ?? '')) ?: '—') ?></p></div></div>
+    </div>
+    <div class="accident-case-block">
+      <div class="accident-case-status"><select class="quick-status-select <?= h($caseHeaderStatusClass) ?> js-quick-status" aria-label="Estado del accidente" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>"><?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?><option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option><?php endforeach; ?></select></div>
+      <dl class="accident-case-meta"><dt>N° informe policial</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['nro_informe_policial'] ?? '')) ?: '—') ?></dd><dt>Carpeta fiscal N°</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['comunicacion_carpeta_nro'] ?? '')) ?: '—') ?></dd><dt>Decreto</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['comunicacion_decreto'] ?? '')) ?: '—') ?></dd></dl>
+      <div class="accident-case-authority"><strong>Fiscalía</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscalia_nom'] ?? '')) ?: '—') ?></span><strong>Fiscal a cargo</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscal_nom'] ?? '')) ?: '—') ?></span></div>
+    </div>
+  </section>
 
   <div class="case-summary-modal" id="case-summary-modal" role="dialog" aria-modal="true" aria-labelledby="case-summary-title" hidden>
     <div class="case-summary-dialog">
@@ -12290,6 +12336,15 @@ include __DIR__ . '/sidebar.php';
           }
 
           select.dataset.prev = nextValue;
+          document.querySelectorAll('.js-quick-status').forEach((peer) => {
+            if (peer === select) return;
+            peer.value = nextValue;
+            peer.dataset.prev = nextValue;
+            peer.classList.remove('status-pendiente', 'status-resuelto', 'status-diligencias');
+            if (nextValue.toLowerCase() === 'pendiente') peer.classList.add('status-pendiente');
+            else if (nextValue.toLowerCase() === 'resuelto') peer.classList.add('status-resuelto');
+            else if (nextValue.toLowerCase() === 'con diligencias') peer.classList.add('status-diligencias');
+          });
         } catch (error) {
           select.value = previous;
           paintStatus();
