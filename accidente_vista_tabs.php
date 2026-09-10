@@ -5506,6 +5506,7 @@ include __DIR__ . '/sidebar.php';
   }
   body{background:linear-gradient(180deg,var(--page-grad-start) 0%,var(--page-grad-end) 100%);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
   .page{max-width:1380px;margin:10px auto;padding:0 10px 14px}
+  .case-sticky-header{position:sticky;top:0;z-index:1000;display:flow-root;background:var(--page-grad-start)}
   .topbar{
     position:relative;z-index:1000;isolation:isolate;overflow:visible;
     display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:18px;margin-bottom:12px;padding:13px 15px;
@@ -7444,6 +7445,7 @@ include __DIR__ . '/sidebar.php';
 </head>
 <body>
 <div class="page">
+  <div class="case-sticky-header">
   <div class="topbar">
     <div class="title-wrap">
       <div class="case-identity-row">
@@ -7529,6 +7531,7 @@ include __DIR__ . '/sidebar.php';
       <div class="accident-case-authority"><strong>Fiscalía</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscalia_nom'] ?? '')) ?: '—') ?></span><strong>Fiscal a cargo</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscal_nom'] ?? '')) ?: '—') ?></span></div>
     </div>
   </section>
+  </div>
 
   <div class="case-summary-modal" id="case-summary-modal" role="dialog" aria-modal="true" aria-labelledby="case-summary-title" hidden>
     <div class="case-summary-dialog">
