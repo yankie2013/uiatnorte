@@ -7442,6 +7442,7 @@ include __DIR__ . '/sidebar.php';
     .tab-panel.driver-panel::before{animation:none}
   }
 </style>
+<link rel="stylesheet" href="assets/css/accidente-header-participantes.css?v=<?= filemtime(__DIR__ . '/assets/css/accidente-header-participantes.css') ?>">
 </head>
 <body>
 <div class="page">
@@ -7449,16 +7450,21 @@ include __DIR__ . '/sidebar.php';
   <div class="topbar">
     <div class="title-wrap">
       <div class="case-identity-row">
-        <span class="case-identity-icon" aria-hidden="true">🚨</span>
-        <div class="case-identity-copy">
-          <span>Expediente del accidente</span>
-          <strong>Accidente #<?= (int) $accidente_id ?></strong>
-        </div>
         <button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)">
           <span>SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></span>
           <span class="sidpol-summary-sep">·</span>
           <span>Folder <?= h($caseSummaryFolder !== '' ? $caseSummaryFolder : '—') ?></span>
         </button>
+        <div class="case-status-switch" role="group" aria-label="Cambiar estado del accidente">
+<select hidden tabindex="-1" class="quick-status-select <?= h($caseHeaderStatusClass) ?> js-quick-status" aria-label="Estado del accidente" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>"><?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?><option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option><?php endforeach; ?></select>
+          <button type="button" class="case-status-current" data-state="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>" aria-expanded="false" aria-controls="case-status-options" title="Cambiar estado del accidente"><?= h((string) ($A['estado'] ?? 'Pendiente')) ?></button>
+          <div class="case-status-menu" id="case-status-options" hidden>
+          <?php foreach (['Pendiente', 'Con diligencias', 'Resuelto'] as $headerStatusOption): ?>
+            <button type="button" class="case-status-option" data-case-status="<?= h($headerStatusOption) ?>" aria-pressed="<?= (string) ($A['estado'] ?? 'Pendiente') === $headerStatusOption ? 'true' : 'false' ?>"><?= h($headerStatusOption) ?></button>
+          <?php endforeach; ?>
+          </div>
+        </div>
+        <span class="case-status-feedback" role="status" aria-live="polite"></span>
       </div>
       <div class="case-command-label">Acciones rápidas</div>
       <div class="title-heading-row">
@@ -7515,21 +7521,75 @@ include __DIR__ . '/sidebar.php';
   </div>
 
   <section class="accident-case-header" aria-label="Resumen del accidente">
-    <div class="accident-case-block"><div class="accident-case-ident"><span class="accident-case-icon accident-case-icon--record" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg></span><div><p class="accident-case-type">Siniestro de tránsito</p><p class="accident-case-sidpol-label">SIDPOL</p><p class="accident-case-sidpol"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></p><p class="accident-case-station"><?= h(compact_text((string) ($A['comisaria_nom'] ?? '')) ?: '—') ?></p></div></div></div>
-    <div class="accident-case-block">
-      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--modal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16v-4l2-4h5l2 4v4M12 16v-4l2-4h5l2 4v4M5 16h5M14 16h5"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/><path d="m10 5 2-2 2 2M12 3v4"/></svg></span><div><p class="accident-case-eyebrow">Modalidad</p><p class="accident-case-value"><?= h($modsConcat !== '' ? $modsConcat : '—') ?></p></div></div>
-      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--modal" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></svg></span><div><p class="accident-case-eyebrow">Consecuencias</p><p class="accident-case-value"><?= h($consConcat !== '' ? $consConcat : '—') ?></p></div></div>
+    <div class="case-header-facts case-header-facts-list">
+      <div class="case-facts-titlebar">
+        <h2 class="case-facts-heading">Datos generales del accidente</h2>
+        <button type="button" class="case-facts-edit-chip js-header-edit-general" title="Editar datos generales del accidente"><span aria-hidden="true">✎</span> Editar</button>
+      </div>
+      <dl class="case-facts-topline">
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📁</span><span>N° folder</span></dt><dd><?= fmt($A['folder'] ?? '') ?></dd></div>
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📄</span><span>N° informe policial</span></dt><dd><?= fmt($A['nro_informe_policial'] ?? '') ?></dd></div>
+      </dl>
+      <div class="case-facts-scroll" role="region" aria-label="Lista de datos generales del accidente">
+      <section class="case-facts-card case-facts-card--combined">
+        <div class="case-facts-combined-grid">
+          <div class="case-facts-combined-col case-facts-combined-col--event">
+            <h3 class="case-facts-card-title"><span aria-hidden="true">🚘</span>Características del accidente</h3>
+            <dl class="case-facts-rows case-facts-section">
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16v-4l2-4h5l2 4v4M12 16v-4l2-4h5l2 4v4M10 5l2-2 2 2M12 3v4"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg></span><span>Modalidad</span></dt><dd><?= h($modsConcat !== '' ? $modsConcat : '—') ?></dd></div>
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></svg></span><span>Consecuencias</span></dt><dd><?= h($consConcat !== '' ? $consConcat : '—') ?></dd></div>
+            </dl>
+          </div>
+          <div class="case-facts-combined-col case-facts-combined-col--dates">
+            <h3 class="case-facts-card-title"><span aria-hidden="true">📅</span>Fechas y actuaciones</h3>
+            <dl class="case-facts-rows case-facts-section">
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg></span><span>Fecha y hora del accidente</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></dd></div>
+              <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📞</span><span>Fecha de comunicación</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></dd></div>
+              <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🚓</span><span>Fecha de intervención</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></dd></div>
+            </dl>
+          </div>
+        </div>
+      </section>
+      <section class="case-facts-card case-facts-card--location">
+        <h3 class="case-facts-card-title"><span aria-hidden="true">📍</span>Ubicación y dirección</h3>
+        <dl class="case-facts-rows case-facts-section case-facts-section--location">
+        <?php
+          $mapsTargetUrl = $googleMapsUrl !== '' ? $googleMapsUrl : (!empty($A['lugar']) ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim((string) ($A['lugar'] ?? '') . ' ' . $ubicacion)) : '');
+        ?>
+        <div class="case-facts-row case-facts-row--featured case-facts-row--place"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span>Lugar</span><?php if ($mapsTargetUrl !== ''): ?><a href="<?= h($mapsTargetUrl) ?>" target="_blank" rel="noopener" class="case-maps-pill" title="Ver en Google Maps"><span>Ver en Maps</span> <span aria-hidden="true">↗</span></a><?php endif; ?></dt><dd><?= fmt($A['lugar'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🗺️</span><span>Ubicación</span></dt><dd><?= $ubicacion !== '' ? h($ubicacion) : '—' ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🏢</span><span>Jurisdicción</span></dt><dd><?= fmt($A['comisaria_nom'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📌</span><span>Referencia</span></dt><dd><?= fmt($A['referencia'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8z"/></svg></span><span>Sentido / dirección</span></dt><dd><?= fmt($A['sentido'] ?? '') ?></dd></div>
+      </dl>
+      </section>
+      <section class="case-facts-card case-facts-card--contact">
+        <h3 class="case-facts-card-title"><span aria-hidden="true">📞</span>Comunicación</h3>
+        <dl class="case-facts-rows case-facts-section case-facts-section--contact">
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">👤</span><span>Comunicante</span></dt><dd><?= fmt($A['comunicante_nombre'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">☎️</span><span>Teléfono del comunicante</span></dt><dd><?= fmt($A['comunicante_telefono'] ?? '') ?></dd></div>
+      </dl>
+      </section>
+      <section class="case-facts-card case-facts-card--authority">
+        <h3 class="case-facts-card-title"><span aria-hidden="true">⚖️</span>Fiscalía y documentación</h3>
+        <dl class="case-facts-rows case-facts-section case-facts-section--authority">
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">⚖️</span><span>Fiscalía</span></dt><dd><?= fmt($A['fiscalia_nom'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">👨‍⚖️</span><span>Fiscal a cargo</span></dt><dd><?= fmt($A['fiscal_nom'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📜</span><span>Decreto</span></dt><dd><?= fmt($A['comunicacion_decreto'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">✉️</span><span>Oficio</span></dt><dd><?= fmt($A['comunicacion_oficio'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🗂️</span><span>Carpeta fiscal N°</span></dt><dd><?= fmt($A['comunicacion_carpeta_nro'] ?? '') ?></dd></div>
+      </dl>
+      </section>
+      <section class="case-facts-card case-facts-card--sequence">
+        <h3 class="case-facts-card-title"><span aria-hidden="true">🧭</span>Secuencia de eventos</h3>
+        <dl class="case-facts-rows case-facts-section case-facts-section--sequence">
+        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🔢</span><span>Secuencia de eventos</span></dt><dd><?= fmt($A['secuencia'] ?? '') ?></dd></div>
+      </dl>
+      </section>
+      </div>
     </div>
-    <div class="accident-case-block">
-      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--place" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><p class="accident-case-eyebrow">Lugar</p><p class="accident-case-value"><?= h(compact_text((string) ($A['lugar'] ?? '')) ?: '—') ?></p><p class="accident-case-subvalue"><?= h($ubicacion !== '' ? $ubicacion : '—') ?></p></div></div>
-      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--date" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg></span><div><p class="accident-case-eyebrow">Fecha y hora del accidente</p><p class="accident-case-value"><?= h($caseHeaderDate) ?> · <?= h($caseSummaryTime) ?> h</p></div></div>
-      <div class="accident-case-item"><span class="accident-case-icon accident-case-icon--direction" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8z"/></svg></span><div><p class="accident-case-eyebrow">Sentido / dirección</p><p class="accident-case-value"><?= h(compact_text((string) ($A['sentido'] ?? '')) ?: '—') ?></p></div></div>
-    </div>
-    <div class="accident-case-block">
-      <div class="accident-case-status"><select class="quick-status-select <?= h($caseHeaderStatusClass) ?> js-quick-status" aria-label="Estado del accidente" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>"><?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?><option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option><?php endforeach; ?></select></div>
-      <dl class="accident-case-meta"><dt>N° informe policial</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['nro_informe_policial'] ?? '')) ?: '—') ?></dd><dt>Carpeta fiscal N°</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['comunicacion_carpeta_nro'] ?? '')) ?: '—') ?></dd><dt>Decreto</dt><span class="sep">:</span><dd><?= h(compact_text((string) ($A['comunicacion_decreto'] ?? '')) ?: '—') ?></dd></dl>
-      <div class="accident-case-authority"><strong>Fiscalía</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscalia_nom'] ?? '')) ?: '—') ?></span><strong>Fiscal a cargo</strong><span class="sep">:</span><span><?= h(compact_text((string) ($A['fiscal_nom'] ?? '')) ?: '—') ?></span></div>
-    </div>
+    <?php include __DIR__ . '/partials/accidente_header_participantes.php'; ?>
   </section>
   </div>
 
@@ -12358,6 +12418,56 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    const headerStatusSelect = document.querySelector('.case-status-switch .js-quick-status');
+    const headerStatusButtons = document.querySelectorAll('[data-case-status]');
+    const statusFeedback = document.querySelector('.case-status-feedback');
+    if (headerStatusSelect) {
+      const statusSelects = Array.from(document.querySelectorAll('.js-quick-status'));
+      const statusTrigger = document.querySelector('.case-status-current');
+      const statusMenu = document.getElementById('case-status-options');
+      const closeStatusMenu = () => {
+        statusMenu.hidden = true;
+        statusTrigger.setAttribute('aria-expanded', 'false');
+      };
+      statusTrigger.addEventListener('click', () => {
+        statusMenu.hidden = !statusMenu.hidden;
+        statusTrigger.setAttribute('aria-expanded', String(!statusMenu.hidden));
+        if (!statusMenu.hidden) statusMenu.querySelector('[aria-pressed="true"]')?.focus();
+      });
+      document.addEventListener('click', (event) => {
+        if (!statusTrigger.closest('.case-status-switch').contains(event.target)) closeStatusMenu();
+      });
+      statusTrigger.closest('.case-status-switch').addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { closeStatusMenu(); statusTrigger.focus(); }
+      });
+      let wasSavingStatus = false;
+      const syncHeaderStatus = () => {
+        const saving = statusSelects.some((select) => select.disabled);
+        statusTrigger.disabled = saving;
+        statusTrigger.textContent = saving ? 'Guardando…' : headerStatusSelect.dataset.prev;
+        statusTrigger.dataset.state = headerStatusSelect.dataset.prev;
+        headerStatusButtons.forEach((button) => {
+          button.disabled = saving;
+          button.setAttribute('aria-pressed', String(button.dataset.caseStatus === headerStatusSelect.dataset.prev));
+        });
+        if (statusFeedback) {
+          statusFeedback.textContent = wasSavingStatus && !saving ? 'Estado actual: ' + headerStatusSelect.dataset.prev : '';
+        }
+        wasSavingStatus = saving;
+      };
+      headerStatusButtons.forEach((button) => button.addEventListener('click', () => {
+        closeStatusMenu();
+        statusTrigger.focus();
+        if (statusSelects.some((select) => select.disabled) || button.dataset.caseStatus === headerStatusSelect.dataset.prev) return;
+        headerStatusSelect.value = button.dataset.caseStatus;
+        headerStatusSelect.dispatchEvent(new Event('change', {bubbles: true}));
+        syncHeaderStatus();
+      }));
+      const statusObserver = new MutationObserver(syncHeaderStatus);
+      statusSelects.forEach((select) => statusObserver.observe(select, {attributes: true, attributeFilter: ['disabled', 'data-prev']}));
+      syncHeaderStatus();
+    }
+
     document.querySelectorAll('.js-quick-oficio-status').forEach((select) => {
       const paintStatus = () => {
         const value = String(select.value || '').toLowerCase();
@@ -12734,6 +12844,20 @@ include __DIR__ . '/sidebar.php';
           if (submitter) submitter.disabled = false;
         }
       });
+    });
+
+    document.querySelector('.js-header-edit-general')?.addEventListener('click', () => {
+      const trigger = document.getElementById('datos-generales-tab');
+      const edit = () => {
+        if (!getEditState('general-accidente')) openEditShell('general-accidente');
+        document.getElementById('accidente-inline-form')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+      };
+      if (trigger && !trigger.classList.contains('active')) {
+        trigger.addEventListener('shown.bs.tab', edit, {once: true});
+        bootstrap.Tab.getOrCreateInstance(trigger).show();
+      } else {
+        edit();
+      }
     });
 
     document.querySelectorAll('.js-edit-start').forEach((button) => {
