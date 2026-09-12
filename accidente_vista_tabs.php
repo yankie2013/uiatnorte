@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
@@ -6024,7 +6024,7 @@ include __DIR__ . '/sidebar.php';
   .participant-tabs .nav-link.tab-familiar.active{border-color:#d8b4fe;background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%);color:#7e22ce}
   .participant-tabs .nav-link.tab-abogados.active{border-color:#f2cf72;background:linear-gradient(135deg,#fffaf0 0%,#ffefbd 100%);color:#805b08}
   .participant-tabs .tab-sub{display:block;font-size:10px;font-weight:700;opacity:.72;margin-top:3px}
-  .tab-panel{position:relative;overflow:hidden;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
+  .tab-panel{position:relative;overflow:visible;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:16px;padding:11px}
   .tab-panel::before,.tab-panel::after{z-index:0}
   .tab-panel > *{position:relative;z-index:1}
   .tab-panel.driver-panel{
@@ -7445,7 +7445,7 @@ include __DIR__ . '/sidebar.php';
 <link rel="stylesheet" href="assets/css/accidente-header-participantes.css?v=<?= filemtime(__DIR__ . '/assets/css/accidente-header-participantes.css') ?>">
 </head>
 <body>
-<div class="page">
+<div class="page case-overview-layout">
   <div class="case-sticky-header">
   <div class="topbar">
     <div class="title-wrap">
@@ -7524,6 +7524,7 @@ include __DIR__ . '/sidebar.php';
     <div class="case-header-facts case-header-facts-list">
       <div class="case-facts-titlebar">
         <h2 class="case-facts-heading">Datos generales del accidente</h2>
+        <button type="button" class="case-facts-edit-chip js-header-view-general"><span aria-hidden="true">👁</span> Ver</button>
         <button type="button" class="case-facts-edit-chip js-header-edit-general" title="Editar datos generales del accidente"><span aria-hidden="true">✎</span> Editar</button>
       </div>
       <dl class="case-facts-topline">
@@ -7564,13 +7565,6 @@ include __DIR__ . '/sidebar.php';
         <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8z"/></svg></span><span>Sentido / dirección</span></dt><dd><?= fmt($A['sentido'] ?? '') ?></dd></div>
       </dl>
       </section>
-      <section class="case-facts-card case-facts-card--contact">
-        <h3 class="case-facts-card-title"><span aria-hidden="true">📞</span>Comunicación</h3>
-        <dl class="case-facts-rows case-facts-section case-facts-section--contact">
-        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">👤</span><span>Comunicante</span></dt><dd><?= fmt($A['comunicante_nombre'] ?? '') ?></dd></div>
-        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">☎️</span><span>Teléfono del comunicante</span></dt><dd><?= fmt($A['comunicante_telefono'] ?? '') ?></dd></div>
-      </dl>
-      </section>
       <section class="case-facts-card case-facts-card--authority">
         <h3 class="case-facts-card-title"><span aria-hidden="true">⚖️</span>Fiscalía y documentación</h3>
         <dl class="case-facts-rows case-facts-section case-facts-section--authority">
@@ -7579,12 +7573,6 @@ include __DIR__ . '/sidebar.php';
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📜</span><span>Decreto</span></dt><dd><?= fmt($A['comunicacion_decreto'] ?? '') ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">✉️</span><span>Oficio</span></dt><dd><?= fmt($A['comunicacion_oficio'] ?? '') ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🗂️</span><span>Carpeta fiscal N°</span></dt><dd><?= fmt($A['comunicacion_carpeta_nro'] ?? '') ?></dd></div>
-      </dl>
-      </section>
-      <section class="case-facts-card case-facts-card--sequence">
-        <h3 class="case-facts-card-title"><span aria-hidden="true">🧭</span>Secuencia de eventos</h3>
-        <dl class="case-facts-rows case-facts-section case-facts-section--sequence">
-        <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🔢</span><span>Secuencia de eventos</span></dt><dd><?= fmt($A['secuencia'] ?? '') ?></dd></div>
       </dl>
       </section>
       </div>
@@ -7650,9 +7638,10 @@ include __DIR__ . '/sidebar.php';
     </div>
   </div>
 
-  <div class="tabs-shell tabs-shell-main">
-    <div class="tab-content mt-2 general-tab-content">
-      <div class="tab-pane fade show active" id="datos-generales" role="tabpanel">
+  <dialog class="general-details-modal" id="general-details-modal" aria-labelledby="general-details-title">
+    <header class="general-details-modal-head"><h2 id="general-details-title">Datos generales del accidente</h2><button type="button" class="btn-shell js-general-modal-close" aria-label="Cerrar datos generales">Cerrar ✕</button></header>
+    <div class="general-modal-content">
+      <div id="datos-generales">
         <div class="panel main-module-panel main-panel-datos">
           <div class="general-edit-shell" data-edit-shell="general-accidente">
       <div class="editable-toolbar">
@@ -8078,10 +8067,11 @@ include __DIR__ . '/sidebar.php';
       </div>
     </div>
 
+  </dialog>
+  <div class="tabs-shell tabs-shell-main">
     <div class="tabs-header main-tabs nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php
         $mainTabs = [
-            ['id' => 'datos-generales', 'label' => 'Datos Generales', 'sub' => 'Accidente'],
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
             ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos) + count($actas) + count($actasVisualizacion)],
@@ -8092,7 +8082,7 @@ include __DIR__ . '/sidebar.php';
         ];
       ?>
       <?php foreach ($mainTabs as $index => $tab): ?>
-        <button class="nav-link tab-<?= h((string) $tab['id']) ?> <?= $index === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
+        <button <?= $tab['id'] === 'participantes' ? 'hidden' : '' ?> class="nav-link tab-<?= h((string) $tab['id']) ?> <?= $index === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
           <span class="main-tab-title"><?= h($tab['label']) ?></span>
           <span class="tab-sub"><?= h((string) ($tab['sub'] ?? ((string) $tab['count'] . ' registro(s)'))) ?></span>
         </button>
@@ -8815,7 +8805,7 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
 
-      <div class="tab-pane fade" id="participantes" role="tabpanel">
+      <div class="tab-pane fade show active" id="participantes" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-participantes">
           <div class="inline-workbench modal-workbench" id="vehiculo-documento-modal" role="dialog" aria-modal="true" aria-labelledby="vehiculo-documento-modal-title" hidden>
             <div class="modal-workbench-dialog">
@@ -9987,7 +9977,7 @@ include __DIR__ . '/sidebar.php';
                       $contactoAbogado .= $contactoAbogado !== '' ? ' · ' . $row['email'] : $row['email'];
                   }
                 ?>
-                <article class="module-card lawyer-record-card">
+                <article class="module-card lawyer-record-card" id="sidebar-abogado-<?= (int) $row['id'] ?>">
                   <header>
                     <div>
                       <h4>
@@ -12246,6 +12236,11 @@ include __DIR__ . '/sidebar.php';
           if (target) {
             localStorage.setItem(storageKey, target);
           }
+          if (nav.id === 'accTabs' && target !== '#participantes') {
+            document.querySelectorAll('.sidebar-vehicle-only, .sidebar-multiple-vehicles').forEach((panel) => {
+              panel.classList.remove('sidebar-vehicle-only', 'sidebar-multiple-vehicles');
+            });
+          }
         });
       });
       const params = new URLSearchParams(window.location.search);
@@ -12254,7 +12249,10 @@ include __DIR__ . '/sidebar.php';
       const requestedTarget = requestedTab
         ? '#' + requestedTab
         : (requestedSubtab ? '#documentos-' + requestedSubtab : '');
-      const saved = requestedTarget || localStorage.getItem(storageKey);
+      let saved = requestedTarget || localStorage.getItem(storageKey);
+      if (saved && nav.id.startsWith('person-pane-') && saved.includes('-vehiculo')) {
+        saved = '#' + nav.id + '-persona';
+      }
       if (saved) {
         const trigger = nav.querySelector('[data-bs-target="' + saved + '"]');
         if (trigger) {
@@ -12846,19 +12844,121 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
-    document.querySelector('.js-header-edit-general')?.addEventListener('click', () => {
-      const trigger = document.getElementById('datos-generales-tab');
-      const edit = () => {
-        if (!getEditState('general-accidente')) openEditShell('general-accidente');
-        document.getElementById('accidente-inline-form')?.scrollIntoView({behavior: 'smooth', block: 'start'});
-      };
-      if (trigger && !trigger.classList.contains('active')) {
-        trigger.addEventListener('shown.bs.tab', edit, {once: true});
-        bootstrap.Tab.getOrCreateInstance(trigger).show();
-      } else {
-        edit();
-      }
+    document.querySelectorAll('.js-sidebar-view-person').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const personTarget = document.getElementById(button.dataset.personTarget);
+        if (!personTarget || button.disabled) return;
+        const vehicleOnly = button.dataset.vehicleOnly === '1';
+        const vehicleTabs = personTarget.querySelectorAll(
+          ':scope > .tab-panel > .inner-tabs > [data-bs-target*="-vehiculo"], :scope > .inner-panel > .inner-tabs > [data-bs-target*="-vehiculo"]'
+        );
+        const vehicleTab = vehicleTabs.length > 0 ? vehicleTabs[0] : null;
+        const personalTab = !vehicleOnly
+          ? personTarget.querySelector(
+              ':scope > .tab-panel > .inner-tabs > [data-bs-target$="-persona"], :scope > .inner-panel > .inner-tabs > [data-bs-target$="-persona"]'
+            )
+          : null;
+        const subtabTrigger = vehicleOnly ? vehicleTab : personalTab;
+        const target = subtabTrigger
+          ? document.querySelector(subtabTrigger.dataset.bsTarget)
+          : personTarget;
+        if (!target) return;
+
+        document.querySelectorAll('.sidebar-vehicle-only, .sidebar-multiple-vehicles').forEach((panel) => {
+          panel.classList.remove('sidebar-vehicle-only', 'sidebar-multiple-vehicles');
+        });
+
+        if (vehicleOnly) {
+          personTarget.classList.add('sidebar-vehicle-only');
+          if (vehicleTabs.length > 1) {
+            personTarget.classList.add('sidebar-multiple-vehicles');
+          }
+        }
+
+        // Asegurar que los paneles no queden con scroll desplazado que oculte el hero o las subpestañas
+        personTarget.querySelectorAll('.tab-panel, .inner-panel').forEach((panel) => {
+          panel.scrollTop = 0;
+        });
+        const mainPanel = document.querySelector('.main-panel-participantes');
+        if (mainPanel) mainPanel.scrollTop = 0;
+
+        button.disabled = true;
+        try {
+          const panes = [];
+          for (let node = target; node; node = node.parentElement) {
+            if (node.classList && node.classList.contains('tab-pane')) panes.unshift(node);
+          }
+          for (const pane of panes) {
+            const trigger = document.querySelector('[data-bs-toggle="tab"][data-bs-target="#' + CSS.escape(pane.id) + '"]');
+            if (trigger && !trigger.classList.contains('active')) {
+              await new Promise((resolve) => {
+                let resolved = false;
+                const finish = () => {
+                  if (resolved) return;
+                  resolved = true;
+                  resolve();
+                };
+                trigger.addEventListener('shown.bs.tab', finish, {once: true});
+                setTimeout(finish, 150);
+                bootstrap.Tab.getOrCreateInstance(trigger).show();
+              });
+            }
+          }
+          if (subtabTrigger && !subtabTrigger.classList.contains('active')) {
+            bootstrap.Tab.getOrCreateInstance(subtabTrigger).show();
+          }
+
+          if (vehicleOnly && target) {
+            const vehicleFirstSubtab = target.querySelector('.inner-tabs > [data-bs-toggle="tab"]');
+            if (vehicleFirstSubtab && !vehicleFirstSubtab.classList.contains('active')) {
+              bootstrap.Tab.getOrCreateInstance(vehicleFirstSubtab).show();
+            }
+          }
+
+          document.querySelectorAll('#abogados .lawyer-record-card').forEach((card) => {
+            card.hidden = target.classList.contains('lawyer-record-card') && card !== target;
+          });
+          document.querySelectorAll('.js-sidebar-view-person').forEach((item) => {
+            item.setAttribute('aria-pressed', String(item === button));
+          });
+
+          // Desplazar hacia la ficha del participante asegurando que quede en el campo visual
+          personTarget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        } finally {
+          button.disabled = false;
+        }
+      });
     });
+
+    // Permitir hacer clic en toda la fila de la persona en la barra lateral
+    document.querySelectorAll('.case-header-person').forEach((item) => {
+      item.addEventListener('click', (event) => {
+        if (event.target.closest('button, a')) return;
+        const viewBtn = item.querySelector('.js-sidebar-view-person');
+        if (viewBtn) viewBtn.click();
+      });
+    });
+
+    const generalModal = document.getElementById('general-details-modal');
+    const openGeneralModal = (edit = false) => {
+      if (!generalModal) return;
+      if (!generalModal.open) generalModal.showModal();
+      document.body.classList.add('has-general-details-modal');
+      if (edit && !getEditState('general-accidente')) openEditShell('general-accidente');
+      generalModal.scrollTop = 0;
+    };
+    const closeGeneralModal = () => {
+      if (getEditState('general-accidente')) requestCloseEditShell('general-accidente');
+      if (!getEditState('general-accidente')) generalModal.close();
+    };
+    document.querySelector('.js-header-view-general')?.addEventListener('click', () => openGeneralModal());
+    document.querySelector('.js-header-edit-general')?.addEventListener('click', () => openGeneralModal(true));
+    document.querySelector('.js-general-modal-close')?.addEventListener('click', closeGeneralModal);
+    generalModal?.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      if (!generalModal.querySelector('.geo-inline-modal.is-open')) closeGeneralModal();
+    });
+    generalModal?.addEventListener('close', () => document.body.classList.remove('has-general-details-modal'));
 
     document.querySelectorAll('.js-edit-start').forEach((button) => {
       button.addEventListener('click', () => {

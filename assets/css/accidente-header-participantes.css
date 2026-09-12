@@ -184,3 +184,94 @@ html[data-theme-resolved="dark"] .case-status-option[data-case-status="Con dilig
 html[data-theme-resolved="dark"] .case-status-option[data-case-status="Resuelto"] {color:#8ce3b0;background:rgba(19,47,34,.4)}
 html[data-theme-resolved="dark"] .case-status-option[data-case-status="Resuelto"]:hover,
 html[data-theme-resolved="dark"] .case-status-option[data-case-status="Resuelto"][aria-pressed="true"] {background:#132f22;border-color:#22563a;color:#b2f3cd}
+
+/* Resumen superior de ancho completo y participantes en la columna izquierda. */
+.page.case-overview-layout {display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
+.case-overview-layout > .case-sticky-header,
+.case-overview-layout .accident-case-header:has(> .case-header-facts-list) {display:contents}
+.case-overview-layout .topbar {grid-column:1/-1;margin-bottom:0}
+.case-overview-layout .accident-case-header > .case-header-facts-list {grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px}
+.case-overview-layout .case-facts-titlebar {margin:0;align-self:center}
+.case-overview-layout .case-facts-topline {width:480px;max-width:100%;margin:0;padding:0;gap:8px}
+.case-overview-layout .case-facts-top-item {min-height:48px;padding:6px 10px;border-radius:14px}
+.case-overview-layout .case-facts-scroll {grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.case-overview-layout .case-facts-card--combined {grid-column:1}
+.case-overview-layout .case-facts-card--location {grid-column:2}
+.case-overview-layout .case-facts-card--authority {grid-column:3;grid-row:1}
+.case-overview-layout .accident-case-header > .case-header-people {grid-column:1;grid-row:3;padding:12px}
+.case-overview-layout .case-header-people-heading {flex-wrap:wrap;gap:4px 8px}
+.case-overview-layout .case-header-people-group ul {grid-template-columns:1fr}
+.case-overview-layout > .tabs-shell-main {grid-column:2;grid-row:3;min-width:0}
+@media(max-width:1200px){
+  .page.case-overview-layout {grid-template-columns:240px minmax(0,1fr);gap:12px}
+  .case-overview-layout .case-facts-scroll {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .case-overview-layout .case-facts-card--authority {grid-column:1 / -1;grid-row:2}
+}
+@media(max-width:900px){
+  .page.case-overview-layout {grid-template-columns:1fr}
+  .case-overview-layout .accident-case-header > .case-header-people {grid-column:1;grid-row:auto}
+  .case-overview-layout > .tabs-shell-main {grid-column:1;grid-row:auto}
+  .case-overview-layout .case-header-people-group ul {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .case-overview-layout .accident-case-header > .case-header-facts-list {grid-template-columns:1fr}
+  .case-overview-layout .case-facts-topline {width:100%}
+}
+@media(max-width:600px){
+  .case-overview-layout .case-facts-scroll {grid-template-columns:1fr}
+  .case-overview-layout .case-facts-scroll > .case-facts-card {grid-column:1;grid-row:auto}
+  .case-overview-layout .case-header-people-group ul {grid-template-columns:1fr}
+}
+
+/* Consulta y edición de datos generales desde el encabezado. */
+.general-details-modal {width:min(1180px,calc(100vw - 32px));max-height:90vh;margin:auto;padding:0;border:1px solid #d5e2f4;border-radius:20px;background:var(--card,#fff);color:var(--text,#18304d);box-shadow:0 24px 80px #102b4c40;overflow:auto}
+.general-details-modal::backdrop {background:rgba(15,30,50,.48);backdrop-filter:blur(3px)}
+.general-details-modal-head {position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:var(--card,#fff);border-bottom:1px solid #d5e2f4}
+.general-details-modal-head h2 {font-size:16px;margin:0}
+.general-modal-content {padding:12px}
+.general-details-modal .main-panel-datos {margin:0}
+body.has-general-details-modal {overflow:hidden}
+html[data-theme-resolved="dark"] .general-details-modal,
+html[data-theme-resolved="dark"] .general-details-modal-head {background:#182536;color:#e2eaf5;border-color:#34455c}
+
+.case-person-view {display:flex;align-items:center;gap:5px;margin-top:6px;padding:4px 9px;border:1px solid #cbdcf5;border-radius:999px;background:#fff;color:#32639b;font-size:10px;font-weight:700;cursor:pointer}
+.case-person-view:hover {background:#eaf3ff;border-color:#8cb4ee}
+.case-person-view:focus-visible {outline:2px solid #387dd1;outline-offset:2px}
+html[data-theme-resolved="dark"] .case-person-view {background:#23354b;color:#b7d6ff;border-color:#47617e}
+
+/* Las fichas de participantes se eligen desde la barra lateral. */
+#accTabs > [hidden],
+#participantes .participant-tabs,
+#efectivo-policial-personas-tabs,
+#propietario-vehiculo-personas-tabs,
+#familiar-fallecido-personas-tabs {display:none !important}
+#participantes > .tab-panel {padding-top:8px}
+.case-person-view[aria-pressed="true"] {background:#e1efff;border-color:#75a6e7;color:#204f8b}
+
+/* Fichas de participantes sin controles de copia junto a cada dato. */
+#participantes .js-copy-name,
+#participantes .record-detail-copy,
+#participantes .copy-name-btn {display:none !important}
+
+.case-person-actions {display:flex;flex-wrap:wrap;gap:6px}
+.case-header-person {cursor:pointer;transition:background .15s ease}
+.case-header-person:hover {background:rgba(225,239,255,.75)}
+html[data-theme-resolved="dark"] .case-header-person:hover {background:rgba(35,53,75,.85)}
+
+/* Modo vehículo exclusivo: para el conductor se ocultan el hero de persona y la barra de subpestañas personales directas */
+.sidebar-vehicle-only:not(.sidebar-multiple-vehicles) > .tab-panel > .person-hero,
+.sidebar-vehicle-only:not(.sidebar-multiple-vehicles) > .tab-panel > .inner-tabs {
+  display: none !important;
+}
+
+.sidebar-vehicle-only.sidebar-multiple-vehicles > .tab-panel > .person-hero {
+  display: none !important;
+}
+
+.sidebar-vehicle-only.sidebar-multiple-vehicles > .tab-panel > .inner-tabs > button:not([data-bs-target*="-vehiculo"]) {
+  display: none !important;
+}
+
+/* Modo persona: en la barra de subpestañas de la persona se oculta la pestaña de vehículo */
+#participantes [id^="persona-"]:not(.sidebar-vehicle-only) > .tab-panel > .inner-tabs > button[data-bs-target*="-vehiculo"] {
+  display: none !important;
+}
+
