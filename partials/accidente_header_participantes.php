@@ -77,7 +77,19 @@
         <div class="case-header-people-groups" role="region" aria-label="Listado completo de participantes por rol">
           <?php foreach ($groups as $role => $members): ?>
             <?php if ($members === []) continue; ?>
-            <section class="case-header-people-group">
+            <?php
+            $tone = match ($role) {
+                'Conductores' => 'blue',
+                'Ocupantes', 'Pasajeros' => 'cyan',
+                'Peatones' => 'amber',
+                'Efectivos policiales' => 'green',
+                'Propietarios de vehículo' => 'violet',
+                'Familiares de fallecidos' => 'rose',
+                'Abogados' => 'gold',
+                default => 'slate',
+            };
+            ?>
+            <section class="case-header-people-group" data-role-tone="<?= h($tone) ?>">
               <h3><?= h($role) ?> <span><?= count($members) ?></span></h3>
               <ul>
                 <?php foreach ($members as $member): ?>

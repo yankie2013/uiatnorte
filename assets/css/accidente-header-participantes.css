@@ -529,3 +529,54 @@ html[data-theme-resolved="dark"] .case-module-sidebar #accTabs > .nav-link.activ
 .participants-list-toggle {display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;margin:-6px -6px -6px 8px;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;font-size:22px;cursor:pointer}
 .participants-list-toggle:hover {background:#b9d1f04d}
 .participants-list-toggle:focus-visible {outline:2px solid currentColor;outline-offset:2px}
+
+/* Lista lateral: más compacta, ordenada y con identidad visual por rol. */
+.case-module-sidebar .case-header-people-groups {gap:9px;padding-top:2px}
+.case-module-sidebar .case-header-people-group {
+  --people-accent:#55718e;--people-tint:#eef3f8;--people-surface:#f8fafc;
+  position:relative;padding:9px 9px 10px;border:1px solid color-mix(in srgb,var(--people-accent) 20%,#dfe7ef);
+  border-radius:12px;background:linear-gradient(145deg,#fff 0%,var(--people-surface) 100%);
+  box-shadow:0 3px 10px rgba(30,54,82,.045);overflow:hidden;
+}
+.case-module-sidebar .case-header-people-group::before {
+  content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--people-accent);
+}
+.case-module-sidebar .case-header-people-group[data-role-tone="blue"] {--people-accent:#2f6fbd;--people-tint:#e8f1ff;--people-surface:#f5f9ff}
+.case-module-sidebar .case-header-people-group[data-role-tone="cyan"] {--people-accent:#168195;--people-tint:#e3f6f8;--people-surface:#f4fbfc}
+.case-module-sidebar .case-header-people-group[data-role-tone="amber"] {--people-accent:#a46913;--people-tint:#fff1d6;--people-surface:#fffbf2}
+.case-module-sidebar .case-header-people-group[data-role-tone="green"] {--people-accent:#287653;--people-tint:#e3f4eb;--people-surface:#f4fbf7}
+.case-module-sidebar .case-header-people-group[data-role-tone="violet"] {--people-accent:#7256a2;--people-tint:#f0eafd;--people-surface:#faf7ff}
+.case-module-sidebar .case-header-people-group[data-role-tone="rose"] {--people-accent:#a84f70;--people-tint:#faeaf0;--people-surface:#fff7fa}
+.case-module-sidebar .case-header-people-group[data-role-tone="gold"] {--people-accent:#9a701c;--people-tint:#fbf0d5;--people-surface:#fffbf2}
+.case-module-sidebar .case-header-people-group h3 {
+  gap:6px;margin:0 0 7px;padding:0 2px 7px;border-bottom:1px solid color-mix(in srgb,var(--people-accent) 18%,#e7edf3);
+  color:var(--people-accent);font-size:9px;font-weight:850;letter-spacing:.075em;line-height:1.25;
+}
+.case-module-sidebar .case-header-people-group h3 span {
+  display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 5px;border-radius:999px;
+  background:var(--people-tint);color:var(--people-accent);font-size:8px;font-weight:850;opacity:1;
+}
+.case-module-sidebar .case-header-people-group ul {gap:6px}
+.case-module-sidebar .case-header-person {
+  grid-template-columns:28px minmax(0,1fr);gap:7px;padding:7px;background:rgba(255,255,255,.72);
+  border:1px solid rgba(217,227,237,.65);border-radius:9px;
+}
+.case-module-sidebar .case-header-person:hover {background:#fff;border-color:color-mix(in srgb,var(--people-accent) 28%,#dbe5ef)}
+.case-module-sidebar .case-header-person-icon {
+  width:28px;height:30px;border-radius:8px;background:var(--people-tint);font-size:16px;
+}
+.case-module-sidebar .case-header-person strong {display:block;font-size:10px;line-height:1.28;letter-spacing:-.01em}
+.case-module-sidebar .case-header-person small {margin-top:2px;font-size:8.5px;line-height:1.35;font-weight:600}
+.case-module-sidebar .case-person-actions {gap:5px;margin-top:5px}
+.case-module-sidebar .case-person-view {
+  margin:0;padding:3px 8px;border-color:color-mix(in srgb,var(--people-accent) 28%,#d4dfeb);
+  background:#fff;color:var(--people-accent);font-size:9px;line-height:1.35;
+}
+.case-module-sidebar .case-person-view:hover {background:var(--people-tint);border-color:var(--people-accent)}
+html[data-theme-resolved="dark"] .case-module-sidebar .case-header-people-group {
+  --people-surface:#152338;background:linear-gradient(145deg,#17263c,var(--people-surface));
+  border-color:color-mix(in srgb,var(--people-accent) 42%,#31475f);
+}
+html[data-theme-resolved="dark"] .case-module-sidebar .case-header-person {background:rgba(18,31,49,.72);border-color:#2b4058}
+html[data-theme-resolved="dark"] .case-module-sidebar .case-header-person-icon {background:color-mix(in srgb,var(--people-accent) 28%,#1b2c43)}
+html[data-theme-resolved="dark"] .case-module-sidebar .case-person-view {background:#1c2e45;border-color:#425c77;color:#d6e8ff}
