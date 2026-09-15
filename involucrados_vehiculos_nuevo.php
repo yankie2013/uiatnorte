@@ -162,6 +162,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
   select:focus,input:focus,textarea:focus{ border-color: rgba(79,140,255,.55); box-shadow: 0 0 0 3px rgba(79,140,255,.18); }
 
   .inline{ display:flex; gap:8px; align-items:center; }
+  .accident-search-fields{ display:grid; grid-template-columns:minmax(0, 1fr); gap:14px; }
+  .plate-search-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .plate-search-controls input{ flex:0 1 260px; min-width:0; width:260px; max-width:100%; box-sizing:border-box; }
+  .plate-search-controls .btn{ flex:0 0 auto; white-space:nowrap; }
+  #formIV{ --field-label:#a9caff; --field-bg:#172233; --field-border:#526580; --field-ink:#f1f5f9; --field-placeholder:#a5b4c8; }
+  #formIV label{ color:var(--field-label); font-weight:800; margin-bottom:8px; }
+  #formIV select, #formIV input[type="text"], #formIV input[type="number"], #formIV textarea{
+    background:var(--field-bg); border-color:var(--field-border); color:var(--field-ink);
+    box-shadow:inset 0 1px 2px rgba(15,23,42,.04);
+  }
+  #formIV input::placeholder, #formIV textarea::placeholder{ color:var(--field-placeholder); opacity:1; }
+  #formIV select:focus, #formIV input:focus, #formIV textarea:focus{
+    border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.18);
+  }
+  @media (prefers-color-scheme: light){
+    #formIV{ --field-label:#1e3a70; --field-bg:#f1f5fa; --field-border:#b8c6d9; --field-ink:#172033; --field-placeholder:#64748b; }
+  }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px; }
   .modal-frame-box{ width:min(100%, 1240px) !important; padding:0 !important; overflow:hidden !important; }
   .modal-frame-head{
@@ -491,9 +508,9 @@ body.modal-open{ overflow: hidden !important; }
     <input type="hidden" name="return_to" value="<?=h($return_to)?>">
     <input type="hidden" name="next" id="next" value="0">
 
-    <div class="row">
+    <div class="accident-search-fields">
       <div>
-        <label>Accidente</label>
+        <label for="accidente_id">Accidente</label>
         <select name="accidente_id" id="accidente_id" required>
           <option value="">— Seleccionar —</option>
           <?php foreach($accidentes as $a): ?>
@@ -502,8 +519,8 @@ body.modal-open{ overflow: hidden !important; }
         </select>
       </div>
       <div>
-        <label>Búsqueda por placa</label>
-        <div class="inline">
+        <label for="qplaca">Búsqueda por placa</label>
+        <div class="plate-search-controls">
           <input type="text" id="qplaca" placeholder="Ej. ABC123">
           <button class="btn mini" type="button" id="btnBuscarPlaca">Buscar</button>
           <button class="btn mini" type="button" id="btnNuevoVehiculo">＋ Nuevo vehículo</button>

@@ -7447,14 +7447,14 @@ include __DIR__ . '/sidebar.php';
 <body>
 <div class="page case-overview-layout">
   <div class="case-sticky-header">
-  <div class="topbar">
-    <div class="title-wrap">
-      <div class="case-identity-row">
-        <button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)">
-          <span>SIDPOL <?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></span>
-          <span class="sidpol-summary-sep">·</span>
-          <span>Folder <?= h($caseSummaryFolder !== '' ? $caseSummaryFolder : '—') ?></span>
-        </button>
+  <section class="accident-case-header" aria-label="Resumen del accidente">
+    <div class="case-header-facts case-header-facts-list">
+      <dl class="case-facts-topline">
+        <div class="case-facts-top-item case-facts-sidpol"><dt>SIDPOL</dt><dd><button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></button></dd></div>
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📄</span><span>N° informe policial</span></dt><dd><?= fmt($A['nro_informe_policial'] ?? '') ?></dd></div>
+        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📁</span><span>N° folder</span></dt><dd><?= fmt($A['folder'] ?? '') ?></dd></div>
+        <div class="case-facts-top-item case-facts-status"><dt>Estado</dt><dd>
         <div class="case-status-switch" role="group" aria-label="Cambiar estado del accidente">
 <select hidden tabindex="-1" class="quick-status-select <?= h($caseHeaderStatusClass) ?> js-quick-status" aria-label="Estado del accidente" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>"><?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?><option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option><?php endforeach; ?></select>
           <button type="button" class="case-status-current" data-state="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>" aria-expanded="false" aria-controls="case-status-options" title="Cambiar estado del accidente"><?= h((string) ($A['estado'] ?? 'Pendiente')) ?></button>
@@ -7465,73 +7465,12 @@ include __DIR__ . '/sidebar.php';
           </div>
         </div>
         <span class="case-status-feedback" role="status" aria-live="polite"></span>
-      </div>
-      <div class="case-command-label">Acciones rápidas</div>
-      <div class="title-heading-row">
-        <div class="case-new-actions">
-          <button class="btn-shell btn-nuevo case-new-trigger case-command-button js-case-new-trigger" type="button" aria-expanded="false" aria-controls="case-new-menu">NUEVO</button>
-          <div class="case-new-menu" id="case-new-menu" hidden>
-            <a class="case-new-item" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👤</span><span>Persona involucrada<small>Registrar participante</small></span></a>
-            <a class="case-new-item" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🚘</span><span>Vehículo involucrado<small>Registrar unidad participante</small></span></a>
-            <a class="case-new-item" href="familiar_fallecido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👥</span><span>Familiar<small>Registrar familiar de fallecido</small></span></a>
-            <a class="case-new-item" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🔑</span><span>Propietario<small>Registrar propietario de vehículo</small></span></a>
-            <a class="case-new-item" href="abogado_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">⚖️</span><span>Abogado<small>Registrar defensa legal</small></span></a>
-            <a class="case-new-item" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Registrar interviniente</small></span></a>
-          </div>
-        </div>
-        <div class="case-doc-actions">
-          <button class="btn-shell case-doc-trigger case-command-button js-case-doc-trigger" type="button" aria-expanded="false" aria-controls="case-doc-menu"><span class="case-command-icon" aria-hidden="true">📁</span>DOCUMENTOS</button>
-          <div class="case-new-menu case-doc-menu" id="case-doc-menu" hidden>
-            <a class="case-new-item" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=oficios') ?>"><span class="case-new-icon" aria-hidden="true">📨</span><span>Nuevo oficio<small>Crear oficio para el accidente</small></span></a>
-            <a class="case-new-item" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=recibidos') ?>"><span class="case-new-icon" aria-hidden="true">📥</span><span>Nuevo documento recibido<small>Registrar documentación ingresada</small></span></a>
-          </div>
-        </div>
-        <a class="btn-shell btn-citacion case-command-button" href="citacion_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true">📅</span>CITACIONES</a>
-        <div class="case-manifest-actions">
-          <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true">📝</span>MANIFESTACIÓN</button>
-          <div class="case-new-menu case-manifest-menu" id="case-manifest-menu" hidden>
-            <?php if ($manifestacionPersonaOptions === []): ?>
-              <div class="case-manifest-empty">No hay personas vinculadas al accidente para crear una manifestación.</div>
-            <?php else: ?>
-              <form class="case-manifest-form js-case-manifest-form" action="documento_manifestacion_nuevo.php" method="get">
-                <label for="case-manifest-persona">Persona</label>
-                <select id="case-manifest-persona" name="persona_id" required>
-                  <option value="">Seleccionar persona...</option>
-                  <?php foreach ($manifestacionPersonaOptions as $manifestacionPersona): ?>
-                    <option value="<?= (int) $manifestacionPersona['persona_id'] ?>" data-rol-id="<?= (int) $manifestacionPersona['rol_id'] ?>"><?= h(manifestacion_persona_icono($manifestacionPersona['condicion']) . ' ' . $manifestacionPersona['nombre'] . ($manifestacionPersona['condicion'] !== '' ? ' — ' . $manifestacionPersona['condicion'] : '')) ?></option>
-                  <?php endforeach; ?>
-                </select>
-                <input type="hidden" name="rol_id" value="" class="js-case-manifest-role">
-                <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
-                <input type="hidden" name="return_to" value="<?= h('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>">
-              </form>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="top-actions">
-      <span class="top-actions-label">Navegación</span>
-      <button type="button" class="btn-shell js-history-back"><span aria-hidden="true">←</span>Volver atrás</button>
-      <?php if ($googleMapsUrl !== ''): ?>
-        <a class="btn-shell" href="<?= h($googleMapsUrl) ?>" target="_blank" rel="noopener"><span aria-hidden="true">🗺️</span>Google Maps</a>
-      <?php endif; ?>
-      <a class="btn-shell" href="accidente_listar.php"><span aria-hidden="true">☰</span>Listado</a>
-    </div>
-  </div>
-
-  <section class="accident-case-header" aria-label="Resumen del accidente">
-    <div class="case-header-facts case-header-facts-list">
+        </dd></div>
+      </dl>
       <div class="case-facts-titlebar">
-        <h2 class="case-facts-heading">Datos generales del accidente</h2>
         <button type="button" class="case-facts-edit-chip js-header-view-general"><span aria-hidden="true">👁</span> Ver</button>
         <button type="button" class="case-facts-edit-chip js-header-edit-general" title="Editar datos generales del accidente"><span aria-hidden="true">✎</span> Editar</button>
       </div>
-      <dl class="case-facts-topline">
-        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
-        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📁</span><span>N° folder</span></dt><dd><?= fmt($A['folder'] ?? '') ?></dd></div>
-        <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📄</span><span>N° informe policial</span></dt><dd><?= fmt($A['nro_informe_policial'] ?? '') ?></dd></div>
-      </dl>
       <div class="case-facts-scroll" role="region" aria-label="Lista de datos generales del accidente">
       <section class="case-facts-card case-facts-card--combined">
         <div class="case-facts-combined-grid">
@@ -8806,6 +8745,7 @@ include __DIR__ . '/sidebar.php';
       </div>
 
       <div class="tab-pane fade show active" id="participantes" role="tabpanel">
+        <?php require __DIR__ . '/partials/accidente_participantes_resumen.php'; ?>
         <div class="tab-panel main-module-panel main-panel-participantes">
           <div class="inline-workbench modal-workbench" id="vehiculo-documento-modal" role="dialog" aria-modal="true" aria-labelledby="vehiculo-documento-modal-title" hidden>
             <div class="modal-workbench-dialog">
@@ -8893,27 +8833,6 @@ include __DIR__ . '/sidebar.php';
         ?>
         <div class="tab-pane fade <?= $participantPaneIndex === 0 ? 'show active' : '' ?>" id="<?= h($tabId) ?>" role="tabpanel">
           <div class="tab-panel <?= h(person_panel_tone_class($persona)) ?>">
-            <div class="person-hero">
-              <div class="person-title">
-                <h2>
-                  <span class="person-name-copy">
-                    <span><?= h(person_label($persona)) ?></span>
-                    <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($persona)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
-                    <span class="person-quick-actions">
-                      <?= render_whatsapp_message_actions($wa, $whatsAppMessages) ?>
-                      <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('INV:' . (int) $persona['involucrado_id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
-                    </span>
-                  </span>
-                </h2>
-                <p><?php if (person_heading_meta($persona) !== ''): ?><?= h(person_heading_meta($persona)) ?> · <?php endif; ?><?= h(tab_person_label($persona)) ?><?php if (!empty($persona['orden_participacion'])): ?> · <?= h((string) $persona['orden_participacion']) ?><?php endif; ?></p>
-              </div>
-              <div class="chip-row">
-                <?php if (!empty($persona['rol_nombre'])): ?><span class="<?= h(role_chip_class((string) $persona['rol_nombre'])) ?>"><?= h((string) $persona['rol_nombre']) ?></span><?php endif; ?>
-                <?php if (!empty($persona['lesion'])): ?><span class="<?= h(lesion_chip_class((string) $persona['lesion'])) ?>"><?= h((string) $persona['lesion']) ?></span><?php endif; ?>
-                <span class="chip-simple"><?= !empty($persona['vehiculo_id']) ? 'Con vehículo' : 'Sin vehículo' ?></span>
-                <?php if (!empty($persona['veh_chip_text'])): ?><span class="chip-simple">Vehículo <?= h((string) $persona['veh_chip_text']) ?></span><?php endif; ?>
-              </div>
-            </div>
             <div class="inner-tabs nav nav-tabs flex-nowrap" id="<?= h($personPaneId) ?>" role="tablist">
               <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#<?= h($personPaneId) ?>-persona" type="button" role="tab">
                 Persona
@@ -8966,6 +8885,28 @@ include __DIR__ . '/sidebar.php';
                   <span class="tab-mini"><?= count($extras['occ']) ?> registro(s)</span>
                 </button>
               <?php endif; ?>
+            </div>
+
+            <div class="person-hero">
+              <div class="person-title">
+                <h2>
+                  <span class="person-name-copy">
+                    <span><?= h(person_label($persona)) ?></span>
+                    <button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h(person_label($persona)) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button>
+                    <span class="person-quick-actions">
+                      <?= render_whatsapp_message_actions($wa, $whatsAppMessages) ?>
+                      <a class="btn-shell btn-citacion" href="citacion_rapida.php?accidente_id=<?= (int) $accidente_id ?>&persona=<?= urlencode('INV:' . (int) $persona['involucrado_id']) ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Citación rápida</a>
+                    </span>
+                  </span>
+                </h2>
+                <p><?php if (person_heading_meta($persona) !== ''): ?><?= h(person_heading_meta($persona)) ?> · <?php endif; ?><?= h(tab_person_label($persona)) ?><?php if (!empty($persona['orden_participacion'])): ?> · <?= h((string) $persona['orden_participacion']) ?><?php endif; ?></p>
+              </div>
+              <div class="chip-row">
+                <?php if (!empty($persona['rol_nombre'])): ?><span class="<?= h(role_chip_class((string) $persona['rol_nombre'])) ?>"><?= h((string) $persona['rol_nombre']) ?></span><?php endif; ?>
+                <?php if (!empty($persona['lesion'])): ?><span class="<?= h(lesion_chip_class((string) $persona['lesion'])) ?>"><?= h((string) $persona['lesion']) ?></span><?php endif; ?>
+                <span class="chip-simple"><?= !empty($persona['vehiculo_id']) ? 'Con vehículo' : 'Sin vehículo' ?></span>
+                <?php if (!empty($persona['veh_chip_text'])): ?><span class="chip-simple">Vehículo <?= h((string) $persona['veh_chip_text']) ?></span><?php endif; ?>
+              </div>
             </div>
 
             <div class="inline-workbench" id="workbench-<?= (int) $persona['involucrado_id'] ?>" hidden>
@@ -10095,6 +10036,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
+                  <a class="btn-shell document-new-button" aria-label="Nuevo oficio" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
 	                  <label class="module-category-filter">Categoría
 	                    <select class="js-document-category-filter" data-list="oficios">
 	                      <option value="">Todas</option>
@@ -10187,6 +10129,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
               <div class="inner-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
+                  <a class="btn-shell document-new-button" aria-label="Nuevo documento recibido" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=recibidos') ?>">Nuevo <span aria-hidden="true">+</span></a>
                   <label class="module-category-filter">Categoría
                     <select class="js-document-category-filter" data-list="recibidos">
                       <option value="">Todas</option>
@@ -13580,6 +13523,91 @@ function applyDocumentFilters(list) {
 document.querySelectorAll('.js-document-category-filter, .js-document-type-filter').forEach((select) => {
   select.addEventListener('change', () => applyDocumentFilters(select.dataset.list || ''));
 });
+</script>
+<script>
+(() => {
+  const page = document.querySelector('.case-overview-layout');
+  const people = page?.querySelector('.case-header-people');
+  const tabs = document.getElementById('accTabs');
+  const participantTab = document.getElementById('participantes-tab');
+  if (!page || !people || !tabs || !participantTab) return;
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'case-module-sidebar';
+  sidebar.setAttribute('aria-label', 'Secciones del accidente');
+  const details = document.createElement('details');
+  details.className = 'case-participants-disclosure';
+  const summary = document.createElement('summary');
+  summary.textContent = 'Participantes';
+  const heading = people.querySelector('.case-header-people-heading');
+  const count = heading?.querySelector('h2 span');
+  if (count) summary.append(' · ' + count.textContent.trim());
+  if (heading) heading.hidden = true;
+  details.append(summary, people);
+  sidebar.append(details, tabs);
+  page.append(sidebar);
+  tabs.setAttribute('aria-orientation', 'vertical');
+  details.open = false;
+  const participantPane = document.getElementById('participantes');
+  participantPane.classList.add('show-participants-overview');
+  summary.addEventListener('click', () => {
+    participantPane.classList.add('show-participants-overview');
+    bootstrap.Tab.getOrCreateInstance(participantTab).show();
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.js-sidebar-view-person')) participantPane.classList.remove('show-participants-overview');
+  }, true);
+  details.addEventListener('toggle', () => {
+    if (details.open && !participantTab.classList.contains('active')) {
+      bootstrap.Tab.getOrCreateInstance(participantTab).show();
+    }
+  });
+  tabs.addEventListener('shown.bs.tab', (event) => {
+    details.open = event.target === participantTab;
+  });
+})();
+</script>
+<script>
+(() => {
+  document.querySelectorAll('.participants-overview .participant-overview-unit, .participants-overview .overview-police-group').forEach((group, index) => {
+    const header = group.querySelector(':scope > header, :scope > .overview-role-group');
+    if (!header) return;
+    const title = header.querySelector('h3') || header;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'overview-group-toggle';
+    button.textContent = title.textContent.trim();
+    const content = document.createElement('div');
+    content.id = 'overview-group-content-' + index;
+    content.className = 'overview-group-content';
+    content.hidden = true;
+    Array.from(group.childNodes).forEach((node) => {
+      if (node !== header) content.append(node);
+    });
+    group.append(content);
+    title.replaceChildren(button);
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', content.id);
+    const toggle = () => {
+      if (content.hidden) {
+        group.closest('.participants-overview').querySelectorAll('.overview-group-toggle').forEach((otherButton) => {
+          if (otherButton === button) return;
+          const otherContent = document.getElementById(otherButton.getAttribute('aria-controls'));
+          if (otherContent) otherContent.hidden = true;
+          otherButton.setAttribute('aria-expanded', 'false');
+          otherButton.closest('.overview-collapsible-heading')?.classList.add('is-collapsed');
+        });
+      }
+      content.hidden = !content.hidden;
+      button.setAttribute('aria-expanded', String(!content.hidden));
+      header.classList.toggle('is-collapsed', content.hidden);
+    };
+    button.addEventListener('click', toggle);
+    header.classList.add('overview-collapsible-heading', 'is-collapsed');
+    header.addEventListener('click', (event) => {
+      if (!event.target.closest('a, button')) toggle();
+    });
+  });
+})();
 </script>
 </body>
 </html>

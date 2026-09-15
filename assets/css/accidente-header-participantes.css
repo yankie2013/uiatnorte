@@ -200,7 +200,7 @@ html[data-theme-resolved="dark"] .case-status-option[data-case-status="Resuelto"
 .case-overview-layout .case-facts-titlebar {margin:0;align-self:center}
 .case-overview-layout .case-facts-topline {width:480px;max-width:100%;margin:0;padding:0;gap:8px}
 .case-overview-layout .case-facts-top-item {min-height:48px;padding:6px 10px;border-radius:14px}
-.case-overview-layout .case-facts-scroll {grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.case-overview-layout .case-facts-scroll {grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
 .case-overview-layout .case-facts-card--combined {grid-column:1}
 .case-overview-layout .case-facts-card--location {grid-column:2}
 .case-overview-layout .case-facts-card--authority {grid-column:3;grid-row:1}
@@ -276,8 +276,251 @@ html[data-theme-resolved="dark"] .case-header-person:hover {background:rgba(35,5
   display: none !important;
 }
 
+/* Resumen con superficies de color y sin contornos superpuestos. */
+.case-overview-layout .accident-case-header > .case-header-facts-list {
+  border:0;background:#f0f4fa;box-shadow:none;
+}
+.case-overview-layout .case-facts-top-item {
+  border:0;background:linear-gradient(135deg,#244c98,#3269c5);box-shadow:none;
+}
+.case-overview-layout .case-facts-top-item:nth-child(2) {background:linear-gradient(135deg,#11665f,#14867c)}
+.case-overview-layout .case-facts-top-item:nth-child(3) {background:linear-gradient(135deg,#59419a,#7855bc)}
+.case-overview-layout .case-facts-top-item dt {color:#edf4ff}
+.case-overview-layout .case-facts-top-item dd {color:#fff;font-size:15px;font-weight:800}
+.case-overview-layout .case-facts-card {
+  border:0;background:#e9f1ff;box-shadow:0 5px 16px rgba(30,58,95,.07);overflow:hidden;
+}
+.case-overview-layout .case-facts-card--location {background:#e4f4f0}
+.case-overview-layout .case-facts-card--authority {background:#f0eafa}
+.case-overview-layout .case-facts-card .case-facts-card-title {
+  border:0;background:#ccdefa;color:#203f76;padding:11px 12px;
+}
+.case-overview-layout .case-facts-card--location .case-facts-card-title {background:#bce5d9;color:#135b50}
+.case-overview-layout .case-facts-card--authority .case-facts-card-title {background:#ddcef2;color:#513779}
+.case-overview-layout .case-facts-combined-col + .case-facts-combined-col {border:0}
+.case-overview-layout .case-facts-card .case-facts-row dt {color:#506683}
+.case-overview-layout .case-facts-card .case-facts-row dd {color:#182e4b}
+html[data-theme-resolved="dark"] .case-overview-layout .accident-case-header > .case-header-facts-list {background:#111c2c}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card {background:#1b2c45}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card--location {background:#19362f}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card--authority {background:#302440}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card .case-facts-card-title {background:#29466d;color:#e3efff}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card--location .case-facts-card-title {background:#255648;color:#dcfff0}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card--authority .case-facts-card-title {background:#503a6b;color:#f2e7ff}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card .case-facts-row dt {color:#b0c3da}
+html[data-theme-resolved="dark"] .case-overview-layout .case-facts-card .case-facts-row dd {color:#f0f5ff}
+
 /* Modo persona: en la barra de subpestañas de la persona se oculta la pestaña de vehículo */
 #participantes [id^="persona-"]:not(.sidebar-vehicle-only) > .tab-panel > .inner-tabs > button[data-bs-target*="-vehiculo"] {
   display: none !important;
 }
 
+/* Navegación lateral de los módulos del accidente. */
+.case-overview-layout > .case-module-sidebar {grid-column:1;grid-row:3;min-width:0;display:flex;flex-direction:column;gap:10px}
+.case-module-sidebar .case-participants-disclosure {border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 4px 14px #18304d0d}
+.case-module-sidebar summary {display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;padding:17px 16px;background:#e3edff;color:#234b85;font-size:16px;font-weight:800}
+.case-module-sidebar summary::-webkit-details-marker {display:none}
+.case-module-sidebar summary::after {content:'⌄';font-size:22px}
+.case-module-sidebar details[open] > summary::after {content:'⌃'}
+.case-module-sidebar summary:focus-visible {outline:3px solid #3785ef;outline-offset:-3px}
+.case-module-sidebar .case-header-people {padding:10px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.case-module-sidebar .case-header-people-heading[hidden] {display:none}
+.case-module-sidebar #accTabs {display:flex;flex-direction:column;flex-wrap:nowrap!important;gap:10px;width:100%;padding:0;margin:0;border:0;overflow:visible}
+.case-module-sidebar #accTabs > .nav-link:not([hidden]) {width:100%;min-width:0;max-width:none;flex:none;margin:0;padding:14px 16px;min-height:68px;text-align:left;border-radius:14px}
+.case-module-sidebar #accTabs > .nav-link[hidden] {display:none!important}
+.case-module-sidebar #accTabs .main-tab-title {font-size:15px;white-space:normal}
+.case-module-sidebar #accTabs .tab-sub {font-size:11px}
+html[data-theme-resolved="dark"] .case-module-sidebar .case-participants-disclosure {background:#17263c}
+html[data-theme-resolved="dark"] .case-module-sidebar summary {background:#28456c;color:#e3efff}
+@media(max-width:900px){
+  .case-overview-layout > .case-module-sidebar {grid-column:1;grid-row:3}
+  .case-overview-layout > .tabs-shell-main {grid-column:1;grid-row:4}
+}
+
+#participantes > .participants-overview {display:none}
+#participantes.show-participants-overview > .participants-overview {display:block}
+#participantes.show-participants-overview > .main-panel-participantes {display:none}
+.participants-overview {padding:18px;background:var(--card,#fff);border-radius:18px}
+.participants-overview > h2 {font-size:21px;margin:0 0 18px;color:var(--text,#203f76)}
+.participant-overview-unit {margin-bottom:18px;border-radius:16px;overflow:hidden;background:#f0f5fd}
+.participant-overview-unit > header {padding:14px 18px;background:#dce9ff;color:#214b82;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.participant-overview-unit h3 {margin:0;font-size:19px}
+.participant-overview-person {display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:15px 18px;border-bottom:1px solid #dce5f0;color:#203654}
+.participant-overview-person:last-child {border-bottom:0}
+.participant-overview-role {font-size:13px;font-weight:800;margin-bottom:6px}
+.participant-overview-person strong {font-size:16px}
+.participant-overview-person p {margin:5px 0 0;font-size:13px;color:#536780}
+html[data-theme-resolved="dark"] .participant-overview-unit {background:#1b2c45}
+html[data-theme-resolved="dark"] .participant-overview-unit > header {background:#29466d;color:#e3efff}
+html[data-theme-resolved="dark"] .participant-overview-person {color:#e3efff;border-color:#344963}
+html[data-theme-resolved="dark"] .participant-overview-person p {color:#b0c3da}
+
+/* Ficha compacta de involucrados, con nombres y acciones juntos. */
+#participantes > .participants-overview {padding:16px 18px;background:linear-gradient(135deg,#f6fcfa,#f4f8ff);box-shadow:0 4px 18px #18304d08;border-radius:16px}
+.participants-overview > h2 {font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#758595;margin:0 0 10px}
+.participants-overview .participant-overview-unit {background:transparent;border-radius:0;margin:0;padding:0 0 8px}
+.participants-overview .participant-overview-unit + .participant-overview-unit {border-top:1px solid #dae5ed;padding-top:8px}
+.participants-overview .participant-overview-unit > header {padding:5px 0 8px;background:transparent;gap:10px;color:#365d85}
+.participants-overview .participant-overview-unit h3 {font-size:12px}
+.participants-overview .participant-overview-unit header strong {font-size:12px}
+.participants-overview .participant-overview-person {display:flex;justify-content:flex-start;align-items:center;gap:8px;padding:6px 0;border:0;flex-wrap:nowrap}
+.overview-person-icon {font-size:17px;flex:0 0 24px;text-align:center}
+.overview-person-info {flex:0 1 auto;min-width:0}
+.participants-overview .participant-overview-person strong {font-size:12px;line-height:1.25}
+.participants-overview .participant-overview-person.is-fatal strong {color:#bc2923}
+.participants-overview .participant-overview-person p {margin:2px 0 0;font-size:10px;line-height:1.35;font-weight:600}
+.participants-overview .case-person-actions {gap:5px;flex-wrap:wrap}
+.participants-overview .case-person-view,.participants-overview .btn-shell {margin:0;padding:3px 7px;font-size:10px;min-height:0;white-space:nowrap;box-shadow:none}
+html[data-theme-resolved="dark"] #participantes > .participants-overview {background:#17283a}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-unit,html[data-theme-resolved="dark"] .participants-overview .participant-overview-unit > header {background:transparent}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-person.is-fatal strong {color:#ff9e98}
+@media(max-width:650px){
+  .participants-overview .participant-overview-person {flex-wrap:wrap}
+  .overview-person-info {flex:1 1 calc(100% - 40px)}
+  .participant-overview-person > .case-person-actions {margin-left:34px}
+}
+
+.participants-overview .overview-role-group {margin:12px 0 3px;padding:0 0 4px;font-size:12px;font-weight:800;color:#365d85;border-bottom:1px solid #dce7ee;letter-spacing:.025em}
+.participants-overview .overview-person-role {margin:0 0 2px;font-size:10px;font-weight:750;color:#617891}
+html[data-theme-resolved="dark"] .participants-overview .overview-role-group {color:#b9d5ff;border-color:#344963}
+html[data-theme-resolved="dark"] .participants-overview .overview-person-role {color:#b0c3da}
+
+/* Jerarquía entre unidades, roles y participantes. */
+.participants-overview .participant-overview-unit > header {
+  padding:9px 12px;margin:4px 0 10px;border-radius:9px;
+  background:#e4edf9;color:#234c7e;
+}
+.participants-overview .participant-overview-unit h3,
+.participants-overview .participant-overview-unit header strong {
+  font-family:'Avenir Next','Trebuchet MS',sans-serif;
+  font-size:14px;font-weight:800;letter-spacing:.035em;
+}
+.participants-overview .overview-role-group {margin-left:16px;font-size:11px;font-weight:700}
+.participants-overview .participant-overview-person {margin-left:24px}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-unit > header {background:#253e5d;color:#d3e6ff}
+@media(max-width:650px){
+  .participants-overview .overview-role-group {margin-left:8px}
+  .participants-overview .participant-overview-person {margin-left:12px}
+}
+
+/* Familiares y defensa junto a la persona a quien están vinculados. */
+.overview-linked-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.85fr);gap:14px;align-items:start;margin:5px 0 10px}
+.overview-related-people {padding:8px 10px;background:#eaf2f7;border-radius:10px;border-left:3px solid #9ab8cc}
+.participants-overview .overview-related-people .overview-role-group {margin:3px 0;border:0;font-size:10px}
+.participants-overview .overview-related-people .participant-overview-person {margin:0;padding:4px 0;flex-wrap:wrap}
+.overview-related-people .overview-linked-row {display:block}
+.overview-linked-row > .participant-overview-person {flex-wrap:wrap}
+.overview-police-group {margin-top:16px;padding-top:5px;border-top:2px solid #ccdae9}
+html[data-theme-resolved="dark"] .overview-related-people {background:#21364a;border-color:#587c9c}
+@media(max-width:1100px){.overview-linked-row {grid-template-columns:1fr}.overview-related-people {margin-left:24px}}
+
+/* Resumen denso y bloques vinculados sin alturas ni espacios sobrantes. */
+.participants-overview .participant-overview-person strong {font-size:11px;line-height:1.25}
+.participants-overview .participant-overview-person p,
+.participants-overview .overview-person-role {font-size:9px;line-height:1.3}
+.participants-overview .participant-overview-person {padding:4px 0;gap:6px;min-height:0;align-self:start}
+.participants-overview .overview-person-icon {font-size:15px;flex-basis:21px}
+.participants-overview .overview-role-group {margin-top:9px;margin-bottom:2px;padding-bottom:3px}
+.participants-overview .overview-linked-row {grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;margin:3px 0 6px;min-height:0;align-items:start}
+.participants-overview .overview-related-people {position:static;display:block;width:auto;min-width:0;height:auto;min-height:0;margin:0;padding:5px 8px;box-shadow:none;border-radius:7px}
+.participants-overview .overview-linked-row .participant-overview-person {display:grid;grid-template-columns:21px minmax(0,1fr);gap:2px 6px;align-items:start}
+.participants-overview .overview-linked-row .case-person-actions {grid-column:2;margin:2px 0 0}
+.participants-overview .overview-linked-row .overview-person-info {min-width:0;overflow-wrap:anywhere}
+.participants-overview .overview-related-people .overview-linked-row {display:block;margin:4px 0}
+.participants-overview .overview-related-people .overview-role-group {margin:0 0 3px;font-size:9px}
+.participants-overview .case-person-view,.participants-overview .btn-shell {font-size:9px;padding:2px 6px}
+.participants-overview .overview-police-group {margin-top:10px;padding:0;border:0}
+.participants-overview .overview-police-group > .overview-role-group {
+  font-family:'Avenir Next','Trebuchet MS',sans-serif;font-size:14px;font-weight:800;letter-spacing:.035em;
+  margin:4px 0 8px;padding:9px 12px;border:0;border-radius:9px;background:#dcefe5;color:#226447;
+}
+html[data-theme-resolved="dark"] .participants-overview .overview-police-group > .overview-role-group {background:#214c3b;color:#c0efda}
+@media(max-width:700px){
+  .participants-overview .overview-linked-row {grid-template-columns:1fr;gap:4px}
+  .participants-overview .overview-related-people {margin-left:24px}
+}
+
+/* Couleurs de repérage des rôles, sans agrandir la fiche. */
+.participants-overview [data-tone="blue"] {--role-accent:#285ba2;--role-tint:#e6efff}
+.participants-overview [data-tone="teal"] {--role-accent:#147267;--role-tint:#def3ee}
+.participants-overview [data-tone="amber"] {--role-accent:#885b13;--role-tint:#fff0cf}
+.participants-overview [data-tone="violet"] {--role-accent:#76509a;--role-tint:#f1e8fa}
+.participants-overview [data-tone="indigo"] {--role-accent:#514c9e;--role-tint:#eae8ff}
+.participants-overview [data-tone="green"] {--role-accent:#226447;--role-tint:#dcefe5}
+.participants-overview .overview-role-group[data-tone] {color:var(--role-accent);background:var(--role-tint);border:0;border-radius:6px;padding:5px 8px}
+.participants-overview .overview-person-role {color:var(--role-accent,#617891)}
+.participants-overview .overview-person-icon {background:var(--role-tint,#e6efff);border-radius:6px;padding:3px 0}
+.participants-overview .participant-overview-person:not(.is-fatal) strong {color:var(--role-accent,#203654)}
+.participants-overview .overview-person-meta {color:#53657e;font-weight:500}
+.participants-overview .overview-condition {display:inline-block;font-size:9px;padding:1px 5px;border-radius:5px;line-height:1.3}
+.participants-overview .overview-related-people:has(> [data-tone="violet"]) {background:#f3edfa;border-left-color:#ad8ccb}
+.participants-overview .overview-related-people:has(> [data-tone="indigo"]) {background:#eeedfc;border-left-color:#9891d4}
+.participants-overview a[href^="https://wa.me/"] {background:#e3f5eb;color:#176442;border-color:#b6e2c8}
+.participants-overview .case-person-view {background:#edf4ff;color:#285ba2;border-color:#cbdcf5}
+html[data-theme-resolved="dark"] .participants-overview [data-tone] {--role-accent:#b6d5f5;--role-tint:#29425a}
+html[data-theme-resolved="dark"] .participants-overview .overview-person-meta {color:#b4c5d8}
+html[data-theme-resolved="dark"] .participants-overview .overview-related-people {background:#2d2943}
+
+.participants-overview .overview-title-actions {display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.participants-overview .overview-title-actions h2 {margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#758595}
+.participants-overview .overview-title-actions .case-new-trigger {padding:7px 12px;font-size:11px;min-height:34px;border-radius:10px;background:linear-gradient(135deg,#078c83,#10b7a5);color:#fff;border:0;box-shadow:0 3px 10px #078c8326}
+.participants-overview .overview-title-actions .case-new-menu {text-transform:none;max-width:calc(100vw - 50px)}
+
+.participants-overview .overview-collapsible-heading {cursor:pointer}
+.participants-overview .overview-group-toggle {display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-align:left;cursor:pointer}
+.participants-overview .overview-group-toggle::before {content:'▾';font-size:13px;width:12px}
+.participants-overview .overview-group-toggle[aria-expanded="false"]::before {content:'▸'}
+.participants-overview .overview-group-toggle:focus-visible {outline:2px solid currentColor;outline-offset:4px;border-radius:3px}
+.participants-overview .overview-group-content[hidden] {display:none!important}
+
+#documentos .document-new-button {display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:0;border-radius:10px;background:linear-gradient(135deg,#078c83,#10b7a5);color:#fff;font-size:12px;font-weight:800;box-shadow:0 3px 10px #078c8326}
+#documentos .document-new-button:hover {background:#087c73;transform:translateY(-1px)}
+#documentos .document-new-button:focus-visible {outline:3px solid #65cfc4;outline-offset:3px}
+
+.participants-overview .overview-title-actions .case-command-button {display:inline-flex;align-items:center;gap:7px;padding:7px 12px;min-height:34px;font-size:11px;border-radius:10px}
+.participants-overview .overview-title-actions .btn-citacion {background:#edf4ff;border:1px solid #9ebfff;color:#285ba2}
+.participants-overview .overview-title-actions .case-manifest-trigger {background:#fff3d9;border:1px solid #edc774;color:#946012}
+
+.case-overview-layout .case-facts-topline {width:850px;grid-template-columns:repeat(5,minmax(0,1fr))}
+.case-overview-layout .case-facts-top-item.case-facts-sidpol {background:linear-gradient(135deg,#245278,#357ca4)}
+.case-overview-layout .case-facts-top-item.case-facts-status {background:#fff0d4;position:relative;overflow:visible}
+.case-overview-layout .case-facts-status dt {color:#875812}
+.case-overview-layout .case-facts-sidpol .sidpol-summary-trigger {background:transparent;border:0;box-shadow:none;color:#fff;font-size:15px;font-weight:800;padding:0}
+.case-overview-layout .case-facts-status .case-status-current {font-size:12px;padding:3px 9px}
+.case-overview-layout .case-facts-status .case-status-feedback:empty {display:none}
+.case-overview-layout .topbar {justify-content:flex-end}
+@media(max-width:900px){.case-overview-layout .case-facts-topline {width:100%;grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:480px){.case-overview-layout .case-facts-topline {grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Sin franja superior: navegación y contenido siguen al resumen. */
+.case-overview-layout > .case-module-sidebar,
+.case-overview-layout > .tabs-shell-main {grid-row:2}
+@media(max-width:900px){.case-overview-layout > .tabs-shell-main {grid-row:3}}
+
+.case-overview-layout .case-facts-scroll > .case-facts-card {align-self:stretch}
+.case-overview-layout .case-facts-card--combined .case-facts-combined-grid {height:100%}
+
+/* Panel y navegación alineados con una escala visual uniforme. */
+.case-overview-layout > .tabs-shell-main {margin-top:0;align-self:start}
+.case-overview-layout > .tabs-shell-main > .tab-content {margin-top:0!important}
+.case-module-sidebar {gap:8px}
+.case-module-sidebar summary {min-height:58px;box-sizing:border-box;padding:12px 16px;font-size:15px;background:#e4edff;color:#234b85}
+.case-module-sidebar #accTabs {gap:8px}
+.case-module-sidebar #accTabs > .nav-link:not([hidden]) {min-height:58px;padding:11px 15px;background:#fff;box-shadow:0 2px 8px #193b6210;border:1px solid #e2eaf3}
+.case-module-sidebar #accTabs > .nav-link:not(.active) {opacity:1;color:#53657b}
+.case-module-sidebar #accTabs > .nav-link.active {background:#eaf2ff;color:#234b85;border-color:#bad1ef}
+.case-module-sidebar #accTabs .main-tab-title {font-size:13px;font-weight:750;line-height:1.3}
+.case-module-sidebar #accTabs .tab-sub {font-size:10px;color:#7a899b}
+#participantes > .participants-overview {background:#fff;padding:16px;border-radius:16px;box-shadow:0 4px 20px #203c6010}
+.participants-overview .overview-title-actions {min-height:36px;gap:10px;margin:0 0 14px}
+.participants-overview .overview-title-actions .case-command-button {height:36px;box-sizing:border-box;justify-content:center;line-height:1;padding:0 12px}
+.participants-overview .participant-overview-unit > header,
+.participants-overview .overview-police-group > .overview-role-group {display:flex;align-items:center;min-height:42px;box-sizing:border-box;padding:8px 12px;margin:0 0 8px;border-radius:10px}
+.participants-overview .participant-overview-unit h3,
+.participants-overview .participant-overview-unit header strong,
+.participants-overview .overview-police-group > .overview-role-group {font-family:inherit;font-size:13px;font-weight:750;letter-spacing:.01em}
+.participants-overview .participant-overview-unit {padding-bottom:0}
+.participants-overview .overview-police-group {margin-top:8px}
+.participants-overview .overview-group-toggle {gap:8px}
+html[data-theme-resolved="dark"] .case-module-sidebar #accTabs > .nav-link:not([hidden]) {background:#1b2c42;color:#c7d6e9;border-color:#31475f}
+html[data-theme-resolved="dark"] .case-module-sidebar #accTabs > .nav-link.active {background:#294969;color:#fff}

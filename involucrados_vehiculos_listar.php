@@ -115,8 +115,18 @@ $returnParam = urlencode($currentUrl);
   .wrap{ max-width:1180px; margin:18px auto 28px auto; padding:0 14px; }
 
   .topbar{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:14px;
   }
+  .heading-actions{ display:flex; flex-direction:column; align-items:flex-start; gap:14px; }
+  .btn.new-vehicle{
+    display:inline-flex; align-items:center; gap:10px; padding:12px 22px;
+    border:1px solid #2563eb; border-radius:14px;
+    background:linear-gradient(135deg, #2563eb, #4338ca); color:#fff;
+    font-size:16px; font-weight:800; box-shadow:0 6px 16px rgba(37,99,235,.25);
+  }
+  .btn.new-vehicle:hover{ background:linear-gradient(135deg, #1d4ed8, #3730a3); box-shadow:0 8px 20px rgba(37,99,235,.32); }
+  .btn.new-vehicle:focus-visible{ outline:3px solid #60a5fa; outline-offset:3px; }
+  .new-vehicle-icon{ display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.2); font-size:24px; line-height:1; }
   .title{
     font-weight:800; letter-spacing:.2px; font-size:20px;
     display:flex; align-items:center; gap:10px;
@@ -214,13 +224,15 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
 <div class="wrap">
 
   <div class="topbar">
-    <div class="title">Involucrados – Vehículos</div>
+    <div class="heading-actions">
+      <div class="title">Involucrados – Vehículos</div>
+      <a class="btn new-vehicle" href="<?=$base?>involucrados_vehiculos_nuevo.php<?=($accidente_id?('?accidente_id='.$accidente_id):'')?>"><span class="new-vehicle-icon" aria-hidden="true">+</span> Nuevo</a>
+    </div>
     <div class="actions">
       <!-- NUEVOS BOTONES -->
       <a class="btn ghost" href="#" onclick="history.back();return false;">← Atrás</a>
       <a class="btn ghost" href="<?=$base?>accidente_listar.php">🗂️ Accidentes</a>
       <!-- EXISTENTES -->
-      <a class="btn primary" href="<?=$base?>involucrados_vehiculos_nuevo.php<?=($accidente_id?('?accidente_id='.$accidente_id):'')?>">＋ Nuevo</a>
       <a class="btn ghost" href="<?=$base?>index.php">🏠 Panel</a>
     </div>
   </div>
