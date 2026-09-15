@@ -13542,6 +13542,20 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   const count = heading?.querySelector('h2 span');
   if (count) summary.append(' · ' + count.textContent.trim());
   if (heading) heading.hidden = true;
+  const arrow = document.createElement('button');
+  arrow.type = 'button';
+  arrow.className = 'participants-list-toggle';
+  arrow.setAttribute('aria-label', 'Expandir lista de participantes');
+  arrow.setAttribute('aria-expanded', 'false');
+  people.id = 'sidebar-participants-list';
+  arrow.setAttribute('aria-controls', people.id);
+  arrow.textContent = '⌄';
+  summary.append(arrow);
+  arrow.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    details.open = !details.open;
+  });
   details.append(summary, people);
   sidebar.append(details, tabs);
   page.append(sidebar);
@@ -13549,7 +13563,8 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   details.open = false;
   const participantPane = document.getElementById('participantes');
   participantPane.classList.add('show-participants-overview');
-  summary.addEventListener('click', () => {
+  summary.addEventListener('click', (event) => {
+    event.preventDefault();
     participantPane.classList.add('show-participants-overview');
     bootstrap.Tab.getOrCreateInstance(participantTab).show();
   });
@@ -13557,12 +13572,9 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
     if (event.target.closest('.js-sidebar-view-person')) participantPane.classList.remove('show-participants-overview');
   }, true);
   details.addEventListener('toggle', () => {
-    if (details.open && !participantTab.classList.contains('active')) {
-      bootstrap.Tab.getOrCreateInstance(participantTab).show();
-    }
-  });
-  tabs.addEventListener('shown.bs.tab', (event) => {
-    details.open = event.target === participantTab;
+    arrow.setAttribute('aria-expanded', String(details.open));
+    arrow.setAttribute('aria-label', details.open ? 'Contraer lista de participantes' : 'Expandir lista de participantes');
+    arrow.textContent = details.open ? '⌃' : '⌄';
   });
 })();
 </script>
