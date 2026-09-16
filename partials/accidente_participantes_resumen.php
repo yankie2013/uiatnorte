@@ -87,7 +87,6 @@
     ?>
     <section class="participants-overview" aria-label="Resumen de todos los participantes">
       <div class="overview-title-actions">
-        <h2>Involucrados</h2>
         <div class="case-new-actions">
           <button class="btn-shell btn-nuevo case-new-trigger case-command-button js-case-new-trigger" type="button" aria-expanded="false" aria-controls="case-new-menu">NUEVO</button>
           <div class="case-new-menu" id="case-new-menu" hidden>
@@ -126,8 +125,25 @@
         <article class="participant-overview-unit">
           <header><h3><?= h($unit['ut']) ?></h3>
           <?php foreach ($unit['vehiculos'] as $vehicle): ?>
+            <?php
+            $vehiclePersonTarget = '';
+            $vehiclePanelTarget = '';
+            foreach ($unit['personas'] as $candidate) {
+                if (!is_conductor($candidate) || empty($candidate['veh_id'])) continue;
+                $combined = es_participacion_combinada($candidate['veh_participacion'] ?? null) && count($unit['vehiculos']) > 1;
+                if (!$combined && (int) $candidate['veh_id'] !== (int) ($vehicle['veh_id'] ?? 0)) continue;
+                $vehiclePersonTarget = 'persona-' . (int) $candidate['involucrado_id'];
+                $vehiclePanelTarget = '#person-pane-' . (int) $candidate['involucrado_id'] . '-vehiculo';
+                if ($combined) $vehiclePanelTarget .= '-' . (string) ($vehicle['veh_numero'] ?? '');
+                break;
+            }
+            ?>
             <div class="case-person-actions"><strong>Vehículo de placa <?= h($vehicle['veh_placa'] ?: 'Sin placa registrada') ?></strong>
-            <a class="case-person-view" href="vehiculo_editar.php?id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=participantes') ?>">Ver vehículo ↗</a></div>
+            <?php if ($vehiclePersonTarget !== ''): ?>
+              <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($vehiclePersonTarget) ?>" data-vehicle-only="1" data-vehicle-panel="<?= h($vehiclePanelTarget) ?>">Ver vehículo ↗</button>
+            <?php else: ?>
+              <a class="case-person-view" href="vehiculo_editar.php?id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=participantes') ?>">Ver vehículo ↗</a>
+            <?php endif; ?></div>
           <?php endforeach; ?></header>
           <?php
           $lastRoleGroup = '';

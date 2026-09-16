@@ -12795,7 +12795,8 @@ include __DIR__ . '/sidebar.php';
         const vehicleTabs = personTarget.querySelectorAll(
           ':scope > .tab-panel > .inner-tabs > [data-bs-target*="-vehiculo"], :scope > .inner-panel > .inner-tabs > [data-bs-target*="-vehiculo"]'
         );
-        const vehicleTab = vehicleTabs.length > 0 ? vehicleTabs[0] : null;
+        const vehicleTab = Array.from(vehicleTabs).find((tab) => tab.dataset.bsTarget === button.dataset.vehiclePanel)
+          || (vehicleTabs.length > 0 ? vehicleTabs[0] : null);
         const personalTab = !vehicleOnly
           ? personTarget.querySelector(
               ':scope > .tab-panel > .inner-tabs > [data-bs-target$="-persona"], :scope > .inner-panel > .inner-tabs > [data-bs-target$="-persona"]'
@@ -13019,6 +13020,26 @@ include __DIR__ . '/sidebar.php';
       });
     });
 
+    document.querySelectorAll('.case-person-wa-toggle').forEach((button) => {
+      const panel = document.getElementById(button.getAttribute('aria-controls'));
+      if (!panel) return;
+      button.addEventListener('click', () => {
+        const expanded = button.getAttribute('aria-expanded') !== 'true';
+        document.querySelectorAll('.case-person-wa-toggle').forEach((other) => {
+          other.setAttribute('aria-expanded', 'false');
+          const otherPanel = document.getElementById(other.getAttribute('aria-controls'));
+          if (otherPanel) otherPanel.hidden = true;
+        });
+        button.setAttribute('aria-expanded', String(expanded));
+        panel.hidden = !expanded;
+      });
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        panel.hidden = true;
+        button.setAttribute('aria-expanded', 'false');
+        button.focus();
+      });
+    });
     document.querySelectorAll('.js-whatsapp-meet').forEach((button) => {
       button.addEventListener('click', () => {
         const phone = String(button.dataset.waPhone || '').replace(/\D+/g, '');
@@ -13619,6 +13640,74 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
       if (!event.target.closest('a, button')) toggle();
     });
   });
+})();
+</script>
+<script>
+(() => {
+  const shell = document.querySelector('.tabs-shell-main');
+  const tabs = document.getElementById('accTabs');
+  if (!shell || !tabs) return;
+  const location = document.createElement('div');
+  location.className = 'case-tab-location';
+  location.setAttribute('role', 'status');
+  location.setAttribute('aria-live', 'polite');
+  location.setAttribute('aria-atomic', 'true');
+  shell.prepend(location);
+  const label = (tab) => {
+    const copy = tab.cloneNode(true);
+    copy.querySelectorAll('.tab-sub, .badge').forEach((node) => node.remove());
+    return copy.textContent.replace(/\s+/g, ' ').trim();
+  };
+  function updateLocation() {
+    const active = tabs.querySelector('.nav-link.active');
+    if (!active) return;
+    const mainId = active.dataset.bsTarget;
+    const pane = document.querySelector(mainId);
+    const parts = [label(active)];
+    const overview = mainId === '#participantes' && pane?.classList.contains('show-participants-overview');
+    if (pane && !overview) {
+      pane.querySelectorAll('[data-bs-toggle="tab"].active').forEach((tab) => {
+        if (tab.getClientRects().length && !tab.closest('[hidden]')) {
+          const text = label(tab);
+          if (text && parts[parts.length - 1] !== text) parts.push(text);
+        }
+      });
+    }
+    const signature = parts.join(' / ');
+    if (location.dataset.path !== signature) {
+      location.dataset.path = signature;
+      const caption = document.createElement('span');
+      caption.className = 'case-location-caption';
+      caption.textContent = 'Estás en';
+      const trail = document.createElement('span');
+      trail.className = 'case-location-trail';
+      parts.forEach((part, index) => {
+        if (index) {
+          const separator = document.createElement('span');
+          separator.className = 'case-location-separator';
+          separator.textContent = '›';
+          separator.setAttribute('aria-hidden', 'true');
+          trail.append(separator);
+        }
+        const item = document.createElement('span');
+        item.textContent = part;
+        if (index === parts.length - 1) item.setAttribute('aria-current', 'location');
+        trail.append(item);
+      });
+      location.replaceChildren(caption, trail);
+    }
+    const summary = document.querySelector('.case-participants-disclosure > summary');
+    summary?.classList.toggle('is-current-section', mainId === '#participantes');
+    if (mainId === '#participantes') summary?.setAttribute('aria-current', 'page');
+    else summary?.removeAttribute('aria-current');
+  }
+  document.addEventListener('shown.bs.tab', updateLocation);
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.js-sidebar-view-person, .case-participants-disclosure > summary')) {
+      requestAnimationFrame(updateLocation);
+    }
+  });
+  updateLocation();
 })();
 </script>
 </body>
