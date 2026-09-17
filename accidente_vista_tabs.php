@@ -8007,23 +8007,68 @@ include __DIR__ . '/sidebar.php';
     </div>
 
   </dialog>
+          <div class="inline-workbench modal-workbench" id="documento-recibido-modal" role="dialog" aria-modal="true" aria-labelledby="documento-recibido-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="documento-recibido-modal-title">Nuevo documento recibido</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" aria-label="Cerrar formulario">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="documento-recibido-modal-frame" src="about:blank" loading="lazy" title="Formulario de documento recibido"></iframe>
+            </div>
+          </div>
+
+          <div class="inline-workbench modal-workbench" id="oficio-modal" role="dialog" aria-modal="true" aria-labelledby="oficio-modal-title" hidden>
+            <div class="modal-workbench-dialog">
+              <div class="inline-head">
+                <strong id="oficio-modal-title">Oficio</strong>
+                <button type="button" class="btn-shell js-inline-close" data-workbench="oficio-modal" data-frame="oficio-modal-frame" aria-label="Cerrar oficio">Cerrar</button>
+              </div>
+              <iframe class="inline-frame" id="oficio-modal-frame" src="about:blank" loading="lazy" title="Detalle y edición de oficio"></iframe>
+            </div>
+          </div>
+
+          <div class="inline-workbench modal-workbench" role="dialog" aria-modal="true" aria-labelledby="documentos-workbench-title" id="documentos-workbench" hidden>
+            <div class="modal-workbench-dialog">
+            <div class="inline-head">
+              <strong id="documentos-workbench-title">Formulario</strong>
+              <button type="button" class="btn-shell js-inline-close" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame">Cerrar</button>
+            </div>
+            <iframe class="inline-frame" id="documentos-workbench-frame" src="about:blank" loading="lazy"></iframe>
+            </div>
+          </div>
+
   <div class="tabs-shell tabs-shell-main">
     <div class="tabs-header main-tabs nav nav-tabs flex-nowrap" id="accTabs" role="tablist">
       <?php
         $mainTabs = [
             ['id' => 'participantes', 'label' => 'Participantes', 'count' => count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados)],
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
-            ['id' => 'documentos', 'label' => 'Documentos', 'count' => count($oficios) + count($documentosRecibidos) + count($actas) + count($actasVisualizacion)],
-            ['id' => 'diligencias-pendientes', 'label' => 'DILIGENCIAS PENDIENTES', 'count' => count($diligencias)],
-            ['id' => 'analisis', 'label' => 'Analisis', 'count' => $analysisTabCount],
+            ['id' => 'oficios', 'label' => 'Oficios', 'count' => count($oficios)],
+            ['id' => 'documentos-recibidos', 'label' => 'Documentos recibidos', 'count' => count($documentosRecibidos)],
+            ['id' => 'documentos-actas', 'label' => 'Actas', 'count' => count($actas) + count($actasVisualizacion)],
+            ['id' => 'diligencias-pendientes', 'label' => 'Diligencias pendientes', 'count' => count($diligencias)],
+            ['id' => 'analisis', 'label' => 'Análisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
-            ['id' => 'resumen-integral', 'label' => 'RESUMEN', 'count' => $summaryBlocksCount],
+            ['id' => 'resumen-integral', 'label' => 'Resumen', 'count' => $summaryBlocksCount],
+        ];
+
+        $tabIcons = [
+            'itp' => 'M9 3h6v4H9z M9 5H6v16h12V5h-3 M9 12h6 M9 16h4',
+            'oficios' => 'M14 2H6v20h12V6z M14 2v5h5 M9 12h6 M9 16h6',
+            'documentos-recibidos' => 'M3 12v8h18v-8 M12 3v11 M8 10l4 4 4-4 M3 12h4l2 4h6l2-4h4',
+            'documentos-actas' => 'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3',
+            'diligencias-pendientes' => 'M9 5h11 M9 12h11 M9 19h11 M3 5l1 1 2-3 M3 12l1 1 2-3 M3 19l1 1 2-3',
+            'analisis' => 'M4 3v18h17 M8 16v-5 M13 16V7 M18 16v-8',
+            'componentes-informe' => 'M5 3h14v18H5z M9 7h6 M9 11h6 M9 15h4',
+            'resumen-integral' => 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
+            'participantes' => 'M4 21v-3a8 8 0 0 1 16 0v3 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
         ];
       ?>
       <?php foreach ($mainTabs as $index => $tab): ?>
         <button <?= $tab['id'] === 'participantes' ? 'hidden' : '' ?> class="nav-link tab-<?= h((string) $tab['id']) ?> <?= $index === 0 ? 'active' : '' ?>" id="<?= h($tab['id']) ?>-tab" data-bs-toggle="tab" data-bs-target="#<?= h($tab['id']) ?>" type="button" role="tab">
+          <span class="main-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?= h($tabIcons[$tab['id']]) ?>"/></svg></span>
           <span class="main-tab-title"><?= h($tab['label']) ?></span>
-          <span class="tab-sub"><?= h((string) ($tab['sub'] ?? ((string) $tab['count'] . ' registro(s)'))) ?></span>
+          <span class="tab-sub" <?= isset($tab['count']) ? 'aria-label="' . (int) $tab['count'] . ' registros"' : '' ?>><?= h((string) ($tab['sub'] ?? (string) $tab['count'])) ?></span>
         </button>
       <?php endforeach; ?>
     </div>
@@ -9987,56 +10032,10 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
 
-      <div class="tab-pane fade" id="documentos" role="tabpanel">
-        <div class="tab-panel main-module-panel main-panel-documentos">
-          <div class="inline-workbench modal-workbench" id="documento-recibido-modal" role="dialog" aria-modal="true" aria-labelledby="documento-recibido-modal-title" hidden>
-            <div class="modal-workbench-dialog">
-              <div class="inline-head">
-                <strong id="documento-recibido-modal-title">Nuevo documento recibido</strong>
-                <button type="button" class="btn-shell js-inline-close" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" aria-label="Cerrar formulario">Cerrar</button>
-              </div>
-              <iframe class="inline-frame" id="documento-recibido-modal-frame" src="about:blank" loading="lazy" title="Formulario de documento recibido"></iframe>
-            </div>
-          </div>
-
-          <div class="inline-workbench modal-workbench" id="oficio-modal" role="dialog" aria-modal="true" aria-labelledby="oficio-modal-title" hidden>
-            <div class="modal-workbench-dialog">
-              <div class="inline-head">
-                <strong id="oficio-modal-title">Oficio</strong>
-                <button type="button" class="btn-shell js-inline-close" data-workbench="oficio-modal" data-frame="oficio-modal-frame" aria-label="Cerrar oficio">Cerrar</button>
-              </div>
-              <iframe class="inline-frame" id="oficio-modal-frame" src="about:blank" loading="lazy" title="Detalle y edición de oficio"></iframe>
-            </div>
-          </div>
-
-          <div class="inline-workbench" id="documentos-workbench" hidden>
-            <div class="inline-head">
-              <strong id="documentos-workbench-title">Formulario</strong>
-              <button type="button" class="btn-shell js-inline-close" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame">Cerrar</button>
-            </div>
-            <iframe class="inline-frame" id="documentos-workbench-frame" src="about:blank" loading="lazy"></iframe>
-          </div>
-
-          <div class="inner-tabs nav nav-tabs flex-nowrap" id="documentos-tabs" role="tablist">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#documentos-oficios" type="button" role="tab">
-              Oficios
-              <span class="tab-mini"><?= count($oficios) ?> registro(s)</span>
-            </button>
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-recibidos" type="button" role="tab">
-              Documentos recibidos
-              <span class="tab-mini"><?= count($documentosRecibidos) ?> registro(s)</span>
-            </button>
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-actas" type="button" role="tab">
-              Actas
-              <span class="tab-mini"><?= count($actas) + count($actasVisualizacion) ?> registro(s)</span>
-            </button>
-          </div>
-
-          <div class="tab-content mt-2">
-            <div class="tab-pane fade show active" id="documentos-oficios" role="tabpanel">
-              <div class="inner-panel">
+            <div class="tab-pane fade" id="oficios" aria-labelledby="oficios-tab" role="tabpanel">
+              <div class="inner-panel tab-panel main-module-panel main-panel-oficios">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell document-new-button" aria-label="Nuevo oficio" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
+                  <a class="btn-shell document-new-button" aria-label="Nuevo oficio" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
 	                  <label class="module-category-filter">Categoría
 	                    <select class="js-document-category-filter" data-list="oficios">
 	                      <option value="">Todas</option>
@@ -10126,10 +10125,11 @@ include __DIR__ . '/sidebar.php';
               </div>
             </div>
 
-            <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel">
-              <div class="inner-panel">
+
+            <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel" aria-labelledby="documentos-recibidos-tab">
+              <div class="inner-panel tab-panel main-module-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell document-new-button" aria-label="Nuevo documento recibido" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos&subtab=recibidos') ?>">Nuevo <span aria-hidden="true">+</span></a>
+                  <a class="btn-shell document-new-button" aria-label="Nuevo documento recibido" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos-recibidos') ?>">Nuevo <span aria-hidden="true">+</span></a>
                   <label class="module-category-filter">Categoría
                     <select class="js-document-category-filter" data-list="recibidos">
                       <option value="">Todas</option>
@@ -10186,8 +10186,8 @@ include __DIR__ . '/sidebar.php';
               </div>
             </div>
 
-            <div class="tab-pane fade" id="documentos-actas" role="tabpanel">
-              <div class="inner-panel">
+            <div class="tab-pane fade" id="documentos-actas" role="tabpanel" aria-labelledby="documentos-actas-tab">
+              <div class="inner-panel tab-panel main-module-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_form.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nueva acta de entrega de vehiculo">+ Acta de entrega de vehiculo</a>
                   <a class="btn-shell" href="acta_visualizacion_form.php?accidente_id=<?= (int) $accidente_id ?>" target="_blank" rel="noopener">+ Acta de visualizacion</a>
@@ -10257,9 +10257,6 @@ include __DIR__ . '/sidebar.php';
                 <?php endif; ?>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
       <div class="tab-pane fade" id="diligencias-pendientes" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-diligencias">
           <div class="inline-workbench modal-workbench" id="diligencia-modal" role="dialog" aria-modal="true" aria-labelledby="diligencia-modal-title" hidden>
@@ -12187,12 +12184,19 @@ include __DIR__ . '/sidebar.php';
         });
       });
       const params = new URLSearchParams(window.location.search);
-      const requestedTab = nav.id === 'accTabs' ? params.get('tab') : '';
-      const requestedSubtab = nav.id === 'documentos-tabs' ? params.get('subtab') : '';
-      const requestedTarget = requestedTab
-        ? '#' + requestedTab
-        : (requestedSubtab ? '#documentos-' + requestedSubtab : '');
+      let requestedTab = nav.id === 'accTabs' ? params.get('tab') : '';
+      if (requestedTab === 'documentos') {
+        const legacySubtab = params.get('subtab');
+        requestedTab = legacySubtab === 'oficios' ? 'oficios'
+          : (legacySubtab === 'actas' ? 'documentos-actas' : 'documentos-recibidos');
+      }
+      const requestedTarget = requestedTab ? '#' + requestedTab : '';
       let saved = requestedTarget || localStorage.getItem(storageKey);
+      if (nav.id === 'accTabs' && saved === '#documentos') {
+        const legacySaved = localStorage.getItem('uiat_tab_' + accId + '_documentos-tabs');
+        saved = legacySaved === '#documentos-oficios' ? '#oficios'
+          : (legacySaved === '#documentos-actas' ? '#documentos-actas' : '#documentos-recibidos');
+      }
       if (saved && nav.id.startsWith('person-pane-') && saved.includes('-vehiculo')) {
         saved = '#' + nav.id + '-persona';
       }
@@ -13655,7 +13659,7 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   shell.prepend(location);
   const label = (tab) => {
     const copy = tab.cloneNode(true);
-    copy.querySelectorAll('.tab-sub, .badge').forEach((node) => node.remove());
+    copy.querySelectorAll('.tab-sub, .tab-mini, .main-tab-icon, .badge').forEach((node) => node.remove());
     return copy.textContent.replace(/\s+/g, ' ').trim();
   };
   function updateLocation() {
