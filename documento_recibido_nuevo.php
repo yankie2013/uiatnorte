@@ -169,8 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
     <div>
       <label for="fecha_recepcion">Fecha de recepción</label>
-      <input id="fecha_recepcion" type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>" readonly>
-      <div class="help">Se registra automáticamente con la fecha de hoy.</div>
+      <input id="fecha_recepcion" type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>">
+      <div class="help">Por defecto es la fecha de hoy; puedes ajustarla si es necesario.</div>
     </div>
     <div>
       <label for="fecha_documento">Fecha del documento</label>

@@ -64,7 +64,9 @@ final class DocumentoRecibidoService
 
     public function crear(array $input): int
     {
-        $input['fecha_recepcion'] = date('Y-m-d');
+        if (empty($input['fecha_recepcion'])) {
+            $input['fecha_recepcion'] = date('Y-m-d');
+        }
         return $this->repository->create($this->payload($input));
     }
 
@@ -74,7 +76,9 @@ final class DocumentoRecibidoService
         if ($actual === null) {
             throw new InvalidArgumentException('Documento recibido no encontrado.');
         }
-        $input['fecha_recepcion'] = (string) ($actual['fecha_recepcion'] ?? $actual['fecha_recepcion_resuelta'] ?? $actual['fecha'] ?? date('Y-m-d'));
+        if (empty($input['fecha_recepcion'])) {
+            $input['fecha_recepcion'] = (string) ($actual['fecha_recepcion'] ?? $actual['fecha_recepcion_resuelta'] ?? $actual['fecha'] ?? date('Y-m-d'));
+        }
         $this->repository->update($id, $this->payload($input));
     }
 

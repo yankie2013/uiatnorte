@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
@@ -57,7 +57,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php if($errores): ?><div class="error"><?php foreach($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div><?php endif; ?>
 <form method="post"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 <div><label>Accidente</label><select name="accidente_id"><option value="">(ninguno)</option><?php foreach($ctx['accidentes'] as $a): ?><option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id']===(string)$a['id'])?'selected':'' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty($a['lugar']) ? (' - '.h($a['lugar'])) : '' ?></option><?php endforeach; ?></select></div>
-<div><label>Fecha de recepcion</label><input type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>" readonly></div>
+<div><label>Fecha de recepcion</label><input type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>"></div>
 <div><label>Fecha del documento</label><input type="date" name="fecha_documento" value="<?= h($data['fecha_documento']) ?>"></div>
 <div class="full"><label for="categoria">Categoría</label><div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias']), JSON_UNESCAPED_UNICODE)) ?>"><input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar" role="combobox" aria-autocomplete="list" aria-expanded="false"></div></div>
 <div class="full"><label>Asunto</label><input type="text" name="asunto" value="<?= h($data['asunto']) ?>"></div>

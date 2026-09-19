@@ -291,6 +291,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
+  <?php if (!$embed): ?>
   <div class="office-page-head">
     <div class="office-title">
       <h1>Nuevo Oficio</h1>
@@ -305,8 +306,12 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <a class="btn" href="index.php">Ir al panel</a>
         <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
       <?php endif; ?>
+      <button class="btn" type="button" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) $preselectedAccidenteId ?>&tab=documentos';}">← Volver atrás</button>
+      <a class="btn" href="index.php">Ir al panel</a>
+      <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
     </div>
   </div>
+  <?php endif; ?>
 
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>"><?= h($returnLabel) ?></a><?php endif; ?></div><?php endif; ?>
