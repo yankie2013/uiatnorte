@@ -13584,6 +13584,20 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   details.append(summary, people);
   sidebar.append(details, tabs);
   page.append(sidebar);
+  // Measure the actual header: wrapped text and zoom change its height.
+  const caseFacts = page.querySelector('.case-header-facts-list');
+  if (caseFacts) {
+    const updateStickyLayout = () => {
+      const headerHeight = Math.ceil(caseFacts.getBoundingClientRect().height);
+      const enoughSpace = window.innerWidth > 900 && window.innerHeight - headerHeight >= 260;
+      page.classList.toggle('case-sticky-ready', enoughSpace);
+      page.style.setProperty('--case-sticky-offset', (enoughSpace ? headerHeight + 20 : 12) + 'px');
+    };
+    new ResizeObserver(updateStickyLayout).observe(caseFacts);
+    window.addEventListener('resize', updateStickyLayout);
+    updateStickyLayout();
+  }
+
   tabs.setAttribute('aria-orientation', 'vertical');
   details.open = false;
   const participantPane = document.getElementById('participantes');
@@ -13616,13 +13630,13 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
     const content = document.createElement('div');
     content.id = 'overview-group-content-' + index;
     content.className = 'overview-group-content';
-    content.hidden = true;
+    content.hidden = index !== 0;
     Array.from(group.childNodes).forEach((node) => {
       if (node !== header) content.append(node);
     });
     group.append(content);
     title.replaceChildren(button);
-    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-expanded', String(!content.hidden));
     button.setAttribute('aria-controls', content.id);
     const toggle = () => {
       if (content.hidden) {
@@ -13639,10 +13653,21 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
       header.classList.toggle('is-collapsed', content.hidden);
     };
     button.addEventListener('click', toggle);
-    header.classList.add('overview-collapsible-heading', 'is-collapsed');
+    header.classList.add('overview-collapsible-heading');
+    header.classList.toggle('is-collapsed', content.hidden);
     header.addEventListener('click', (event) => {
       if (!event.target.closest('a, button')) toggle();
     });
+  });
+  const openFirstParticipantGroup = () => {
+    const first = document.querySelector('.participants-overview .overview-group-toggle');
+    if (first?.getAttribute('aria-expanded') === 'false') first.click();
+  };
+  document.getElementById('participantes-tab')?.addEventListener('shown.bs.tab', openFirstParticipantGroup);
+  document.querySelector('.case-participants-disclosure > summary')?.addEventListener('click', openFirstParticipantGroup);
+  const participantsDisclosure = document.querySelector('.case-participants-disclosure');
+  participantsDisclosure?.addEventListener('toggle', () => {
+    if (participantsDisclosure.open) openFirstParticipantGroup();
   });
 })();
 </script>
