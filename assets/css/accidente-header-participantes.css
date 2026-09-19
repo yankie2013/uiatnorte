@@ -850,3 +850,12 @@ html[data-theme-resolved="dark"] .case-overview-layout .case-facts-topline .sidp
   .case-overview-layout.case-sticky-ready .accident-case-header > .case-header-facts-list,
   .case-overview-layout > .case-module-sidebar {position:static;max-height:none;overflow:visible;box-shadow:none}
 }
+
+/* Documents and official letters open inside their module, retaining case context. */
+.main-module-panel.has-case-editor > :not(.case-inline-editor) {display:none!important}
+.case-inline-editor {margin:0;scroll-margin-top:var(--case-sticky-offset,12px);border-radius:16px}
+.case-inline-editor > .modal-workbench-dialog {width:100%;max-height:none;border:0;border-radius:0;box-shadow:none}
+.case-inline-editor .inline-head {padding:12px 16px;background:linear-gradient(120deg,#eaf4ff,#f8fcff)}
+.case-inline-editor .inline-frame {display:block;height:max(300px,calc(100dvh - var(--case-sticky-offset,12px) - 100px));min-height:300px}
+html[data-theme-resolved="dark"] .case-inline-editor .inline-head {background:linear-gradient(120deg,#233b57,#17283e)}
+@media(max-width:900px) {.case-inline-editor .inline-frame {height:75dvh}.case-inline-editor {scroll-margin-top:12px}}

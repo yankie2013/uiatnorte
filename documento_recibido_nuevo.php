@@ -96,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="<?= $embed ? 'is-embed' : '' ?>">
 <?php if (!$embed) include __DIR__ . '/sidebar.php'; ?>
 <div class="wrap">
+  <?php if (!$embed): ?>
   <div class="head">
     <div>
       <p class="eyebrow">Documentos recibidos</p>
@@ -112,6 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
     </div>
   </div>
+
+  <?php endif; ?>
 
   <?php if ($errores): ?>
     <div class="error"><?php foreach ($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div>
@@ -143,8 +146,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </section>
 
     <section class="form-section">
-      <div class="section-head"><h2>Identificación y fechas</h2><p>El accidente ya viene seleccionado desde la vista actual.</p></div>
+      <div class="section-head"><h2><?= $embed && $accidenteFijo ? 'Fechas' : 'Identificación y fechas' ?></h2><?php if (!$embed || !$accidenteFijo): ?><p>El accidente ya viene seleccionado desde la vista actual.</p><?php endif; ?></div>
       <div class="form-grid">
+    <?php if ($embed && $accidenteFijo): ?>
+      <input type="hidden" id="accidente_id" name="accidente_id" value="<?= (int) $accidenteFijo['id'] ?>">
+    <?php else: ?>
     <div class="full">
       <label for="accidente_id">Accidente</label>
       <?php if ($accidenteFijo): ?>
@@ -160,6 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </select>
       <?php endif; ?>
     </div>
+    <?php endif; ?>
     <div>
       <label for="fecha_recepcion">Fecha de recepción</label>
       <input id="fecha_recepcion" type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>" readonly>

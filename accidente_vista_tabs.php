@@ -10035,7 +10035,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade" id="oficios" aria-labelledby="oficios-tab" role="tabpanel">
               <div class="inner-panel tab-panel main-module-panel main-panel-oficios">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell document-new-button" aria-label="Nuevo oficio" href="oficios_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
+                  <a class="btn-shell document-new-button js-inline-open" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio" aria-label="Nuevo oficio" href="oficios_nuevo.php?embed=1&accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
 	                  <label class="module-category-filter">Categoría
 	                    <select class="js-document-category-filter" data-list="oficios">
 	                      <option value="">Todas</option>
@@ -10129,7 +10129,7 @@ include __DIR__ . '/sidebar.php';
             <div class="tab-pane fade" id="documentos-recibidos" role="tabpanel" aria-labelledby="documentos-recibidos-tab">
               <div class="inner-panel tab-panel main-module-panel">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell document-new-button" aria-label="Nuevo documento recibido" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos-recibidos') ?>">Nuevo <span aria-hidden="true">+</span></a>
+                  <a class="btn-shell document-new-button js-inline-open" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido" aria-label="Nuevo documento recibido" href="documento_recibido_nuevo.php?embed=1&accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=documentos-recibidos') ?>">Nuevo <span aria-hidden="true">+</span></a>
                   <label class="module-category-filter">Categoría
                     <select class="js-document-category-filter" data-list="recibidos">
                       <option value="">Todas</option>
@@ -10714,6 +10714,10 @@ include __DIR__ . '/sidebar.php';
     function closeWorkbenchImmediate(workbench, frame) {
       frame.src = 'about:blank';
       workbench.hidden = true;
+      if (workbench.classList.contains('case-inline-editor')) {
+        workbench.parentElement?.classList.remove('has-case-editor');
+        workbench.caseOpener?.focus({preventScroll:true});
+      }
       workbenchStates.delete(frame.id);
       if (workbench.classList.contains('modal-workbench')) {
         document.body.classList.remove('modal-workbench-open');
@@ -12219,6 +12223,21 @@ include __DIR__ . '/sidebar.php';
         const frame = document.getElementById(link.dataset.frame);
         const title = workbench ? workbench.querySelector('strong') : null;
         if (!workbench || !frame) return;
+        if (['documento-recibido-modal', 'oficio-modal'].includes(workbench.id)) {
+          if (!workbench.hidden) {
+            workbench.querySelector('.js-inline-close')?.focus();
+            return;
+          }
+          const panel = link.closest('.main-module-panel');
+          if (!panel) return;
+          workbench.classList.remove('modal-workbench');
+          workbench.classList.add('case-inline-editor');
+          workbench.setAttribute('role', 'region');
+          workbench.removeAttribute('aria-modal');
+          workbench.caseOpener = link;
+          panel.prepend(workbench);
+          panel.classList.add('has-case-editor');
+        }
         if (title) {
           title.textContent = link.dataset.title || 'Formulario';
         }
@@ -12227,7 +12246,8 @@ include __DIR__ . '/sidebar.php';
         if (workbench.classList.contains('modal-workbench')) {
           document.body.classList.add('modal-workbench-open');
         } else {
-          workbench.scrollIntoView({behavior: 'smooth', block: 'start'});
+          workbench.scrollIntoView({behavior: 'auto', block: 'start'});
+          workbench.querySelector('.js-inline-close')?.focus({preventScroll:true});
         }
       });
     });
@@ -13494,12 +13514,13 @@ include __DIR__ . '/sidebar.php';
 
     window.addEventListener('message', (event) => {
       const data = event.data || {};
+      if (event.origin !== window.location.origin) return;
+      const sourceFrame = Array.from(document.querySelectorAll('.inline-frame')).find(frame => frame.contentWindow === event.source);
+      if (!sourceFrame) return;
       if (data.type === 'occiso.close' || data.type === 'oficio.close' || data.type === 'documento_recibido.close' || data.type === 'diligencia.close' || data.type === 'acta.close') {
-        const workbench = visibleWorkbench();
+        const workbench = sourceFrame.closest('.inline-workbench');
         if (!workbench) return;
-        const frame = workbench.querySelector('.inline-frame');
-        if (!frame) return;
-        closeWorkbenchImmediate(workbench, frame);
+        requestCloseWorkbench(workbench, sourceFrame);
         return;
       }
       if (['lc.saved', 'rml.saved', 'dosaje.saved', 'manifestacion.saved', 'occiso.saved', 'occiso.updated', 'oficio.saved', 'oficio.deleted', 'documento_recibido.saved', 'documento_recibido.deleted', 'diligencia.saved', 'diligencia.deleted', 'acta.saved', 'acta.deleted'].includes(data.type)) {
