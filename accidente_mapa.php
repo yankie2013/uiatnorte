@@ -184,8 +184,19 @@ $comisariaId = (int) ($_GET['comisaria_id'] ?? 0);
 
 $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
 
+// A MySQL view created with SELECT * retains its original column list.
+// Preserve the active-case and workspace filters even with an older view/schema.
+$verificationColumns = $pdo->query("SELECT table_name FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND column_name = 'ubicacion_verificada'
+    AND table_name IN ('accidentes', 'accidentes_activos')")->fetchAll(PDO::FETCH_COLUMN);
+$verificationSelect = in_array('accidentes_activos', $verificationColumns, true)
+    ? 'a.ubicacion_verificada'
+    : (in_array('accidentes', $verificationColumns, true)
+        ? '(SELECT av.ubicacion_verificada FROM accidentes av WHERE av.id = a.id)'
+        : '0');
+
 $sql = "SELECT a.id, a.sidpol, a.registro_sidpol, a.tipo_registro, a.lugar, a.referencia,
-               a.fecha_accidente, a.estado, a.ubicacion_verificada, a.latitud, a.longitud, a.cod_dep, a.cod_prov, a.cod_dist,
+               a.fecha_accidente, a.estado, $verificationSelect AS ubicacion_verificada, a.latitud, a.longitud, a.cod_dep, a.cod_prov, a.cod_dist,
                c.nombre AS comisaria,
                dep.nombre AS departamento,
                prov.nombre AS provincia,
