@@ -7,6 +7,11 @@ use RuntimeException;
 
 final class Access
 {
+    private const CATALOG_CREATE_PAGES = [
+        'oficio_entidad_nuevo.php', 'oficio_subentidad_nuevo.php', 'oficio_persona_entidad_nuevo.php',
+        'oficio_asunto_nuevo.php', 'oficio_cargo_nuevo.php', 'oficio_oficial_ano_nuevo.php',
+        'add_catalogo.php', 'involucrados_vehiculos_nuevo.php',
+    ];
     public const ROLES = ['admin'=>'Administrador','jefe_emi'=>'JEFE EMI','adjunto'=>'ADJUNTO','secretaria'=>'Secretaría','guardia'=>'Comandante de guardia','viewer'=>'Consulta (anterior)','editor'=>'Consulta (anterior)'];
     public static function actor(): array { Database::connection(); return $_SESSION['user'] ?? []; }
     public static function id(): int { return (int)(self::actor()['id'] ?? 0); }
@@ -27,6 +32,21 @@ final class Access
             'guardia' => "EXISTS (SELECT 1 FROM comunicaciones_guardia workspace_cg WHERE workspace_cg.accidente_id = $alias.id AND workspace_cg.creado_por = $id AND workspace_cg.eliminado_en IS NULL)",
             default => '1=0',
         };
+    }
+    public static function canViewWorkspaceCase(int $case): bool {
+        $role = self::role();
+        if ($role === 'admin' || in_array($role, ['secretaria','viewer','editor'], true)) return true;
+        if (!in_array($role, ['jefe_emi','adjunto','guardia'], true)) return false;
+        $predicate = self::workspacePredicate('a');
+        $s = Database::connection()->prepare("SELECT 1 FROM accidentes_activos a WHERE a.id=? AND ($predicate) LIMIT 1");
+        $s->execute([$case]);
+        return (bool)$s->fetchColumn();
+    }
+    public static function requireWorkspaceCase(int $case): void {
+        if ($case <= 0 || !self::canViewWorkspaceCase($case)) {
+            http_response_code(403);
+            exit('No tienes autorización para abrir este expediente fuera de tu espacio de trabajo. Puedes consultarlo desde el buscador general.');
+        }
     }
     public static function canEdit(int $case): bool {
         $s=Database::connection()->prepare('SELECT rbac_case(?)');$s->execute([$case]);return (bool)$s->fetchColumn();
@@ -51,15 +71,21 @@ final class Access
         $snapshot = json_decode((string)($document['responsable_documento'] ?? ''), true);
         return is_array($snapshot) ? $snapshot : self::profile((int)($document['accidente_id'] ?? 0));
     }
-    public static function greeting(int $case): string {
-        $p=self::profile($case);
-        return 'Buen día le saluda '.trim(($p['grado']??'').' '.($p['nombre']??'')).' de '.($p['unidad']??'DEPIAT');
+    public static function greeting(int $case = 0): string {
+        $user = self::actor();
+        $grade = preg_replace('/[.\s]+/u', ' ', trim((string)($user['grado'] ?? ''))) ?? '';
+        $name = trim((string)($user['nombre'] ?? 'Personal policial'));
+        return 'Hola, le saluda '.trim($grade.' '.$name);
     }
     public static function requestGuard(): void {
         if(PHP_SAPI==='cli')return;
         $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
         if(in_array($script,['login.php','logout.php','cambiar_clave.php','session_keepalive.php','session_resume.php'],true))return;
         if(!self::id()) { http_response_code(401); exit('Inicia sesión para continuar.'); }
+        if (in_array($script, ['catalogos.php', 'oficio_entidad_editar.php'], true) && !self::admin()) {
+            http_response_code(403);
+            exit('La administración y edición de catálogos está reservada al administrador.');
+        }
         $action=implode(' ',array_filter([$_POST['action']??'',$_POST['accion']??'',$_POST['do']??'',$_GET['action']??'',$_GET['accion']??''], 'is_scalar'));
         $deleting=preg_match('/eliminar|delete|_delete|\bdel\b|\bborrar\b/i',$script.' '.$action);
         if($deleting && !self::admin()) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
@@ -76,8 +102,11 @@ final class Access
         }
 
         $newPage=in_array($script,['gestion_expedientes.php','guardia.php','usuarios_gestion.php','estadisticas.php'],true);
+        $catalogCreationPage = in_array($script, self::CATALOG_CREATE_PAGES, true);
+        $catalogAjaxCreate = $script === 'involucrados_vehiculos_nuevo.php'
+            && preg_match('/^crear_(categoria|tipo|carroceria|marca|modelo)$/', (string) ($_GET['ajax'] ?? '')) === 1;
         if($post && !$newPage && !in_array($script,['buscar_dni.php','buscar_placa.php','buscar_personas_nombre.php','documento_recibido_analizar_ia.php'],true)) {
-            if(in_array(self::role(),['secretaria','viewer','editor','guardia'],true)) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
+            if(in_array(self::role(),['secretaria','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
         }
     }
 }

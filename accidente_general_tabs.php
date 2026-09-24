@@ -66,6 +66,7 @@ if(!$acc){
 if(!$acc) die('No hay accidentes registrados.');
 
 $accidente_id=(int)$acc['id'];
+\App\Support\Access::requireWorkspaceCase($accidente_id);
 $sidpol=(string)$acc['sidpol'];
 
 /* Datos enriquecidos */

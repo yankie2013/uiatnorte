@@ -22,7 +22,7 @@ final class UserRepository
     public function findByIdentifier(string $identifier): ?array
     {
         $column = preg_match('/^[0-9]+$/D', $identifier) ? 'cip' : 'email';
-        $st = $this->pdo->prepare("SELECT id,email,nombre,rol,pass_hash,activo,cip,must_change_password,auth_version FROM usuarios WHERE $column=? LIMIT 1");
+        $st = $this->pdo->prepare("SELECT id,email,nombre,grado,rol,pass_hash,activo,cip,must_change_password,auth_version FROM usuarios WHERE $column=? LIMIT 1");
         $st->execute([$identifier]);
         return $st->fetch(PDO::FETCH_ASSOC) ?: null;
     }

@@ -1,6 +1,10 @@
 <?php
 require __DIR__ . '/auth.php';
 require_login();
+if (!\App\Support\Access::admin()) {
+    http_response_code(403);
+    exit('La administración de catálogos está reservada al administrador.');
+}
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -387,6 +391,20 @@ function loadRows(PDO $pdo, array $config, array $fields, string $query): array
     return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
+function catalogAuthors(PDO $pdo, string $table, array $rows): array
+{
+    $ids = array_values(array_filter(array_map(static fn($row) => (int) ($row['id'] ?? 0), $rows)));
+    if ($ids === []) return [];
+    $marks = implode(',', array_fill(0, count($ids), '?'));
+    $st = $pdo->prepare("SELECT ca.registro_id, u.nombre, u.grado, u.cip FROM catalogo_aportaciones ca JOIN usuarios u ON u.id=ca.usuario_id WHERE ca.tabla=? AND ca.registro_id IN ($marks)");
+    $st->execute(array_merge([$table], $ids));
+    $authors = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $author) {
+        $authors[(int) $author['registro_id']] = trim((string) ($author['grado'] ?? '') . ' ' . (string) ($author['nombre'] ?? '') . ((string) ($author['cip'] ?? '') !== '' ? ' · CIP ' . $author['cip'] : ''));
+    }
+    return $authors;
+}
+
 function findRow(PDO $pdo, array $config, int $id): ?array
 {
     if ($id <= 0) {
@@ -515,6 +533,7 @@ function saveCatalogRow(PDO $pdo, array $config, array $fields, array $input, ?i
             $marks = array_fill(0, count($columns), '?');
             $st = $pdo->prepare('INSERT INTO `' . $table . '` (`' . implode('`, `', $columns) . '`) VALUES (' . implode(', ', $marks) . ')');
             $st->execute(array_values($payload));
+            \App\Services\CatalogContributionService::record($pdo, $table, (int) $pdo->lastInsertId());
         }
 
         if ($started) {
@@ -709,6 +728,7 @@ $editId = (int) ($_GET['edit'] ?? 0);
 $editRow = ($pdo && $selected && $editId > 0) ? findRow($pdo, $selected, $editId) : null;
 $query = trim((string) ($_GET['q'] ?? ''));
 $rows = ($pdo && $selected) ? loadRows($pdo, $selected, $fields, $query) : [];
+$authors = ($pdo && $selected) ? catalogAuthors($pdo, $selected['table'], $rows) : [];
 
 include __DIR__ . '/sidebar.php';
 ?>
@@ -856,12 +876,13 @@ include __DIR__ . '/sidebar.php';
                     <?php foreach ($fields as $field): ?>
                       <th><?= h($field['label']) ?></th>
                     <?php endforeach; ?>
+                    <th>Agregado por</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                 <?php if ($rows === []): ?>
-                  <tr><td colspan="<?= count($fields) + 2 ?>" class="empty">No hay registros para este catalogo.</td></tr>
+                  <tr><td colspan="<?= count($fields) + 3 ?>" class="empty">No hay registros para este catalogo.</td></tr>
                 <?php else: ?>
                   <?php foreach ($rows as $row): ?>
                     <tr>
@@ -898,6 +919,7 @@ include __DIR__ . '/sidebar.php';
                           <?php endif; ?>
                         </td>
                       <?php endforeach; ?>
+                      <td><?= h($authors[(int) $row['id']] ?? 'Histórico · autor no registrado') ?></td>
                       <td>
                         <div class="row-actions">
                           <a class="btn" href="catalogos.php?catalog=<?= h($catalogKey) ?>&edit=<?= (int) $row['id'] ?>">Editar</a>

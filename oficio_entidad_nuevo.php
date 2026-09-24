@@ -66,7 +66,7 @@ function closeModalMaybe(){ if(window.parent && typeof window.parent.closeModal=
 <div class="wrap">
   <div class="toolbar">
     <h1 style="margin:0;">Nueva entidad</h1>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="oficio_entidades_listar.php">Prontuario</a><button class="btn" type="button" onclick="closeModalMaybe()">Cerrar</button><button class="btn primary" type="submit" form="frmEntidad">Guardar</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if (\App\Support\Access::admin()): ?><a class="btn" href="oficio_entidades_listar.php">Prontuario</a><?php endif; ?><button class="btn" type="button" onclick="closeModalMaybe()">Cerrar</button><button class="btn primary" type="submit" form="frmEntidad">Guardar</button></div>
   </div>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="ok"><?= h($success) ?></div><?php endif; ?>

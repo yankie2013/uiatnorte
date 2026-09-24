@@ -23,7 +23,7 @@ final class LoginService
             $_SESSION['password_setup']=['id'=>(int)$user['id'],'credential'=>hash('sha256',$user['pass_hash']),'expires'=>time()+900];
             return;
         }
-        $_SESSION['user']=array_intersect_key($user,array_flip(['id','nombre','email','rol','auth_version']));
+        $_SESSION['user']=array_intersect_key($user,array_flip(['id','nombre','grado','email','rol','auth_version']));
         $_SESSION['id']=(int)$user['id'];$_SESSION['rol']=$user['rol'];
     }
     public static function pendingSetup(): ?array

@@ -3753,6 +3753,7 @@ if (!$accidente) {
 }
 
 $accidente_id = (int) $accidente['id'];
+\App\Support\Access::requireWorkspaceCase($accidente_id);
 $_SESSION['accidente_ultimo_abierto'] = $accidente_id;
 $abogadoInlineService = new AbogadoService(new AbogadoRepository($pdo));
 $abogadoInlineContext = $abogadoInlineService->formContext($accidente_id);
@@ -4711,13 +4712,6 @@ $renderVehiculoSubtabs = static function (
     </div>
 
     <div class="tab-content mt-2">
-      <div class="tab-pane fade" id="estado" role="tabpanel">
-        <div class="expediente-state">
-          <?php if (isset($_GET['gestion_ok'])) echo '<p role="status">Cambio guardado.</p>'; ?>
-          <?php require __DIR__.'/app/Views/expedientes/estado.php'; ?>
-        </div>
-      </div>
-
       <div class="tab-pane fade show active" id="<?= h($tabPrefix) ?>-resumen" role="tabpanel">
         <div class="inner-panel">
           <?php if ($unidadRecord !== null): ?>
@@ -7447,8 +7441,10 @@ include __DIR__ . '/sidebar.php';
 </style>
 <link rel="stylesheet" href="assets/css/accidente-header-participantes.css?v=<?= filemtime(__DIR__ . '/assets/css/accidente-header-participantes.css') ?>">
 <link rel="stylesheet" href="assets/css/expediente_estado.css">
+<link rel="stylesheet" href="assets/css/user_topbar.css">
 </head>
 <body>
+<?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
   <div class="case-sticky-header">
   <section class="accident-case-header" aria-label="Resumen del accidente">
@@ -8080,6 +8076,13 @@ include __DIR__ . '/sidebar.php';
     </div>
 
     <div class="tab-content mt-2">
+      <div class="tab-pane fade" id="estado" role="tabpanel">
+        <div class="expediente-state">
+          <?php if (isset($_GET['gestion_ok'])) echo '<p role="status">Cambio guardado.</p>'; ?>
+          <?php require __DIR__.'/app/Views/expedientes/estado.php'; ?>
+        </div>
+      </div>
+
       <div class="tab-pane fade" id="resumen-integral" role="tabpanel">
         <div class="tab-panel main-module-panel main-panel-resumen">
           <div class="module-actions" style="margin:0 0 12px;">

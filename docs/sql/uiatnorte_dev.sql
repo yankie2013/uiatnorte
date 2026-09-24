@@ -2329,6 +2329,7 @@ INSERT INTO `ubigeo_provincia` (`cod_dep`, `cod_prov`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `usuarios`
 --
 
+-- La autoría de los valores de catálogo se registra en `catalogo_aportaciones`.
 CREATE TABLE `usuarios` (
   `id` int NOT NULL,
   `email` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,

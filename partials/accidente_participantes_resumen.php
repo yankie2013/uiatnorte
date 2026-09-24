@@ -67,7 +67,10 @@
             <p><?php if (!empty($person['lesion'])): ?><span class="overview-condition <?= h(lesion_chip_class((string) $person['lesion'])) ?>"><?= h($person['lesion']) ?></span> <?php endif; ?><span class="overview-person-meta"><?= h(person_heading_meta($person)) ?></span></p>
           </div>
           <div class="case-person-actions">
-            <?php if ($phone !== ''): ?><a class="btn-shell" href="https://wa.me/<?= h($phone) ?>" target="_blank" rel="noopener">WhatsApp</a><?php endif; ?>
+            <?php if ($phone !== ''): ?>
+              <?php $overviewWhatsAppMessages=whatsapp_message_pack($GLOBALS['modalidades']??[], $GLOBALS['A']['fecha_accidente']??null, $GLOBALS['A']['lugar']??null, $GLOBALS['A']['registro_sidpol']??null); ?>
+              <?= render_whatsapp_message_actions($phone,$overviewWhatsAppMessages) ?>
+            <?php endif; ?>
             <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($target) ?>" data-vehicle-only="0">Ver persona ↗</button>
           </div>
         </div>

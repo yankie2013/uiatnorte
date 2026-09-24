@@ -5,6 +5,7 @@ namespace App\Repositories;
 
 use PDO;
 use Throwable;
+use App\Services\CatalogContributionService;
 
 final class CatalogoOficioRepository
 {
@@ -94,7 +95,9 @@ final class CatalogoOficioRepository
         $sql = 'INSERT INTO oficio_entidad (' . implode(', ', $columns) . ') VALUES (' . implode(', ', array_fill(0, count($columns), '?')) . ')';
         $st = $this->pdo->prepare($sql);
         $st->execute($values);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'oficio_entidad', $id);
+        return $id;
     }
 
     public function updateEntidad(int $id, array $payload): void
@@ -243,7 +246,9 @@ final class CatalogoOficioRepository
             $payload['detalle'],
             $payload['orden'],
         ]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'oficio_asunto', $id);
+        return $id;
     }
 
     public function subentidadesByEntidad(int $entidadId): array
@@ -269,7 +274,9 @@ final class CatalogoOficioRepository
             $payload['correo'],
             $payload['parent_id'],
         ]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'oficio_subentidad', $id);
+        return $id;
     }
 
     public function createPersonaEntidad(array $payload): int
@@ -287,7 +294,9 @@ final class CatalogoOficioRepository
             $payload['correo'],
             $payload['observacion'],
         ]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'oficio_persona_entidad', $id);
+        return $id;
     }
 
     public function createGradoCargo(array $payload): int
@@ -301,7 +310,9 @@ final class CatalogoOficioRepository
             $payload['orden'],
             $payload['activo'],
         ]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'grado_cargo', $id);
+        return $id;
     }
 
     public function oficialAnoRows(): array
@@ -325,6 +336,7 @@ final class CatalogoOficioRepository
                 $payload['vigente'],
             ]);
             $id = (int) $this->pdo->lastInsertId();
+            CatalogContributionService::record($this->pdo, 'oficio_oficial_ano', $id);
             $this->pdo->commit();
             return $id;
         } catch (Throwable $e) {

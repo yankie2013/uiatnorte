@@ -5,7 +5,7 @@ final class WorkspacePage {
     public static function escape(mixed $s): string {return htmlspecialchars((string)$s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
     public static function start(string $title): void {
         $title=self::escape($title);
-        echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.' · DEPIAT</title><link rel="stylesheet" href="assets/css/gestion.css"></head><body>';
+        echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.' · DEPIAT</title><link rel="stylesheet" href="assets/css/gestion.css"><link rel="stylesheet" href="assets/css/expediente_card.css"></head><body>';
         require base_path('sidebar.php');
         echo '<main class="gestion"><header><p class="eyebrow">DEPIAT · GESTIÓN DE EXPEDIENTES</p><h1>'.$title.'</h1><p>'.self::escape(Access::actor()['nombre']??'').' · '.self::escape(Access::ROLES[Access::role()]??'').'</p></header>';
     }

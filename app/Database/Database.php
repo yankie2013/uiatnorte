@@ -40,14 +40,14 @@ final class Database
         $actorId = (int) ($_SESSION['user']['id'] ?? 0);
         $identity = false;
         if ($actorId > 0) {
-            $actor = self::$connection->prepare('SELECT id, nombre, email, rol, activo, must_change_password, auth_version FROM usuarios WHERE id=?');
+            $actor = self::$connection->prepare('SELECT id, nombre, grado, email, rol, activo, must_change_password, auth_version FROM usuarios WHERE id=?');
             $actor->execute([$actorId]);
             $identity = $actor->fetch();
         }
         $actorId = $identity && (int)$identity['activo'] === 1 && !(int)$identity['must_change_password'] && (int)$identity['auth_version'] === (int)($_SESSION['user']['auth_version'] ?? 0) ? (int)$identity['id'] : 0;
         self::$connection->exec('SET @actor_id = ' . $actorId);
         if ($actorId > 0 && isset($_SESSION['user'])) {
-            $_SESSION['user'] = array_intersect_key($identity, array_flip(['id','nombre','email','rol','auth_version']));
+            $_SESSION['user'] = array_intersect_key($identity, array_flip(['id','nombre','grado','email','rol','auth_version']));
             $_SESSION['rol'] = $identity['rol'];
         } elseif (isset($_SESSION['user'])) {
             unset($_SESSION['user'], $_SESSION['rol'], $_SESSION['id']);

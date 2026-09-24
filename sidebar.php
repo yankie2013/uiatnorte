@@ -59,8 +59,10 @@ $sidebarGroups['DIRECTORIO'] = [
     ['building', 'Comisarías', 'comisarias_listar.php', str_starts_with($sidebarPath, 'comisarias_')],
     ['book', 'Entidades', 'oficio_entidades_listar.php', str_starts_with($sidebarPath, 'oficio_entidad')],
     ['link', 'Enlaces de interés', 'enlaces_interes_listar.php', str_starts_with($sidebarPath, 'enlace')],
-    ['grid', 'Catálogos', 'catalogos.php', $sidebarPath === 'catalogos.php'],
 ];
+if (\App\Support\Access::admin()) {
+    $sidebarGroups['DIRECTORIO'][] = ['grid', 'Catálogos', 'catalogos.php', $sidebarPath === 'catalogos.php'];
+}
 ?>
 <link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">
 <div id="uiat-navigation">

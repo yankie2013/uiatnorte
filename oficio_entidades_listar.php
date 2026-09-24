@@ -48,7 +48,7 @@ include __DIR__ . '/sidebar.php';
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn" href="index.php">Panel</a>
-      <a class="btn primary" href="oficio_entidad_nuevo.php">Nueva entidad</a>
+      <?php if (\App\Support\Access::admin()): ?><a class="btn primary" href="oficio_entidad_nuevo.php">Nueva entidad</a><?php endif; ?>
     </div>
   </div>
 
@@ -125,7 +125,7 @@ include __DIR__ . '/sidebar.php';
             <td><?= h((string) (($row['direccion'] ?? '') !== '' ? $row['direccion'] : 'Sin direccion registrada')) ?></td>
             <td>
               <div class="stack-actions">
-                <a class="btn" href="oficio_entidad_editar.php?id=<?= (int) ($row['id'] ?? 0) ?>">Editar</a>
+                <?php if (\App\Support\Access::admin()): ?><a class="btn" href="oficio_entidad_editar.php?id=<?= (int) ($row['id'] ?? 0) ?>">Editar</a><?php else: ?><span class="small">Solo consulta</span><?php endif; ?>
               </div>
             </td>
           </tr>

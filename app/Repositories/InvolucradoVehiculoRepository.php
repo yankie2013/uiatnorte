@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use PDO;
+use App\Services\CatalogContributionService;
 
 final class InvolucradoVehiculoRepository
 {
@@ -77,35 +78,45 @@ final class InvolucradoVehiculoRepository
     {
         $st = $this->pdo->prepare('INSERT INTO categoria_vehiculos(codigo,descripcion,creado_en) VALUES (?,?,NOW())');
         $st->execute([$codigo, $descripcion]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'categoria_vehiculos', $id);
+        return $id;
     }
 
     public function createTipo(int $categoriaId, string $codigo, string $nombre, ?string $descripcion): int
     {
         $st = $this->pdo->prepare('INSERT INTO tipos_vehiculo(categoria_id,codigo,nombre,descripcion,creado_en) VALUES (?,?,?,?,NOW())');
         $st->execute([$categoriaId, $codigo, $nombre, $descripcion]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'tipos_vehiculo', $id);
+        return $id;
     }
 
     public function createCarroceria(int $tipoId, string $nombre, ?string $descripcion): int
     {
         $st = $this->pdo->prepare('INSERT INTO carroceria_vehiculo(tipo_id,nombre,descripcion,creado_en) VALUES (?,?,?,NOW())');
         $st->execute([$tipoId, $nombre, $descripcion]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'carroceria_vehiculo', $id);
+        return $id;
     }
 
     public function createMarca(string $nombre, ?string $pais): int
     {
         $st = $this->pdo->prepare('INSERT INTO marcas_vehiculo(nombre,pais_origen,creado_en) VALUES (?,?,NOW())');
         $st->execute([$nombre, $pais]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'marcas_vehiculo', $id);
+        return $id;
     }
 
     public function createModelo(int $marcaId, string $nombre): int
     {
         $st = $this->pdo->prepare('INSERT INTO modelos_vehiculo(marca_id,nombre,creado_en) VALUES (?,?,NOW())');
         $st->execute([$marcaId, $nombre]);
-        return (int) $this->pdo->lastInsertId();
+        $id = (int) $this->pdo->lastInsertId();
+        CatalogContributionService::record($this->pdo, 'modelos_vehiculo', $id);
+        return $id;
     }
 
     public function createVehiculo(array $payload): int

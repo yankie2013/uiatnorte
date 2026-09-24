@@ -669,6 +669,7 @@ if ($accidenteIds !== []) {
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/css/user_topbar.css">
 <title>Accidentes | UIAT Norte</title>
 <style>
 /* ===== Variables de esta vista, atadas al tema global ===== */
@@ -1450,7 +1451,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 </style>
 </head>
 <body>
-<?php include __DIR__ . '/sidebar.php'; ?>
+<?php include __DIR__ . '/sidebar.php'; $userTopbarSection='Lista de accidentes'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="wrap">
   <div class="title">
     <h1 style="margin:0">Accidentes <span class="badge">Listado</span></h1>
