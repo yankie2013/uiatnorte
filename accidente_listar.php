@@ -430,7 +430,7 @@ $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.l
         LEFT JOIN fiscales fi ON fi.id = a.fiscal_id
         LEFT JOIN (
           SELECT accidente_id, COUNT(*) AS diligencias_pendientes
-            FROM diligencias_pendientes_activos
+            FROM diligencias_pendientes
            WHERE COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') = 'Pendiente'
            GROUP BY accidente_id
         ) dpc ON dpc.accidente_id = a.id
