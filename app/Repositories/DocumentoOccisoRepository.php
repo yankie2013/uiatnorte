@@ -43,9 +43,9 @@ final class DocumentoOccisoRepository
         $sql = "SELECT o.*,
                        p.nombres, p.apellido_paterno, p.apellido_materno,
                        a.fecha_accidente, a.lugar AS lugar_accidente, a.registro_sidpol
-                  FROM documento_occiso o
+                  FROM documento_occiso_activos o
              LEFT JOIN personas p ON p.id=o.persona_id
-             LEFT JOIN accidentes a ON a.id=o.accidente_id
+             LEFT JOIN accidentes_activos a ON a.id=o.accidente_id
                  WHERE o.id=? LIMIT 1";
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
@@ -93,9 +93,9 @@ final class DocumentoOccisoRepository
                        o.numero_protocolo, o.fecha_protocolo, o.hora_protocolo,
                        p.nombres, p.apellido_paterno, p.apellido_materno,
                        a.fecha_accidente, a.lugar AS lugar_accidente, a.registro_sidpol
-                  FROM documento_occiso o
+                  FROM documento_occiso_activos o
              LEFT JOIN personas p ON p.id=o.persona_id
-             LEFT JOIN accidentes a ON a.id=o.accidente_id";
+             LEFT JOIN accidentes_activos a ON a.id=o.accidente_id";
         $where = [];
         $params = [];
         if ($personaId > 0) {
@@ -153,7 +153,7 @@ final class DocumentoOccisoRepository
                 $pieces[] = "`{$column}`";
             }
         }
-        $sql = 'SELECT ' . implode(',', $pieces) . ' FROM accidentes ORDER BY id DESC';
+        $sql = 'SELECT ' . implode(',', $pieces) . ' FROM accidentes_activos ORDER BY id DESC';
         $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         $items = [];
         foreach ($rows as $row) {

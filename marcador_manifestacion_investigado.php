@@ -11,7 +11,7 @@ ob_start();
 // ---------------------- Dependencias --------------------------
 require __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/word_filename_helper.php';
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (class_exists('ZipArchive')) {
     \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::ZIPARCHIVE);
@@ -102,7 +102,7 @@ try {
     // 1) registro en involucrados_personas (asegurar que corresponde al accidente)
     $stmt = $pdo->prepare("
         SELECT ip.*, pp.Nombre AS rol_nombre
-        FROM involucrados_personas ip
+        FROM involucrados_personas_activos ip
         LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
         WHERE ip.id = :id AND ip.accidente_id = :accidente_id
         LIMIT 1
@@ -124,7 +124,7 @@ try {
     }
 
     // 3) accidente
-    $stmtA = $pdo->prepare("SELECT * FROM accidentes WHERE id = :id LIMIT 1");
+    $stmtA = $pdo->prepare("SELECT * FROM accidentes_activos WHERE id = :id LIMIT 1");
     $stmtA->execute(['id' => $accidente_id]);
     $accidente = $stmtA->fetch(PDO::FETCH_ASSOC);
     if (!$accidente) {
@@ -218,7 +218,7 @@ if (!empty($invol['persona_id'])) {
     try {
         $stmtAb = $pdo->prepare("
             SELECT *
-            FROM abogados
+            FROM abogados_activos
             WHERE persona_id = :pid AND accidente_id = :aid
             LIMIT 1
         ");

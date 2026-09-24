@@ -95,7 +95,7 @@ if ($accidenteId <= 0) {
     exit('Accidente no especificado.');
 }
 
-$st = $pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar FROM accidentes WHERE id = ? LIMIT 1');
+$st = $pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar FROM accidentes_activos WHERE id = ? LIMIT 1');
 $st->execute([$accidenteId]);
 $accidente = $st->fetch(PDO::FETCH_ASSOC);
 if (!$accidente) {
@@ -105,7 +105,7 @@ if (!$accidente) {
 
 $st = $pdo->prepare(
     'SELECT m.nombre
-       FROM accidente_modalidad am
+       FROM accidente_modalidad_activos am
        JOIN modalidad_accidente m ON m.id = am.modalidad_id
       WHERE am.accidente_id = ?
       ORDER BY am.modalidad_id'

@@ -4,7 +4,7 @@ require_login();
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
@@ -135,7 +135,7 @@ function load_accidente(PDO $pdo, int $accidenteId): array
 
     $sql = "
         SELECT a.*, f.nombre AS fiscalia_nombre, {$selectDistrito}
-        FROM accidentes a
+        FROM accidentes_activos a
         LEFT JOIN fiscalia f ON f.id = a.fiscalia_id
         WHERE a.id = ?
         LIMIT 1
@@ -149,7 +149,7 @@ function load_accidente(PDO $pdo, int $accidenteId): array
 
     $modalidades = [];
     if (table_exists($pdo, 'accidente_modalidad') && table_exists($pdo, 'modalidad_accidente')) {
-        $st = $pdo->prepare("SELECT ma.nombre FROM accidente_modalidad am JOIN modalidad_accidente ma ON ma.id=am.modalidad_id WHERE am.accidente_id=? ORDER BY ma.id");
+        $st = $pdo->prepare("SELECT ma.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente ma ON ma.id=am.modalidad_id WHERE am.accidente_id=? ORDER BY ma.id");
         $st->execute([$accidenteId]);
         $modalidades = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
     } elseif (column_exists($pdo, 'accidentes', 'modalidad')) {
@@ -158,7 +158,7 @@ function load_accidente(PDO $pdo, int $accidenteId): array
 
     $consecuencias = [];
     if (table_exists($pdo, 'accidente_consecuencia') && table_exists($pdo, 'consecuencia_accidente')) {
-        $st = $pdo->prepare("SELECT ca.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente ca ON ca.id=ac.consecuencia_id WHERE ac.accidente_id=? ORDER BY ca.id");
+        $st = $pdo->prepare("SELECT ca.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente ca ON ca.id=ac.consecuencia_id WHERE ac.accidente_id=? ORDER BY ca.id");
         $st->execute([$accidenteId]);
         $consecuencias = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
     } elseif (column_exists($pdo, 'accidentes', 'consecuencia')) {

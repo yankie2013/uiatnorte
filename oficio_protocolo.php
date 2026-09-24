@@ -20,7 +20,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(TemplateProcessor::class)) {
     http_response_code(500);
@@ -88,10 +88,10 @@ SELECT
   se.nombre  AS subentidad_nombre, se.tipo AS subentidad_tipo,
   pe.nombres AS per_dest_nombres, pe.apellido_paterno AS per_dest_apep, COALESCE(pe.apellido_materno,'') AS per_dest_apem,
   ".($hasPersonaManual?"COALESCE(o.persona_destino_manual,'')":"''")." AS persona_destino_manual
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad  e  ON e.id=o.entidad_id_destino
 LEFT JOIN oficio_asunto   s  ON s.id=o.asunto_id
-LEFT JOIN accidentes      a  ON a.id=o.accidente_id
+LEFT JOIN accidentes_activos      a  ON a.id=o.accidente_id
 LEFT JOIN comisarias      c  ON c.id=a.comisaria_id
 LEFT JOIN fiscalia        f  ON f.id=a.fiscalia_id
 LEFT JOIN grado_cargo     gc ON gc.id=o.grado_cargo_id
@@ -123,7 +123,7 @@ if($inv_id > 0){
       p.id AS persona_id,
       p.nombres, p.apellido_paterno, p.apellido_materno,
       p.tipo_doc, p.num_doc, p.sexo, p.fecha_nacimiento, p.domicilio
-    FROM involucrados_personas ip
+    FROM involucrados_personas_activos ip
     JOIN personas p ON p.id = ip.persona_id
     WHERE ip.id = ? 
       AND ip.accidente_id = ?
@@ -143,7 +143,7 @@ if(!$fallecido){
       p.id AS persona_id,
       p.nombres, p.apellido_paterno, p.apellido_materno,
       p.tipo_doc, p.num_doc, p.sexo, p.fecha_nacimiento, p.domicilio
-    FROM involucrados_personas ip
+    FROM involucrados_personas_activos ip
     JOIN personas p ON p.id = ip.persona_id
     WHERE ip.accidente_id = ?
       AND UPPER(COALESCE(ip.lesion,'')) = 'FALLECIDO'
@@ -159,7 +159,7 @@ if(!$fallecido) exit('No se encontró fallecido.');
 // -------------------- documento_occiso (número pericial)
 $numero_pericial='';
 try{
-  $st=$pdo->prepare("SELECT numero_pericial FROM documento_occiso WHERE persona_id=? OR accidente_id=? ORDER BY id DESC LIMIT 1");
+  $st=$pdo->prepare("SELECT numero_pericial FROM documento_occiso_activos WHERE persona_id=? OR accidente_id=? ORDER BY id DESC LIMIT 1");
   $st->execute([$fallecido['persona_id'],$of['accidente_id']]);
   $numero_pericial=$st->fetchColumn()?:'';
 }catch(Throwable $e){ $numero_pericial=''; }

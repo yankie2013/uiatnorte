@@ -6,7 +6,7 @@ require_login();
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
@@ -82,19 +82,19 @@ SELECT o.*, e.nombre AS entidad_nombre, COALESCE(e.siglas, '') AS entidad_siglas
        p.sexo AS persona_sexo, p.estado_civil AS persona_estado_civil, p.nacionalidad AS persona_nacionalidad,
        p.domicilio AS persona_domicilio, p.ocupacion AS persona_ocupacion,
        p.grado_instruccion AS persona_grado_instruccion, p.celular AS persona_celular, p.email AS persona_email
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto s ON s.id = o.asunto_id
 LEFT JOIN oficio_subentidad se ON se.id = o.subentidad_destino_id
 LEFT JOIN oficio_persona_entidad pe ON pe.id = o.persona_destino_id
-LEFT JOIN accidentes ac ON ac.id = o.accidente_id
+LEFT JOIN accidentes_activos ac ON ac.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = ac.comisaria_id
 LEFT JOIN fiscalia fa ON fa.id = ac.fiscalia_id
 LEFT JOIN fiscales fi ON fi.id = ac.fiscal_id
 LEFT JOIN ubigeo_distrito ud ON ud.cod_dep = ac.cod_dep AND ud.cod_prov = ac.cod_prov AND ud.cod_dist = ac.cod_dist
 LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id
 LEFT JOIN grado_cargo gc ON gc.id = o.grado_cargo_id
-LEFT JOIN involucrados_personas inv ON inv.id = o.involucrado_persona_id AND inv.accidente_id = o.accidente_id
+LEFT JOIN involucrados_personas_activos inv ON inv.id = o.involucrado_persona_id AND inv.accidente_id = o.accidente_id
 LEFT JOIN personas p ON p.id = inv.persona_id
 LEFT JOIN participacion_persona pp ON pp.Id = inv.rol_id
 WHERE o.id = ?
@@ -121,10 +121,10 @@ if (!str_contains($lesion, 'herid') && !str_contains($lesion, 'lesion') && !str_
     exit('La persona seleccionada no figura como herida, lesionada o fallecida.');
 }
 
-$st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
+$st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
 $st->execute([(int) $oficio['accidente_id']]);
 $modalidades = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
-$st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
+$st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
 $st->execute([(int) $oficio['accidente_id']]);
 $consecuencias = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
 

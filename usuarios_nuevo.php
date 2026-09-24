@@ -21,7 +21,7 @@ $allowedRoles = $service->allowedRolesFor($actorRole);
 
 if ($allowedRoles === []) {
     http_response_code(403);
-    exit('Acceso denegado. Solo kayiosama o admin pueden registrar usuarios.');
+    exit('Acceso denegado. Solo el administrador puede registrar usuarios.');
 }
 
 $error = '';
@@ -31,14 +31,17 @@ $data['rol'] = $allowedRoles[0] ?? 'viewer';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
+        'cip' => $_POST['cip'] ?? '', 'grado' => $_POST['grado'] ?? '',
+        'cargo' => $_POST['cargo'] ?? '', 'unidad' => $_POST['unidad'] ?? 'DEPIAT',
         'nombre' => $_POST['nombre'] ?? '',
         'email' => $_POST['email'] ?? '',
         'rol' => $_POST['rol'] ?? ($allowedRoles[0] ?? 'viewer'),
     ];
 
     try {
+        \App\Support\Access::checkCsrf();
         $service->create($_POST, $actorRole);
-        $success = 'Usuario creado correctamente.';
+        $success = 'Usuario creado. Ingresará con su CIP como usuario y contraseña inicial; deberá crear una nueva contraseña antes de usar el sistema.';
         $data = $service->defaultData();
         $data['rol'] = $allowedRoles[0] ?? 'viewer';
     } catch (Throwable $e) {
@@ -74,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php if ($error !== ''): ?><div class="msg-err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" autocomplete="off">
+    <input type="hidden" name="_csrf" value="<?= h(\App\Support\Access::csrf()) ?>">
+    <div class="row"><label>Grado<input name="grado" maxlength="40" value="<?= h($data['grado']) ?>"></label><label>CIP*<input name="cip" maxlength="30" inputmode="numeric" pattern="[0-9]+" value="<?= h($data['cip']) ?>" required></label></div>
+    <div class="row"><label>Cargo<input name="cargo" maxlength="80" value="<?= h($data['cargo']) ?>"></label><label>Unidad<input name="unidad" value="<?= h($data['unidad']) ?>" maxlength="160"></label></div>
     <div class="row">
       <div class="field">
         <label>Nombre completo*</label>
@@ -90,23 +96,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Rol*</label>
         <select name="rol" required>
           <?php foreach ($allowedRoles as $role): ?>
-            <option value="<?= h($role) ?>" <?= (string) $data['rol'] === $role ? 'selected' : '' ?>><?= h($role) ?></option>
+            <option value="<?= h($role) ?>" <?= (string) $data['rol'] === $role ? 'selected' : '' ?>><?= h(\App\Support\Access::ROLES[$role] ?? $role) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <div></div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label>Contrasena*</label>
-        <input type="password" name="clave1" required minlength="6">
-      </div>
-      <div class="field">
-        <label>Confirmar contrasena*</label>
-        <input type="password" name="clave2" required minlength="6">
-      </div>
-    </div>
+    <p class="sub">La contraseña inicial será el CIP del usuario. En su primer acceso deberá crear una contraseña de al menos 10 caracteres con mayúscula, minúscula, número y carácter especial.</p>
 
     <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
       <a class="btn" href="index.php">Cancelar</a>

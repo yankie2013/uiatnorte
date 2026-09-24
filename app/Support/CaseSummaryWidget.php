@@ -68,7 +68,7 @@ if (!function_exists('case_summary_widget_context')) {
                     a.lugar,
                     t.nombre AS distrito_ubicacion,
                     c.nombre AS jurisdiccion
-               FROM accidentes a
+               FROM accidentes_activos a
           LEFT JOIN ubigeo_distrito t ON t.cod_dep = a.cod_dep AND t.cod_prov = a.cod_prov AND t.cod_dist = a.cod_dist
           LEFT JOIN comisarias c ON c.id = a.comisaria_id
               WHERE a.id = ?
@@ -84,7 +84,7 @@ if (!function_exists('case_summary_widget_context')) {
         try {
             $stmt = $pdo->prepare(
                 "SELECT m.nombre
-                   FROM accidente_modalidad am
+                   FROM accidente_modalidad_activos am
                    JOIN modalidad_accidente m ON m.id = am.modalidad_id
                   WHERE am.accidente_id = ?
                ORDER BY am.modalidad_id"
@@ -99,7 +99,7 @@ if (!function_exists('case_summary_widget_context')) {
         try {
             $stmt = $pdo->prepare(
                 "SELECT c.nombre
-                   FROM accidente_consecuencia ac
+                   FROM accidente_consecuencia_activos ac
                    JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
                   WHERE ac.accidente_id = ?
                ORDER BY ac.consecuencia_id"
@@ -125,10 +125,10 @@ if (!function_exists('case_summary_widget_context')) {
                         COALESCE(iv.orden_participacion, '') AS ut,
                         COALESCE(v.placa, '') AS placa,
                         COALESCE(tv.nombre, '') AS veh_tipo
-                   FROM involucrados_personas ip
+                   FROM involucrados_personas_activos ip
                    JOIN personas p ON p.id = ip.persona_id
               LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
-              LEFT JOIN involucrados_vehiculos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
+              LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
               LEFT JOIN vehiculos v ON v.id = ip.vehiculo_id
               LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
                   WHERE ip.accidente_id = ?

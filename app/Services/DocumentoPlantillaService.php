@@ -25,6 +25,7 @@ final class DocumentoPlantillaService
         $vehiculos = $this->repository->involucradosVehiculosByAccidente($accidenteId);
 
         return [
+            'responsable_documento' => \App\Support\Access::documentProfile($oficio),
             'filename' => 'Oficio_Remitir_' . ($oficio['numero'] ?? $oficioId) . '-' . ($oficio['anio'] ?? date('Y')) . '.docx',
             'values' => [
                 'numero' => (string) ($oficio['numero'] ?? ''),
@@ -85,6 +86,7 @@ final class DocumentoPlantillaService
         $apellidos = trim((string) (($citacion['persona_apep'] ?? '') . ' ' . ($citacion['persona_apem'] ?? '')));
 
         return [
+            'responsable_documento' => \App\Support\Access::documentProfile($citacion),
             'filename' => 'Citacion_' . $citacionId . (!empty($citacion['persona_apep']) ? '_' . preg_replace('~\s+~', '_', (string) $citacion['persona_apep']) : '') . '.docx',
             'values' => [
                 'persona_nombres' => (string) ($citacion['persona_nombres'] ?? ''),

@@ -74,7 +74,7 @@ if(!$autoload_ok){
   exit;
 }
 require_once __DIR__ . '/word_filename_helper.php';
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (class_exists('ZipArchive')) {
   \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::ZIPARCHIVE);
@@ -159,9 +159,9 @@ SELECT
   -- DATOS DE LA FISCALÍA (tabla 'fiscalia')
   fa.nombre AS fa_nombre, fa.direccion AS fa_direccion, fa.telefono AS fa_telefono, fa.correo AS fa_correo
 
-FROM familiar_fallecido f
-JOIN accidentes acc              ON acc.id = f.accidente_id
-JOIN involucrados_personas ipf   ON ipf.id = f.fallecido_inv_id
+FROM familiar_fallecido_activos f
+JOIN accidentes_activos acc              ON acc.id = f.accidente_id
+JOIN involucrados_personas_activos ipf   ON ipf.id = f.fallecido_inv_id
 JOIN personas pf                 ON pf.id = ipf.persona_id
 JOIN personas pfa                ON pfa.id = f.familiar_persona_id
 

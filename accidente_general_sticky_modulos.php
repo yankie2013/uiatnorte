@@ -65,7 +65,7 @@ $param_sidpol = trim($_GET['sidpol'] ?? '');
 $param_id     = isset($_GET['accidente_id']) ? (int)$_GET['accidente_id'] : 0;
 
 function getAccBySidpol(PDO $pdo, string $sidpol){
-  $st=$pdo->prepare("SELECT * FROM accidentes WHERE sidpol=? LIMIT 1");
+  $st=$pdo->prepare("SELECT * FROM accidentes_activos WHERE sidpol=? LIMIT 1");
   $st->execute([$sidpol]);
   return $st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -73,12 +73,12 @@ function getAccBySidpol(PDO $pdo, string $sidpol){
 $acc = null;
 if ($param_sidpol!=='') $acc = getAccBySidpol($pdo,$param_sidpol);
 if (!$acc && $param_id>0){
-  $st=$pdo->prepare("SELECT * FROM accidentes WHERE id=? LIMIT 1");
+  $st=$pdo->prepare("SELECT * FROM accidentes_activos WHERE id=? LIMIT 1");
   $st->execute([$param_id]);
   $acc = $st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 if (!$acc){
-  $acc = $pdo->query("SELECT * FROM accidentes ORDER BY sidpol DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: null;
+  $acc = $pdo->query("SELECT * FROM accidentes_activos ORDER BY sidpol DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 if (!$acc) { die('No hay accidentes registrados.'); }
 
@@ -86,9 +86,9 @@ $accidente_id = (int)$acc['id'];
 $sidpol       = (string)$acc['sidpol'];
 
 /* Prev/Next por SIDPOL */
-$st=$pdo->prepare("SELECT sidpol FROM accidentes WHERE sidpol < ? ORDER BY sidpol DESC LIMIT 1");
+$st=$pdo->prepare("SELECT sidpol FROM accidentes_activos WHERE sidpol < ? ORDER BY sidpol DESC LIMIT 1");
 $st->execute([$sidpol]); $prevSid = (string)($st->fetchColumn() ?: '');
-$st=$pdo->prepare("SELECT sidpol FROM accidentes WHERE sidpol > ? ORDER BY sidpol ASC LIMIT 1");
+$st=$pdo->prepare("SELECT sidpol FROM accidentes_activos WHERE sidpol > ? ORDER BY sidpol ASC LIMIT 1");
 $st->execute([$sidpol]); $nextSid = (string)($st->fetchColumn() ?: '');
 
 /* =========================
@@ -102,7 +102,7 @@ $sqlInfo = "
          c.nombre  AS comisaria_nom,
          fa.nombre AS fiscalia_nom,
          CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nom
-  FROM accidentes a
+  FROM accidentes_activos a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep=a.cod_dep
   LEFT JOIN ubigeo_provincia  p ON p.cod_dep=a.cod_dep AND p.cod_prov=a.cod_prov
   LEFT JOIN ubigeo_distrito   t ON t.cod_dep=a.cod_dep AND t.cod_prov=a.cod_prov AND t.cod_dist=a.cod_dist
@@ -130,10 +130,10 @@ function fetchListSafe(PDO $pdo, string $sql1, string $sql2, array $params){
 }
 $rowsMods = fetchListSafe(
   $pdo,
-  "SELECT m.nombre FROM accidente_modalidad am
+  "SELECT m.nombre FROM accidente_modalidad_activos am
     JOIN modalidad_accidente m ON m.id=am.modalidad_id
    WHERE am.accidente_id=? ORDER BY am.id",
-  "SELECT m.nombre FROM accidente_modalidad am
+  "SELECT m.nombre FROM accidente_modalidad_activos am
     JOIN modalidad_accidente m ON m.id=am.modalidad_id
    WHERE am.accidente_id=? ORDER BY am.modalidad_id",
   [$accidente_id]
@@ -142,10 +142,10 @@ $mods = array_column($rowsMods,'nombre');
 
 $rowsCons = fetchListSafe(
   $pdo,
-  "SELECT c.nombre FROM accidente_consecuencia ac
+  "SELECT c.nombre FROM accidente_consecuencia_activos ac
     JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
    WHERE ac.accidente_id=? ORDER BY ac.id",
-  "SELECT c.nombre FROM accidente_consecuencia ac
+  "SELECT c.nombre FROM accidente_consecuencia_activos ac
     JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
    WHERE ac.accidente_id=? ORDER BY ac.consecuencia_id",
   [$accidente_id]
@@ -178,7 +178,7 @@ $stV = $pdo->prepare("
          v.id AS veh_id, v.placa, v.color, v.anio,
          tv.nombre AS tipo_vehiculo,
          cv.descripcion AS cat_vehiculo
-  FROM involucrados_vehiculos iv
+  FROM involucrados_vehiculos_activos iv
   JOIN vehiculos v ON v.id=iv.vehiculo_id
   LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id
   LEFT JOIN categoria_vehiculos cv ON cv.id=v.categoria_id
@@ -193,7 +193,7 @@ $stPV = $pdo->prepare("
          p.id AS persona_id, p.nombres, p.apellido_paterno, p.apellido_materno,
          p.num_doc, p.edad, p.celular, p.email,
          pr.Nombre AS rol_nombre
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   JOIN personas p ON p.id=ip.persona_id
   LEFT JOIN participacion_persona pr ON pr.Id=ip.rol_id
   WHERE ip.accidente_id=? AND ip.vehiculo_id=?
@@ -205,7 +205,7 @@ $stPSV = $pdo->prepare("
          p.id AS persona_id, p.nombres, p.apellido_paterno, p.apellido_materno,
          p.num_doc, p.edad, p.celular, p.email,
          pr.Nombre AS rol_nombre
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   JOIN personas p ON p.id=ip.persona_id
   LEFT JOIN participacion_persona pr ON pr.Id=ip.rol_id
   WHERE ip.accidente_id=? AND (ip.vehiculo_id IS NULL OR ip.vehiculo_id=0)
@@ -233,41 +233,41 @@ function countRowsSafe(PDO $pdo, array $sqlAlternas, array $params){
 }
 
 /* ====== Conteos para “LED” ====== */
-$cntItp = (int)$pdo->query("SELECT COUNT(*) FROM itp WHERE accidente_id=".(int)$accidente_id)->fetchColumn();
+$cntItp = (int)$pdo->query("SELECT COUNT(*) FROM itp_activos WHERE accidente_id=".(int)$accidente_id)->fetchColumn();
 $cntVeh = is_array($vehiculos) ? count($vehiculos) : 0;
 
 $cntPer = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM involucrados_personas WHERE accidente_id=?"
+  "SELECT COUNT(*) FROM involucrados_personas_activos WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntEfec = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM policial_interviniente WHERE accidente_id=?",
+  "SELECT COUNT(*) FROM policial_interviniente_activos WHERE accidente_id=?",
   "SELECT COUNT(*) FROM efectivos_intervinientes WHERE accidente_id=?",
   "SELECT COUNT(*) FROM efectivos_policiales WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntFam = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM familiar_fallecido WHERE accidente_id=?",
+  "SELECT COUNT(*) FROM familiar_fallecido_activos WHERE accidente_id=?",
   "SELECT COUNT(*) FROM familiares_fallecidos WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntProp = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM propietario_vehiculo WHERE accidente_id=?",
+  "SELECT COUNT(*) FROM propietario_vehiculo_activos WHERE accidente_id=?",
   "SELECT COUNT(*) FROM propietarios_vehiculo WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntAbog = countRowsSafe($pdo, [
   "SELECT COUNT(*) FROM abogado WHERE accidente_id=?",
-  "SELECT COUNT(*) FROM abogados WHERE accidente_id=?"
+  "SELECT COUNT(*) FROM abogados_activos WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntOfi = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM oficios WHERE accidente_id=?",
+  "SELECT COUNT(*) FROM oficios_activos WHERE accidente_id=?",
   "SELECT COUNT(*) FROM oficio WHERE accidente_id=?"
 ], [$accidente_id]);
 
 $cntCit = countRowsSafe($pdo, [
-  "SELECT COUNT(*) FROM citacion WHERE accidente_id=?",
+  "SELECT COUNT(*) FROM citacion_activos WHERE accidente_id=?",
   "SELECT COUNT(*) FROM citaciones WHERE accidente_id=?"
 ], [$accidente_id]);
 
@@ -815,7 +815,7 @@ include __DIR__ . '/sidebar.php';
 
                   <?php if($wa): ?>
                     <?php
-                      $mensaje = "Buen día le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigación por el accidente de tránsito {$modalidad_txt}, suscitado el día {$fecha_acc} a horas {$hora_acc} en la {$lugar_acc}.";
+                      $mensaje = \App\Support\Access::greeting((int)($accidente_id ?? $accidenteId ?? $_GET['accidente_id'] ?? 0)) . ", a cargo de la investigación por el accidente de tránsito {$modalidad_txt}, suscitado el día {$fecha_acc} a horas {$hora_acc} en la {$lugar_acc}.";
                     ?>
                     <a class="oj whatsapp"
                        href="https://wa.me/<?= h($wa) ?>?text=<?= rawurlencode($mensaje) ?>"
@@ -884,7 +884,7 @@ include __DIR__ . '/sidebar.php';
 
               <?php if($wa): ?>
                 <?php
-                  $mensaje = "Buen día le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE, a cargo de la investigación por el accidente de tránsito {$modalidad_txt}, suscitado el día {$fecha_acc} a horas {$hora_acc} en la {$lugar_acc}.";
+                  $mensaje = \App\Support\Access::greeting((int)($accidente_id ?? $accidenteId ?? $_GET['accidente_id'] ?? 0)) . ", a cargo de la investigación por el accidente de tránsito {$modalidad_txt}, suscitado el día {$fecha_acc} a horas {$hora_acc} en la {$lugar_acc}.";
                 ?>
                 <a class="oj whatsapp"
                    href="https://wa.me/<?= h($wa) ?>?text=<?= rawurlencode($mensaje) ?>"

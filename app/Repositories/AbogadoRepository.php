@@ -13,7 +13,7 @@ final class AbogadoRepository
 
     public function accidenteHeader(int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, sidpol, lugar, fecha_accidente FROM accidentes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, sidpol, lugar, fecha_accidente FROM accidentes_activos WHERE id = ? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -28,7 +28,7 @@ final class AbogadoRepository
                     SELECT p.id AS persona_id,
                            TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            COALESCE(pr.Nombre, 'Involucrado') AS rol
-                    FROM involucrados_personas ip
+                    FROM involucrados_personas_activos ip
                     JOIN personas p ON p.id = ip.persona_id
                     LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
                     WHERE ip.accidente_id = ?
@@ -38,7 +38,7 @@ final class AbogadoRepository
                     SELECT p.id AS persona_id,
                            TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            'Propietario vehiculo' AS rol
-                    FROM propietario_vehiculo pv
+                    FROM propietario_vehiculo_activos pv
                     JOIN personas p ON p.id = pv.propietario_persona_id
                     WHERE pv.accidente_id = ?
 
@@ -47,7 +47,7 @@ final class AbogadoRepository
                     SELECT p.id AS persona_id,
                            TRIM(CONCAT(COALESCE(p.nombres,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,''))) AS nombre,
                            'Familiar fallecido' AS rol
-                    FROM familiar_fallecido ff
+                    FROM familiar_fallecido_activos ff
                     JOIN personas p ON p.id = ff.familiar_persona_id
                     WHERE ff.accidente_id = ?
                 ) base
@@ -63,24 +63,24 @@ final class AbogadoRepository
         $sql = "SELECT a.*,
                        TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
-                FROM abogados a
+                FROM abogados_activos a
                 LEFT JOIN personas pr ON pr.id = a.persona_id
                 LEFT JOIN (
                     SELECT accidente_id, persona_id, GROUP_CONCAT(DISTINCT rol ORDER BY rol SEPARATOR ', ') AS roles
                     FROM (
                         SELECT ip.accidente_id, ip.persona_id, COALESCE(pp.Nombre, 'Involucrado') AS rol
-                        FROM involucrados_personas ip
+                        FROM involucrados_personas_activos ip
                         LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
 
                         UNION ALL
 
                         SELECT pv.accidente_id, pv.propietario_persona_id AS persona_id, 'Propietario vehiculo' AS rol
-                        FROM propietario_vehiculo pv
+                        FROM propietario_vehiculo_activos pv
 
                         UNION ALL
 
                         SELECT ff.accidente_id, ff.familiar_persona_id AS persona_id, 'Familiar fallecido' AS rol
-                        FROM familiar_fallecido ff
+                        FROM familiar_fallecido_activos ff
                     ) roles_base
                     GROUP BY accidente_id, persona_id
                 ) prr ON prr.accidente_id = a.accidente_id AND prr.persona_id = a.persona_id
@@ -93,7 +93,7 @@ final class AbogadoRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM abogados WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM abogados_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -104,24 +104,24 @@ final class AbogadoRepository
         $sql = "SELECT a.*,
                        TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
-                FROM abogados a
+                FROM abogados_activos a
                 LEFT JOIN personas pr ON pr.id = a.persona_id
                 LEFT JOIN (
                     SELECT accidente_id, persona_id, GROUP_CONCAT(DISTINCT rol ORDER BY rol SEPARATOR ', ') AS roles
                     FROM (
                         SELECT ip.accidente_id, ip.persona_id, COALESCE(pp.Nombre, 'Involucrado') AS rol
-                        FROM involucrados_personas ip
+                        FROM involucrados_personas_activos ip
                         LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
 
                         UNION ALL
 
                         SELECT pv.accidente_id, pv.propietario_persona_id AS persona_id, 'Propietario vehiculo' AS rol
-                        FROM propietario_vehiculo pv
+                        FROM propietario_vehiculo_activos pv
 
                         UNION ALL
 
                         SELECT ff.accidente_id, ff.familiar_persona_id AS persona_id, 'Familiar fallecido' AS rol
-                        FROM familiar_fallecido ff
+                        FROM familiar_fallecido_activos ff
                     ) roles_base
                     GROUP BY accidente_id, persona_id
                 ) prr ON prr.accidente_id = a.accidente_id AND prr.persona_id = a.persona_id

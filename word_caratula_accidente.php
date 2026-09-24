@@ -9,7 +9,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 use PhpOffice\PhpWord\Element\TextRun;
 
 ini_set('display_errors', '0');
@@ -303,7 +303,7 @@ SELECT a.*,
        CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nombre,
        {$fiscalCargoSelect} AS fiscal_cargo,
        {$fiscalTelefonoSelect} AS fiscal_telefono
-  FROM accidentes a
+  FROM accidentes_activos a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
   LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
   LEFT JOIN ubigeo_distrito t ON t.cod_dep = a.cod_dep AND t.cod_prov = a.cod_prov AND t.cod_dist = a.cod_dist
@@ -340,10 +340,10 @@ SELECT ip.id AS involucrado_id,
        COALESCE(car.nombre, car.descripcion, '') AS veh_carroceria,
        COALESCE(mar.nombre, '') AS veh_marca,
        COALESCE(modv.nombre, '') AS veh_modelo
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   JOIN personas p ON p.id = ip.persona_id
   LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
-  LEFT JOIN involucrados_vehiculos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
+  LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
   LEFT JOIN vehiculos v ON v.id = ip.vehiculo_id
   LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
   LEFT JOIN carroceria_vehiculo car ON car.id = v.carroceria_id
@@ -374,7 +374,7 @@ if (caratula_table_exists($pdo, 'familiar_fallecido')) {
            pr.fecha_nacimiento,
            pr.edad,
            pr.celular
-      FROM familiar_fallecido ff
+      FROM familiar_fallecido_activos ff
       JOIN personas pr ON pr.id = ff.familiar_persona_id
      WHERE ff.accidente_id = ?
      ORDER BY ff.id ASC";

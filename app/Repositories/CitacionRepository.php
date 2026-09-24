@@ -40,7 +40,7 @@ final class CitacionRepository
 
     public function oficiosByAccidente(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT id, numero, anio FROM oficios WHERE accidente_id = ? ORDER BY id DESC LIMIT 300');
+        $st = $this->pdo->prepare('SELECT id, numero, anio FROM oficios_activos WHERE accidente_id = ? ORDER BY id DESC LIMIT 300');
         $st->execute([$accidenteId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -52,7 +52,7 @@ final class CitacionRepository
                        fecha_accidente,
                        COALESCE(lugar, '') AS lugar,
                        COALESCE(referencia, '') AS referencia
-                FROM accidentes
+                FROM accidentes_activos
                 WHERE id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -104,8 +104,8 @@ final class CitacionRepository
     public function find(int $id): ?array
     {
         $sql = "SELECT c.*, o.numero AS oficio_num, o.anio AS oficio_anio
-                FROM citacion c
-                LEFT JOIN oficios o ON o.id = c.oficio_id
+                FROM citacion_activos c
+                LEFT JOIN oficios_activos o ON o.id = c.oficio_id
                 WHERE c.id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -179,8 +179,8 @@ final class CitacionRepository
     public function searchByAccidente(int $accidenteId, array $filters): array
     {
         $sql = "SELECT c.*, o.numero AS oficio_num, o.anio AS oficio_anio
-                FROM citacion c
-                LEFT JOIN oficios o ON o.id = c.oficio_id
+                FROM citacion_activos c
+                LEFT JOIN oficios_activos o ON o.id = c.oficio_id
                 WHERE c.accidente_id = ?";
         $params = [$accidenteId];
 

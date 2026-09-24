@@ -31,6 +31,11 @@ final class Auth
     {
         self::startSession();
 
+        if (!empty($_SESSION['user'])) \App\Database\Database::connection();
+        if (\App\Services\LoginService::pendingSetup() !== null) {
+            header('Location: cambiar_clave.php');
+            exit;
+        }
         if (empty($_SESSION['user'])) {
             self::rememberInterruptedRequest();
             $_SESSION['flash'] = !empty($_SESSION[self::PENDING_REQUEST_KEY])
@@ -84,6 +89,7 @@ final class Auth
     public static function postLoginDestination(): string
     {
         self::startSession();
+        if (\App\Services\LoginService::pendingSetup() !== null) return 'cambiar_clave.php';
         if (self::pendingRequest() !== null) {
             return 'session_resume.php';
         }

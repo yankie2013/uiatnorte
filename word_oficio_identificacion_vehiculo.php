@@ -9,7 +9,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -87,14 +87,14 @@ SELECT o.*,
        mv.nombre AS veh_marca, modv.nombre AS veh_modelo,
        tv.codigo AS veh_tipo_codigo, tv.nombre AS veh_tipo,
        cv.codigo AS veh_categoria, cv.descripcion AS veh_categoria_descripcion
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto a ON a.id = o.asunto_id
-LEFT JOIN accidentes ac ON ac.id = o.accidente_id
+LEFT JOIN accidentes_activos ac ON ac.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = ac.comisaria_id
 LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id
 LEFT JOIN grado_cargo gc ON gc.id = o.grado_cargo_id
-LEFT JOIN involucrados_vehiculos iv ON iv.id = o.involucrado_vehiculo_id
+LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = o.involucrado_vehiculo_id
 LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
 LEFT JOIN marcas_vehiculo mv ON mv.id = v.marca_id
 LEFT JOIN modelos_vehiculo modv ON modv.id = v.modelo_id
@@ -120,7 +120,8 @@ if (empty($oficio['involucrado_vehiculo_id'])) {
 }
 
 $accidenteLugar = identveh_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
-$firmaGrado = identveh_clean($oficio['grado_cargo_abrev'] ?: $oficio['grado_cargo_nombre'] ?: 'ST3.PNP');
+$responsableDocumento = \App\Support\Access::documentProfile($oficio);
+$firmaGrado = identveh_clean($responsableDocumento['grado'] ?? '');
 
 $values = [
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?? '',
@@ -152,9 +153,9 @@ $values = [
     'veh_categoria' => $oficio['veh_categoria'] ?? '',
     'veh_categoria_descripcion' => $oficio['veh_categoria_descripcion'] ?? '',
     'investigador_grado' => $firmaGrado,
-    'investigador_nombre' => 'Giancarlo MERINO SANCHO',
+    'investigador_nombre' => ($responsableDocumento['nombre'] ?? ''),
     'firma_grado' => $firmaGrado,
-    'firma_nombre' => 'Giancarlo MERINO SANCHO',
+    'firma_nombre' => ($responsableDocumento['nombre'] ?? ''),
     'firma_cargo' => 'Instructor UIAT Norte',
 ];
 

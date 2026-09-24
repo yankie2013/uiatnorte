@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $accidenteId > 0) {
                           FROM documentos_recibidos_anexos a
                          WHERE a.documento_recibido_id = dr.id
                     ) AS anexos_texto
-               FROM documentos_recibidos dr
+               FROM documentos_recibidos_activos dr
               WHERE dr.id = ? AND dr.accidente_id = ?
               LIMIT 1"
         );

@@ -59,7 +59,7 @@ require_login();
   SELECT a.*,
          c.nombre AS comisaria_nombre, c.direccion AS comisaria_direccion,
          f.nombre AS fiscalia_nombre
-  FROM accidentes a
+  FROM accidentes_activos a
   LEFT JOIN comisarias c ON c.id = a.comisaria_id
   LEFT JOIN fiscalia f   ON f.id = a.fiscalia_id
   WHERE a.id = :id";
@@ -88,7 +88,7 @@ SELECT
   car.nombre AS carroceria_nombre,
   m.nombre AS marca_nombre,
   mo.nombre AS modelo_nombre
-FROM involucrados_vehiculos iv
+FROM involucrados_vehiculos_activos iv
 JOIN vehiculos v                ON v.id = iv.vehiculo_id
 LEFT JOIN categoria_vehiculos  cat ON cat.id = v.categoria_id
 LEFT JOIN tipos_vehiculo        t  ON t.id   = v.tipo_id
@@ -108,7 +108,7 @@ LIMIT 4";
   if($VEH){
     $ivIds = array_column($VEH,'iv_id');
     $qs = implode(',', array_fill(0,count($ivIds),'?'));
-    $st=$pdo->prepare("SELECT * FROM documento_vehiculo WHERE involucrado_vehiculo_id IN ($qs)");
+    $st=$pdo->prepare("SELECT * FROM documento_vehiculo_activos WHERE involucrado_vehiculo_id IN ($qs)");
     $st->execute($ivIds);
     while($r=$st->fetch(PDO::FETCH_ASSOC)){ $DOCV[(int)$r['involucrado_vehiculo_id']]=$r; }
   }
@@ -120,7 +120,7 @@ LIMIT 4";
     $ivIds = array_column($VEH,'iv_id');
     $qs = implode(',', array_fill(0,count($ivIds),'?'));
     $params = array_merge([$acc_id], $ivIds);
-    $st=$pdo->prepare("SELECT * FROM propietario_vehiculo WHERE accidente_id=? AND vehiculo_inv_id IN ($qs) ORDER BY id DESC");
+    $st=$pdo->prepare("SELECT * FROM propietario_vehiculo_activos WHERE accidente_id=? AND vehiculo_inv_id IN ($qs) ORDER BY id DESC");
     $st->execute($params);
     $rows=$st->fetchAll(PDO::FETCH_ASSOC);
     foreach($rows as $r){
@@ -149,7 +149,7 @@ LIMIT 4";
   $sqlPer = "
   SELECT ip.id AS invp_id, ip.accidente_id, ip.persona_id, ip.rol_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones,
          p.*, rol.Nombre AS rol_nombre, rol.RequiereVehiculo
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   JOIN personas p                  ON p.id = ip.persona_id
   LEFT JOIN participacion_persona rol ON rol.Id = ip.rol_id
   WHERE ip.accidente_id = :id
@@ -162,9 +162,9 @@ LIMIT 4";
   step("docs PERSONA");
   $mapPersonDocs = [
     'lc'     => "SELECT * FROM documento_lc WHERE persona_id = ? ORDER BY id DESC LIMIT 1",
-    'rml'    => "SELECT * FROM documento_rml WHERE persona_id = ? AND accidente_id = ? ORDER BY id DESC LIMIT 1",
+    'rml'    => "SELECT * FROM documento_rml_activos WHERE persona_id = ? AND accidente_id = ? ORDER BY id DESC LIMIT 1",
     'dosaje' => "SELECT * FROM documento_dosaje WHERE persona_id = ? ORDER BY id DESC LIMIT 1",
-    'occiso' => "SELECT * FROM documento_occiso WHERE persona_id = ? AND accidente_id = ? ORDER BY id DESC LIMIT 1",
+    'occiso' => "SELECT * FROM documento_occiso_activos WHERE persona_id = ? AND accidente_id = ? ORDER BY id DESC LIMIT 1",
   ];
   function loadDocsPersona(PDO $pdo, $pid, $acc_id, $map){
     $out=[]; foreach($map as $k=>$sql){
@@ -226,7 +226,7 @@ LIMIT 4";
     if(strcasecmp((string)$p['lesion'],'Fallecido')===0 || !empty($p['_docs']['occiso'])){ $FALLECIDO=$p; break; }
   }
   if($FALLECIDO){
-    $st=$pdo->prepare("SELECT * FROM familiar_fallecido WHERE accidente_id=:acc AND fallecido_inv_id=:inv ORDER BY id ASC LIMIT 1");
+    $st=$pdo->prepare("SELECT * FROM familiar_fallecido_activos WHERE accidente_id=:acc AND fallecido_inv_id=:inv ORDER BY id ASC LIMIT 1");
     $st->execute([':acc'=>$acc_id, ':inv'=>$FALLECIDO['invp_id']]);
     $ff=$st->fetch(PDO::FETCH_ASSOC);
     if($ff && !empty($ff['familiar_persona_id'])){
@@ -245,7 +245,7 @@ LIMIT 4";
 
   /* -------- Policiales intervinientes (hasta 4) -------- */
   step("policiales");
-  $st=$pdo->prepare("SELECT * FROM policial_interviniente WHERE accidente_id=:id ORDER BY id ASC LIMIT 4");
+  $st=$pdo->prepare("SELECT * FROM policial_interviniente_activos WHERE accidente_id=:id ORDER BY id ASC LIMIT 4");
   $st->execute([':id'=>$acc_id]);
   $PINT=$st->fetchAll(PDO::FETCH_ASSOC);
   $POL= [];
@@ -445,7 +445,7 @@ LIMIT 4";
   $tplPath = __DIR__.'/plantillas/informe_policial2.docx';
   if(!file_exists($tplPath)){ http_response_code(500); echo "No se encontró la plantilla: plantillas/informe_policial2.docx"; exit; }
 
-  $tpl = new \PhpOffice\PhpWord\TemplateProcessor($tplPath);
+  $tpl = new \App\Support\ResponsibleTemplateProcessor($tplPath);
   foreach($vars as $k=>$v){ $tpl->setValue($k, $v); }
 
   $outName = 'Informe_Policial2_ACC_'.$ACC['id'].'_'.date('Ymd_His').'.docx';

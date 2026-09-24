@@ -72,9 +72,9 @@ $sql = "
          a.fecha_accidente, a.lugar AS lugar_accidente,
          v.id AS veh_id, v.placa AS veh_placa, v.color AS veh_color, v.anio AS veh_anio, v.marca AS veh_marca, v.modelo AS veh_modelo,
          pp.Nombre AS rol_nombre, COALESCE(pp.RequiereVehiculo,0) AS rol_reqveh
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   LEFT JOIN personas p ON p.id = ip.persona_id
-  LEFT JOIN accidentes a ON a.id = ip.accidente_id
+  LEFT JOIN accidentes_activos a ON a.id = ip.accidente_id
   LEFT JOIN vehiculos v ON v.id = ip.vehiculo_id
   LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
   WHERE ip.id = ?
@@ -122,7 +122,7 @@ try {
 
 $rmlList = [];
 try {
-    $st = $pdo->prepare("SELECT id, numero, fecha, incapacidad_medico, atencion_facultativo, observaciones FROM documento_rml WHERE persona_id = ? ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC");
+    $st = $pdo->prepare("SELECT id, numero, fecha, incapacidad_medico, atencion_facultativo, observaciones FROM documento_rml_activos WHERE persona_id = ? ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC");
     $st->execute([$pid]);
     $rmlList = $st->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -140,7 +140,7 @@ try {
 
 $manList = [];
 try {
-    $st = $pdo->prepare("SELECT id, fecha, horario_inicio, hora_termino, modalidad, observaciones FROM Manifestacion WHERE persona_id = ? AND accidente_id = ? ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC");
+    $st = $pdo->prepare("SELECT id, fecha, horario_inicio, hora_termino, modalidad, observaciones FROM Manifestacion_activos WHERE persona_id = ? AND accidente_id = ? ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC");
     $st->execute([$pid, $aid]);
     $manList = $st->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -149,7 +149,7 @@ try {
 
 $occList = [];
 try {
-    $st = $pdo->prepare("SELECT id, fecha_levantamiento, hora_levantamiento, lugar_levantamiento, numero_protocolo, observaciones_levantamiento FROM documento_occiso WHERE persona_id = ? AND accidente_id = ? ORDER BY COALESCE(fecha_levantamiento, '9999-12-31') DESC, id DESC");
+    $st = $pdo->prepare("SELECT id, fecha_levantamiento, hora_levantamiento, lugar_levantamiento, numero_protocolo, observaciones_levantamiento FROM documento_occiso_activos WHERE persona_id = ? AND accidente_id = ? ORDER BY COALESCE(fecha_levantamiento, '9999-12-31') DESC, id DESC");
     $st->execute([$pid, $aid]);
     $occList = $st->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

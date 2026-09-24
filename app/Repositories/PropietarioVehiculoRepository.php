@@ -13,7 +13,7 @@ final class PropietarioVehiculoRepository
 
     public function accidenteHeader(int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes_activos WHERE id = ? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -22,7 +22,7 @@ final class PropietarioVehiculoRepository
     public function vehiculosByAccidente(int $accidenteId): array
     {
         $sql = "SELECT iv.id AS inv_id, iv.orden_participacion, v.placa
-                FROM involucrados_vehiculos iv
+                FROM involucrados_vehiculos_activos iv
                 JOIN vehiculos v ON v.id = iv.vehiculo_id
                 WHERE iv.accidente_id = ?
                 ORDER BY FIELD(iv.orden_participacion,'UT-1','UT-2','UT-3','UT-4','UT-5','UT-6','UT-7'), v.placa";
@@ -33,7 +33,7 @@ final class PropietarioVehiculoRepository
 
     public function vehiculoBelongsAccidente(int $accidenteId, int $vehiculoInvId): bool
     {
-        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos WHERE id = ? AND accidente_id = ?');
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos_activos WHERE id = ? AND accidente_id = ?');
         $st->execute([$vehiculoInvId, $accidenteId]);
         return (int) $st->fetchColumn() > 0;
     }
@@ -77,7 +77,7 @@ final class PropietarioVehiculoRepository
 
     public function existsDuplicate(int $accidenteId, int $vehiculoInvId, string $tipoPropietario, int $propietarioPersonaId, string $ruc, ?int $excludeId = null): bool
     {
-        $sql = "SELECT COUNT(*) FROM propietario_vehiculo
+        $sql = "SELECT COUNT(*) FROM propietario_vehiculo_activos
                 WHERE accidente_id = ?
                   AND vehiculo_inv_id = ?
                   AND tipo_propietario = ?
@@ -152,7 +152,7 @@ final class PropietarioVehiculoRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM propietario_vehiculo WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM propietario_vehiculo_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -164,9 +164,9 @@ final class PropietarioVehiculoRepository
                        iv.orden_participacion, v.placa,
                        pn.tipo_doc AS tipo_doc_nat, pn.num_doc AS dni_nat, pn.apellido_paterno AS ap_nat, pn.apellido_materno AS am_nat, pn.nombres AS no_nat, pn.domicilio AS dom_nat, pn.celular AS cel_nat, pn.email AS em_nat,
                        pr.tipo_doc AS tipo_doc_rep, pr.num_doc AS dni_rep, pr.apellido_paterno AS ap_rep, pr.apellido_materno AS am_rep, pr.nombres AS no_rep, pr.domicilio AS dom_rep, pr.celular AS cel_rep, pr.email AS em_rep
-                FROM propietario_vehiculo pv
-                JOIN accidentes a ON a.id = pv.accidente_id
-                JOIN involucrados_vehiculos iv ON iv.id = pv.vehiculo_inv_id
+                FROM propietario_vehiculo_activos pv
+                JOIN accidentes_activos a ON a.id = pv.accidente_id
+                JOIN involucrados_vehiculos_activos iv ON iv.id = pv.vehiculo_inv_id
                 JOIN vehiculos v ON v.id = iv.vehiculo_id
                 LEFT JOIN personas pn ON pn.id = pv.propietario_persona_id
                 LEFT JOIN personas pr ON pr.id = pv.representante_persona_id
@@ -184,8 +184,8 @@ final class PropietarioVehiculoRepository
                        pv.vehiculo_inv_id, iv.orden_participacion, v.placa,
                        pn.tipo_doc AS tipo_doc_nat, pn.num_doc AS dni_nat, pn.apellido_paterno AS ap_nat, pn.apellido_materno AS am_nat, pn.nombres AS no_nat,
                        pr.tipo_doc AS tipo_doc_rep, pr.num_doc AS dni_rep, pr.apellido_paterno AS ap_rep, pr.apellido_materno AS am_rep, pr.nombres AS no_rep
-                FROM propietario_vehiculo pv
-                JOIN involucrados_vehiculos iv ON iv.id = pv.vehiculo_inv_id
+                FROM propietario_vehiculo_activos pv
+                JOIN involucrados_vehiculos_activos iv ON iv.id = pv.vehiculo_inv_id
                 JOIN vehiculos v ON v.id = iv.vehiculo_id
                 LEFT JOIN personas pn ON pn.id = pv.propietario_persona_id
                 LEFT JOIN personas pr ON pr.id = pv.representante_persona_id

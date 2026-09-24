@@ -11,7 +11,7 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
 
 /* Si ya está logueado, envía al panel */
-if (!empty($_SESSION['user'])) {
+if (!empty($_SESSION['user']) || \App\Services\LoginService::pendingSetup() !== null) {
   header('Location: ' . Auth::postLoginDestination()); exit;
 }
 
@@ -22,40 +22,15 @@ $flash = trim((string) ($_SESSION['flash'] ?? ''));
 unset($_SESSION['flash']);
 
 if ($_SERVER['REQUEST_METHOD']==='POST') {
-  $email = trim($_POST['email'] ?? '');
-  $pass  = $_POST['password'] ?? '';
-
-  if ($email==='')            { $err = 'Ingresa tu correo.'; }
-  elseif (!preg_match('/^[^@\s]+@[^@\s]+$/', $email)) { $err = 'Correo inválido.'; } // permite admin@uiat
-  elseif ($pass==='')         { $err = 'Ingresa tu contraseña.'; }
-  else {
-    $st = $pdo->prepare("SELECT id, email, nombre, rol, pass_hash, activo
-                         FROM usuarios
-                         WHERE email = :e
-                         LIMIT 1");
-    $st->execute([':e'=>$email]);
-    $u = $st->fetch(PDO::FETCH_ASSOC);
-
-    if (!$u) {
-      $err = 'Credenciales inválidas.';
-    } elseif ((int)$u['activo'] !== 1) {
-      $err = 'Usuario inactivo. Contacte al administrador.';
-    } elseif (!password_verify($pass, $u['pass_hash'])) {
-      $err = 'Credenciales inválidas.';
-    } else {
-      session_regenerate_id(true);
-      $_SESSION['id']   = (int)$u['id'];
-      $_SESSION['rol']  = $u['rol'];
-      $_SESSION['user'] = [
-        'id'     => (int)$u['id'],
-        'email'  => $u['email'],
-        'nombre' => $u['nombre'],
-        'rol'    => $u['rol'],
-      ];
-      header('Location: ' . Auth::postLoginDestination()); exit;
-    }
-  }
+  $email = trim((string)($_POST['identifier'] ?? $_POST['email'] ?? ''));
+  try {
+    \App\Support\Access::checkCsrf();
+    $user=(new \App\Services\LoginService($pdo))->authenticate($email,(string)($_POST['password']??''));
+    \App\Services\LoginService::beginSession($user);
+    header('Location: '.Auth::postLoginDestination());exit;
+  } catch (Throwable $e) { $err=$e->getMessage(); }
 }
+
 ?>
 <!doctype html>
 <html lang="es">
@@ -99,16 +74,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       <?php if ($err): ?><div class="message error" role="alert"><?= h($err) ?></div><?php endif; ?>
       <?php if ($flash): ?><div class="message info" role="status"><?= h($flash) ?></div><?php endif; ?>
       <form method="post" id="loginForm">
+        <input type="hidden" name="_csrf" value="<?= h(\App\Support\Access::csrf()) ?>">
         <div class="field">
-          <label for="email">Correo institucional</label>
-          <div class="input-wrap"><svg class="icon input-icon"><use href="#i-mail"/></svg><input type="text" name="email" id="email" value="<?= h($email) ?>" placeholder="Ingresa tu correo" required pattern="[^@\s]+@[^@\s]+" title="Formato: usuario@dominio" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+          <label for="email">CIP o correo</label>
+          <div class="input-wrap"><svg class="icon input-icon"><use href="#i-mail"/></svg><input type="text" name="identifier" id="email" value="<?= h($email) ?>" placeholder="Ingresa tu número de CIP" required autocomplete="username" autocapitalize="none" spellcheck="false"></div>
         </div>
         <div class="field">
           <label for="password">Contraseña</label>
           <div class="input-wrap"><svg class="icon input-icon"><use href="#i-lock"/></svg><input type="password" name="password" id="password" placeholder="Ingresa tu contraseña" required autocomplete="current-password" aria-describedby="capsWarning"><button type="button" class="toggle" id="togglePwd" aria-label="Mostrar contraseña" aria-pressed="false"><svg class="icon"><use href="#i-eye"/></svg></button></div>
         </div>
         <p class="caps" id="capsWarning" role="status" hidden>Bloq Mayús está activado.</p>
-        <div class="form-options"><label class="remember"><input type="checkbox" id="remember"> Recordar correo</label><button type="button" class="help-link" id="helpBtn" aria-expanded="false" aria-controls="recoveryHelp">¿Olvidaste tu contraseña?</button></div>
+        <div class="form-options"><label class="remember"><input type="checkbox" id="remember"> Recordar CIP o correo</label><button type="button" class="help-link" id="helpBtn" aria-expanded="false" aria-controls="recoveryHelp">¿Olvidaste tu contraseña?</button></div>
         <p class="recovery-help" id="recoveryHelp" hidden>Contacta al administrador del sistema para restablecer tu contraseña.</p>
         <button class="submit" type="submit" id="submitBtn"><span class="txt">Iniciar sesión</span><svg class="icon arrow"><use href="#i-arrow"/></svg><span class="spinner" aria-hidden="true"></span></button>
       </form>

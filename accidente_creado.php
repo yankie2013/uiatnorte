@@ -11,7 +11,7 @@ if ($accidenteId <= 0) {
     exit;
 }
 
-$st = $pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar FROM accidentes WHERE id = ? LIMIT 1');
+$st = $pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar FROM accidentes_activos WHERE id = ? LIMIT 1');
 $st->execute([$accidenteId]);
 $accidente = $st->fetch(PDO::FETCH_ASSOC);
 if (!$accidente) {

@@ -14,7 +14,7 @@ final class InvolucradoVehiculoRepository
     public function accidentes(): array
     {
         $sql = "SELECT id, CONCAT('#',id,'  ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),'  ',COALESCE(lugar,'')) AS nom
-                  FROM accidentes ORDER BY id DESC";
+                  FROM accidentes_activos ORDER BY id DESC";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -134,7 +134,7 @@ final class InvolucradoVehiculoRepository
 
     public function ordenesParticipacionUsadas(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT orden_participacion FROM involucrados_vehiculos WHERE accidente_id=?');
+        $st = $this->pdo->prepare('SELECT orden_participacion FROM involucrados_vehiculos_activos WHERE accidente_id=?');
         $st->execute([$accidenteId]);
         return array_map(fn($r) => (string) $r['orden_participacion'], $st->fetchAll(PDO::FETCH_ASSOC));
     }
@@ -187,9 +187,9 @@ final class InvolucradoVehiculoRepository
         $sql = "SELECT iv.*, 
                        v.placa, v.color, v.anio,
                        a.id AS a_id, a.lugar, a.fecha_accidente
-                  FROM involucrados_vehiculos iv
+                  FROM involucrados_vehiculos_activos iv
                   JOIN vehiculos v  ON v.id = iv.vehiculo_id
-                  JOIN accidentes a ON a.id = iv.accidente_id
+                  JOIN accidentes_activos a ON a.id = iv.accidente_id
                  WHERE iv.id=?
                  LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -206,7 +206,7 @@ final class InvolucradoVehiculoRepository
 
     public function documentosVehiculo(int $involucradoVehiculoId): array
     {
-        $st = $this->pdo->prepare('SELECT * FROM documento_vehiculo WHERE involucrado_vehiculo_id=? ORDER BY id DESC');
+        $st = $this->pdo->prepare('SELECT * FROM documento_vehiculo_activos WHERE involucrado_vehiculo_id=? ORDER BY id DESC');
         $st->execute([$involucradoVehiculoId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }

@@ -150,23 +150,23 @@ final class PersonaRepository
 
     public function involvementCount(int $id): int
     {
-        return $this->safeCount('SELECT COUNT(*) FROM involucrados_personas WHERE persona_id = ?', [$id]);
+        return $this->safeCount('SELECT COUNT(*) FROM involucrados_personas_activos WHERE persona_id = ?', [$id]);
     }
 
     public function referenceSummary(int $id): array
     {
         $checks = [
-            'Involucrados de persona' => ['SELECT COUNT(*) FROM involucrados_personas WHERE persona_id = ?', [$id]],
-            'Intervinientes policiales' => ['SELECT COUNT(*) FROM policial_interviniente WHERE persona_id = ?', [$id]],
-            'Propietario de vehiculo' => ['SELECT COUNT(*) FROM propietario_vehiculo WHERE propietario_persona_id = ?', [$id]],
-            'Representante legal de vehiculo' => ['SELECT COUNT(*) FROM propietario_vehiculo WHERE representante_persona_id = ?', [$id]],
-            'Familiar de fallecido' => ['SELECT COUNT(*) FROM familiar_fallecido WHERE familiar_persona_id = ?', [$id]],
-            'Abogados' => ['SELECT COUNT(*) FROM abogados WHERE persona_id = ?', [$id]],
-            'Citaciones' => ['SELECT COUNT(*) FROM citacion WHERE persona_id = ?', [$id]],
-            'Manifestaciones' => ['SELECT COUNT(*) FROM Manifestacion WHERE persona_id = ?', [$id]],
-            'Documento RML' => ['SELECT COUNT(*) FROM documento_rml WHERE persona_id = ?', [$id]],
+            'Involucrados de persona' => ['SELECT COUNT(*) FROM involucrados_personas_activos WHERE persona_id = ?', [$id]],
+            'Intervinientes policiales' => ['SELECT COUNT(*) FROM policial_interviniente_activos WHERE persona_id = ?', [$id]],
+            'Propietario de vehiculo' => ['SELECT COUNT(*) FROM propietario_vehiculo_activos WHERE propietario_persona_id = ?', [$id]],
+            'Representante legal de vehiculo' => ['SELECT COUNT(*) FROM propietario_vehiculo_activos WHERE representante_persona_id = ?', [$id]],
+            'Familiar de fallecido' => ['SELECT COUNT(*) FROM familiar_fallecido_activos WHERE familiar_persona_id = ?', [$id]],
+            'Abogados' => ['SELECT COUNT(*) FROM abogados_activos WHERE persona_id = ?', [$id]],
+            'Citaciones' => ['SELECT COUNT(*) FROM citacion_activos WHERE persona_id = ?', [$id]],
+            'Manifestaciones' => ['SELECT COUNT(*) FROM Manifestacion_activos WHERE persona_id = ?', [$id]],
+            'Documento RML' => ['SELECT COUNT(*) FROM documento_rml_activos WHERE persona_id = ?', [$id]],
             'Documento dosaje' => ['SELECT COUNT(*) FROM documento_dosaje WHERE persona_id = ?', [$id]],
-            'Documento occiso' => ['SELECT COUNT(*) FROM documento_occiso WHERE persona_id = ?', [$id]],
+            'Documento occiso' => ['SELECT COUNT(*) FROM documento_occiso_activos WHERE persona_id = ?', [$id]],
             'Documento licencia de conducir' => ['SELECT COUNT(*) FROM documento_lc WHERE persona_id = ?', [$id]],
         ];
 

@@ -108,7 +108,7 @@ function join_es(array $items): string{
 function persona_por_rol(PDO $pdo,$accidente_id,$vehiculo_id,$rol_id){
   $sql="SELECT p.id, p.tipo_doc, p.num_doc,
                CONCAT(TRIM(p.nombres),' ',TRIM(p.apellido_paterno),' ',TRIM(p.apellido_materno)) AS nombre
-        FROM involucrados_personas ip
+        FROM involucrados_personas_activos ip
         JOIN personas p ON p.id=ip.persona_id
         WHERE ip.accidente_id=? AND ip.vehiculo_id=? AND ip.rol_id=?
         ORDER BY ip.id ASC LIMIT 1";
@@ -206,10 +206,10 @@ if(!file_exists($templatePath)){
 /* 1) Cargar OFICIO (por id o por numero/año) */
 $oficio = null;
 if ($oficio_id_forzado>0) {
-  $q=$pdo->prepare("SELECT * FROM oficios WHERE id=? LIMIT 1");
+  $q=$pdo->prepare("SELECT * FROM oficios_activos WHERE id=? LIMIT 1");
   $q->execute([$oficio_id_forzado]); $oficio=$q->fetch(PDO::FETCH_ASSOC);
 } elseif ($numero_q!=='' && $anio_q!=='') {
-  $q=$pdo->prepare("SELECT * FROM oficios WHERE numero=? AND anio=? ORDER BY id DESC LIMIT 1");
+  $q=$pdo->prepare("SELECT * FROM oficios_activos WHERE numero=? AND anio=? ORDER BY id DESC LIMIT 1");
   $q->execute([$numero_q,$anio_q]); $oficio=$q->fetch(PDO::FETCH_ASSOC);
 }
 
@@ -218,7 +218,7 @@ $vehiculo=null; $vehiculo_id=null; $accidente_id=null; $involucrado_vehiculo_id=
 
 if ($oficio) {
   if (!empty($oficio['involucrado_vehiculo_id'])) {
-    $q=$pdo->prepare("SELECT * FROM involucrados_vehiculos WHERE id=? LIMIT 1");
+    $q=$pdo->prepare("SELECT * FROM involucrados_vehiculos_activos WHERE id=? LIMIT 1");
     $q->execute([(int)$oficio['involucrado_vehiculo_id']]); $iv=$q->fetch(PDO::FETCH_ASSOC);
     if ($iv) {
       $involucrado_vehiculo_id=(int)$iv['id'];
@@ -227,7 +227,7 @@ if ($oficio) {
     }
   }
   if (!$vehiculo_id && !empty($oficio['involucrado_persona_id'])) {
-    $q=$pdo->prepare("SELECT * FROM involucrados_personas WHERE id=? LIMIT 1");
+    $q=$pdo->prepare("SELECT * FROM involucrados_personas_activos WHERE id=? LIMIT 1");
     $q->execute([(int)$oficio['involucrado_persona_id']]); $ip=$q->fetch(PDO::FETCH_ASSOC);
     if ($ip) { $vehiculo_id=(int)$ip['vehiculo_id']; $accidente_id=(int)$ip['accidente_id']; }
   }
@@ -245,18 +245,18 @@ if (!$vehiculo && $placa!=='') {
   if(!$vehiculo){ http_response_code(404); header('Content-Type: text/plain; charset=utf-8'); echo "No existe vehículo con placa ".h($placa); exit; }
   $vehiculo_id=(int)$vehiculo['id'];
 
-  $st=$pdo->prepare("SELECT * FROM involucrados_vehiculos WHERE vehiculo_id=? ORDER BY id DESC LIMIT 1");
+  $st=$pdo->prepare("SELECT * FROM involucrados_vehiculos_activos WHERE vehiculo_id=? ORDER BY id DESC LIMIT 1");
   $st->execute([$vehiculo_id]); $iv=$st->fetch(PDO::FETCH_ASSOC);
   if(!$iv){ http_response_code(404); header('Content-Type: text/plain; charset=utf-8'); echo "La placa ".h($placa)." no tiene registros en involucrados_vehiculos."; exit; }
   $accidente_id=(int)$iv['accidente_id'];
   $involucrado_vehiculo_id=(int)$iv['id'];
 
   if(!$oficio){
-    $q=$pdo->prepare("SELECT * FROM oficios WHERE involucrado_vehiculo_id=? ORDER BY fecha_emision DESC, id DESC LIMIT 1");
+    $q=$pdo->prepare("SELECT * FROM oficios_activos WHERE involucrado_vehiculo_id=? ORDER BY fecha_emision DESC, id DESC LIMIT 1");
     $q->execute([$involucrado_vehiculo_id]); $oficio=$q->fetch(PDO::FETCH_ASSOC);
   }
   if(!$oficio){
-    $q=$pdo->prepare("SELECT * FROM oficios WHERE accidente_id=? ORDER BY fecha_emision DESC, id DESC LIMIT 1");
+    $q=$pdo->prepare("SELECT * FROM oficios_activos WHERE accidente_id=? ORDER BY fecha_emision DESC, id DESC LIMIT 1");
     $q->execute([$accidente_id]); $oficio=$q->fetch(PDO::FETCH_ASSOC);
   }
 }
@@ -270,7 +270,7 @@ if(!$vehiculo){ http_response_code(404); header('Content-Type: text/plain; chars
    =========================================================== */
 
 /* Accidente */
-$st=$pdo->prepare("SELECT * FROM accidentes WHERE id=? LIMIT 1");
+$st=$pdo->prepare("SELECT * FROM accidentes_activos WHERE id=? LIMIT 1");
 $st->execute([$accidente_id]); $acc=$st->fetch(PDO::FETCH_ASSOC) ?: [];
 
 /* Modalidades */
@@ -279,7 +279,7 @@ try{
   $modNombres = [];
   if (table_exists($pdo,'accidente_modalidad') && table_exists($pdo,'modalidad_accidente')) {
     $sqlMod = "SELECT ma.nombre
-               FROM accidente_modalidad am
+               FROM accidente_modalidad_activos am
                JOIN modalidad_accidente ma ON ma.id = am.modalidad_id
                WHERE am.accidente_id = ?
                ORDER BY am.modalidad_id ASC";
@@ -338,7 +338,7 @@ if (!empty($oficio['entidad_id_destino']) && table_exists($pdo,'oficio_entidad')
 $conductor = persona_por_rol($pdo,$accidente_id,(int)$vehiculo['id'],ROL_CONDUCTOR);
 if ($conductor['nombre']==='') {
   $q=$pdo->prepare("SELECT CONCAT(TRIM(p.nombres),' ',TRIM(p.apellido_paterno),' ',TRIM(p.apellido_materno)) AS nombre,p.tipo_doc,p.num_doc
-                    FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id
+                    FROM involucrados_personas_activos ip JOIN personas p ON p.id=ip.persona_id
                     WHERE ip.accidente_id=? AND ip.vehiculo_id=? ORDER BY ip.id ASC LIMIT 1");
   $q->execute([$accidente_id,(int)$vehiculo['id']]); $aux=$q->fetch(PDO::FETCH_ASSOC) ?: [];
   if($aux){ $conductor['nombre']=$aux['nombre']; $conductor['tipo_doc']=$aux['tipo_doc']; $conductor['num_doc']=$aux['num_doc']; }
@@ -349,7 +349,7 @@ $propietario_nombre = '';
 $propietario_doc    = '';
 
 if (empty($involucrado_vehiculo_id)) {
-  $q=$pdo->prepare("SELECT id FROM involucrados_vehiculos WHERE accidente_id=? AND vehiculo_id=? ORDER BY id ASC LIMIT 1");
+  $q=$pdo->prepare("SELECT id FROM involucrados_vehiculos_activos WHERE accidente_id=? AND vehiculo_id=? ORDER BY id ASC LIMIT 1");
   $q->execute([$accidente_id,(int)$vehiculo['id']]);
   $involucrado_vehiculo_id = (int)($q->fetchColumn() ?: 0);
 }
@@ -361,7 +361,7 @@ if ($involucrado_vehiculo_id && table_exists($pdo,'propietario_vehiculo')) {
            CONCAT(TRIM(p.nombres),' ',TRIM(p.apellido_paterno),' ',TRIM(p.apellido_materno)) AS p_nombre,
            rp.tipo_doc AS r_tipo_doc, rp.num_doc AS r_num_doc,
            CONCAT(TRIM(rp.nombres),' ',TRIM(rp.apellido_paterno),' ',TRIM(rp.apellido_materno)) AS r_nombre
-    FROM propietario_vehiculo pv
+    FROM propietario_vehiculo_activos pv
     LEFT JOIN personas p  ON p.id  = pv.propietario_persona_id
     LEFT JOIN personas rp ON rp.id = pv.representante_persona_id
     WHERE pv.accidente_id=? AND pv.vehiculo_inv_id=?
@@ -538,7 +538,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class)) {
   exit;
 }
 
-$tpl = new \PhpOffice\PhpWord\TemplateProcessor($templatePath);
+$tpl = new \App\Support\ResponsibleTemplateProcessor($templatePath);
 foreach($vars as $k=>$v){ $tpl->setValue($k, (string)$v); }
 
 /* Inspección opcional: ?vars=1 */

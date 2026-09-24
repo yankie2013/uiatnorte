@@ -31,8 +31,8 @@ SELECT ip.id, ip.accidente_id, ip.lesion, ip.observaciones,
        p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno,
        v.placa, v.color,
        r.Nombre AS rol_nombre
-FROM involucrados_personas ip
-JOIN accidentes a            ON a.id = ip.accidente_id
+FROM involucrados_personas_activos ip
+JOIN accidentes_activos a            ON a.id = ip.accidente_id
 JOIN personas  p             ON p.id = ip.persona_id
 LEFT JOIN vehiculos v        ON v.id = ip.vehiculo_id
 JOIN participacion_persona r ON r.Id = ip.rol_id

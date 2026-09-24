@@ -6,7 +6,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use App\Repositories\DocumentoPlantillaRepository;
 use App\Services\DocumentoPlantillaService;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');

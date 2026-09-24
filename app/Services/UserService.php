@@ -17,15 +17,16 @@ final class UserService
         return [
             'nombre' => '',
             'email' => '',
-            'rol' => 'viewer',
+            'rol' => 'jefe_emi',
+            'cip' => '', 'grado' => '', 'cargo' => '', 'unidad' => 'DEPIAT',
         ];
     }
 
     public function allowedRolesFor(string $actorRole): array
     {
         return match ($actorRole) {
-            'kayiosama' => ['viewer', 'editor', 'admin', 'kayiosama'],
-            'admin' => ['viewer', 'editor'],
+            'kayiosama' => [],
+            'admin' => ['jefe_emi', 'adjunto', 'secretaria', 'guardia', 'admin'],
             default => [],
         };
     }
@@ -34,13 +35,12 @@ final class UserService
     {
         $allowed = $this->allowedRolesFor($actorRole);
         if ($allowed === []) {
-            throw new InvalidArgumentException('Acceso denegado. Solo kayiosama o admin pueden registrar usuarios.');
+            throw new InvalidArgumentException('Acceso denegado. Solo el administrador puede registrar usuarios.');
         }
 
         $nombre = trim((string) ($input['nombre'] ?? ''));
         $email = trim((string) ($input['email'] ?? ''));
-        $clave1 = (string) ($input['clave1'] ?? '');
-        $clave2 = (string) ($input['clave2'] ?? '');
+        $cip = \App\Support\PasswordPolicy::cip((string)($input['cip'] ?? ''));
         $rol = (string) ($input['rol'] ?? 'viewer');
 
         if ($nombre === '') {
@@ -52,27 +52,24 @@ final class UserService
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new InvalidArgumentException('Email invalido.');
         }
-        if ($clave1 === '' || $clave2 === '') {
-            throw new InvalidArgumentException('Debes ingresar la contrasena dos veces.');
-        }
-        if ($clave1 !== $clave2) {
-            throw new InvalidArgumentException('Las contrasenas no coinciden.');
-        }
-        if (strlen($clave1) < 6) {
-            throw new InvalidArgumentException('La contrasena debe tener al menos 6 caracteres.');
-        }
         if (!in_array($rol, $allowed, true)) {
-            $rol = 'viewer';
+            throw new InvalidArgumentException('Perfil no permitido.');
         }
         if ($this->repository->findByEmail($email) !== null) {
             throw new InvalidArgumentException('El email ya esta registrado.');
         }
 
+        if ($this->repository->findByIdentifier($cip) !== null) throw new InvalidArgumentException('El CIP ya está registrado.');
+
         return $this->repository->create([
             'email' => $email,
             'nombre' => $nombre,
             'rol' => $rol,
-            'pass_hash' => password_hash($clave1, PASSWORD_DEFAULT),
+            'pass_hash' => password_hash($cip, PASSWORD_DEFAULT),
+            'grado' => trim((string)($input['grado'] ?? '')),
+            'cip' => $cip,
+            'cargo' => trim((string)($input['cargo'] ?? '')),
+            'unidad' => trim((string)($input['unidad'] ?? 'DEPIAT')),
         ]);
     }
 }

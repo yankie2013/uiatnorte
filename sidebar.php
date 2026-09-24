@@ -41,6 +41,20 @@ if ($sidebarAccidentId > 0) {
         ['folder', 'Vista del expediente', 'accidente_vista_tabs.php?accidente_id=' . $sidebarAccidentId, $sidebarPath === 'accidente_vista_tabs.php'],
     ];
 }
+$sidebarGroups['GESTIÓN'] = [
+    ['folder', 'Buscador general', 'gestion_expedientes.php', $sidebarPath === 'gestion_expedientes.php'],
+    ['folder', 'En espera de recepción', 'expedientes_recepcion.php', $sidebarPath === 'expedientes_recepcion.php'],
+    ['file', 'Comunicaciones de guardia', 'guardia.php', $sidebarPath === 'guardia.php'],
+];
+if (\App\Support\Access::admin()) {
+    $sidebarGroups['ADMINISTRACIÓN'] = [
+        ['people', 'Usuarios y perfiles', 'usuarios_gestion.php', in_array($sidebarPath, ['usuarios_gestion.php','usuarios_nuevo.php'], true)],
+        ['grid', 'Estadísticas de gestión', 'estadisticas.php', $sidebarPath === 'estadisticas.php'],
+    ];
+}
+if ($sidebarAccidentId > 0) {
+    $sidebarGroups['EXPEDIENTE ACTUAL'][] = ['people', 'Estado y colaboración', 'accidente_vista_tabs.php?tab=estado&accidente_id=' . $sidebarAccidentId, false];
+}
 $sidebarGroups['DIRECTORIO'] = [
     ['building', 'Comisarías', 'comisarias_listar.php', str_starts_with($sidebarPath, 'comisarias_')],
     ['book', 'Entidades', 'oficio_entidades_listar.php', str_starts_with($sidebarPath, 'oficio_entidad')],

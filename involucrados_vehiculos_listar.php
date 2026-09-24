@@ -28,7 +28,7 @@ $q            = g('q','');
 // combos
 $accidentes = $pdo->query("
   SELECT id, CONCAT('#',id,' – ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' – ',COALESCE(lugar,'')) AS nom
-  FROM accidentes ORDER BY id DESC
+  FROM accidentes_activos ORDER BY id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // consulta
@@ -36,8 +36,8 @@ $sql = "
 SELECT iv.id, iv.accidente_id, iv.vehiculo_id, iv.tipo, iv.observaciones,
        a.fecha_accidente, a.lugar,
        v.placa, v.color, v.anio
-FROM involucrados_vehiculos iv
-JOIN accidentes a ON a.id = iv.accidente_id
+FROM involucrados_vehiculos_activos iv
+JOIN accidentes_activos a ON a.id = iv.accidente_id
 JOIN vehiculos  v ON v.id = iv.vehiculo_id
 WHERE 1=1
 ";

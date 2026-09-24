@@ -31,7 +31,7 @@ final class DiligenciaPendienteRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM diligencias_pendientes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM diligencias_pendientes_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -149,7 +149,7 @@ final class DiligenciaPendienteRepository
         $whereSql = implode(' AND ', $where);
 
         $countSql = "SELECT COUNT(*)
-                     FROM diligencias_pendientes dp
+                     FROM diligencias_pendientes_activos dp
                      LEFT JOIN tipo_diligencia td ON td.id = dp.tipo_diligencia_id
                      WHERE {$whereSql}";
         $countSt = $this->pdo->prepare($countSql);
@@ -157,7 +157,7 @@ final class DiligenciaPendienteRepository
         $total = (int) $countSt->fetchColumn();
 
         $sql = "SELECT dp.*, td.nombre AS tipo_nombre, td.descripcion AS tipo_descripcion
-                FROM diligencias_pendientes dp
+                FROM diligencias_pendientes_activos dp
                 LEFT JOIN tipo_diligencia td ON td.id = dp.tipo_diligencia_id
                 WHERE {$whereSql}
                 ORDER BY dp.creado_en DESC, dp.id DESC
@@ -179,7 +179,7 @@ final class DiligenciaPendienteRepository
 
     public function oficiosByAccidente(?int $accidenteId): array
     {
-        $sql = 'SELECT id, numero, anio, motivo, referencia_texto, fecha_emision FROM oficios';
+        $sql = 'SELECT id, numero, anio, motivo, referencia_texto, fecha_emision FROM oficios_activos';
         $params = [];
 
         if ($accidenteId && $this->columnExists('oficios', 'accidente_id')) {
@@ -235,7 +235,7 @@ final class DiligenciaPendienteRepository
             $select[] = "{$textColumn} AS texto";
         }
 
-        $sql = 'SELECT ' . implode(', ', $select) . ' FROM citacion';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM citacion_activos';
         $params = [];
         if ($accidenteId && in_array('accidente_id', $columns, true)) {
             $sql .= ' WHERE accidente_id = ?';

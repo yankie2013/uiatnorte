@@ -13,7 +13,7 @@ final class FamiliarFallecidoRepository
 
     public function accidenteHeader(int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes_activos WHERE id = ? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -27,7 +27,7 @@ final class FamiliarFallecidoRepository
                        p.apellido_paterno,
                        p.apellido_materno,
                        p.nombres
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 JOIN personas p ON p.id = ip.persona_id
                 WHERE ip.accidente_id = ?
                   AND (
@@ -85,8 +85,8 @@ final class FamiliarFallecidoRepository
                        pr.celular AS cel_fam,
                        pr.email AS em_fam,
                        pr.domicilio AS dom_fam
-                FROM familiar_fallecido ff
-                JOIN involucrados_personas ip ON ip.id = ff.fallecido_inv_id
+                FROM familiar_fallecido_activos ff
+                JOIN involucrados_personas_activos ip ON ip.id = ff.fallecido_inv_id
                 JOIN personas pf ON pf.id = ip.persona_id
                 JOIN personas pr ON pr.id = ff.familiar_persona_id
                 WHERE ff.accidente_id = ?
@@ -98,7 +98,7 @@ final class FamiliarFallecidoRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM familiar_fallecido WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM familiar_fallecido_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -132,9 +132,9 @@ final class FamiliarFallecidoRepository
                        pr.domicilio AS dom_fam,
                        pr.celular AS cel_fam,
                        pr.email AS em_fam
-                FROM familiar_fallecido ff
-                JOIN accidentes a ON a.id = ff.accidente_id
-                JOIN involucrados_personas ip ON ip.id = ff.fallecido_inv_id
+                FROM familiar_fallecido_activos ff
+                JOIN accidentes_activos a ON a.id = ff.accidente_id
+                JOIN involucrados_personas_activos ip ON ip.id = ff.fallecido_inv_id
                 JOIN personas pf ON pf.id = ip.persona_id
                 JOIN personas pr ON pr.id = ff.familiar_persona_id
                 WHERE ff.id = ?
@@ -147,7 +147,7 @@ final class FamiliarFallecidoRepository
 
     public function existsDuplicate(int $accidenteId, int $fallecidoInvId, int $familiarPersonaId, ?int $excludeId = null): bool
     {
-        $sql = 'SELECT COUNT(*) FROM familiar_fallecido WHERE accidente_id = ? AND fallecido_inv_id = ? AND familiar_persona_id = ?';
+        $sql = 'SELECT COUNT(*) FROM familiar_fallecido_activos WHERE accidente_id = ? AND fallecido_inv_id = ? AND familiar_persona_id = ?';
         $params = [$accidenteId, $fallecidoInvId, $familiarPersonaId];
         if ($excludeId !== null) {
             $sql .= ' AND id <> ?';

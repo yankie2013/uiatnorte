@@ -39,7 +39,7 @@ try {
 $accidenteId = isset($_GET['accidente_id']) ? (int) $_GET['accidente_id'] : (int) ($_GET['id'] ?? 0);
 if ($accidenteId > 0 && isset($pdo)) {
     try {
-        $st = $pdo->prepare('SELECT id, sidpol, fecha_accidente FROM accidentes WHERE id=? LIMIT 1');
+        $st = $pdo->prepare('SELECT id, sidpol, fecha_accidente FROM accidentes_activos WHERE id=? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         $lines[] = $row ? ('ACCIDENTE=' . $accidenteId . ' FOUND sidpol=' . ($row['sidpol'] ?? '')) : ('ACCIDENTE=' . $accidenteId . ' NOT FOUND');

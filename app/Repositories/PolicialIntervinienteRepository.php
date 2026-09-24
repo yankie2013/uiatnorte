@@ -13,7 +13,7 @@ final class PolicialIntervinienteRepository
 
     public function accidenteHeader(int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, sidpol, registro_sidpol, lugar, fecha_accidente FROM accidentes_activos WHERE id = ? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -47,7 +47,7 @@ final class PolicialIntervinienteRepository
 
     public function existsDuplicate(int $accidenteId, int $personaId, ?int $excludeId = null): bool
     {
-        $sql = 'SELECT COUNT(*) FROM policial_interviniente WHERE accidente_id = ? AND persona_id = ?';
+        $sql = 'SELECT COUNT(*) FROM policial_interviniente_activos WHERE accidente_id = ? AND persona_id = ?';
         $params = [$accidenteId, $personaId];
         if ($excludeId !== null) {
             $sql .= ' AND id <> ?';
@@ -97,7 +97,7 @@ final class PolicialIntervinienteRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM policial_interviniente WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM policial_interviniente_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -107,9 +107,9 @@ final class PolicialIntervinienteRepository
     {
         $sql = "SELECT pi.*, p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.fecha_nacimiento, p.domicilio, p.celular, p.email,
                        a.id AS accidente_id, a.sidpol, a.registro_sidpol, a.lugar, a.fecha_accidente
-                FROM policial_interviniente pi
+                FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id
-                JOIN accidentes a ON a.id = pi.accidente_id
+                JOIN accidentes_activos a ON a.id = pi.accidente_id
                 WHERE pi.id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -122,7 +122,7 @@ final class PolicialIntervinienteRepository
     {
         $sql = "SELECT pi.id, pi.accidente_id, pi.persona_id, pi.grado_policial, pi.cip, pi.dependencia_policial, pi.rol_funcion, pi.observaciones,
                        p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.celular, p.email
-                FROM policial_interviniente pi
+                FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id
                 WHERE pi.accidente_id = ?
                 ORDER BY pi.id ASC";
@@ -136,9 +136,9 @@ final class PolicialIntervinienteRepository
         $sql = "SELECT pi.id, pi.accidente_id, pi.persona_id, pi.grado_policial, pi.cip, pi.dependencia_policial, pi.rol_funcion,
                        p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.celular, p.email,
                        a.sidpol, a.registro_sidpol, a.lugar, a.fecha_accidente
-                FROM policial_interviniente pi
+                FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id
-                JOIN accidentes a ON a.id = pi.accidente_id
+                JOIN accidentes_activos a ON a.id = pi.accidente_id
                 ORDER BY a.fecha_accidente DESC, pi.id DESC";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }

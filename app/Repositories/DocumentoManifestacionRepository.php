@@ -27,7 +27,7 @@ final class DocumentoManifestacionRepository
         if ($select === []) {
             return '#' . $id;
         }
-        $st = $this->pdo->prepare('SELECT ' . implode(',', $select) . ' FROM accidentes WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT ' . implode(',', $select) . ' FROM accidentes_activos WHERE id=? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
         return '#' . $id . ' - ' . trim(($row['sidpol'] ?? '') . ' ' . ($row['fecha'] ?? '') . ' ' . ($row['lugar'] ?? ''));
@@ -43,7 +43,7 @@ final class DocumentoManifestacionRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM Manifestacion WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM Manifestacion_activos WHERE id=? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;

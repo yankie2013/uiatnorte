@@ -17,3 +17,5 @@ if (!function_exists('db')) {
         return $pdo;
     }
 }
+
+\App\Support\Access::requestGuard();

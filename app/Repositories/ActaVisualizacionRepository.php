@@ -17,7 +17,7 @@ final class ActaVisualizacionRepository
                     (SELECT COUNT(*) FROM actas_visualizacion_participantes p WHERE p.acta_visualizacion_id=av.id) participantes_total,
                     (SELECT COUNT(*) FROM actas_visualizacion_documentos d WHERE d.acta_visualizacion_id=av.id) documentos_total,
                     (SELECT COUNT(*) FROM actas_visualizacion_discos d WHERE d.acta_visualizacion_id=av.id) discos_total
-               FROM actas_visualizacion av
+               FROM actas_visualizacion_activos av
               WHERE av.accidente_id=?
            ORDER BY av.fecha_visualizacion DESC, av.hora_inicio DESC, av.id DESC"
         );
@@ -27,7 +27,7 @@ final class ActaVisualizacionRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM actas_visualizacion WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM actas_visualizacion_activos WHERE id=? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
@@ -53,7 +53,7 @@ final class ActaVisualizacionRepository
                     fa.nombre fiscalia,
                     TRIM(CONCAT_WS(' ', f.nombres, f.apellido_paterno, f.apellido_materno)) fiscal,
                     f.cargo fiscal_cargo, f.telefono fiscal_telefono
-               FROM accidentes a
+               FROM accidentes_activos a
           LEFT JOIN ubigeo_distrito ud ON ud.cod_dep=a.cod_dep AND ud.cod_prov=a.cod_prov AND ud.cod_dist=a.cod_dist
           LEFT JOIN fiscalia fa ON fa.id=a.fiscalia_id
           LEFT JOIN fiscales f ON f.id=a.fiscal_id
@@ -69,20 +69,20 @@ final class ActaVisualizacionRepository
                   SELECT CONVERT('INVOLUCRADO' USING utf8mb4) COLLATE utf8mb4_general_ci fuente, ip.id fuente_id,
                          CONVERT(TRIM(CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.apellido_materno)) USING utf8mb4) COLLATE utf8mb4_general_ci nombre,
                          CONVERT(CONCAT(COALESCE(pp.Nombre,'Involucrado'), IF(ip.lesion IS NULL OR ip.lesion='', '', CONCAT(' - ',ip.lesion))) USING utf8mb4) COLLATE utf8mb4_general_ci condicion
-                    FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id
+                    FROM involucrados_personas_activos ip JOIN personas p ON p.id=ip.persona_id
                LEFT JOIN participacion_persona pp ON pp.Id=ip.rol_id WHERE ip.accidente_id=?
                   UNION ALL
                   SELECT CONVERT('FAMILIAR' USING utf8mb4) COLLATE utf8mb4_general_ci, ff.id, CONVERT(TRIM(CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.apellido_materno)) USING utf8mb4) COLLATE utf8mb4_general_ci,
                          CONVERT(CONCAT('Familiar de fallecido',IF(ff.parentesco IS NULL OR ff.parentesco='','',CONCAT(' - ',ff.parentesco))) USING utf8mb4) COLLATE utf8mb4_general_ci
-                    FROM familiar_fallecido ff JOIN personas p ON p.id=ff.familiar_persona_id WHERE ff.accidente_id=?
+                    FROM familiar_fallecido_activos ff JOIN personas p ON p.id=ff.familiar_persona_id WHERE ff.accidente_id=?
                   UNION ALL
                   SELECT CONVERT('PROPIETARIO' USING utf8mb4) COLLATE utf8mb4_general_ci, pv.id,
                          CONVERT(CASE WHEN pv.tipo_propietario='JURIDICA' THEN pv.razon_social ELSE TRIM(CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.apellido_materno)) END USING utf8mb4) COLLATE utf8mb4_general_ci,
                          CONVERT(CASE WHEN pv.tipo_propietario='JURIDICA' THEN 'Propietario - Persona juridica' ELSE 'Propietario' END USING utf8mb4) COLLATE utf8mb4_general_ci
-                    FROM propietario_vehiculo pv LEFT JOIN personas p ON p.id=pv.propietario_persona_id WHERE pv.accidente_id=?
+                    FROM propietario_vehiculo_activos pv LEFT JOIN personas p ON p.id=pv.propietario_persona_id WHERE pv.accidente_id=?
                   UNION ALL
                   SELECT CONVERT('ABOGADO' USING utf8mb4) COLLATE utf8mb4_general_ci, ab.id, CONVERT(TRIM(CONCAT_WS(' ',ab.nombres,ab.apellido_paterno,ab.apellido_materno)) USING utf8mb4) COLLATE utf8mb4_general_ci, CONVERT('Abogado' USING utf8mb4) COLLATE utf8mb4_general_ci
-                    FROM abogados ab WHERE ab.accidente_id=?
+                    FROM abogados_activos ab WHERE ab.accidente_id=?
                 ) participantes WHERE nombre IS NOT NULL AND nombre<>'' ORDER BY condicion,nombre";
         $st = $this->pdo->prepare($sql);
         $st->execute([$accidenteId, $accidenteId, $accidenteId, $accidenteId]);
@@ -98,10 +98,10 @@ final class ActaVisualizacionRepository
                     dr.id respuesta_id, COALESCE(dr.numero_documento,'') respuesta_numero,
                     COALESCE(dr.siglas_documento,'') respuesta_siglas,
                     COALESCE(dr.asunto,'') respuesta_asunto, COALESCE(dr.entidad_persona,'') respuesta_entidad
-               FROM oficios o
+               FROM oficios_activos o
           LEFT JOIN oficio_asunto oa ON oa.id=o.asunto_id
           LEFT JOIN oficio_entidad e ON e.id=o.entidad_id_destino
-               JOIN documentos_recibidos dr ON dr.referencia_oficio_id=o.id AND dr.accidente_id=o.accidente_id
+               JOIN documentos_recibidos_activos dr ON dr.referencia_oficio_id=o.id AND dr.accidente_id=o.accidente_id
               WHERE o.accidente_id=?
                 AND LOWER(CONVERT(CONCAT_WS(' ',o.categoria,oa.nombre,oa.detalle,o.motivo,o.referencia_texto) USING utf8mb4)) COLLATE utf8mb4_general_ci
                     REGEXP 'c.mara|video|videovigilancia|vigilancia'

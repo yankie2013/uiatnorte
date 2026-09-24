@@ -53,7 +53,7 @@ try {
             a.estado,
             a.nro_informe_policial,
             c.nombre AS comisaria
-          FROM accidentes a
+          FROM accidentes_activos a
           LEFT JOIN comisarias c ON c.id=a.comisaria_id
           WHERE a.id=?";
   $st = $pdo->prepare($sql);

@@ -11,7 +11,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
 use App\Repositories\AbogadoRepository;
 use App\Repositories\DocumentoPlantillaRepository;
 use App\Services\AbogadoService;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 function h(mixed $value): string
 {
@@ -386,7 +386,7 @@ if ($documentRepo->hasTable('fiscalia') && $documentRepo->hasColumn('accidentes'
     $select[] = "NULL AS fiscalia_nombre";
 }
 
-$accidenteSql = 'SELECT ' . implode(', ', $select) . ' FROM accidentes a ' . implode(' ', $joins) . ' WHERE a.id = ? LIMIT 1';
+$accidenteSql = 'SELECT ' . implode(', ', $select) . ' FROM accidentes_activos a ' . implode(' ', $joins) . ' WHERE a.id = ? LIMIT 1';
 $accidenteStmt = $pdo->prepare($accidenteSql);
 $accidenteStmt->execute([$accidenteId]);
 $accidente = $accidenteStmt->fetch(PDO::FETCH_ASSOC) ?: [
@@ -423,7 +423,7 @@ $citacionStmt = $pdo->prepare("
            hora,
            lugar,
            motivo
-    FROM citacion
+    FROM citacion_activos
     WHERE accidente_id = ?
       AND (
             fecha > CURDATE()

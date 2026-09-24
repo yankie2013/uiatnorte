@@ -10,7 +10,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
 
 use App\Repositories\DocumentoPlantillaRepository;
 use App\Services\DocumentoPlantillaService;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 header('Content-Type: text/html; charset=utf-8');
 

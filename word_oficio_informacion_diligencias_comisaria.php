@@ -6,7 +6,7 @@ require_login();
 require __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
@@ -121,12 +121,12 @@ SELECT o.*, e.nombre AS entidad_nombre, COALESCE(e.siglas, '') AS entidad_siglas
        ac.registro_sidpol, ac.sidpol, ac.lugar, ac.referencia AS accidente_referencia, ac.sentido, ac.fecha_accidente,
        c.nombre AS comisaria_nombre, f.nombre AS fiscalia_nombre,
        ao.nombre AS nombre_oficial_ano, gc.nombre AS grado_cargo_nombre, gc.abreviatura AS grado_cargo_abrev
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto s ON s.id = o.asunto_id
 LEFT JOIN oficio_subentidad se ON se.id = o.subentidad_destino_id
 LEFT JOIN oficio_persona_entidad pe ON pe.id = o.persona_destino_id
-LEFT JOIN accidentes ac ON ac.id = o.accidente_id
+LEFT JOIN accidentes_activos ac ON ac.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = ac.comisaria_id
 LEFT JOIN fiscalia f ON f.id = ac.fiscalia_id
 LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id
@@ -161,7 +161,7 @@ if ($diligenciasTexto === '') {
 $st = $pdo->prepare("
 SELECT iv.orden_participacion, iv.tipo AS participacion, v.placa, v.color, v.anio,
        mv.nombre AS marca, modv.nombre AS modelo, tv.nombre AS tipo_vehiculo
-FROM involucrados_vehiculos iv
+FROM involucrados_vehiculos_activos iv
 LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
 LEFT JOIN marcas_vehiculo mv ON mv.id = v.marca_id
 LEFT JOIN modelos_vehiculo modv ON modv.id = v.modelo_id
@@ -187,7 +187,7 @@ $st = $pdo->prepare("
 SELECT p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc, p.fecha_nacimiento,
        p.edad, p.sexo, p.estado_civil, p.domicilio, p.ocupacion, p.celular, p.email,
        ip.rol_id, ip.vehiculo_id, ip.lesion
-FROM involucrados_personas ip
+FROM involucrados_personas_activos ip
 JOIN personas p ON p.id = ip.persona_id
 WHERE ip.accidente_id = ?
 ORDER BY ip.id");
@@ -224,10 +224,10 @@ foreach ($fallecidos as $index => $row) {
 }
 $fallecido = $fallecidos[0] ?? [];
 
-$st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
+$st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
 $st->execute([(int) $oficio['accidente_id']]);
 $modalidades = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
-$st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
+$st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
 $st->execute([(int) $oficio['accidente_id']]);
 $consecuencias = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
 

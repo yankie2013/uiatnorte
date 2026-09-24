@@ -182,7 +182,7 @@ final class VehiculoRepository
 
     public function countAccidentesVinculados(int $vehiculoId): int
     {
-        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos WHERE vehiculo_id = :vehiculo_id');
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos_activos WHERE vehiculo_id = :vehiculo_id');
         $st->execute([':vehiculo_id' => $vehiculoId]);
         return (int) $st->fetchColumn();
     }

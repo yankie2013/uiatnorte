@@ -36,6 +36,22 @@ final class Database
         self::$connection->exec("SET time_zone = " . self::$connection->quote($timeZone));
         self::$connection->exec(sprintf('SET NAMES %s COLLATE %s', $charset, $collation));
 
+        // La identidad se toma de la sesión; nunca de parámetros del formulario.
+        $actorId = (int) ($_SESSION['user']['id'] ?? 0);
+        $identity = false;
+        if ($actorId > 0) {
+            $actor = self::$connection->prepare('SELECT id, nombre, email, rol, activo, must_change_password, auth_version FROM usuarios WHERE id=?');
+            $actor->execute([$actorId]);
+            $identity = $actor->fetch();
+        }
+        $actorId = $identity && (int)$identity['activo'] === 1 && !(int)$identity['must_change_password'] && (int)$identity['auth_version'] === (int)($_SESSION['user']['auth_version'] ?? 0) ? (int)$identity['id'] : 0;
+        self::$connection->exec('SET @actor_id = ' . $actorId);
+        if ($actorId > 0 && isset($_SESSION['user'])) {
+            $_SESSION['user'] = array_intersect_key($identity, array_flip(['id','nombre','email','rol','auth_version']));
+            $_SESSION['rol'] = $identity['rol'];
+        } elseif (isset($_SESSION['user'])) {
+            unset($_SESSION['user'], $_SESSION['rol'], $_SESSION['id']);
+        }
         return self::$connection;
     }
 

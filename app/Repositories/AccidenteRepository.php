@@ -32,7 +32,7 @@ final class AccidenteRepository
                        comunicacion_decreto, comunicacion_oficio, comunicacion_carpeta_nro,
                        fiscalia_id, fiscal_id, nro_informe_policial,
                        sentido, secuencia
-                  FROM accidentes
+                  FROM accidentes_activos
                  WHERE id=?';
         $st = $this->pdo->prepare($sql);
         $st->execute([$accidenteId]);
@@ -273,14 +273,14 @@ final class AccidenteRepository
 
     public function modalidadIdsForAccidente(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT modalidad_id FROM accidente_modalidad WHERE accidente_id=?');
+        $st = $this->pdo->prepare('SELECT modalidad_id FROM accidente_modalidad_activos WHERE accidente_id=?');
         $st->execute([$accidenteId]);
         return array_map('intval', array_column($st->fetchAll(PDO::FETCH_ASSOC), 'modalidad_id'));
     }
 
     public function consecuenciaIdsForAccidente(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT consecuencia_id FROM accidente_consecuencia WHERE accidente_id=?');
+        $st = $this->pdo->prepare('SELECT consecuencia_id FROM accidente_consecuencia_activos WHERE accidente_id=?');
         $st->execute([$accidenteId]);
         return array_map('intval', array_column($st->fetchAll(PDO::FETCH_ASSOC), 'consecuencia_id'));
     }

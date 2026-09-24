@@ -19,7 +19,7 @@ if (!class_exists(\PhpOffice\PhpWord\PhpWord::class) && is_file(__DIR__ . '/PHPW
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(PhpWord::class) || !class_exists(IOFactory::class)) {
     http_response_code(500);
@@ -581,7 +581,7 @@ $accidente = fetch_one_doc($pdo, "
            c.nombre AS comisaria_nombre,
            fa.nombre AS fiscalia_nombre,
            CONCAT(fi.nombres, ' ', fi.apellido_paterno, ' ', fi.apellido_materno) AS fiscal_nombre
-      FROM accidentes a
+      FROM accidentes_activos a
  LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
  LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
  LEFT JOIN ubigeo_distrito t ON t.cod_dep = a.cod_dep AND t.cod_prov = a.cod_prov AND t.cod_dist = a.cod_dist
@@ -599,14 +599,14 @@ if ($accidente === []) {
 
 $modalidadesRows = safe_fetch_all_doc($pdo, "
     SELECT m.nombre
-      FROM accidente_modalidad am
+      FROM accidente_modalidad_activos am
       JOIN modalidad_accidente m ON m.id = am.modalidad_id
      WHERE am.accidente_id = :id
   ORDER BY m.nombre
 ", [':id' => $accidenteId]);
 $consecuenciasRows = safe_fetch_all_doc($pdo, "
     SELECT c.nombre
-      FROM accidente_consecuencia ac
+      FROM accidente_consecuencia_activos ac
       JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
      WHERE ac.accidente_id = :id
   ORDER BY c.nombre
@@ -622,7 +622,7 @@ $vehiculosRows = safe_fetch_all_doc($pdo, "
            v.id AS vehiculo_id,
            v.placa AS veh_placa,
            tv.nombre AS veh_tipo
-      FROM involucrados_vehiculos iv
+      FROM involucrados_vehiculos_activos iv
       JOIN vehiculos v ON v.id = iv.vehiculo_id
  LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
      WHERE iv.accidente_id = :id
@@ -649,10 +649,10 @@ $personas = safe_fetch_all_doc($pdo, "
            pr.Nombre AS rol_nombre,
            iv.id AS inv_vehiculo_id,
            iv.orden_participacion
-      FROM involucrados_personas ip
+      FROM involucrados_personas_activos ip
       JOIN personas p ON p.id = ip.persona_id
  LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
- LEFT JOIN involucrados_vehiculos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
+ LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
      WHERE ip.accidente_id = :id
   ORDER BY FIELD(iv.orden_participacion, 'UT-1','UT-2','UT-3','UT-4','UT-5','UT-6','UT-7'), ip.id ASC
 ", [':id' => $accidenteId]);
@@ -723,7 +723,7 @@ $sortSummaryPeople($summaryOtrosSinUnidad);
 
 $itp = safe_fetch_one_doc($pdo, "
     SELECT i.*
-      FROM itp i
+      FROM itp_activos i
      WHERE i.accidente_id = :id
   ORDER BY i.id DESC
      LIMIT 1

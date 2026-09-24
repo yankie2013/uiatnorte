@@ -185,20 +185,20 @@ $comisariaId = (int) ($_GET['comisaria_id'] ?? 0);
 $comisarias = $pdo->query("SELECT id, nombre FROM comisarias ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $sql = "SELECT a.id, a.sidpol, a.registro_sidpol, a.tipo_registro, a.lugar, a.referencia,
-               a.fecha_accidente, a.estado, a.latitud, a.longitud, a.cod_dep, a.cod_prov, a.cod_dist,
+               a.fecha_accidente, a.estado, a.ubicacion_verificada, a.latitud, a.longitud, a.cod_dep, a.cod_prov, a.cod_dist,
                c.nombre AS comisaria,
                dep.nombre AS departamento,
                prov.nombre AS provincia,
                dist.nombre AS distrito,
                (
                    SELECT i.ubicacion_gps
-                   FROM itp i
+                   FROM itp_activos i
                    WHERE i.accidente_id = a.id
                      AND TRIM(COALESCE(i.ubicacion_gps, '')) <> ''
                    ORDER BY i.id DESC
                    LIMIT 1
                ) AS itp_ubicacion_gps
-        FROM accidentes a
+        FROM accidentes_activos a
         LEFT JOIN comisarias c
             ON c.id = a.comisaria_id
         LEFT JOIN ubigeo_departamento dep
@@ -211,6 +211,7 @@ $sql = "SELECT a.id, a.sidpol, a.registro_sidpol, a.tipo_registro, a.lugar, a.re
            AND dist.cod_prov = a.cod_prov
            AND dist.cod_dist = a.cod_dist
         WHERE 1 = 1";
+$sql .= " AND (" . \App\Support\Access::workspacePredicate('a') . ")";
 
 $params = [];
 if ($estado !== 'todos') {
@@ -314,6 +315,7 @@ foreach ($rows as $row) {
         'lat' => $lat,
         'lng' => $lng,
         'source' => $origin,
+        'verified' => $origin !== 'itp' && (bool)$row['ubicacion_verificada'],
         'view_url' => 'accidente_vista_tabs.php?accidente_id=' . (int) $row['id'],
         'edit_url' => 'accidente_editar.php?id=' . (int) $row['id'],
     ];
@@ -815,6 +817,7 @@ window.initAccidentesMap = function initAccidentesMap(){
         <div class="meta">SIDPOL: ${escapeHtml(item.sidpol || item.registro_sidpol || '-')}</div>
         <div class="meta">Fecha: ${escapeHtml(item.fecha_accidente || '-')}</div>
         <div class="meta">Estado: ${escapeHtml(item.estado || 'Pendiente')}</div>
+        <div class="meta">Ubicación: ${item.verified ? 'Verificada' : 'Preliminar / pendiente de verificar'}</div>
         <div class="meta">Fuente GPS: ${item.source === 'itp' ? 'ITP' : 'Accidente'}</div>
         <div class="actions">
           <a href="${escapeHtml(item.view_url)}">Ver caso</a>

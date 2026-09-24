@@ -81,7 +81,7 @@ function word_manifestation_load_people(PDO $pdo, int $accidenteId): array
             SELECT ip.persona_id,
                    COALESCE(pp.Nombre, 'Involucrado') AS rol,
                    p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc
-              FROM involucrados_personas ip
+              FROM involucrados_personas_activos ip
               JOIN personas p ON p.id = ip.persona_id
          LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
              WHERE ip.accidente_id = :a
@@ -98,7 +98,7 @@ function word_manifestation_load_people(PDO $pdo, int $accidenteId): array
         $rows = word_manifestation_fetch_all($pdo, "
             SELECT pv.propietario_persona_id AS persona_id,
                    p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc
-              FROM propietario_vehiculo pv
+              FROM propietario_vehiculo_activos pv
               JOIN personas p ON p.id = pv.propietario_persona_id
              WHERE pv.accidente_id = :a
                AND pv.propietario_persona_id IS NOT NULL
@@ -115,7 +115,7 @@ function word_manifestation_load_people(PDO $pdo, int $accidenteId): array
         $rows = word_manifestation_fetch_all($pdo, "
             SELECT pv.representante_persona_id AS persona_id,
                    p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc
-              FROM propietario_vehiculo pv
+              FROM propietario_vehiculo_activos pv
               JOIN personas p ON p.id = pv.representante_persona_id
              WHERE pv.accidente_id = :a
                AND pv.representante_persona_id IS NOT NULL
@@ -132,7 +132,7 @@ function word_manifestation_load_people(PDO $pdo, int $accidenteId): array
         $rows = word_manifestation_fetch_all($pdo, "
             SELECT ff.familiar_persona_id AS persona_id,
                    p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc
-              FROM familiar_fallecido ff
+              FROM familiar_fallecido_activos ff
               JOIN personas p ON p.id = ff.familiar_persona_id
              WHERE ff.accidente_id = :a
                AND ff.familiar_persona_id IS NOT NULL
@@ -149,7 +149,7 @@ function word_manifestation_load_people(PDO $pdo, int $accidenteId): array
         $rows = word_manifestation_fetch_all($pdo, "
             SELECT pi.persona_id,
                    p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc
-              FROM policial_interviniente pi
+              FROM policial_interviniente_activos pi
               JOIN personas p ON p.id = pi.persona_id
              WHERE pi.accidente_id = :a
              ORDER BY pi.id ASC
@@ -172,7 +172,7 @@ function word_manifestation_load_records(PDO $pdo, int $accidenteId, int $person
     try {
         return word_manifestation_fetch_all($pdo, "
             SELECT id, accidente_id, persona_id, fecha, horario_inicio, hora_termino, modalidad
-              FROM Manifestacion
+              FROM Manifestacion_activos
              WHERE accidente_id = :a
                AND persona_id = :p
              ORDER BY fecha DESC, horario_inicio DESC, id DESC
@@ -239,7 +239,7 @@ function word_manifestation_fill_global_array(array &$markers, PDO $pdo, int $ac
     try {
         $policias = word_manifestation_fetch_all($pdo, "
             SELECT pi.persona_id
-              FROM policial_interviniente pi
+              FROM policial_interviniente_activos pi
              WHERE pi.accidente_id = :a
              ORDER BY pi.id ASC
              LIMIT {$limit}
@@ -258,7 +258,7 @@ function word_manifestation_fill_global_array(array &$markers, PDO $pdo, int $ac
     try {
         $testigos = word_manifestation_fetch_all($pdo, "
             SELECT ip.persona_id
-              FROM involucrados_personas ip
+              FROM involucrados_personas_activos ip
          LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
              WHERE ip.accidente_id = :a
                AND LOWER(COALESCE(pp.Nombre, '')) LIKE '%testig%'

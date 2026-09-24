@@ -30,7 +30,7 @@ final class ActaRepository
     {
         $st = $this->pdo->prepare(
             "SELECT iv.id, iv.vehiculo_id, iv.orden_participacion, v.placa, v.color, v.anio
-               FROM involucrados_vehiculos iv
+               FROM involucrados_vehiculos_activos iv
                JOIN vehiculos v ON v.id = iv.vehiculo_id
               WHERE iv.accidente_id = ?
            ORDER BY FIELD(iv.orden_participacion,'UT-1','UT-2','UT-3','UT-4','UT-5','UT-6','UT-7'), v.placa"
@@ -116,14 +116,14 @@ final class ActaRepository
             "SELECT ip.id, ip.vehiculo_id,
                     COALESCE((
                         SELECT primary_iv.vehiculo_id
-                          FROM involucrados_vehiculos own_iv
-                          JOIN involucrados_vehiculos primary_iv ON primary_iv.accidente_id=own_iv.accidente_id AND primary_iv.tipo='Combinado vehicular 1'
+                          FROM involucrados_vehiculos_activos own_iv
+                          JOIN involucrados_vehiculos_activos primary_iv ON primary_iv.accidente_id=own_iv.accidente_id AND primary_iv.tipo='Combinado vehicular 1'
                          WHERE own_iv.accidente_id=ip.accidente_id AND own_iv.vehiculo_id=ip.vehiculo_id AND own_iv.tipo='Combinado vehicular 2'
                       ORDER BY (primary_iv.orden_participacion=own_iv.orden_participacion) DESC, primary_iv.id ASC
                          LIMIT 1
                     ), ip.vehiculo_id) AS acta_vehiculo_id,
                     p.tipo_doc, p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno
-               FROM involucrados_personas ip
+               FROM involucrados_personas_activos ip
                JOIN personas p ON p.id = ip.persona_id
                JOIN participacion_persona pp ON pp.Id = ip.rol_id
               WHERE ip.accidente_id = ? AND LOWER(pp.Nombre) = 'conductor'
@@ -139,8 +139,8 @@ final class ActaRepository
             "SELECT pv.id, pv.vehiculo_inv_id,
                     COALESCE((
                         SELECT primary_iv.id
-                          FROM involucrados_vehiculos own_iv
-                          JOIN involucrados_vehiculos primary_iv ON primary_iv.accidente_id=own_iv.accidente_id AND primary_iv.tipo='Combinado vehicular 1'
+                          FROM involucrados_vehiculos_activos own_iv
+                          JOIN involucrados_vehiculos_activos primary_iv ON primary_iv.accidente_id=own_iv.accidente_id AND primary_iv.tipo='Combinado vehicular 1'
                          WHERE own_iv.id=pv.vehiculo_inv_id AND own_iv.tipo='Combinado vehicular 2'
                       ORDER BY (primary_iv.orden_participacion=own_iv.orden_participacion) DESC, primary_iv.id ASC
                          LIMIT 1
@@ -150,7 +150,7 @@ final class ActaRepository
                     rp.tipo_doc AS representante_tipo_doc, rp.num_doc AS representante_num_doc,
                     rp.nombres AS representante_nombres, rp.apellido_paterno AS representante_apellido_paterno,
                     rp.apellido_materno AS representante_apellido_materno
-               FROM propietario_vehiculo pv
+               FROM propietario_vehiculo_activos pv
           LEFT JOIN personas p ON p.id = pv.propietario_persona_id
           LEFT JOIN personas rp ON rp.id = pv.representante_persona_id
               WHERE pv.accidente_id = ?
@@ -186,7 +186,7 @@ final class ActaRepository
 
     public function vehicleBelongs(int $accidenteId, int $involucradoVehiculoId): bool
     {
-        return $this->exists('SELECT COUNT(*) FROM involucrados_vehiculos WHERE accidente_id=? AND id=?', [$accidenteId, $involucradoVehiculoId]);
+        return $this->exists('SELECT COUNT(*) FROM involucrados_vehiculos_activos WHERE accidente_id=? AND id=?', [$accidenteId, $involucradoVehiculoId]);
     }
 
     public function conductorBelongs(int $accidenteId, int $involucradoPersonaId, int $involucradoVehiculoId): bool
@@ -195,7 +195,7 @@ final class ActaRepository
         if ($vehicleIds === []) return false;
         $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
         return $this->exists(
-            "SELECT COUNT(*) FROM involucrados_personas ip
+            "SELECT COUNT(*) FROM involucrados_personas_activos ip
                JOIN participacion_persona pp ON pp.Id=ip.rol_id
               WHERE ip.accidente_id=? AND ip.id=? AND ip.vehiculo_id IN ({$placeholders}) AND LOWER(pp.Nombre)='conductor'",
             [$accidenteId, $involucradoPersonaId, ...$vehicleIds]
@@ -208,7 +208,7 @@ final class ActaRepository
         if ($vehicleIds === []) return false;
         $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
         return $this->exists(
-            "SELECT COUNT(*) FROM propietario_vehiculo WHERE accidente_id=? AND id=? AND vehiculo_inv_id IN ({$placeholders})",
+            "SELECT COUNT(*) FROM propietario_vehiculo_activos WHERE accidente_id=? AND id=? AND vehiculo_inv_id IN ({$placeholders})",
             [$accidenteId, $ownerId, ...$vehicleIds]
         );
     }
@@ -216,7 +216,7 @@ final class ActaRepository
     public function juridicalOwnerHasRepresentative(int $ownerId): bool
     {
         return $this->exists(
-            "SELECT COUNT(*) FROM propietario_vehiculo
+            "SELECT COUNT(*) FROM propietario_vehiculo_activos
               WHERE id=? AND (tipo_propietario<>'JURIDICA' OR representante_persona_id>0)",
             [$ownerId]
         );
@@ -231,7 +231,7 @@ final class ActaRepository
         $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
         $st = $this->pdo->prepare(
             "SELECT ip.id
-               FROM involucrados_personas ip
+               FROM involucrados_personas_activos ip
                JOIN participacion_persona pp ON pp.Id=ip.rol_id
               WHERE ip.accidente_id=? AND ip.vehiculo_id IN ({$placeholders}) AND LOWER(pp.Nombre)='conductor'
            ORDER BY FIELD(ip.vehiculo_id, {$placeholders}), ip.id ASC
@@ -251,7 +251,7 @@ final class ActaRepository
         $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
         $st = $this->pdo->prepare(
             "SELECT pv.id
-               FROM propietario_vehiculo pv
+               FROM propietario_vehiculo_activos pv
               WHERE pv.accidente_id=? AND pv.vehiculo_inv_id IN ({$placeholders})
            ORDER BY FIELD(pv.vehiculo_inv_id, {$placeholders}), pv.id ASC
               LIMIT 1"
@@ -301,17 +301,17 @@ final class ActaRepository
                        rp.tipo_doc AS representante_tipo_doc, rp.num_doc AS representante_num_doc,
                        rp.nombres AS representante_nombres, rp.apellido_paterno AS representante_apellido_paterno, rp.apellido_materno AS representante_apellido_materno,
                        rp.domicilio AS representante_domicilio, rp.celular AS representante_celular, rp.email AS representante_email
-                  FROM actas ac
-                  JOIN accidentes a ON a.id=ac.accidente_id
+                  FROM actas_activos ac
+                  JOIN accidentes_activos a ON a.id=ac.accidente_id
              LEFT JOIN ubigeo_distrito ud ON ud.cod_dep=a.cod_dep AND ud.cod_prov=a.cod_prov AND ud.cod_dist=a.cod_dist
-                  JOIN involucrados_vehiculos iv ON iv.id=ac.involucrado_vehiculo_id
+                  JOIN involucrados_vehiculos_activos iv ON iv.id=ac.involucrado_vehiculo_id
                   JOIN vehiculos v ON v.id=iv.vehiculo_id
              LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id
              LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id
              LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id
-                  JOIN involucrados_personas cip ON cip.id=ac.conductor_involucrado_persona_id
+                  JOIN involucrados_personas_activos cip ON cip.id=ac.conductor_involucrado_persona_id
                   JOIN personas cp ON cp.id=cip.persona_id
-             LEFT JOIN propietario_vehiculo pv ON pv.id=ac.propietario_vehiculo_id
+             LEFT JOIN propietario_vehiculo_activos pv ON pv.id=ac.propietario_vehiculo_id
              LEFT JOIN personas pp ON pp.id=pv.propietario_persona_id
              LEFT JOIN personas rp ON rp.id=pv.representante_persona_id";
     }
@@ -331,7 +331,7 @@ final class ActaRepository
                        v.largo_mm, v.ancho_mm, v.alto_mm,
                        cv.descripcion AS categoria, tv.nombre AS clase, car.nombre AS carroceria,
                        mv.nombre AS marca, modv.nombre AS modelo
-                  FROM involucrados_vehiculos iv
+                  FROM involucrados_vehiculos_activos iv
                   JOIN vehiculos v ON v.id=iv.vehiculo_id
              LEFT JOIN categoria_vehiculos cv ON cv.id=v.categoria_id
              LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id

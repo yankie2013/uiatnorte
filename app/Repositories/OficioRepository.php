@@ -264,7 +264,7 @@ final class OficioRepository
                        oa.nombre AS asunto_nombre,
                        oa.tipo AS asunto_tipo,
                        COALESCE(oa.detalle,'') AS asunto_detalle
-                FROM oficios o
+                FROM oficios_activos o
                 LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
                 WHERE o.asunto_id IS NOT NULL
                 ORDER BY o.id DESC
@@ -299,9 +299,9 @@ final class OficioRepository
 
         $select = implode(',', array_map(static fn (string $column): string => $column === 'id' ? 'id' : "`{$column}`", $cols));
         try {
-            $rows = $this->pdo->query("SELECT {$select} FROM accidentes ORDER BY id DESC LIMIT 300")->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $this->pdo->query("SELECT {$select} FROM accidentes_activos ORDER BY id DESC LIMIT 300")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable) {
-            $rows = $this->pdo->query('SELECT id FROM accidentes ORDER BY id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $this->pdo->query('SELECT id FROM accidentes_activos ORDER BY id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $items = [];
@@ -333,7 +333,7 @@ final class OficioRepository
         if ($sidpol === '' || !$this->columnExists('accidentes', 'registro_sidpol')) {
             return null;
         }
-        $st = $this->pdo->prepare('SELECT id FROM accidentes WHERE registro_sidpol = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id FROM accidentes_activos WHERE registro_sidpol = ? LIMIT 1');
         $st->execute([$sidpol]);
         $id = $st->fetchColumn();
         return $id === false ? null : (int) $id;
@@ -341,14 +341,14 @@ final class OficioRepository
 
     public function nextNumero(int $anio): int
     {
-        $st = $this->pdo->prepare('SELECT COALESCE(MAX(numero),0)+1 FROM oficios WHERE anio = ?');
+        $st = $this->pdo->prepare('SELECT COALESCE(MAX(numero),0)+1 FROM oficios_activos WHERE anio = ?');
         $st->execute([$anio]);
         return max(1, (int) $st->fetchColumn());
     }
 
     public function numeroExists(int $anio, int $numero, ?int $excludeId = null): bool
     {
-        $sql = 'SELECT COUNT(*) FROM oficios WHERE anio = ? AND numero = ?';
+        $sql = 'SELECT COUNT(*) FROM oficios_activos WHERE anio = ? AND numero = ?';
         $params = [$anio, $numero];
         if ($excludeId !== null) {
             $sql .= ' AND id <> ?';
@@ -365,7 +365,7 @@ final class OficioRepository
             return false;
         }
 
-        $st = $this->pdo->prepare('SELECT COUNT(*) FROM accidentes WHERE id = ?');
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM accidentes_activos WHERE id = ?');
         $st->execute([$id]);
         return (int) $st->fetchColumn() > 0;
     }
@@ -378,7 +378,7 @@ final class OficioRepository
         $sql = "SELECT iv.id,
                        CONCAT(COALESCE(iv.orden_participacion,''),
                               CASE WHEN COALESCE(v.placa,'') = '' THEN '' ELSE CONCAT(' - ', v.placa) END) AS nombre
-                FROM involucrados_vehiculos iv
+                FROM involucrados_vehiculos_activos iv
                 LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
                 WHERE iv.accidente_id = ?
                 ORDER BY iv.orden_participacion, iv.id";
@@ -393,7 +393,7 @@ final class OficioRepository
             return false;
         }
 
-        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos WHERE id = ? AND accidente_id = ?');
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM involucrados_vehiculos_activos WHERE id = ? AND accidente_id = ?');
         $st->execute([$involucradoVehiculoId, $accidenteId]);
         return (int) $st->fetchColumn() > 0;
     }
@@ -406,7 +406,7 @@ final class OficioRepository
                        o.grado_cargo_id,
                        o.asunto_id,
                        COALESCE(o.motivo,'') AS motivo
-                FROM oficios o
+                FROM oficios_activos o
                 LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
                 WHERE LOWER(COALESCE(oa.nombre,'')) LIKE '%peritaje%'
                    OR LOWER(COALESCE(oa.detalle,'')) LIKE '%peritaje%'
@@ -424,7 +424,7 @@ final class OficioRepository
                        o.grado_cargo_id,
                        o.asunto_id,
                        COALESCE(o.motivo,'') AS motivo
-                FROM oficios o
+                FROM oficios_activos o
                 LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
                 WHERE LOWER(COALESCE(oa.nombre,'')) LIKE '%necrops%'
                    OR LOWER(COALESCE(oa.detalle,'')) LIKE '%necrops%'
@@ -458,7 +458,7 @@ final class OficioRepository
         }
         $sql = "SELECT ip.id,
                        TRIM(CONCAT(COALESCE(pe.nombres,''), ' ', COALESCE(pe.apellido_paterno,''), ' ', COALESCE(pe.apellido_materno,''))) AS nombre
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 LEFT JOIN personas pe ON pe.id = ip.persona_id
                 WHERE ip.accidente_id = ? AND (" . implode(' OR ', $filters) . ")
                 ORDER BY pe.apellido_paterno, pe.apellido_materno, pe.nombres";
@@ -490,7 +490,7 @@ final class OficioRepository
         }
 
         $sql = "SELECT COUNT(*)
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 WHERE ip.id = ? AND ip.accidente_id = ? AND (" . implode(' OR ', $filters) . ')';
         $st = $this->pdo->prepare($sql);
         $st->execute([$involucradoPersonaId, $accidenteId]);
@@ -501,10 +501,10 @@ final class OficioRepository
     {
         $queries = [];
         if ($this->columnExists('oficios', 'categoria')) {
-            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios WHERE categoria IS NOT NULL AND categoria <> ''";
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios_activos WHERE categoria IS NOT NULL AND categoria <> ''";
         }
         if ($this->columnExists('documentos_recibidos', 'categoria')) {
-            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos WHERE categoria IS NOT NULL AND categoria <> ''";
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos_activos WHERE categoria IS NOT NULL AND categoria <> ''";
         }
         if ($queries === []) {
             return [];
@@ -525,7 +525,7 @@ final class OficioRepository
                            TRIM(CONCAT(COALESCE(pe.nombres,''), ' ', COALESCE(pe.apellido_paterno,''), ' ', COALESCE(pe.apellido_materno,''))),
                            CASE WHEN COALESCE(ip.lesion,'') <> '' THEN CONCAT(' - ', ip.lesion) ELSE '' END
                        ) AS nombre
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 LEFT JOIN personas pe ON pe.id = ip.persona_id
                 WHERE ip.accidente_id = ?
                   AND (LOWER(COALESCE(ip.lesion,'')) LIKE '%herid%'
@@ -544,7 +544,7 @@ final class OficioRepository
         }
 
         $sql = "SELECT COUNT(*)
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 WHERE ip.id = ? AND ip.accidente_id = ?
                   AND (LOWER(COALESCE(ip.lesion,'')) LIKE '%herid%'
                        OR LOWER(COALESCE(ip.lesion,'')) LIKE '%lesion%'
@@ -569,12 +569,12 @@ final class OficioRepository
         $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
-            'LEFT JOIN accidentes a ON a.id = o.accidente_id',
+            'LEFT JOIN accidentes_activos a ON a.id = o.accidente_id',
             'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id'
         ];
 
         if ($this->columnExists('oficios', 'involucrado_vehiculo_id')) {
-            $joins[] = 'LEFT JOIN involucrados_vehiculos iv ON iv.id = o.involucrado_vehiculo_id';
+            $joins[] = 'LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = o.involucrado_vehiculo_id';
             $joins[] = 'LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id';
             $select[] = 'COALESCE(v.placa,\'\') AS veh_placa';
             $select[] = 'COALESCE(iv.orden_participacion,\'\') AS veh_ut';
@@ -589,7 +589,7 @@ final class OficioRepository
             $select[] = 'NULL AS inv_per_id';
         }
 
-        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios o ' . implode(' ', $joins) . ' WHERE 1=1';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios_activos o ' . implode(' ', $joins) . ' WHERE 1=1';
         $params = [];
 
         if (!empty($filters['anio'])) {
@@ -726,7 +726,7 @@ final class OficioRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM oficios WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM oficios_activos WHERE id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -764,10 +764,10 @@ final class OficioRepository
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             'LEFT JOIN oficio_subentidad se ON se.id = o.subentidad_destino_id',
             'LEFT JOIN oficio_persona_entidad p ON p.id = o.persona_destino_id',
-            'LEFT JOIN involucrados_personas ipf ON ipf.id = o.involucrado_persona_id',
+            'LEFT JOIN involucrados_personas_activos ipf ON ipf.id = o.involucrado_persona_id',
             'LEFT JOIN personas pf ON pf.id = ipf.persona_id',
-            'LEFT JOIN accidentes a ON a.id = o.accidente_id',
-            'LEFT JOIN involucrados_vehiculos iv ON iv.id = o.involucrado_vehiculo_id',
+            'LEFT JOIN accidentes_activos a ON a.id = o.accidente_id',
+            'LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = o.involucrado_vehiculo_id',
             'LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id',
             'LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id',
             'LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id'
@@ -778,7 +778,7 @@ final class OficioRepository
         } else {
             $select[] = 'NULL AS grado_cargo_nombre';
         }
-        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios o ' . implode(' ', $joins) . ' WHERE o.id = ? LIMIT 1';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios_activos o ' . implode(' ', $joins) . ' WHERE o.id = ? LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);

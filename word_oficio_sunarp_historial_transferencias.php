@@ -9,7 +9,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -148,10 +148,10 @@ SELECT o.*,
        ao.nombre AS nombre_oficial_ano,
        gc.nombre AS grado_cargo_nombre,
        gc.abreviatura AS grado_cargo_abrev
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto a ON a.id = o.asunto_id
-LEFT JOIN accidentes ac ON ac.id = o.accidente_id
+LEFT JOIN accidentes_activos ac ON ac.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = ac.comisaria_id
 LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id
 LEFT JOIN grado_cargo gc ON gc.id = o.grado_cargo_id
@@ -180,7 +180,7 @@ if ($involucradoVehiculoId <= 0) {
 $st = $pdo->prepare("
 SELECT iv.id AS inv_vehiculo_id, iv.orden_participacion, iv.vehiculo_id,
        v.placa, v.marca_id, v.modelo_id, v.color, v.anio
-FROM involucrados_vehiculos iv
+FROM involucrados_vehiculos_activos iv
 JOIN vehiculos v ON v.id = iv.vehiculo_id
 WHERE iv.id = ? AND iv.accidente_id = ?
 LIMIT 1");
@@ -193,21 +193,21 @@ if (!$vehiculo) {
 
 $modalidades = [];
 if (sunarp_table_exists($pdo, 'accidente_modalidad') && sunarp_table_exists($pdo, 'modalidad_accidente')) {
-    $st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
+    $st = $pdo->prepare('SELECT ma.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente ma ON ma.id = am.modalidad_id WHERE am.accidente_id = ? ORDER BY ma.id');
     $st->execute([(int) $oficio['accidente_id']]);
     $modalidades = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
 }
 
 $consecuencias = [];
 if (sunarp_table_exists($pdo, 'accidente_consecuencia') && sunarp_table_exists($pdo, 'consecuencia_accidente')) {
-    $st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
+    $st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
     $st->execute([(int) $oficio['accidente_id']]);
     $consecuencias = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
 }
 
 $st = $pdo->prepare("
 SELECT p.nombres, p.apellido_paterno, p.apellido_materno, p.tipo_doc, p.num_doc, p.fecha_nacimiento, p.edad
-FROM involucrados_personas ip
+FROM involucrados_personas_activos ip
 JOIN personas p ON p.id = ip.persona_id
 WHERE ip.accidente_id = ? AND ip.vehiculo_id = ?
 ORDER BY CASE WHEN ip.rol_id = 1 THEN 0 ELSE 1 END, ip.id
@@ -217,7 +217,7 @@ $conductor = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
 $st = $pdo->prepare("
 SELECT p.nombres, p.apellido_paterno, p.apellido_materno, p.fecha_nacimiento, p.edad
-FROM involucrados_personas ip
+FROM involucrados_personas_activos ip
 JOIN personas p ON p.id = ip.persona_id
 WHERE ip.accidente_id = ? AND ip.vehiculo_id <> ?
 ORDER BY ip.id
@@ -232,8 +232,9 @@ foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
 
 $conductorNombre = sunarp_clean(($conductor['nombres'] ?? '') . ' ' . ($conductor['apellido_paterno'] ?? '') . ' ' . ($conductor['apellido_materno'] ?? ''));
 $accidenteLugar = sunarp_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
-$firmaGrado = sunarp_clean($oficio['grado_cargo_abrev'] ?: $oficio['grado_cargo_nombre'] ?: 'ST3.PNP');
-$firmaNombre = 'Giancarlo MERINO SANCHO';
+$responsableDocumento = \App\Support\Access::documentProfile($oficio);
+$firmaGrado = sunarp_clean($responsableDocumento['grado'] ?? '');
+$firmaNombre = ($responsableDocumento['nombre'] ?? '');
 
 $values = [
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?: 'Año de la recuperación y la consolidación de la economía peruana',

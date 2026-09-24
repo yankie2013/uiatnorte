@@ -42,7 +42,7 @@ $q = g('q', '');
 
 $accidentes = $pdo->query("
   SELECT id, CONCAT('#', id, ' - ', DATE_FORMAT(fecha_accidente, '%Y-%m-%d %H:%i'), ' - ', COALESCE(lugar, '')) AS nom
-  FROM accidentes
+  FROM accidentes_activos
   ORDER BY id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -62,11 +62,11 @@ SELECT ip.id, ip.accidente_id, ip.rol_id, ip.vehiculo_id, ip.lesion, ip.observac
        iv_ref.orden_participacion AS veh_ut,
        combo.combo_placas,
        r.Nombre AS rol_nombre
-FROM involucrados_personas ip
-JOIN accidentes a            ON a.id = ip.accidente_id
+FROM involucrados_personas_activos ip
+JOIN accidentes_activos a            ON a.id = ip.accidente_id
 JOIN personas p              ON p.id = ip.persona_id
 LEFT JOIN vehiculos v        ON v.id = ip.vehiculo_id
-LEFT JOIN involucrados_vehiculos iv_ref ON iv_ref.accidente_id = ip.accidente_id AND iv_ref.vehiculo_id = ip.vehiculo_id
+LEFT JOIN involucrados_vehiculos_activos iv_ref ON iv_ref.accidente_id = ip.accidente_id AND iv_ref.vehiculo_id = ip.vehiculo_id
 LEFT JOIN (
     SELECT iv.accidente_id,
            iv.orden_participacion,
@@ -78,7 +78,7 @@ LEFT JOIN (
                ORDER BY FIELD(iv.tipo, 'Combinado vehicular 1', 'Combinado vehicular 2'), v2.placa
                SEPARATOR ' + '
            ) AS combo_placas
-    FROM involucrados_vehiculos iv
+    FROM involucrados_vehiculos_activos iv
     JOIN vehiculos v2 ON v2.id = iv.vehiculo_id
     WHERE iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
     GROUP BY iv.accidente_id, iv.orden_participacion

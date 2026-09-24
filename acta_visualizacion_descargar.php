@@ -8,7 +8,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/word_filename_helper.php';
 
 use App\Repositories\ActaVisualizacionRepository;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 function avv_date_long(string $date): string
 {
@@ -175,10 +175,11 @@ $actDate = (string) ($row['fecha_visualizacion'] ?? '');
 $actTime = substr((string) ($row['hora_inicio'] ?? ''), 0, 5);
 $accidentDateTime = (string) ($accident['fecha_accidente'] ?? '');
 $district = 'Santa Rosa';
-$unit = 'Unidad de Investigación de Accidentes de Tránsito Norte';
-$instructorName = 'Giancarlo Jorge MERINO SANCHO';
-$instructorGrade = 'ST3.PNP';
-$instructorCip = '';
+$responsableDocumento = \App\Support\Access::documentProfile($row);
+$unit = $responsableDocumento['unidad'] ?? 'DEPIAT';
+$instructorName = $responsableDocumento['nombre'] ?? '';
+$instructorGrade = $responsableDocumento['grado'] ?? '';
+$instructorCip = $responsableDocumento['cip'] ?? '';
 $instructor = trim(implode(' ', array_filter([$instructorGrade, $instructorName])));
 $fiscalName = trim((string) ($accident['fiscal'] ?? ''));
 $fiscalOffice = trim((string) ($accident['fiscalia'] ?? ''));

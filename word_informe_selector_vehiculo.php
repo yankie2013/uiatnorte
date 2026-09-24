@@ -58,7 +58,7 @@ function load_accidentes(PDO $pdo): array
     return $pdo->query("
         SELECT id,
                CONCAT('#', id, ' - ', DATE_FORMAT(fecha_accidente, '%Y-%m-%d %H:%i'), ' - ', COALESCE(lugar, '')) AS label
-          FROM accidentes
+          FROM accidentes_activos
          ORDER BY id DESC
          LIMIT 300
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -86,9 +86,9 @@ function load_unidades(PDO $pdo, int $accidenteId, string $condicion): array
                    ORDER BY ip.id
                    SEPARATOR '; '
                ) AS personas
-          FROM involucrados_vehiculos iv
+          FROM involucrados_vehiculos_activos iv
           JOIN vehiculos v ON v.id = iv.vehiculo_id
-          JOIN involucrados_personas ip ON ip.accidente_id = iv.accidente_id AND ip.vehiculo_id = iv.vehiculo_id
+          JOIN involucrados_personas_activos ip ON ip.accidente_id = iv.accidente_id AND ip.vehiculo_id = iv.vehiculo_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
           JOIN personas p ON p.id = ip.persona_id
          WHERE iv.accidente_id = :a
@@ -138,9 +138,9 @@ function load_un_vehiculo_conductor_ileso(PDO $pdo, int $accidenteId): array
                    ORDER BY ip.id
                    SEPARATOR '; '
                ) AS personas
-          FROM involucrados_vehiculos iv
+          FROM involucrados_vehiculos_activos iv
           JOIN vehiculos v ON v.id = iv.vehiculo_id
-          JOIN involucrados_personas ip ON ip.accidente_id = iv.accidente_id AND ip.vehiculo_id = iv.vehiculo_id
+          JOIN involucrados_personas_activos ip ON ip.accidente_id = iv.accidente_id AND ip.vehiculo_id = iv.vehiculo_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
           JOIN personas p ON p.id = ip.persona_id
          WHERE iv.accidente_id = :a
@@ -188,13 +188,13 @@ function load_combinados(PDO $pdo, int $accidenteId, string $condicion): array
                               ORDER BY ip2.id
                               SEPARATOR '; '
                           )
-                     FROM involucrados_personas ip2
+                     FROM involucrados_personas_activos ip2
                      JOIN personas p2 ON p2.id = ip2.persona_id
                 LEFT JOIN participacion_persona pr2 ON pr2.Id = ip2.rol_id
                     WHERE ip2.accidente_id = :a_personas
                       AND ip2.vehiculo_id IN (
                           SELECT ivx.vehiculo_id
-                            FROM involucrados_vehiculos ivx
+                            FROM involucrados_vehiculos_activos ivx
                            WHERE ivx.accidente_id = :a_combo
                              AND ivx.orden_participacion = combo.orden_participacion
                              AND ivx.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
@@ -215,7 +215,7 @@ function load_combinados(PDO $pdo, int $accidenteId, string $condicion): array
                          SEPARATOR ' | '
                      ) AS detalle,
                      COUNT(*) AS componentes
-                FROM involucrados_vehiculos iv
+                FROM involucrados_vehiculos_activos iv
                 JOIN vehiculos v ON v.id = iv.vehiculo_id
                WHERE iv.accidente_id = :a
                  AND iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
@@ -248,7 +248,7 @@ function load_peatones_fallecidos(PDO $pdo, int $accidenteId): array
                p.apellido_paterno,
                p.apellido_materno,
                p.nombres
-          FROM involucrados_personas ip
+          FROM involucrados_personas_activos ip
           JOIN personas p ON p.id = ip.persona_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
          WHERE ip.accidente_id = :a
@@ -283,14 +283,14 @@ function count_vehicle_groups(PDO $pdo, int $accidenteId): int
     $sql = "
         SELECT SUM(total) FROM (
             SELECT COUNT(*) AS total
-              FROM involucrados_vehiculos
+              FROM involucrados_vehiculos_activos
              WHERE accidente_id = :a_unidad
                AND tipo NOT IN ('Combinado vehicular 1', 'Combinado vehicular 2')
             UNION ALL
             SELECT COUNT(*) AS total
               FROM (
                   SELECT orden_participacion
-                    FROM involucrados_vehiculos
+                    FROM involucrados_vehiculos_activos
                    WHERE accidente_id = :a_combo
                      AND tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
                 GROUP BY orden_participacion

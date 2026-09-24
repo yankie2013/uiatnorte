@@ -13,7 +13,7 @@ final class ItpRepository
 
     public function accidenteHeader(int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, registro_sidpol, fecha_accidente, lugar, latitud, longitud FROM accidentes WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, registro_sidpol, fecha_accidente, lugar, latitud, longitud FROM accidentes_activos WHERE id = ? LIMIT 1');
         $st->execute([$accidenteId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -21,7 +21,7 @@ final class ItpRepository
 
     public function accidentesDisponibles(int $limit = 500): array
     {
-        $st = $this->pdo->prepare('SELECT id, registro_sidpol, fecha_accidente, lugar, latitud, longitud FROM accidentes ORDER BY fecha_accidente DESC, id DESC LIMIT ?');
+        $st = $this->pdo->prepare('SELECT id, registro_sidpol, fecha_accidente, lugar, latitud, longitud FROM accidentes_activos ORDER BY fecha_accidente DESC, id DESC LIMIT ?');
         $st->bindValue(1, $limit, PDO::PARAM_INT);
         $st->execute();
         return $st->fetchAll(PDO::FETCH_ASSOC);
@@ -30,7 +30,7 @@ final class ItpRepository
     public function find(int $id): ?array
     {
         $sql = "SELECT i.*, `señalizacion_via1` AS senializacion_via1, `señalizacion_via2` AS senializacion_via2
-                FROM itp i
+                FROM itp_activos i
                 WHERE i.id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -44,8 +44,8 @@ final class ItpRepository
         $sql = "SELECT i.*, `señalizacion_via1` AS senializacion_via1, `señalizacion_via2` AS senializacion_via2,
                        a.id AS accidente_id, a.registro_sidpol, a.fecha_accidente, a.lugar,
                        a.latitud AS accidente_latitud, a.longitud AS accidente_longitud
-                FROM itp i
-                JOIN accidentes a ON a.id = i.accidente_id
+                FROM itp_activos i
+                JOIN accidentes_activos a ON a.id = i.accidente_id
                 WHERE i.id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -70,8 +70,8 @@ final class ItpRepository
 
         $sql = "SELECT i.id, i.accidente_id, i.fecha_itp, i.hora_itp, i.forma_via, i.punto_referencia, i.ubicacion_gps,
                        a.registro_sidpol, a.fecha_accidente, a.lugar
-                FROM itp i
-                JOIN accidentes a ON a.id = i.accidente_id
+                FROM itp_activos i
+                JOIN accidentes_activos a ON a.id = i.accidente_id
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY i.id DESC
                 LIMIT 500";

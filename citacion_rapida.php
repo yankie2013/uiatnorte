@@ -95,8 +95,8 @@ try {
     $upcomingSql = "SELECT c.*,
                            a.registro_sidpol,
                            a.lugar AS accidente_lugar
-                      FROM citacion c
-                 LEFT JOIN accidentes a ON a.id = c.accidente_id
+                      FROM citacion_activos c
+                 LEFT JOIN accidentes_activos a ON a.id = c.accidente_id
                      WHERE TIMESTAMP(c.fecha, COALESCE(c.hora, '23:59:59')) >= NOW()";
     $upcomingParams = [];
     if ($accidenteId > 0) {

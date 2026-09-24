@@ -31,7 +31,7 @@ if (!class_exists(\PhpOffice\PhpWord\PhpWord::class) && is_file(__DIR__ . '/PHPW
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(PhpWord::class) || !class_exists(IOFactory::class)) {
     http_response_code(500);
@@ -191,7 +191,7 @@ function load_modalidades(PDO $pdo, int $accidenteId): string
     try {
         $rows = fetch_all($pdo, "
             SELECT m.nombre
-              FROM accidente_modalidad am
+              FROM accidente_modalidad_activos am
               JOIN modalidad_accidente m ON m.id = am.modalidad_id
              WHERE am.accidente_id = :id
              ORDER BY m.nombre
@@ -207,7 +207,7 @@ function load_consecuencias(PDO $pdo, int $accidenteId, array $accidente): strin
     try {
         $rows = fetch_all($pdo, "
             SELECT c.nombre
-              FROM accidente_consecuencia ac
+              FROM accidente_consecuencia_activos ac
               JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
              WHERE ac.accidente_id = :id
              ORDER BY c.nombre
@@ -224,14 +224,14 @@ function load_abogados(PDO $pdo, int $accidenteId, ?int $personaId): array
     if (!$personaId) {
         return [];
     }
-    $rows = fetch_all($pdo, 'SELECT * FROM abogados WHERE accidente_id = :a AND persona_id = :p ORDER BY id DESC', [
+    $rows = fetch_all($pdo, 'SELECT * FROM abogados_activos WHERE accidente_id = :a AND persona_id = :p ORDER BY id DESC', [
         ':a' => $accidenteId,
         ':p' => $personaId,
     ]);
     if ($rows !== []) {
         return $rows;
     }
-    return fetch_all($pdo, 'SELECT * FROM abogados WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
+    return fetch_all($pdo, 'SELECT * FROM abogados_activos WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
 }
 
 function load_person_docs(PDO $pdo, int $accidenteId, ?int $personaId): array
@@ -242,12 +242,12 @@ function load_person_docs(PDO $pdo, int $accidenteId, ?int $personaId): array
 
     return [
         'lc' => fetch_all($pdo, 'SELECT * FROM documento_lc WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]),
-        'rml' => fetch_all($pdo, 'SELECT * FROM documento_rml WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, id DESC', [
+        'rml' => fetch_all($pdo, 'SELECT * FROM documento_rml_activos WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, id DESC', [
             ':p' => $personaId,
             ':a' => $accidenteId,
         ]),
         'dosaje' => fetch_all($pdo, 'SELECT * FROM documento_dosaje WHERE persona_id = :p ORDER BY fecha_extraccion DESC, id DESC', [':p' => $personaId]),
-        'manifestacion' => fetch_all($pdo, 'SELECT * FROM Manifestacion WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, horario_inicio DESC, id DESC', [
+        'manifestacion' => fetch_all($pdo, 'SELECT * FROM Manifestacion_activos WHERE persona_id = :p AND accidente_id = :a ORDER BY fecha DESC, horario_inicio DESC, id DESC', [
             ':p' => $personaId,
             ':a' => $accidenteId,
         ]),
@@ -272,7 +272,7 @@ function load_combined_vehicle_ids(PDO $pdo, int $accidenteId, array $vehicle): 
 
     $rows = fetch_all($pdo, "
         SELECT vehiculo_id
-          FROM involucrados_vehiculos
+          FROM involucrados_vehiculos_activos
          WHERE accidente_id = :a
            AND orden_participacion = :orden
            AND tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
@@ -308,7 +308,7 @@ function load_conductores(PDO $pdo, int $accidenteId, array $vehicle, bool $sing
             SELECT ip.id AS involucrado_persona_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones AS participacion_observaciones,
                    pr.Nombre AS rol_nombre,
                    p.*
-              FROM involucrados_personas ip
+              FROM involucrados_personas_activos ip
               JOIN personas p ON p.id = ip.persona_id
          LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
              WHERE ip.accidente_id = :a
@@ -326,7 +326,7 @@ function load_conductores(PDO $pdo, int $accidenteId, array $vehicle, bool $sing
         SELECT ip.id AS involucrado_persona_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones AS participacion_observaciones,
                pr.Nombre AS rol_nombre,
                p.*
-          FROM involucrados_personas ip
+          FROM involucrados_personas_activos ip
           JOIN personas p ON p.id = ip.persona_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
          WHERE ip.accidente_id = :a
@@ -340,7 +340,7 @@ function load_conductores(PDO $pdo, int $accidenteId, array $vehicle, bool $sing
             SELECT ip.id AS involucrado_persona_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones AS participacion_observaciones,
                    pr.Nombre AS rol_nombre,
                    p.*
-              FROM involucrados_personas ip
+              FROM involucrados_personas_activos ip
               JOIN personas p ON p.id = ip.persona_id
          LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
              WHERE ip.accidente_id = :a
@@ -358,7 +358,7 @@ function load_vehiculo_docs(PDO $pdo, array $vehicle): array
     $vehiculoId = (int) ($vehicle['vehiculo_id'] ?? 0);
     return fetch_all($pdo, "
         SELECT *
-          FROM documento_vehiculo
+          FROM documento_vehiculo_activos
          WHERE involucrado_vehiculo_id = :iv
             OR vehiculo_id = :veh
          ORDER BY id DESC
@@ -375,7 +375,7 @@ function load_propietarios(PDO $pdo, int $accidenteId, int $vehiculoInvId): arra
                pr.tipo_doc AS rep_tipo_doc, pr.num_doc AS rep_num_doc, pr.apellido_paterno AS rep_apellido_paterno,
                pr.apellido_materno AS rep_apellido_materno, pr.nombres AS rep_nombres, pr.domicilio AS rep_domicilio,
                pr.celular AS rep_celular, pr.email AS rep_email
-          FROM propietario_vehiculo pv
+          FROM propietario_vehiculo_activos pv
      LEFT JOIN personas pn ON pn.id = pv.propietario_persona_id
      LEFT JOIN personas pr ON pr.id = pv.representante_persona_id
          WHERE pv.accidente_id = :a
@@ -687,7 +687,7 @@ $accidente = fetch_one($pdo, "
            c.nombre AS comisaria_nombre,
            fa.nombre AS fiscalia_nombre,
            TRIM(CONCAT(COALESCE(fi.nombres, ''), ' ', COALESCE(fi.apellido_paterno, ''), ' ', COALESCE(fi.apellido_materno, ''))) AS fiscal_nombre
-      FROM accidentes a
+      FROM accidentes_activos a
  LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
  LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
  LEFT JOIN ubigeo_distrito u ON u.cod_dep = a.cod_dep AND u.cod_prov = a.cod_prov AND u.cod_dist = a.cod_dist
@@ -706,7 +706,7 @@ $selectedVehicle = [];
 if ($vehiculoInvId > 0) {
     $selectedVehicle = fetch_one($pdo, "
         SELECT accidente_id, orden_participacion, tipo
-          FROM involucrados_vehiculos
+          FROM involucrados_vehiculos_activos
          WHERE id = :iv
            AND accidente_id = :a
          LIMIT 1
@@ -736,7 +736,7 @@ $vehicles = fetch_all($pdo, "
            car.nombre AS carroceria_nombre,
            mar.nombre AS marca_nombre,
            modv.nombre AS modelo_nombre
-      FROM involucrados_vehiculos iv
+      FROM involucrados_vehiculos_activos iv
       JOIN vehiculos v ON v.id = iv.vehiculo_id
  LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
  LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id

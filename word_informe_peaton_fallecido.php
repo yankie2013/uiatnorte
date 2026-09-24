@@ -28,7 +28,7 @@ if (!class_exists(\PhpOffice\PhpWord\PhpWord::class) && is_file(__DIR__ . '/PHPW
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(PhpWord::class) || !class_exists(IOFactory::class)) {
     http_response_code(500);
@@ -170,7 +170,7 @@ function load_modalidades(PDO $pdo, int $accidenteId): string
     try {
         $rows = fetch_all($pdo, "
             SELECT m.nombre
-              FROM accidente_modalidad am
+              FROM accidente_modalidad_activos am
               JOIN modalidad_accidente m ON m.id = am.modalidad_id
              WHERE am.accidente_id = :id
              ORDER BY m.nombre
@@ -186,7 +186,7 @@ function load_consecuencias(PDO $pdo, int $accidenteId, array $accidente): strin
     try {
         $rows = fetch_all($pdo, "
             SELECT c.nombre
-              FROM accidente_consecuencia ac
+              FROM accidente_consecuencia_activos ac
               JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
              WHERE ac.accidente_id = :id
              ORDER BY c.nombre
@@ -203,14 +203,14 @@ function load_abogados(PDO $pdo, int $accidenteId, ?int $personaId): array
     if (!$personaId) {
         return [];
     }
-    $rows = fetch_all($pdo, 'SELECT * FROM abogados WHERE accidente_id = :a AND persona_id = :p ORDER BY id DESC', [
+    $rows = fetch_all($pdo, 'SELECT * FROM abogados_activos WHERE accidente_id = :a AND persona_id = :p ORDER BY id DESC', [
         ':a' => $accidenteId,
         ':p' => $personaId,
     ]);
     if ($rows !== []) {
         return $rows;
     }
-    return fetch_all($pdo, 'SELECT * FROM abogados WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
+    return fetch_all($pdo, 'SELECT * FROM abogados_activos WHERE persona_id = :p ORDER BY id DESC', [':p' => $personaId]);
 }
 
 function load_peatones_fallecidos(PDO $pdo, int $accidenteId, int $personaInvId = 0): array
@@ -227,7 +227,7 @@ function load_peatones_fallecidos(PDO $pdo, int $accidenteId, int $personaInvId 
                ip.observaciones AS participacion_observaciones,
                pr.Nombre AS rol_nombre,
                p.*
-         FROM involucrados_personas ip
+         FROM involucrados_personas_activos ip
           JOIN personas p ON p.id = ip.persona_id
      LEFT JOIN participacion_persona pr ON pr.Id = ip.rol_id
          WHERE ip.accidente_id = :a
@@ -245,7 +245,7 @@ function load_occiso_doc(PDO $pdo, int $accidenteId, ?int $personaId): array
     }
     return first_row(fetch_all($pdo, "
         SELECT *
-          FROM documento_occiso
+          FROM documento_occiso_activos
          WHERE accidente_id = :a
            AND persona_id = :p
          ORDER BY id DESC
@@ -278,7 +278,7 @@ function load_familiar(PDO $pdo, int $accidenteId, ?int $fallecidoInvId): array
                p.domicilio, p.domicilio_departamento, p.domicilio_provincia, p.domicilio_distrito,
                p.ocupacion, p.grado_instruccion, p.nombre_padre, p.nombre_madre,
                p.celular, p.email, p.notas, p.creado_en, p.foto_path, p.api_fuente, p.api_ref
-          FROM familiar_fallecido ff
+          FROM familiar_fallecido_activos ff
      LEFT JOIN personas p ON p.id = ff.familiar_persona_id
          WHERE ff.accidente_id = :a
            AND ff.fallecido_inv_id = :inv
@@ -488,7 +488,7 @@ $accidente = fetch_one($pdo, "
            c.nombre AS comisaria_nombre,
            fa.nombre AS fiscalia_nombre,
            TRIM(CONCAT(COALESCE(fi.nombres, ''), ' ', COALESCE(fi.apellido_paterno, ''), ' ', COALESCE(fi.apellido_materno, ''))) AS fiscal_nombre
-      FROM accidentes a
+      FROM accidentes_activos a
  LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
  LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
  LEFT JOIN ubigeo_distrito u ON u.cod_dep = a.cod_dep AND u.cod_prov = a.cod_prov AND u.cod_dist = a.cod_dist

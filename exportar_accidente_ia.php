@@ -623,7 +623,7 @@ function exp_ai_actas_persona(PDO $pdo, int $accidenteId, int $involucradoPerson
     if ($involucradoPersonaId > 0 && exp_ai_column_exists($pdo, 'actas', 'conductor_involucrado_persona_id')) {
         return exp_ai_fetch_all(
             $pdo,
-            'SELECT * FROM actas WHERE accidente_id = ? AND conductor_involucrado_persona_id = ? ORDER BY id DESC',
+            'SELECT * FROM actas_activos WHERE accidente_id = ? AND conductor_involucrado_persona_id = ? ORDER BY id DESC',
             [$accidenteId, $involucradoPersonaId]
         );
     }
@@ -706,7 +706,7 @@ function exp_ai_actas_vehiculo(PDO $pdo, int $accidenteId, int $involucradoVehic
 
     return exp_ai_fetch_all(
         $pdo,
-        'SELECT * FROM actas WHERE accidente_id = ? AND involucrado_vehiculo_id = ? ORDER BY id DESC',
+        'SELECT * FROM actas_activos WHERE accidente_id = ? AND involucrado_vehiculo_id = ? ORDER BY id DESC',
         [$accidenteId, $involucradoVehiculoId]
     );
 }
@@ -720,7 +720,7 @@ if ($accidenteId <= 0) {
 $accidente = exp_ai_fetch_one($pdo, "
     SELECT a.*,
            c.nombre AS comisaria_nombre
-      FROM accidentes a
+      FROM accidentes_activos a
  LEFT JOIN comisarias c ON c.id = a.comisaria_id
      WHERE a.id = ?
      LIMIT 1
@@ -733,7 +733,7 @@ if (!$accidente) {
 
 $personRows = exp_ai_fetch_all($pdo, "
     SELECT ip.*, pp.Nombre AS rol_nombre, pp.Orden AS rol_orden
-      FROM involucrados_personas ip
+      FROM involucrados_personas_activos ip
  LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
      WHERE ip.accidente_id = ?
   ORDER BY COALESCE(pp.Orden, 999), ip.orden_persona, ip.id
@@ -745,12 +745,12 @@ $personIds = [];
 foreach ($personRows as $row) {
     $person = exp_ai_person($pdo, (int) ($row['persona_id'] ?? 0));
     $personIds[] = (int) ($row['persona_id'] ?? 0);
-    $abogados = exp_ai_fetch_all($pdo, 'SELECT * FROM abogados WHERE accidente_id = ? AND persona_id = ? ORDER BY id', [$accidenteId, (int) ($row['persona_id'] ?? 0)]);
+    $abogados = exp_ai_fetch_all($pdo, 'SELECT * FROM abogados_activos WHERE accidente_id = ? AND persona_id = ? ORDER BY id', [$accidenteId, (int) ($row['persona_id'] ?? 0)]);
     $familiares = [];
     if (str_contains(mb_strtolower((string) ($row['lesion'] ?? ''), 'UTF-8'), 'falle')) {
         $familiares = exp_ai_fetch_all($pdo, "
             SELECT ff.*, p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.domicilio, p.celular, p.email
-              FROM familiar_fallecido ff
+              FROM familiar_fallecido_activos ff
               JOIN personas p ON p.id = ff.familiar_persona_id
              WHERE ff.accidente_id = ? AND ff.fallecido_inv_id = ?
           ORDER BY ff.id
@@ -794,7 +794,7 @@ $vehicleRows = exp_ai_fetch_all($pdo, "
            car.nombre AS carroceria,
            mar.nombre AS marca,
            modv.nombre AS modelo
-      FROM involucrados_vehiculos iv
+      FROM involucrados_vehiculos_activos iv
       JOIN vehiculos v ON v.id = iv.vehiculo_id
  LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
  LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
@@ -811,7 +811,7 @@ foreach ($vehicleRows as $vehicle) {
         SELECT pv.*,
                pn.tipo_doc AS propietario_tipo_doc, pn.num_doc AS propietario_num_doc, pn.apellido_paterno AS propietario_apellido_paterno, pn.apellido_materno AS propietario_apellido_materno, pn.nombres AS propietario_nombres, pn.domicilio AS propietario_domicilio, pn.celular AS propietario_celular, pn.email AS propietario_email,
                pr.tipo_doc AS representante_tipo_doc, pr.num_doc AS representante_num_doc, pr.apellido_paterno AS representante_apellido_paterno, pr.apellido_materno AS representante_apellido_materno, pr.nombres AS representante_nombres, pr.domicilio AS representante_domicilio, pr.celular AS representante_celular, pr.email AS representante_email
-          FROM propietario_vehiculo pv
+          FROM propietario_vehiculo_activos pv
      LEFT JOIN personas pn ON pn.id = pv.propietario_persona_id
      LEFT JOIN personas pr ON pr.id = pv.representante_persona_id
          WHERE pv.accidente_id = ? AND pv.vehiculo_inv_id = ?
@@ -824,7 +824,7 @@ foreach ($vehicleRows as $vehicle) {
     }));
 
     $documentosVehiculo = exp_ai_table_exists($pdo, 'documento_vehiculo')
-        ? exp_ai_fetch_all($pdo, 'SELECT * FROM documento_vehiculo WHERE involucrado_vehiculo_id = ? OR vehiculo_id = ? ORDER BY id', [(int) ($vehicle['id'] ?? 0), (int) ($vehicle['vehiculo_id'] ?? 0)])
+        ? exp_ai_fetch_all($pdo, 'SELECT * FROM documento_vehiculo_activos WHERE involucrado_vehiculo_id = ? OR vehiculo_id = ? ORDER BY id', [(int) ($vehicle['id'] ?? 0), (int) ($vehicle['vehiculo_id'] ?? 0)])
         : [];
 
     $vehiculos[] = [
@@ -843,7 +843,7 @@ foreach ($vehicleRows as $vehicle) {
 
 $modalidades = exp_ai_fetch_all($pdo, "
     SELECT am.*, m.nombre AS modalidad_nombre
-     FROM accidente_modalidad am
+     FROM accidente_modalidad_activos am
  LEFT JOIN modalidad_accidente m ON m.id = am.modalidad_id
      WHERE am.accidente_id = ?
   ORDER BY am.modalidad_id
@@ -851,7 +851,7 @@ $modalidades = exp_ai_fetch_all($pdo, "
 
 $consecuencias = exp_ai_fetch_all($pdo, "
     SELECT ac.*, c.nombre AS consecuencia_nombre
-      FROM accidente_consecuencia ac
+      FROM accidente_consecuencia_activos ac
  LEFT JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
      WHERE ac.accidente_id = ?
   ORDER BY ac.consecuencia_id
@@ -861,7 +861,7 @@ $oficios = exp_ai_fetch_all($pdo, "
     SELECT o.*,
            oe.nombre AS entidad_destino, os.nombre AS subentidad_destino, oa.nombre AS asunto_nombre,
            gc.nombre AS grado_cargo_nombre
-      FROM oficios o
+      FROM oficios_activos o
  LEFT JOIN oficio_entidad oe ON oe.id = o.entidad_id_destino
  LEFT JOIN oficio_subentidad os ON os.id = o.subentidad_destino_id
  LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
@@ -886,8 +886,8 @@ $documentos = [
     'documentos_vehiculares' => exp_ai_table_exists($pdo, 'documento_vehiculo')
         ? exp_ai_fetch_all($pdo, "
             SELECT dv.*, iv.accidente_id, iv.orden_participacion, v.placa
-              FROM documento_vehiculo dv
-         LEFT JOIN involucrados_vehiculos iv ON iv.id = dv.involucrado_vehiculo_id
+              FROM documento_vehiculo_activos dv
+         LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = dv.involucrado_vehiculo_id
          LEFT JOIN vehiculos v ON v.id = COALESCE(dv.vehiculo_id, iv.vehiculo_id)
              WHERE iv.accidente_id = ?
           ORDER BY iv.orden_participacion, dv.id
@@ -899,7 +899,7 @@ $documentos['documentos_vehiculares_detallados'] = array_map('exp_ai_documento_v
 $policia = [
     'intervinientes' => exp_ai_fetch_all($pdo, "
         SELECT pi.*, p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.domicilio, p.celular, p.email
-          FROM policial_interviniente pi
+          FROM policial_interviniente_activos pi
      LEFT JOIN personas p ON p.id = pi.persona_id
          WHERE pi.accidente_id = ?
       ORDER BY pi.id

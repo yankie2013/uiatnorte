@@ -9,7 +9,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -83,14 +83,14 @@ SELECT o.*,
        gc.nombre AS grado_cargo_nombre, gc.abreviatura AS grado_cargo_abrev,
        p.nombres AS fall_nombres, p.apellido_paterno AS fall_ap, p.apellido_materno AS fall_am,
        p.tipo_doc AS fall_doc_tipo, p.num_doc AS fall_doc_num, p.edad AS fall_edad
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto a ON a.id = o.asunto_id
-LEFT JOIN accidentes ac ON ac.id = o.accidente_id
+LEFT JOIN accidentes_activos ac ON ac.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = ac.comisaria_id
 LEFT JOIN oficio_oficial_ano ao ON ao.id = o.oficial_ano_id
 LEFT JOIN grado_cargo gc ON gc.id = o.grado_cargo_id
-LEFT JOIN involucrados_personas ip ON ip.id = o.involucrado_persona_id
+LEFT JOIN involucrados_personas_activos ip ON ip.id = o.involucrado_persona_id
 LEFT JOIN personas p ON p.id = ip.persona_id
 WHERE o.id = ?
 LIMIT 1");
@@ -113,7 +113,8 @@ if (empty($oficio['involucrado_persona_id'])) {
 
 $fallecidoNombre = ident_clean(($oficio['fall_nombres'] ?? '') . ' ' . ($oficio['fall_ap'] ?? '') . ' ' . ($oficio['fall_am'] ?? ''));
 $accidenteLugar = ident_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
-$firmaGrado = ident_clean($oficio['grado_cargo_abrev'] ?: $oficio['grado_cargo_nombre'] ?: 'ST3.PNP');
+$responsableDocumento = \App\Support\Access::documentProfile($oficio);
+$firmaGrado = ident_clean($responsableDocumento['grado'] ?? '');
 
 $values = [
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?? '',
@@ -136,9 +137,9 @@ $values = [
     'fallecido_doc_num' => $oficio['fall_doc_num'] ?? '',
     'fallecido_edad' => $oficio['fall_edad'] ?? '',
     'investigador_grado' => $firmaGrado,
-    'investigador_nombre' => 'Giancarlo MERINO SANCHO',
+    'investigador_nombre' => ($responsableDocumento['nombre'] ?? ''),
     'firma_grado' => $firmaGrado,
-    'firma_nombre' => 'Giancarlo MERINO SANCHO',
+    'firma_nombre' => ($responsableDocumento['nombre'] ?? ''),
     'firma_cargo' => 'Instructor UIAT Norte',
 ];
 

@@ -16,7 +16,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
     require_once __DIR__ . '/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(TemplateProcessor::class)) {
     http_response_code(500);
@@ -104,8 +104,8 @@ SELECT
   fi.telefono         AS fiscal_telefono,
   fi.correo           AS fiscal_correo,
   fi.cargo            AS fiscal_cargo
-FROM oficios o
-LEFT JOIN accidentes a ON a.id = o.accidente_id
+FROM oficios_activos o
+LEFT JOIN accidentes_activos a ON a.id = o.accidente_id
 LEFT JOIN comisarias c ON c.id = a.comisaria_id
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto s ON s.id = o.asunto_id
@@ -135,12 +135,12 @@ if (!empty($O['fiscal_nombres']) || !empty($O['fiscal_apep']) || !empty($O['fisc
 $modalidad = '';
 if (!empty($O['accidente_id'])) {
     if (has_table($pdo,'accidente_modalidad') && has_table($pdo,'modalidad_accidente')) {
-        $q = $pdo->prepare("SELECT GROUP_CONCAT(DISTINCT m.nombre SEPARATOR '||') FROM accidente_modalidad am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?");
+        $q = $pdo->prepare("SELECT GROUP_CONCAT(DISTINCT m.nombre SEPARATOR '||') FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?");
         $q->execute([(int)$O['accidente_id']]);
         $r = trim((string)$q->fetchColumn());
         if ($r !== '') $modalidad = join_es(explode('||', $r));
     } elseif (has_col($pdo,'accidentes','modalidad')) {
-        $q = $pdo->prepare("SELECT modalidad FROM accidentes WHERE id=? LIMIT 1");
+        $q = $pdo->prepare("SELECT modalidad FROM accidentes_activos WHERE id=? LIMIT 1");
         $q->execute([(int)$O['accidente_id']]);
         $modalidad = trim((string)$q->fetchColumn());
     }
@@ -154,7 +154,7 @@ if (!empty($O['accidente_id'])) {
              COALESCE(p.nombres,'') AS nombres,
              CONCAT_WS(' ', COALESCE(p.apellido_paterno,''), COALESCE(p.apellido_materno,'')) AS apellidos,
              COALESCE(p.num_doc,'') AS dni
-      FROM involucrados_personas ip
+      FROM involucrados_personas_activos ip
       LEFT JOIN personas p ON p.id = ip.persona_id
       WHERE ip.accidente_id = :acc
       ORDER BY CAST(ip.orden_persona AS UNSIGNED) ASC, ip.id ASC
@@ -180,7 +180,7 @@ if (!empty($O['accidente_id'])) {
              {$modeloSel},
              {$tipoSel},
              {$obsSel}
-      FROM involucrados_vehiculos iv
+      FROM involucrados_vehiculos_activos iv
       LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
       WHERE iv.accidente_id = :acc
       ORDER BY CAST(iv.orden_participacion AS UNSIGNED) ASC, iv.id ASC

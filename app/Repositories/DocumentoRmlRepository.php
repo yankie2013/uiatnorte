@@ -22,7 +22,7 @@ final class DocumentoRmlRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM documento_rml WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT * FROM documento_rml_activos WHERE id=? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -31,7 +31,7 @@ final class DocumentoRmlRepository
     public function findWithPersona(int $id): ?array
     {
         $sql = "SELECT r.*, CONCAT(pe.nombres,' ',pe.apellido_paterno,' ',pe.apellido_materno) AS per_nom, pe.num_doc
-                  FROM documento_rml r
+                  FROM documento_rml_activos r
              LEFT JOIN personas pe ON pe.id=r.persona_id
                  WHERE r.id=? LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -64,7 +64,7 @@ final class DocumentoRmlRepository
     public function search(int $personaId): array
     {
         $sql = "SELECT r.*, CONCAT(pe.nombres,' ',pe.apellido_paterno,' ',pe.apellido_materno) AS per_nom, pe.num_doc
-                  FROM documento_rml r
+                  FROM documento_rml_activos r
              LEFT JOIN personas pe ON pe.id = r.persona_id";
         $params = [];
         if ($personaId > 0) {

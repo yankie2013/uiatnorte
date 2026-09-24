@@ -23,7 +23,7 @@ final class DocumentoRecibidoRepository
         if ($this->columnExists('accidentes', 'lugar')) {
             $parts[] = 'lugar';
         }
-        $sql = 'SELECT ' . implode(',', $parts) . ' FROM accidentes ORDER BY id DESC';
+        $sql = 'SELECT ' . implode(',', $parts) . ' FROM accidentes_activos ORDER BY id DESC';
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -40,7 +40,7 @@ final class DocumentoRecibidoRepository
         $join = $hasEntidadDestino ? ' LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino' : '';
 
         if ($accidenteId && $this->columnExists('oficios', 'accidente_id')) {
-            $st = $this->pdo->prepare("SELECT {$cols} FROM oficios o{$join} WHERE o.accidente_id = ? ORDER BY o.id DESC");
+            $st = $this->pdo->prepare("SELECT {$cols} FROM oficios_activos o{$join} WHERE o.accidente_id = ? ORDER BY o.id DESC");
             $st->execute([$accidenteId]);
             $rows = $st->fetchAll(PDO::FETCH_ASSOC);
             if ($rows !== []) {
@@ -48,7 +48,7 @@ final class DocumentoRecibidoRepository
             }
         }
 
-        return $this->pdo->query("SELECT {$cols} FROM oficios o{$join} ORDER BY o.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+        return $this->pdo->query("SELECT {$cols} FROM oficios_activos o{$join} ORDER BY o.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function asuntosByIds(array $ids): array
@@ -70,17 +70,17 @@ final class DocumentoRecibidoRepository
 
     public function distinctTipos(): array
     {
-        return $this->pdo->query('SELECT DISTINCT tipo_documento FROM documentos_recibidos ORDER BY tipo_documento')->fetchAll(PDO::FETCH_COLUMN);
+        return $this->pdo->query('SELECT DISTINCT tipo_documento FROM documentos_recibidos_activos ORDER BY tipo_documento')->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function distinctCategorias(): array
     {
         $queries = [];
         if ($this->columnExists('documentos_recibidos', 'categoria')) {
-            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos WHERE categoria IS NOT NULL AND categoria <> ''";
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM documentos_recibidos_activos WHERE categoria IS NOT NULL AND categoria <> ''";
         }
         if ($this->columnExists('oficios', 'categoria')) {
-            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios WHERE categoria IS NOT NULL AND categoria <> ''";
+            $queries[] = "SELECT categoria COLLATE utf8mb4_unicode_ci AS categoria FROM oficios_activos WHERE categoria IS NOT NULL AND categoria <> ''";
         }
         if ($queries === []) {
             return [];
@@ -117,9 +117,9 @@ final class DocumentoRecibidoRepository
         } else {
             $sql .= ', NULL AS accidente_sidpol';
         }
-        $sql .= " FROM documentos_recibidos dr
-                  LEFT JOIN accidentes a ON a.id = dr.accidente_id
-                  LEFT JOIN oficios o ON o.id = dr.referencia_oficio_id";
+        $sql .= " FROM documentos_recibidos_activos dr
+                  LEFT JOIN accidentes_activos a ON a.id = dr.accidente_id
+                  LEFT JOIN oficios_activos o ON o.id = dr.referencia_oficio_id";
 
         $where = [];
         $params = [];
@@ -167,7 +167,7 @@ final class DocumentoRecibidoRepository
         $sql = "SELECT dr.*,
                        {$fechaRecepcionExpr} AS fecha_recepcion_resuelta,
                        {$fechaDocumentoExpr} AS fecha_documento_resuelta
-                  FROM documentos_recibidos dr
+                  FROM documentos_recibidos_activos dr
                  WHERE dr.id = ?
                  LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -315,7 +315,7 @@ final class DocumentoRecibidoRepository
             return [];
         }
 
-        return $this->pdo->query("SELECT DISTINCT `{$column}` FROM documentos_recibidos WHERE `{$column}` IS NOT NULL AND `{$column}` <> '' ORDER BY `{$column}`")
+        return $this->pdo->query("SELECT DISTINCT `{$column}` FROM documentos_recibidos_activos WHERE `{$column}` IS NOT NULL AND `{$column}` <> '' ORDER BY `{$column}`")
             ->fetchAll(PDO::FETCH_COLUMN);
     }
 

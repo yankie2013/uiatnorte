@@ -6,7 +6,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/word_filename_helper.php';
 
 use App\Repositories\ActaRepository;
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 function acta_name(array $r, string $prefix): string {
     return trim(preg_replace('/\s+/u', ' ', trim((string) ($r[$prefix . '_nombres'] ?? '') . ' ' . (string) ($r[$prefix . '_apellido_paterno'] ?? '') . ' ' . (string) ($r[$prefix . '_apellido_materno'] ?? ''))) ?? '');

@@ -45,7 +45,7 @@ final class DocumentoPlantillaRepository
             's.detalle AS asunto_detalle',
         ];
 
-        $joins[] = 'LEFT JOIN accidentes a ON a.id = o.accidente_id';
+        $joins[] = 'LEFT JOIN accidentes_activos a ON a.id = o.accidente_id';
         $joins[] = 'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino';
         $joins[] = 'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id';
 
@@ -83,7 +83,7 @@ final class DocumentoPlantillaRepository
             $select[] = 'NULL AS nombre_oficial_ano';
         }
 
-        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios o ' . implode(' ', $joins) . ' WHERE o.id = ? LIMIT 1';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM oficios_activos o ' . implode(' ', $joins) . ' WHERE o.id = ? LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -108,7 +108,7 @@ final class DocumentoPlantillaRepository
                        COALESCE(p.apellido_materno,'') AS apellido_materno,
                        COALESCE(p.num_doc,'') AS num_doc,
                        {$roleSelect}
-                FROM involucrados_personas ip
+                FROM involucrados_personas_activos ip
                 LEFT JOIN personas p ON p.id = ip.persona_id
                 {$roleJoin}
                 WHERE ip.accidente_id = ?
@@ -134,7 +134,7 @@ final class DocumentoPlantillaRepository
         }
 
         $sql = 'SELECT ' . implode(', ', $select) . '
-                FROM involucrados_vehiculos iv
+                FROM involucrados_vehiculos_activos iv
                 LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
                 WHERE iv.accidente_id = ?
                 ORDER BY CAST(COALESCE(iv.orden_participacion,\'0\') AS UNSIGNED) ASC, iv.id ASC';
@@ -161,7 +161,7 @@ final class DocumentoPlantillaRepository
 
     public function citacionById(int $id): ?array
     {
-        $joins = ['LEFT JOIN accidentes a ON a.id = c.accidente_id', 'LEFT JOIN oficios o ON o.id = c.oficio_id'];
+        $joins = ['LEFT JOIN accidentes_activos a ON a.id = c.accidente_id', 'LEFT JOIN oficios_activos o ON o.id = c.oficio_id'];
         $select = [
             'c.*',
             'a.registro_sidpol',
@@ -186,7 +186,7 @@ final class DocumentoPlantillaRepository
             $select[] = 'NULL AS fiscalia_nombre';
         }
 
-        $sql = 'SELECT ' . implode(', ', $select) . ' FROM citacion c ' . implode(' ', $joins) . ' WHERE c.id = ? LIMIT 1';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM citacion_activos c ' . implode(' ', $joins) . ' WHERE c.id = ? LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -201,7 +201,7 @@ final class DocumentoPlantillaRepository
 
         foreach (['modalidad', 'modalidades', 'tipo_accidente', 'clase_accidente', 'modalidad_texto', 'modalidad_nombre'] as $column) {
             if ($this->hasColumn('accidentes', $column)) {
-                $st = $this->pdo->prepare("SELECT {$column} FROM accidentes WHERE id = ? LIMIT 1");
+                $st = $this->pdo->prepare("SELECT {$column} FROM accidentes_activos WHERE id = ? LIMIT 1");
                 $st->execute([$accidenteId]);
                 $value = trim((string) $st->fetchColumn());
                 if ($value !== '') {
@@ -212,7 +212,7 @@ final class DocumentoPlantillaRepository
 
         if ($this->hasTable('accidente_modalidad') && $this->hasTable('modalidad_accidente')) {
             $sql = "SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR '||')
-                    FROM accidente_modalidad am
+                    FROM accidente_modalidad_activos am
                     JOIN modalidad_accidente m ON m.id = am.modalidad_id
                     WHERE am.accidente_id = ?";
             $st = $this->pdo->prepare($sql);
@@ -222,7 +222,7 @@ final class DocumentoPlantillaRepository
 
         if ($this->hasTable('accidente_modalidad') && $this->hasTable('modalidad')) {
             $sql = "SELECT GROUP_CONCAT(m.nombre ORDER BY m.nombre SEPARATOR '||')
-                    FROM accidente_modalidad am
+                    FROM accidente_modalidad_activos am
                     JOIN modalidad m ON m.id = am.modalidad_id
                     WHERE am.accidente_id = ?";
             $st = $this->pdo->prepare($sql);
@@ -238,7 +238,7 @@ final class DocumentoPlantillaRepository
         if ($accidenteId > 0) {
             foreach (['hora_accidente', 'hora'] as $column) {
                 if ($this->hasColumn('accidentes', $column)) {
-                    $st = $this->pdo->prepare("SELECT {$column} FROM accidentes WHERE id = ? LIMIT 1");
+                    $st = $this->pdo->prepare("SELECT {$column} FROM accidentes_activos WHERE id = ? LIMIT 1");
                     $st->execute([$accidenteId]);
                     $value = trim((string) $st->fetchColumn());
                     if ($value !== '') {

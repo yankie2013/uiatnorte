@@ -12,7 +12,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && is_file(__DIR_
   require __DIR__.'/PHPWord-1.4.0/vendor/autoload.php';
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\Settings;
@@ -48,7 +48,7 @@ $sql = "SELECT
           a.sentido,
           a.secuencia,
           c.nombre AS comisaria
-        FROM accidentes a
+        FROM accidentes_activos a
         LEFT JOIN comisarias c ON c.id = a.comisaria_id
         WHERE a.id = ?";
 
@@ -62,7 +62,7 @@ $involucradosTxt = '-';
 try {
   $q = $pdo->prepare("
     SELECT p.apellidos, p.nombres, p.dni, ip.rol
-    FROM involucrados_personas ip
+    FROM involucrados_personas_activos ip
     JOIN personas p ON p.id = ip.persona_id
     WHERE ip.accidente_id = ?
     ORDER BY ip.id

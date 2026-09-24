@@ -776,11 +776,7 @@ function whatsapp_accident_context(array $modalidades, ?string $fechaAccidente, 
 
 function whatsapp_base_greeting(): string
 {
-    return html_entity_decode(
-        'Buen d&iacute;a le saluda ST3.PNP Giancarlo MERINO SANCHO de la UIAT NORTE',
-        ENT_QUOTES | ENT_HTML5,
-        'UTF-8'
-    );
+    return \App\Support\Access::greeting((int)($GLOBALS['accidenteId'] ?? $GLOBALS['accidente_id'] ?? $_GET['accidente_id'] ?? 0));
 }
 
 function whatsapp_message_pack(array $modalidades, ?string $fechaAccidente, ?string $lugarAccidente, ?string $sidpol = null): array
@@ -3744,13 +3740,13 @@ $paramId = (int) ($_GET['accidente_id'] ?? 0);
 
 $accidente = null;
 if ($paramSidpol !== '') {
-    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes WHERE sidpol = ? LIMIT 1", [$paramSidpol]);
+    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes_activos WHERE sidpol = ? LIMIT 1", [$paramSidpol]);
 }
 if (!$accidente && $paramId > 0) {
-    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes WHERE id = ? LIMIT 1", [$paramId]);
+    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes_activos WHERE id = ? LIMIT 1", [$paramId]);
 }
 if (!$accidente) {
-    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes ORDER BY id DESC LIMIT 1");
+    $accidente = safe_query_one($pdo, "SELECT * FROM accidentes_activos ORDER BY id DESC LIMIT 1");
 }
 if (!$accidente) {
     exit('No hay accidentes registrados.');
@@ -3797,7 +3793,7 @@ $accidenteInfo = safe_query_one(
             fa.nombre AS fiscalia_nom,
             CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nom,
             {$fiscalCargoSelect} AS fiscal_cargo
-       FROM accidentes a
+       FROM accidentes_activos a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep = a.cod_dep
   LEFT JOIN ubigeo_provincia p ON p.cod_dep = a.cod_dep AND p.cod_prov = a.cod_prov
   LEFT JOIN ubigeo_distrito t ON t.cod_dep = a.cod_dep AND t.cod_prov = a.cod_prov AND t.cod_dist = a.cod_dist
@@ -3819,7 +3815,7 @@ $ubicacion = implode(' / ', array_values(array_filter([
 $rowsMods = safe_query_all(
     $pdo,
     "SELECT m.nombre
-       FROM accidente_modalidad am
+       FROM accidente_modalidad_activos am
        JOIN modalidad_accidente m ON m.id = am.modalidad_id
       WHERE am.accidente_id = ?
    ORDER BY am.id",
@@ -3829,7 +3825,7 @@ if ($rowsMods === []) {
     $rowsMods = safe_query_all(
         $pdo,
         "SELECT m.nombre
-           FROM accidente_modalidad am
+           FROM accidente_modalidad_activos am
            JOIN modalidad_accidente m ON m.id = am.modalidad_id
           WHERE am.accidente_id = ?
        ORDER BY am.modalidad_id",
@@ -3839,7 +3835,7 @@ if ($rowsMods === []) {
 $rowsCons = safe_query_all(
     $pdo,
     "SELECT c.nombre
-       FROM accidente_consecuencia ac
+       FROM accidente_consecuencia_activos ac
        JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
       WHERE ac.accidente_id = ?
    ORDER BY ac.id",
@@ -3849,7 +3845,7 @@ if ($rowsCons === []) {
     $rowsCons = safe_query_all(
         $pdo,
         "SELECT c.nombre
-           FROM accidente_consecuencia ac
+           FROM accidente_consecuencia_activos ac
            JOIN consecuencia_accidente c ON c.id = ac.consecuencia_id
           WHERE ac.accidente_id = ?
        ORDER BY ac.consecuencia_id",
@@ -3905,10 +3901,10 @@ $personas = safe_query_all(
             v.notas AS veh_notas,
             v.creado_en AS veh_creado_en,
             v.actualizado_en AS veh_actualizado_en
-       FROM involucrados_personas ip
+       FROM involucrados_personas_activos ip
        JOIN personas p ON p.id = ip.persona_id
   LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
-  LEFT JOIN involucrados_vehiculos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
+  LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id
   LEFT JOIN vehiculos v ON v.id = ip.vehiculo_id
   LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
   LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
@@ -3965,7 +3961,7 @@ $comboVehiculosRows = safe_query_all(
             v.notas AS veh_notas,
             v.creado_en AS veh_creado_en,
             v.actualizado_en AS veh_actualizado_en
-       FROM involucrados_vehiculos iv
+       FROM involucrados_vehiculos_activos iv
        JOIN vehiculos v ON v.id = iv.vehiculo_id
   LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
   LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
@@ -4023,7 +4019,7 @@ if ($vehiculoInvIds !== []) {
     $docVehiculoRows = safe_query_all(
         $pdo,
         "SELECT *
-           FROM documento_vehiculo
+           FROM documento_vehiculo_activos
           WHERE involucrado_vehiculo_id IN ($placeholders)
        ORDER BY involucrado_vehiculo_id, id DESC",
         $vehiculoInvIds
@@ -4092,7 +4088,7 @@ $participacionVehiculoOptions = ['' => 'Sin vehículo'];
 $participacionVehiculos = safe_query_all(
     $pdo,
     "SELECT iv.orden_participacion, iv.tipo, v.id, v.placa, v.color, v.anio
-       FROM involucrados_vehiculos iv
+       FROM involucrados_vehiculos_activos iv
        JOIN vehiculos v ON v.id = iv.vehiculo_id
       WHERE iv.accidente_id = ?
    ORDER BY
@@ -4154,7 +4150,7 @@ $policias = safe_query_all(
             p.api_fuente,
             p.api_ref,
             p.creado_en AS persona_creado_en
-       FROM policial_interviniente pi
+       FROM policial_interviniente_activos pi
        JOIN personas p ON p.id = pi.persona_id
       WHERE pi.accidente_id = ?
    ORDER BY pi.id ASC",
@@ -4222,8 +4218,8 @@ $propietarios = safe_query_all(
             pr.api_fuente AS rep_api_fuente,
             pr.api_ref AS rep_api_ref,
             pr.creado_en AS rep_persona_creado_en
-       FROM propietario_vehiculo pv
-       JOIN involucrados_vehiculos iv ON iv.id = pv.vehiculo_inv_id
+       FROM propietario_vehiculo_activos pv
+       JOIN involucrados_vehiculos_activos iv ON iv.id = pv.vehiculo_inv_id
        JOIN vehiculos v ON v.id = iv.vehiculo_id
   LEFT JOIN personas pn ON pn.id = pv.propietario_persona_id
   LEFT JOIN personas pr ON pr.id = pv.representante_persona_id
@@ -4246,7 +4242,7 @@ $propietarios = safe_query_all(
 $propietarioVehiculoInlineOptions = safe_query_all(
     $pdo,
     "SELECT iv.id AS inv_id, iv.orden_participacion, v.placa
-       FROM involucrados_vehiculos iv
+       FROM involucrados_vehiculos_activos iv
        JOIN vehiculos v ON v.id = iv.vehiculo_id
       WHERE iv.accidente_id = ?
    ORDER BY
@@ -4324,8 +4320,8 @@ $familiares = safe_query_all(
             pr.api_fuente AS fam_api_fuente,
             pr.api_ref AS fam_api_ref,
             pr.creado_en AS fam_persona_creado_en
-       FROM familiar_fallecido ff
-       JOIN involucrados_personas ip ON ip.id = ff.fallecido_inv_id
+       FROM familiar_fallecido_activos ff
+       JOIN involucrados_personas_activos ip ON ip.id = ff.fallecido_inv_id
        JOIN personas pf ON pf.id = ip.persona_id
        JOIN personas pr ON pr.id = ff.familiar_persona_id
       WHERE ff.accidente_id = ?
@@ -4338,24 +4334,24 @@ $abogados = safe_query_all(
     "SELECT a.*,
             TRIM(CONCAT(COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''), ', ', COALESCE(pr.nombres,''))) AS persona_rep_nom,
             COALESCE(prr.roles, '') AS condicion_representado
-       FROM abogados a
+       FROM abogados_activos a
   LEFT JOIN personas pr ON pr.id = a.persona_id
   LEFT JOIN (
         SELECT accidente_id, persona_id, GROUP_CONCAT(DISTINCT rol ORDER BY rol SEPARATOR ', ') AS roles
           FROM (
                 SELECT ip.accidente_id, ip.persona_id, COALESCE(pp.Nombre, 'Involucrado') AS rol
-                  FROM involucrados_personas ip
+                  FROM involucrados_personas_activos ip
              LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
 
                 UNION ALL
 
                 SELECT pv.accidente_id, pv.propietario_persona_id AS persona_id, 'Propietario vehiculo' AS rol
-                  FROM propietario_vehiculo pv
+                  FROM propietario_vehiculo_activos pv
 
                 UNION ALL
 
                 SELECT ff.accidente_id, ff.familiar_persona_id AS persona_id, 'Familiar fallecido' AS rol
-                  FROM familiar_fallecido ff
+                  FROM familiar_fallecido_activos ff
           ) roles_base
       GROUP BY accidente_id, persona_id
    ) prr ON prr.accidente_id = a.accidente_id AND prr.persona_id = a.persona_id
@@ -4377,7 +4373,7 @@ $manifestacionesPorPersona = [];
 $manifestacionesAccidente = safe_query_all(
     $pdo,
     "SELECT id, persona_id, fecha, horario_inicio, hora_termino, modalidad, '' AS observaciones
-       FROM Manifestacion
+       FROM Manifestacion_activos
       WHERE accidente_id = ?
    ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
     [$accidente_id]
@@ -4467,16 +4463,16 @@ $oficios = safe_query_all(
             o.involucrado_persona_id AS inv_per_id,
             EXISTS (
                 SELECT 1
-                  FROM documentos_recibidos dr
+                  FROM documentos_recibidos_activos dr
                  WHERE dr.referencia_oficio_id = o.id
             ) AS tiene_documento_recibido,
             TRIM(CONCAT(COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, ''), ' ', COALESCE(p.nombres, ''))) AS persona_nombre
-       FROM oficios o
+       FROM oficios_activos o
   LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
   LEFT JOIN oficio_asunto a2 ON a2.id = o.asunto_id
-  LEFT JOIN involucrados_vehiculos iv ON iv.id = o.involucrado_vehiculo_id
+  LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = o.involucrado_vehiculo_id
   LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
-  LEFT JOIN involucrados_personas ip ON ip.id = o.involucrado_persona_id
+  LEFT JOIN involucrados_personas_activos ip ON ip.id = o.involucrado_persona_id
   LEFT JOIN personas p ON p.id = ip.persona_id
       WHERE o.accidente_id = ?
    ORDER BY o.fecha_emision DESC, o.id DESC",
@@ -4497,8 +4493,8 @@ $documentosRecibidos = safe_query_all(
             {$documentoFechaDocumentoExpr} AS fecha_documento_resuelta,
             COALESCE(o.numero, '') AS oficio_numero,
             COALESCE(o.anio, '') AS oficio_anio
-       FROM documentos_recibidos dr
-  LEFT JOIN oficios o ON o.id = dr.referencia_oficio_id
+       FROM documentos_recibidos_activos dr
+  LEFT JOIN oficios_activos o ON o.id = dr.referencia_oficio_id
       WHERE dr.accidente_id = ?
    ORDER BY COALESCE({$documentoFechaRecepcionExpr}, '9999-12-31') DESC, dr.id DESC",
     [$accidente_id]
@@ -4519,8 +4515,8 @@ $itps = safe_query_all(
             a.registro_sidpol,
             a.fecha_accidente,
             a.lugar
-       FROM itp i
-  LEFT JOIN accidentes a ON a.id = i.accidente_id
+       FROM itp_activos i
+  LEFT JOIN accidentes_activos a ON a.id = i.accidente_id
       WHERE i.accidente_id = ?
    ORDER BY COALESCE(i.fecha_itp, '9999-12-31') DESC,
             COALESCE(i.hora_itp, '23:59:59') DESC,
@@ -4556,7 +4552,7 @@ $diligencias = safe_query_all(
     $pdo,
     "SELECT dp.*,
             td.nombre AS tipo_nombre
-       FROM diligencias_pendientes dp
+       FROM diligencias_pendientes_activos dp
   LEFT JOIN tipo_diligencia td ON td.id = dp.tipo_diligencia_id
       WHERE dp.accidente_id = ?
    ORDER BY dp.creado_en DESC, dp.id DESC",
@@ -4715,6 +4711,13 @@ $renderVehiculoSubtabs = static function (
     </div>
 
     <div class="tab-content mt-2">
+      <div class="tab-pane fade" id="estado" role="tabpanel">
+        <div class="expediente-state">
+          <?php if (isset($_GET['gestion_ok'])) echo '<p role="status">Cambio guardado.</p>'; ?>
+          <?php require __DIR__.'/app/Views/expedientes/estado.php'; ?>
+        </div>
+      </div>
+
       <div class="tab-pane fade show active" id="<?= h($tabPrefix) ?>-resumen" role="tabpanel">
         <div class="inner-panel">
           <?php if ($unidadRecord !== null): ?>
@@ -4957,7 +4960,7 @@ foreach ($personas as $persona) {
         'rml' => $personaId > 0 ? safe_query_all(
             $pdo,
             "SELECT id, numero, fecha, incapacidad_medico, atencion_facultativo, observaciones
-               FROM documento_rml
+               FROM documento_rml_activos
               WHERE persona_id = ?
            ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
             [$personaId]
@@ -4973,7 +4976,7 @@ foreach ($personas as $persona) {
         'man' => $personaId > 0 ? safe_query_all(
             $pdo,
             "SELECT id, fecha, horario_inicio, hora_termino, modalidad, '' AS observaciones
-               FROM Manifestacion
+               FROM Manifestacion_activos
               WHERE persona_id = ? AND accidente_id = ?
            ORDER BY COALESCE(fecha, '9999-12-31') DESC, id DESC",
             [$personaId, $accidente_id]
@@ -4994,7 +4997,7 @@ foreach ($personas as $persona) {
                     numero_protocolo, fecha_protocolo, hora_protocolo, lesiones_protocolo,
                     presuntivo_protocolo, dosaje_protocolo, toxicologico_protocolo,
                     nosocomio_epicrisis, numero_historia_epicrisis, tratamiento_epicrisis, hora_alta_epicrisis
-               FROM documento_occiso
+               FROM documento_occiso_activos
               WHERE persona_id = ? AND accidente_id = ?
            ORDER BY COALESCE(fecha_levantamiento, '9999-12-31') DESC, id DESC",
             [$personaId, $accidente_id]
@@ -7443,6 +7446,7 @@ include __DIR__ . '/sidebar.php';
   }
 </style>
 <link rel="stylesheet" href="assets/css/accidente-header-participantes.css?v=<?= filemtime(__DIR__ . '/assets/css/accidente-header-participantes.css') ?>">
+<link rel="stylesheet" href="assets/css/expediente_estado.css">
 </head>
 <body>
 <div class="page case-overview-layout">
@@ -8049,10 +8053,12 @@ include __DIR__ . '/sidebar.php';
             ['id' => 'diligencias-pendientes', 'label' => 'Diligencias pendientes', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Análisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
+            ['id' => 'estado', 'label' => 'ESTADO', 'sub' => 'Gestión del expediente'],
             ['id' => 'resumen-integral', 'label' => 'Resumen', 'count' => $summaryBlocksCount],
         ];
 
         $tabIcons = [
+            'estado' => 'M9 5h11 M9 12h11 M9 19h11 M3 5l1 1 2-3 M3 12l1 1 2-3',
             'itp' => 'M9 3h6v4H9z M9 5H6v16h12V5h-3 M9 12h6 M9 16h4',
             'oficios' => 'M14 2H6v20h12V6z M14 2v5h5 M9 12h6 M9 16h6',
             'documentos-recibidos' => 'M3 12v8h18v-8 M12 3v11 M8 10l4 4 4-4 M3 12h4l2 4h6l2-4h4',

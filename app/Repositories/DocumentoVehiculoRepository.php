@@ -14,7 +14,7 @@ final class DocumentoVehiculoRepository
     public function involucradoInfo(int $involucradoVehiculoId): ?array
     {
         $sql = "SELECT iv.id AS invol_id, iv.vehiculo_id, v.placa, v.color, v.anio
-                  FROM involucrados_vehiculos iv
+                  FROM involucrados_vehiculos_activos iv
              LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
                  WHERE iv.id = :id
                  LIMIT 1";
@@ -27,8 +27,8 @@ final class DocumentoVehiculoRepository
     public function find(int $id): ?array
     {
         $sql = "SELECT dv.*, iv.id AS invol_id, iv.vehiculo_id, v.placa, v.color, v.anio
-                  FROM documento_vehiculo dv
-                  JOIN involucrados_vehiculos iv ON iv.id = dv.involucrado_vehiculo_id
+                  FROM documento_vehiculo_activos dv
+                  JOIN involucrados_vehiculos_activos iv ON iv.id = dv.involucrado_vehiculo_id
              LEFT JOIN vehiculos v ON v.id = dv.vehiculo_id
                  WHERE dv.id = :id
                  LIMIT 1";

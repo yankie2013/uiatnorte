@@ -8,7 +8,7 @@ ob_start();
 
 require __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/word_filename_helper.php';
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (class_exists('ZipArchive')) {
     \PhpOffice\PhpWord\Settings::setZipClass(\PhpOffice\PhpWord\Settings::ZIPARCHIVE);
@@ -171,8 +171,8 @@ try {
                pr.domicilio_distrito AS rep_domicilio_distrito,
                pr.celular AS rep_celular,
                pr.email AS rep_email
-          FROM propietario_vehiculo pv
-          LEFT JOIN involucrados_vehiculos iv ON iv.id = pv.vehiculo_inv_id
+          FROM propietario_vehiculo_activos pv
+          LEFT JOIN involucrados_vehiculos_activos iv ON iv.id = pv.vehiculo_inv_id
           LEFT JOIN vehiculos v ON v.id = iv.vehiculo_id
           LEFT JOIN carroceria_vehiculo car ON car.id = v.carroceria_id
           LEFT JOIN marcas_vehiculo mar ON mar.id = v.marca_id
@@ -193,7 +193,7 @@ try {
         exit;
     }
 
-    $stmtA = $pdo->prepare("SELECT * FROM accidentes WHERE id = :id LIMIT 1");
+    $stmtA = $pdo->prepare("SELECT * FROM accidentes_activos WHERE id = :id LIMIT 1");
     $stmtA->execute([':id' => $accidente_id]);
     $accidente = $stmtA->fetch(PDO::FETCH_ASSOC);
     if (!$accidente) {

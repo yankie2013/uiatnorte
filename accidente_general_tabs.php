@@ -48,7 +48,7 @@ $param_sidpol = trim($_GET['sidpol'] ?? '');
 $param_id     = isset($_GET['accidente_id']) ? (int)$_GET['accidente_id'] : 0;
 
 function getAccBySidpol(PDO $pdo, string $sidpol){
-  $st=$pdo->prepare("SELECT * FROM accidentes WHERE sidpol=? LIMIT 1");
+  $st=$pdo->prepare("SELECT * FROM accidentes_activos WHERE sidpol=? LIMIT 1");
   $st->execute([$sidpol]);
   return $st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -56,12 +56,12 @@ function getAccBySidpol(PDO $pdo, string $sidpol){
 $acc=null;
 if($param_sidpol!=='') $acc=getAccBySidpol($pdo,$param_sidpol);
 if(!$acc && $param_id>0){
-  $st=$pdo->prepare("SELECT * FROM accidentes WHERE id=? LIMIT 1");
+  $st=$pdo->prepare("SELECT * FROM accidentes_activos WHERE id=? LIMIT 1");
   $st->execute([$param_id]);
   $acc=$st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 if(!$acc){
-  $acc=$pdo->query("SELECT * FROM accidentes ORDER BY sidpol DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: null;
+  $acc=$pdo->query("SELECT * FROM accidentes_activos ORDER BY sidpol DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 if(!$acc) die('No hay accidentes registrados.');
 
@@ -77,7 +77,7 @@ $sqlInfo = "
          c.nombre  AS comisaria_nom,
          fa.nombre AS fiscalia_nom,
          CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nom
-  FROM accidentes a
+  FROM accidentes_activos a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep=a.cod_dep
   LEFT JOIN ubigeo_provincia  p ON p.cod_dep=a.cod_dep AND p.cod_prov=a.cod_prov
   LEFT JOIN ubigeo_distrito   t ON t.cod_dep=a.cod_dep AND t.cod_prov=a.cod_prov AND t.cod_dist=a.cod_dist
@@ -101,9 +101,9 @@ function fetchListSafe(PDO $pdo, string $sql1, string $sql2, array $params){
 }
 $rowsMods = fetchListSafe(
   $pdo,
-  "SELECT m.nombre FROM accidente_modalidad am JOIN modalidad_accidente m ON m.id=am.modalidad_id
+  "SELECT m.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
    WHERE am.accidente_id=? ORDER BY am.id",
-  "SELECT m.nombre FROM accidente_modalidad am JOIN modalidad_accidente m ON m.id=am.modalidad_id
+  "SELECT m.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
    WHERE am.accidente_id=? ORDER BY am.modalidad_id",
   [$accidente_id]
 );
@@ -111,9 +111,9 @@ $mods = array_column($rowsMods,'nombre');
 
 $rowsCons = fetchListSafe(
   $pdo,
-  "SELECT c.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
+  "SELECT c.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
    WHERE ac.accidente_id=? ORDER BY ac.id",
-  "SELECT c.nombre FROM accidente_consecuencia ac JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
+  "SELECT c.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
    WHERE ac.accidente_id=? ORDER BY ac.consecuencia_id",
   [$accidente_id]
 );

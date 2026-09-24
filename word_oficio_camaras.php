@@ -16,7 +16,7 @@ require_login();
 require __DIR__.'/db.php';
 require_once __DIR__.'/vendor/autoload.php';
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 // Silenciar salida de errores al navegador (para no corromper el DOCX)
 ini_set('display_errors', 0);
@@ -120,7 +120,7 @@ SELECT
   /* === MODALIDAD desde tabla puente === */
   (
     SELECT GROUP_CONCAT(DISTINCT ma.nombre ORDER BY ma.id SEPARATOR '||')
-    FROM accidente_modalidad am
+    FROM accidente_modalidad_activos am
     JOIN modalidad_accidente ma ON ma.id = am.modalidad_id
     WHERE am.accidente_id = a.id
   ) AS modalidad_nombre,
@@ -128,7 +128,7 @@ SELECT
   /* === CONSECUENCIA desde tabla puente === */
   (
     SELECT GROUP_CONCAT(DISTINCT ca.nombre ORDER BY ca.id SEPARATOR '||')
-    FROM accidente_consecuencia ac
+    FROM accidente_consecuencia_activos ac
     JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id
     WHERE ac.accidente_id = a.id
   ) AS consecuencia_nombre,
@@ -138,10 +138,10 @@ SELECT
   se.nombre  AS subentidad_nombre, se.tipo AS subentidad_tipo,
   pe.nombres AS per_dest_nombres, pe.apellido_paterno AS per_dest_apep, COALESCE(pe.apellido_materno,'') AS per_dest_apem,
   ".($hasPersonaManual?"COALESCE(o.persona_destino_manual,'')":"''")." AS persona_destino_manual
-FROM oficios o
+FROM oficios_activos o
 LEFT JOIN oficio_entidad  e  ON e.id=o.entidad_id_destino
 LEFT JOIN oficio_asunto   s  ON s.id=o.asunto_id
-LEFT JOIN accidentes      a  ON a.id=o.accidente_id
+LEFT JOIN accidentes_activos      a  ON a.id=o.accidente_id
 LEFT JOIN comisarias      c  ON c.id=a.comisaria_id
 LEFT JOIN fiscalia        f  ON f.id=a.fiscalia_id
 LEFT JOIN grado_cargo     gc ON gc.id=o.grado_cargo_id

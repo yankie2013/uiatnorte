@@ -9,7 +9,7 @@ ob_start();
 // ------------ Dependencias ------------
 require __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/word_filename_helper.php';
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 // ------------ Conexión ------------
 if (class_exists('ZipArchive')) {
@@ -104,7 +104,7 @@ function slug_nombre_archivo($texto) {
 // ------------ Obtener datos ------------
 try {
     // policial_interviniente
-    $stmtP = $pdo->prepare("SELECT * FROM policial_interviniente WHERE id = :id LIMIT 1");
+    $stmtP = $pdo->prepare("SELECT * FROM policial_interviniente_activos WHERE id = :id LIMIT 1");
     $stmtP->execute(['id' => $policia_id]);
     $policia = $stmtP->fetch(PDO::FETCH_ASSOC);
 
@@ -122,7 +122,7 @@ try {
     }
 
     // accidente
-    $stmtA = $pdo->prepare("SELECT * FROM accidentes WHERE id = :id LIMIT 1");
+    $stmtA = $pdo->prepare("SELECT * FROM accidentes_activos WHERE id = :id LIMIT 1");
     $stmtA->execute(['id' => $accidente_id]);
     $accidente = $stmtA->fetch(PDO::FETCH_ASSOC);
 
@@ -151,7 +151,7 @@ try {
     if (!empty($policia['persona_id'])) {
         $stmtM = $pdo->prepare(
             "SELECT *
-               FROM Manifestacion
+               FROM Manifestacion_activos
               WHERE persona_id = :persona_id
                 AND accidente_id = :accidente_id
            ORDER BY id DESC

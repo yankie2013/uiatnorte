@@ -14,14 +14,14 @@ final class InvolucradoPersonaRepository
     public function accidentes(): array
     {
         $sql = "SELECT id, CONCAT('#',id,' - ',DATE_FORMAT(fecha_accidente,'%Y-%m-%d %H:%i'),' - ',COALESCE(lugar,'')) AS nom
-                  FROM accidentes
+                  FROM accidentes_activos
               ORDER BY id DESC";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function accidenteFecha(int $accidenteId): ?string
     {
-        $st = $this->pdo->prepare('SELECT fecha_accidente FROM accidentes WHERE id=?');
+        $st = $this->pdo->prepare('SELECT fecha_accidente FROM accidentes_activos WHERE id=?');
         $st->execute([$accidenteId]);
         $value = $st->fetchColumn();
         return $value === false ? null : (string) $value;
@@ -100,7 +100,7 @@ final class InvolucradoPersonaRepository
     {
         $sql = "SELECT iv.orden_participacion, iv.tipo,
                        v.id, v.placa, v.color, v.anio
-                  FROM involucrados_vehiculos iv
+                  FROM involucrados_vehiculos_activos iv
                   JOIN vehiculos v ON v.id=iv.vehiculo_id
                  WHERE iv.accidente_id=?
               ORDER BY iv.orden_participacion,
@@ -205,8 +205,8 @@ final class InvolucradoPersonaRepository
                        ip.orden_persona,
                        a.fecha_accidente, a.lugar,
                        p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno, p.sexo, p.fecha_nacimiento
-                  FROM involucrados_personas ip
-                  JOIN accidentes a ON a.id = ip.accidente_id
+                  FROM involucrados_personas_activos ip
+                  JOIN accidentes_activos a ON a.id = ip.accidente_id
                   JOIN personas   p ON p.id = ip.persona_id
                  WHERE ip.id=? LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -245,7 +245,7 @@ final class InvolucradoPersonaRepository
     public function rmlPersona(int $personaId): array
     {
         $sql = "SELECT id, numero, fecha, incapacidad_medico, atencion_facultativo, observaciones
-                  FROM documento_rml WHERE persona_id=? ORDER BY COALESCE(fecha,'9999-12-31') DESC, id DESC";
+                  FROM documento_rml_activos WHERE persona_id=? ORDER BY COALESCE(fecha,'9999-12-31') DESC, id DESC";
         $st = $this->pdo->prepare($sql);
         $st->execute([$personaId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
@@ -266,7 +266,7 @@ final class InvolucradoPersonaRepository
     public function manifestacionesPersona(int $personaId, int $accidenteId): array
     {
         $sql = "SELECT id, fecha, horario_inicio, hora_termino, modalidad
-                  FROM Manifestacion
+                  FROM Manifestacion_activos
                  WHERE persona_id=? AND accidente_id=?
               ORDER BY COALESCE(fecha,'9999-12-31') DESC, COALESCE(horario_inicio,'23:59:59') DESC, id DESC";
         $st = $this->pdo->prepare($sql);
@@ -277,7 +277,7 @@ final class InvolucradoPersonaRepository
     public function occisosPersona(int $personaId, int $accidenteId): array
     {
         $sql = "SELECT id, fecha_levantamiento, hora_levantamiento, lugar_levantamiento, numero_protocolo
-                  FROM documento_occiso
+                  FROM documento_occiso_activos
                  WHERE persona_id=? AND accidente_id=?
               ORDER BY COALESCE(fecha_levantamiento,'9999-12-31') DESC,
                        COALESCE(hora_levantamiento,'23:59:59') DESC,

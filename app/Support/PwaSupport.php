@@ -18,10 +18,6 @@ final class PwaSupport
 
         \define('UIAT_PWA_BOOTED', true);
 
-        if (self::shouldSkipRequest()) {
-            return;
-        }
-
         \ob_start([self::class, 'inject']);
     }
 
@@ -86,6 +82,17 @@ final class PwaSupport
 
     public static function inject(string $buffer): string
     {
+        if ($buffer === '' || self::isNonHtmlResponse() || !self::looksLikeHtmlDocument($buffer)) return $buffer;
+
+        if (isset($_SESSION['user']) && stripos($buffer, '<html') !== false) {
+            $token = \App\Support\Access::csrf();
+            $buffer = preg_replace_callback('~<form\b[^>]*>~i', static function ($m) use ($token) {
+                return preg_match('~method\s*=\s*[\\"\']?post~i', $m[0]) ? $m[0] . '<input type="hidden" name="_csrf" value="' . $token . '">' : $m[0];
+            }, $buffer);
+            $accessScript = '<meta name="csrf-token" content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
+            $buffer = preg_replace('~</head>~i', $accessScript . '</head>', $buffer, 1);
+        }
+
         if ($buffer === '' || self::isNonHtmlResponse() || !self::looksLikeHtmlDocument($buffer)) {
             return $buffer;
         }

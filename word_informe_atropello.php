@@ -42,7 +42,7 @@ if (is_file(__DIR__.'/vendor/autoload.php')) { require __DIR__.'/vendor/autoload
 if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && is_file(__DIR__.'/PHPWord-1.4.0/vendor/autoload.php')) {
   require __DIR__.'/PHPWord-1.4.0/vendor/autoload.php';
 }
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 
 if (!class_exists(TemplateProcessor::class)) {
   http_response_code(500);
@@ -96,12 +96,12 @@ function get_dosaje(PDO $pdo, $persona_id){
 }
 function get_rml(PDO $pdo, $persona_id, $accidente_id){
   if (!$persona_id || !$accidente_id) return [];
-  $q=$pdo->prepare("SELECT * FROM documento_rml WHERE persona_id=:p AND accidente_id=:a ORDER BY id DESC LIMIT 1");
+  $q=$pdo->prepare("SELECT * FROM documento_rml_activos WHERE persona_id=:p AND accidente_id=:a ORDER BY id DESC LIMIT 1");
   $q->execute([':p'=>$persona_id, ':a'=>$accidente_id]); return $q->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 function get_doc_occiso(PDO $pdo, $persona_id, $accidente_id){
   if (!$persona_id || !$accidente_id) return [];
-  $q=$pdo->prepare("SELECT * FROM documento_occiso WHERE persona_id=:p AND accidente_id=:a ORDER BY id DESC LIMIT 1");
+  $q=$pdo->prepare("SELECT * FROM documento_occiso_activos WHERE persona_id=:p AND accidente_id=:a ORDER BY id DESC LIMIT 1");
   $q->execute([':p'=>$persona_id, ':a'=>$accidente_id]); return $q->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
@@ -109,12 +109,12 @@ function get_doc_occiso(PDO $pdo, $persona_id, $accidente_id){
 function get_abogado(PDO $pdo, $accidente_id, $persona_id){
   if(!$persona_id) return [];
   // Primero: abogado vinculado al accidente y persona
-  $q = $pdo->prepare("SELECT * FROM abogados WHERE accidente_id=:a AND persona_id=:p ORDER BY id DESC LIMIT 1");
+  $q = $pdo->prepare("SELECT * FROM abogados_activos WHERE accidente_id=:a AND persona_id=:p ORDER BY id DESC LIMIT 1");
   $q->execute([':a'=>$accidente_id, ':p'=>$persona_id]);
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if($row) return $row;
   // Segundo: Ãºltimo abogado de la persona (sin filtrar por accidente)
-  $q2 = $pdo->prepare("SELECT * FROM abogados WHERE persona_id=:p ORDER BY id DESC LIMIT 1");
+  $q2 = $pdo->prepare("SELECT * FROM abogados_activos WHERE persona_id=:p ORDER BY id DESC LIMIT 1");
   $q2->execute([':p'=>$persona_id]);
   return $q2->fetch(PDO::FETCH_ASSOC) ?: [];
 }
@@ -129,7 +129,7 @@ $sqlAcc = "
          c.nombre  AS comisaria_nombre,
          fa.nombre AS fiscalia_nombre,
          CONCAT(fi.nombres,' ',fi.apellido_paterno,' ',fi.apellido_materno) AS fiscal_nombre
-  FROM accidentes a
+  FROM accidentes_activos a
   LEFT JOIN ubigeo_departamento d ON d.cod_dep=a.cod_dep
   LEFT JOIN ubigeo_provincia  p ON p.cod_dep=a.cod_dep AND p.cod_prov=a.cod_prov
   LEFT JOIN ubigeo_distrito   t ON t.cod_dep=a.cod_dep AND t.cod_prov=a.cod_prov AND t.cod_dist=a.cod_dist
@@ -146,7 +146,7 @@ if(!$ACC){ http_response_code(404); echo "Accidente no encontrado"; exit; }
 /* Modalidades (pueden ser varias) */
 $q = $pdo->prepare("
   SELECT m.nombre
-    FROM accidente_modalidad am
+    FROM accidente_modalidad_activos am
     JOIN modalidad_accidente m ON m.id=am.modalidad_id
    WHERE am.accidente_id=:id
    ORDER BY m.nombre
@@ -160,7 +160,7 @@ $CONS = 'â€”';
 try{
   $qc=$pdo->prepare("
     SELECT c.nombre
-      FROM accidente_consecuencia ac
+      FROM accidente_consecuencia_activos ac
       JOIN consecuencia_accidente c ON c.id=ac.consecuencia_id
      WHERE ac.accidente_id=:id
      ORDER BY c.nombre
@@ -198,7 +198,7 @@ $sqlConductor = "
       mar.nombre AS veh_marca_nombre,
       modv.nombre AS veh_modelo_nombre
 
-  FROM involucrados_personas ip
+  FROM involucrados_personas_activos ip
   JOIN personas               p    ON p.id = ip.persona_id
   LEFT JOIN vehiculos         v    ON v.id = ip.vehiculo_id
 
@@ -229,7 +229,7 @@ $COND = $st->fetch(PDO::FETCH_ASSOC) ?: [];
            v.largo_mm, v.ancho_mm, v.alto_mm,
            tv.nombre AS tipo_vehiculo,
            cv.descripcion AS cat_vehiculo
-      FROM involucrados_personas ip
+      FROM involucrados_personas_activos ip
       JOIN personas p       ON p.id=ip.persona_id
       LEFT JOIN vehiculos v ON v.id=ip.vehiculo_id
       LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id
@@ -256,7 +256,7 @@ try{
     SELECT pv.*,
            p.id AS persona_id, p.nombres, p.apellido_paterno, p.apellido_materno,
            p.tipo_doc, p.num_doc, pv.ruc, pv.razon_social, pv.domicilio_fiscal, pv.tipo_propietario
-      FROM propietario_vehiculo pv
+      FROM propietario_vehiculo_activos pv
       LEFT JOIN personas p ON p.id = pv.propietario_persona_id
      WHERE pv.accidente_id=:acc
      ORDER BY pv.id DESC
@@ -271,7 +271,7 @@ $DOCV = [];
 
 /* 1) Por vehiculo_id (camino directo) */
 if (!empty($COND['vehiculo_id'])) {
-    $qd = $pdo->prepare("SELECT * FROM documento_vehiculo WHERE vehiculo_id=:veh ORDER BY id DESC LIMIT 1");
+    $qd = $pdo->prepare("SELECT * FROM documento_vehiculo_activos WHERE vehiculo_id=:veh ORDER BY id DESC LIMIT 1");
     $qd->execute([':veh'=>$COND['vehiculo_id']]);
     $DOCV = $qd->fetch(PDO::FETCH_ASSOC) ?: [];
 }
@@ -281,7 +281,7 @@ if (!$DOCV && !empty($COND['vehiculo_id'])) {
     // buscamos el 'involucrado_vehiculos.id' del vehÃ­culo de este accidente
     $qiv = $pdo->prepare("
         SELECT iv.id
-        FROM involucrados_vehiculos iv
+        FROM involucrados_vehiculos_activos iv
         WHERE iv.accidente_id = :acc AND iv.vehiculo_id = :veh
         ORDER BY iv.id DESC
         LIMIT 1
@@ -291,7 +291,7 @@ if (!$DOCV && !empty($COND['vehiculo_id'])) {
 
     if (!empty($iv['id'])) {
         $qd2 = $pdo->prepare("
-            SELECT * FROM documento_vehiculo
+            SELECT * FROM documento_vehiculo_activos
             WHERE involucrado_vehiculo_id = :iv
             ORDER BY id DESC
             LIMIT 1
@@ -307,7 +307,7 @@ if (!$DOCV && !empty($COND['vehiculo_id'])) {
 $sqlPeaton = "
   SELECT ip.id AS inv_id, ip.*, pr.Nombre AS rol_nombre,
          p.id AS persona_id, p.*
-    FROM involucrados_personas ip
+    FROM involucrados_personas_activos ip
     JOIN personas p ON p.id=ip.persona_id
     LEFT JOIN participacion_persona pr ON pr.Id=ip.rol_id
    WHERE ip.accidente_id=:id
@@ -325,7 +325,7 @@ $FAM = [];
 if (!empty($PEA['inv_id'])) {
   $sf=$pdo->prepare("
     SELECT ff.*, p.id AS persona_id, p.*
-      FROM familiar_fallecido ff
+      FROM familiar_fallecido_activos ff
       LEFT JOIN personas p ON p.id = ff.familiar_persona_id
      WHERE ff.accidente_id=:acc AND ff.fallecido_inv_id=:inv
      ORDER BY ff.id ASC LIMIT 1
@@ -344,7 +344,7 @@ $OCU = [];
 $stO=$pdo->prepare("
   SELECT ip.id AS inv_id, ip.*, pr.Nombre AS rol_nombre,
          p.id AS persona_id, p.*
-    FROM involucrados_personas ip
+    FROM involucrados_personas_activos ip
     LEFT JOIN participacion_persona pr ON pr.Id=ip.rol_id
     JOIN personas p ON p.id=ip.persona_id
    WHERE ip.accidente_id=:id
@@ -384,7 +384,7 @@ $DOC_RML_OCU     = get_rml($pdo, $OCU['persona_id'] ?? null, $accidente_id);
 =========================================================== */
 $ITP = [];
 try {
-  $q = $pdo->prepare("SELECT * FROM itp WHERE accidente_id = :acc ORDER BY id DESC LIMIT 1");
+  $q = $pdo->prepare("SELECT * FROM itp_activos WHERE accidente_id = :acc ORDER BY id DESC LIMIT 1");
   $q->execute([':acc'=>$accidente_id]);
   $ITP = $q->fetch(PDO::FETCH_ASSOC) ?: [];
 } catch (Throwable $e) {

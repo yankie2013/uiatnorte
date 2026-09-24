@@ -14,7 +14,7 @@ try {
   exit;
 }
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
 use PhpOffice\PhpWord\Settings;
 
 if (!class_exists(TemplateProcessor::class)) {
