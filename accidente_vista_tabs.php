@@ -7457,7 +7457,7 @@ $resumenInterventionRows = [
 <link rel="stylesheet" href="assets/css/user_topbar.css">
 <link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">
 </head>
-<body>
+<body class="uiat-case-view">
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
 <?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
