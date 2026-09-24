@@ -40,6 +40,8 @@ th{color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="bar">
     <h1>Dosajes</h1>

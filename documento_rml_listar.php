@@ -31,7 +31,9 @@ $returnTo = $_SERVER['REQUEST_URI'] ?? ('documento_rml_listar.php' . ($persona_i
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 8% -10%, rgba(136,170,255,.18), transparent 60%),radial-gradient(900px 500px at 92% -10%, rgba(136,170,255,.14), transparent 50%),var(--bg);color:var(--ink);font:13px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto}.wrap{max-width:980px;margin:20px auto;padding:0 14px}h1{margin:0 0 10px;font-size:22px;font-weight:900;letter-spacing:.2px;display:flex;align-items:center;gap:8px}.badge{font-size:11px;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:2px 8px;color:var(--muted);font-weight:800}.note{color:var(--muted);margin-bottom:10px;font-size:12px}.card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:var(--r);padding:12px;box-shadow:0 10px 26px rgba(0,0,0,.22)}.btn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:inherit;text-decoration:none;font-weight:800;cursor:pointer;height:34px}.btn.small{padding:6px 10px;height:32px;font-size:12.5px}.btn.micro{padding:3px 8px;height:auto;font-size:11.5px;border-radius:999px}.bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}.ok{background:#0c3f2d;color:#c6ffe3;border:1px solid #167a59;padding:8px 10px;border-radius:10px;margin:10px 0;font-size:13px}.empty{padding:14px 8px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:13px}th, td{border-bottom:1px solid var(--line);padding:8px;background:var(--panel)}th{color:var(--muted);text-align:left}tr:nth-child(even) td{background:rgba(255,255,255,.02)}.table-wrap{overflow:auto}
 </style>
 </head>
-<body><div class="wrap">
+<body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+<div class="wrap">
   <div class="bar">
     <h1>RML - Listado <span class="badge">documento_rml</span></h1>
     <div><a class="btn small" href="documento_rml_nuevo.php<?= $persona_id ? '?persona_id=' . $persona_id : '' ?>">Nuevo</a></div>

@@ -142,6 +142,8 @@ input:focus,select:focus,textarea:focus{ border-color:var(--primary); box-shadow
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="topbar">
     <h2>Documento Occiso - Nuevo</h2>

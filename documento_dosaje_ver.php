@@ -48,6 +48,8 @@ $persona = trim(($row['apellido_paterno'] ?? '') . ' ' . ($row['apellido_materno
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="hdr">
     <div class="ttl">Dosaje - Detalle</div>

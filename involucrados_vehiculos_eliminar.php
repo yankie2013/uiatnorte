@@ -77,6 +77,8 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <h1 style="margin-top:0">Eliminar involucrado de vehiculo #<?= (int)$id ?></h1>
   <?php if($error): ?><div class="err">Error: <?= h($error) ?></div><?php endif; ?>

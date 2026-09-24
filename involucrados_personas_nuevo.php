@@ -141,6 +141,8 @@ textarea{min-height:60px; resize:vertical}
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <h1 class="title">Nuevo involucrado – Persona</h1>
   <div class="subtitle">Busca por DNI; si no existe, regístrala y se autocompleta.</div>

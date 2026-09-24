@@ -61,260 +61,104 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Iniciar sesión · UIAT Norte</title>
+<title>Acceso · Investigación de Accidentes de Tránsito Lima Norte</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style_gian.css">
-<style>
-  :root{
-    color-scheme: light dark;
-    --bg1: rgba(99,102,241,.18);
-    --bg2: rgba(16,185,129,.18);
-    --card: rgba(255,255,255,.80);
-    --line: rgba(0,0,0,.12);
-    --fg: #0f172a;
-    --muted: rgba(15,23,42,.65);
-    --ring: rgba(99,102,241,.40);
-    --accent: #4f46e5;
-    --accent-weak: rgba(79,70,229,.12);
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --card: rgba(26,32,44,.78);
-      --line: rgba(255,255,255,.16);
-      --fg: #e5e7eb;
-      --muted: rgba(229,231,235,.72);
-      --ring: rgba(99,102,241,.35);
-      --accent: #6366f1;
-      --accent-weak: rgba(99,102,241,.12);
-    }
-  }
-
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; display:grid; place-items:center; padding:24px; color:var(--fg);
-    font-family: system-ui, -apple-system, Segoe UI, Roboto;
-    background:
-      radial-gradient(1200px 600px at 12% 10%, var(--bg1), transparent 60%),
-      radial-gradient(1200px 600px at 88% 90%, var(--bg2), transparent 60%);
-  }
-
-  .shell{
-    width:min(1080px, 96vw);
-    display:grid; grid-template-columns: 1.25fr 1fr; gap:22px;
-  }
-  @media (max-width: 980px){ .shell{ grid-template-columns: 1fr; } }
-
-  .panel{
-    background:var(--card); border:1px solid var(--line); border-radius:20px;
-    backdrop-filter: blur(14px); overflow:hidden;
-    box-shadow: 0 18px 40px rgba(0,0,0,.14);
-  }
-
-  .left{
-    padding:28px 28px 0 28px; min-height:340px;
-    display:flex; flex-direction:column; justify-content:center; gap:18px;
-  }
-  .brand{ display:flex; align-items:center; gap:12px; }
-  .logo{
-    width:46px; height:46px; border-radius:12px; border:1px solid var(--line);
-    display:grid; place-items:center; font-weight:900; background:rgba(255,255,255,.6);
-  }
-  .badge{
-    display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
-    border-radius:999px; border:1px solid var(--line); background:var(--accent-weak); font-weight:700;
-  }
-  .title{ font-size:1.9rem; line-height:1.2; font-weight:850; margin:4px 0 0 }
-  .sub{ color:var(--muted); margin:0 }
-
-  .right{ padding:0; border-left:1px solid var(--line); }
-  @media (max-width:980px){ .right{ border-left:none; border-top:1px solid var(--line); } }
-
-  .card{
-    padding:26px; max-width:520px; margin:0 auto;
-    display:flex; flex-direction:column; gap:14px;
-  }
-  .hdr{ display:flex; flex-direction:column; gap:6px; }
-  .hdr h1{ margin:0; font-size:1.22rem; }
-  .hint{ color:var(--muted); font-size:.95rem; }
-
-  /* Form */
-  form{ display:grid; gap:16px; }
-  .field{ position:relative; }
-  .control{
-    width:100%; background:transparent; color:var(--fg);
-    border:1px solid var(--line); border-radius:12px;
-    padding:16px 44px 10px 14px; font-size:1rem; line-height:1.2;
-    outline:none; transition: box-shadow .15s ease, border-color .15s ease, transform .05s ease;
-  }
-  .control:focus{ box-shadow:0 0 0 5px var(--ring); border-color:transparent; transform: translateY(-1px); }
-  .label{
-    position:absolute; left:14px; top:12px; pointer-events:none;
-    font-size:.96rem; color:var(--muted); transition: all .15s ease;
-    background:transparent;
-  }
-  .control:not(:placeholder-shown) + .label,
-  .control:focus + .label{
-    top:-9px; left:10px; padding:0 6px; font-size:.78rem;
-    background:var(--card);
-    border-radius:6px; border:1px solid var(--line);
-  }
-
-  .toggle{
-    position:absolute; right:8px; top:50%; transform:translateY(-50%);
-    border:1px solid var(--line); background:transparent; color:inherit;
-    border-radius:10px; padding:6px 10px; cursor:pointer; font-size:.9rem;
-  }
-
-  .caps{ display:none; color:#ea580c; font-size:.92rem; }
-
-  .msg-err{
-    display:flex; align-items:center; gap:8px;
-    border:1px solid #ef4444aa; color:#ef4444; padding:10px 12px; border-radius:12px;
-    background: transparent;
-  }
-  .msg-info{
-    border:1px solid rgba(37,99,235,.35); color:var(--fg); padding:11px 12px; border-radius:12px;
-    background:rgba(37,99,235,.10); line-height:1.4;
-  }
-
-  .actions{ display:grid; gap:10px; }
-  .btn{
-    display:inline-grid; place-items:center;
-    background:var(--accent); color:#fff; font-weight:800; letter-spacing:.2px;
-    border:none; border-radius:12px; padding:14px 14px; cursor:pointer;
-    transition: transform .06s ease, filter .15s ease;
-  }
-  .btn:hover{ filter:brightness(1.05); }
-  .btn:active{ transform: translateY(1px); }
-  .btn[disabled]{ opacity:.65; cursor:not-allowed; }
-
-  .btn .spinner{
-    width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.45);
-    border-top-color:#fff; animation: spin .8s linear infinite; display:none;
-  }
-  .btn.loading .txt{ display:none; }
-  .btn.loading .spinner{ display:inline-block; }
-
-  .footrow{
-    display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
-  }
-  .check{ display:flex; align-items:center; gap:8px; color:var(--muted); }
-  .link{ color:inherit; text-underline-offset:3px; }
-
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-</style>
+<meta name="theme-color" content="#142f2a">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/login.css?v=2">
 </head>
 <body>
-
-<div class="shell panel">
-  <!-- IZQUIERDA: branding y mensaje -->
-  <section class="left">
-    <div class="brand">
-      <div class="logo">U</div>
-      <div>
-        <span class="badge">UIAT Norte</span>
-      </div>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></symbol>
+</svg>
+<main class="login-shell">
+  <section class="welcome" aria-labelledby="welcome-title">
+    <div class="institution"><span class="institution-line"></span> POLICÍA NACIONAL DEL PERÚ</div>
+    <div class="division-brand">
+      <div class="emblem"><img src="assets/img/divpiat-logo.jpg" width="244" height="206" alt="Emblema de la DIVPIAT, Policía Nacional del Perú"></div>
+      <div class="division-name"><strong>DIVPIAT</strong><span>División de Prevención e Investigación<br>de Accidentes de Tránsito</span></div>
     </div>
-    <h2 class="title">Bienvenido al sistema<br>de Gestión UIAT Norte</h2>
-    <p class="sub">Accede con tus credenciales institucionales para continuar.</p>
+    <div class="welcome-copy">
+      <span class="eyebrow">SISTEMA DE GESTIÓN DE LA INFORMACIÓN</span>
+      <h1 id="welcome-title">Departamento de<br>Investigación de<br>Accidentes de Tránsito</h1>
+      <div class="location"><span></span> Lima Norte</div>
+      <p>Información organizada para fortalecer<br class="desktop-break"> la investigación y el trabajo policial.</p>
+    </div>
+    <div class="welcome-footer"><svg class="icon"><use href="#i-file"/></svg><span>Gestión documental <b>·</b> Seguimiento de investigaciones</span></div>
   </section>
-
-  <!-- DERECHA: formulario -->
-  <section class="right">
-    <div class="card">
-      <div class="hdr">
-        <h1>Iniciar sesión</h1>
-        <div class="hint">Ingresa tu correo y contraseña para entrar al panel.</div>
-      </div>
-
-      <?php if ($err): ?>
-        <div class="msg-err">⚠️ <?= h($err) ?></div>
-      <?php endif; ?>
-      <?php if ($flash): ?>
-        <div class="msg-info"><?= h($flash) ?></div>
-      <?php endif; ?>
-
-      <form method="post" autocomplete="off" id="loginForm">
-        <!-- EMAIL -->
+  <section class="login-panel" aria-labelledby="login-title">
+    <div class="panel-top"><svg class="icon"><use href="#i-lock"/></svg> ACCESO INSTITUCIONAL</div>
+    <div class="form-container">
+      <span class="form-icon"><svg class="icon"><use href="#i-lock"/></svg></span>
+      <div class="form-heading"><span class="form-eyebrow">TU ESPACIO DE TRABAJO</span><h2 id="login-title">Bienvenido al sistema</h2><p>Ingresa tus credenciales para continuar<br>con la gestión de la información.</p></div>
+      <?php if ($err): ?><div class="message error" role="alert"><?= h($err) ?></div><?php endif; ?>
+      <?php if ($flash): ?><div class="message info" role="status"><?= h($flash) ?></div><?php endif; ?>
+      <form method="post" id="loginForm">
         <div class="field">
-          <input class="control" type="text" name="email" id="email"
-                 value="<?= h($email) ?>" placeholder=" " required
-                 pattern="[^@\s]+@[^@\s]+" title="Formato: usuario@dominio">
-          <label class="label" for="email">Correo</label>
+          <label for="email">Correo institucional</label>
+          <div class="input-wrap"><svg class="icon input-icon"><use href="#i-mail"/></svg><input type="text" name="email" id="email" value="<?= h($email) ?>" placeholder="Ingresa tu correo" required pattern="[^@\s]+@[^@\s]+" title="Formato: usuario@dominio" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
         </div>
-
-        <!-- PASSWORD -->
         <div class="field">
-          <input class="control" type="password" name="password" id="password" placeholder=" " required>
-          <label class="label" for="password">Contraseña</label>
-          <button type="button" class="toggle" id="togglePwd" aria-label="Mostrar/ocultar contraseña">👁️</button>
+          <label for="password">Contraseña</label>
+          <div class="input-wrap"><svg class="icon input-icon"><use href="#i-lock"/></svg><input type="password" name="password" id="password" placeholder="Ingresa tu contraseña" required autocomplete="current-password" aria-describedby="capsWarning"><button type="button" class="toggle" id="togglePwd" aria-label="Mostrar contraseña" aria-pressed="false"><svg class="icon"><use href="#i-eye"/></svg></button></div>
         </div>
-
-        <div class="caps" id="capsWarning">Bloq Mayús activado</div>
-
-        <!-- BOTÓN -->
-        <div class="actions">
-          <button class="btn" type="submit" id="submitBtn">
-            <span class="txt">Ingresar</span>
-            <span class="spinner" aria-hidden="true"></span>
-          </button>
-        </div>
-
-        <div class="footrow">
-          <label class="check">
-            <input type="checkbox" id="remember" style="accent-color:var(--accent)">
-            Recordar correo
-          </label>
-          <a class="link hint" href="#" onclick="alert('Pide al administrador restablecer tu clave.');return false;">¿Olvidaste tu contraseña?</a>
-        </div>
+        <p class="caps" id="capsWarning" role="status" hidden>Bloq Mayús está activado.</p>
+        <div class="form-options"><label class="remember"><input type="checkbox" id="remember"> Recordar correo</label><button type="button" class="help-link" id="helpBtn" aria-expanded="false" aria-controls="recoveryHelp">¿Olvidaste tu contraseña?</button></div>
+        <p class="recovery-help" id="recoveryHelp" hidden>Contacta al administrador del sistema para restablecer tu contraseña.</p>
+        <button class="submit" type="submit" id="submitBtn"><span class="txt">Iniciar sesión</span><svg class="icon arrow"><use href="#i-arrow"/></svg><span class="spinner" aria-hidden="true"></span></button>
       </form>
+      <div class="access-note"><svg class="icon"><use href="#i-shield"/></svg><span>Acceso exclusivo para personal autorizado.</span></div>
     </div>
+    <footer class="panel-footer"><span>DIVPIAT <b>/</b> Lima Norte</span><span>Gestión de la información</span></footer>
   </section>
-</div>
-
+</main>
 <script>
-  // Mostrar/ocultar contraseña
   const pwd = document.getElementById('password');
-  const btn = document.getElementById('togglePwd');
-  btn.addEventListener('click', () => {
-    const is = pwd.type === 'password';
-    pwd.type = is ? 'text' : 'password';
-    btn.textContent = is ? '🙈' : '👁️';
+  const toggle = document.getElementById('togglePwd');
+  toggle.addEventListener('click', () => {
+    const visible = pwd.type === 'password';
+    pwd.type = visible ? 'text' : 'password';
+    toggle.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    toggle.setAttribute('aria-pressed', String(visible));
   });
-
-  // Bloq Mayús
   const caps = document.getElementById('capsWarning');
-  pwd.addEventListener('keyup', e => {
-    const on = e.getModifierState && e.getModifierState('CapsLock');
-    caps.style.display = on ? 'block' : 'none';
+  ['keydown', 'keyup'].forEach(event => pwd.addEventListener(event, e => {
+    caps.hidden = !(e.getModifierState && e.getModifierState('CapsLock'));
+  }));
+  pwd.addEventListener('blur', () => { caps.hidden = true; });
+  const help = document.getElementById('helpBtn');
+  help.addEventListener('click', () => {
+    const panel = document.getElementById('recoveryHelp');
+    panel.hidden = !panel.hidden;
+    help.setAttribute('aria-expanded', String(!panel.hidden));
   });
-
-  // Recordar correo en localStorage
   const remember = document.getElementById('remember');
-  const emailInput = document.getElementById('email');
-  (function initRemember(){
-    try{
-      const saved = localStorage.getItem('uiat_email');
-      if (saved) { emailInput.value = saved; remember.checked = true; emailInput.dispatchEvent(new Event('input')); }
-    }catch(_){}
-  })();
-
-  document.getElementById('loginForm').addEventListener('submit', () => {
-    const sb = document.getElementById('submitBtn');
-    sb.classList.add('loading'); sb.setAttribute('disabled','disabled');
-    try{
-      if (remember.checked) localStorage.setItem('uiat_email', emailInput.value.trim());
+  const email = document.getElementById('email');
+  try {
+    const saved = localStorage.getItem('uiat_email');
+    if (saved) { if (!email.value) email.value = saved; remember.checked = true; }
+  } catch (_) {}
+  const form = document.getElementById('loginForm');
+  const submit = document.getElementById('submitBtn');
+  form.addEventListener('submit', () => {
+    submit.classList.add('loading'); submit.disabled = true;
+    submit.querySelector('.txt').textContent = 'Ingresando…';
+    form.setAttribute('aria-busy', 'true');
+    try {
+      if (remember.checked) localStorage.setItem('uiat_email', email.value.trim());
       else localStorage.removeItem('uiat_email');
-    }catch(_){}
+    } catch (_) {}
   });
-
-  // Dispara label flotante al cargar si hay valor
-  document.querySelectorAll('.control').forEach(el=>{
-    if(el.value) el.dispatchEvent(new Event('input'));
-    el.addEventListener('input', ()=>{ /* placeholder flotante ya controlado por CSS */ });
+  window.addEventListener('pageshow', () => {
+    submit.classList.remove('loading'); submit.disabled = false;
+    submit.querySelector('.txt').textContent = 'Iniciar sesión';
+    form.removeAttribute('aria-busy');
   });
 </script>
-
 </body>
 </html>

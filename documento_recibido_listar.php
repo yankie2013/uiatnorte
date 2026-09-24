@@ -44,6 +44,8 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.95rem}thead 
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="head">
     <div><div style="font-weight:700;font-size:1.05rem;">Documentos recibidos</div><div class="small">Listado general del modulo.</div></div>

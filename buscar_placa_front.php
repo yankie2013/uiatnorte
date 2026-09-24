@@ -16,6 +16,8 @@ require_login();
   </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 
 <h2>Buscar placa</h2>
 

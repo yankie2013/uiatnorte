@@ -133,6 +133,8 @@ textarea{ min-height:96px; resize:vertical; }
 </style>
 </head>
 <body class="p">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 
 <?php if ($guardado && $nuevo_id): ?>
   <div class="alert success">Documento creado (#<?=h($nuevo_id)?>) para el involucrado vehiculo #<?=h($invol_id)?>.</div>

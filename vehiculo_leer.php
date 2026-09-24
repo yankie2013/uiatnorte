@@ -175,6 +175,8 @@ $subtitulo = trim(
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="top">
     <div class="title">

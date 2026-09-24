@@ -90,7 +90,9 @@ textarea{min-height:84px; resize:vertical}
 .bar{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px}
 </style>
 
-</head><body><div class="wrap">
+</head><body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+<div class="wrap">
   <div class="bar">
     <h1>RML - Nuevo</h1>
     <div class="rowin">

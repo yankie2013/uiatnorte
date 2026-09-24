@@ -45,6 +45,8 @@ if ($returnTo === '') {
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
 <div class="head"><div><p class="eyebrow">Documentos recibidos</p><h1>Documento recibido #<?= (int)$row['id'] ?></h1></div><span class="state"><?= h($row['estado']) ?: 'Sin estado' ?></span></div>
 <div class="detail-grid">

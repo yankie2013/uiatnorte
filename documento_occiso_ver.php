@@ -85,6 +85,8 @@ function summary_list_html($value): string {
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="bar">
     <a class="btn small" href="<?= $return_to ? h($return_to) : 'javascript:history.back()' ?>"><?= $embed ? 'Cerrar' : 'Volver' ?></a>

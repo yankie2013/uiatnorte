@@ -69,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="stylesheet" href="style_mushu.css">
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="bar">
     <h1>Nueva Manifestacion<?= $rol_pref ? ' - ' . h($rol_pref) : '' ?></h1>

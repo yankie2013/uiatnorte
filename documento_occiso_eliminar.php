@@ -69,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['confirm'] ?? '') === '1') 
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <h1>Eliminar documento de occiso #<?= (int)$id ?></h1>
   <?php if($error): ?><div class="err">Error: <?= h($error) ?></div><?php endif; ?>

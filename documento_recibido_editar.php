@@ -52,6 +52,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
 <h1 style="margin-top:0">Editar Documento Recibido #<?= (int)$id ?></h1>
 <?php if($errores): ?><div class="error"><?php foreach($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div><?php endif; ?>

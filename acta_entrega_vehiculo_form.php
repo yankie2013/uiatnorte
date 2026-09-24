@@ -61,6 +61,8 @@ $ctx = $service->context($accidenteId);
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="head">
     <div><h1 style="margin:0;font-size:1.25rem"><?= $id > 0 ? 'Editar' : 'Nueva' ?> acta de entrega de vehiculo</h1><div class="help">Selecciona la placa e indica la hora de entrega.</div></div>

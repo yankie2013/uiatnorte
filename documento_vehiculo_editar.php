@@ -104,6 +104,8 @@ input[type="text"],input[type="date"],textarea{ width:100%; padding:10px 12px; b
 </style>
 </head>
 <body class="p">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 
 <?php if ($guardado): ?>
   <div class="alert success">Documento actualizado (#<?=h($id)?>).</div>

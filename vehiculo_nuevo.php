@@ -160,6 +160,8 @@ if (window.parent && window.parent !== window) {
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="card">
     <div class="hdr">

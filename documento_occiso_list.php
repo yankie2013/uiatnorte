@@ -52,6 +52,8 @@ th{opacity:.8;font-size:12px}
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="bar">
     <a class="btn small" href="<?= $embed ? h($baseReturn) : 'javascript:history.back()' ?>"><?= $embed ? 'Cerrar' : 'Volver' ?></a>

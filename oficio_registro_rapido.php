@@ -79,6 +79,8 @@ body{margin:0;background:var(--page);color:var(--text);font-family:Inter,system-
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="head">
     <div><h1>Nuevo oficio - registro rapido</h1><div class="muted">Solo registra los datos esenciales del oficio.</div></div>

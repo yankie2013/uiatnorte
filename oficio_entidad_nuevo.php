@@ -61,6 +61,8 @@ function closeModalMaybe(){ if(window.parent && typeof window.parent.closeModal=
 </script>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="toolbar">
     <h1 style="margin:0;">Nueva entidad</h1>

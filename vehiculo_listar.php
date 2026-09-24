@@ -47,6 +47,8 @@ $returnTo = $_SERVER['REQUEST_URI'] ?? 'vehiculo_listar.php';
 </style>
 </head>
 <body>
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
 <div class="wrap">
   <div class="card" style="max-width:1250px;">
     <div class="hdr">
