@@ -13648,12 +13648,38 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   tabs.setAttribute('aria-orientation', 'vertical');
   details.open = false;
   participantPane?.classList.add('show-participants-overview');
+  const activateModuleTab = (trigger) => {
+    if (!trigger) return;
+    const targetSelector = trigger.getAttribute('data-bs-target');
+    const targetPane = targetSelector ? page.querySelector(targetSelector) : null;
+    if (!targetPane) return;
+    const previous = tabs.querySelector('.nav-link.active');
+    tabs.querySelectorAll('.nav-link').forEach((button) => {
+      const selected = button === trigger;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+    page.querySelectorAll('.tabs-shell-main .tab-pane').forEach((pane) => pane.classList.remove('show', 'active'));
+    targetPane.classList.add('show', 'active');
+    targetPane.dispatchEvent(new CustomEvent('shown.bs.tab', {
+      bubbles: true,
+      detail: { relatedTarget: previous && previous !== trigger ? previous : null }
+    }));
+  };
+  // Cambiar paneles localmente: la vista sigue funcionando aunque Bootstrap JS
+  // no cargue en producción o su CDN esté inaccesible.
+  tabs.addEventListener('click', (event) => {
+    const trigger = event.target.closest('.nav-link[data-bs-target]');
+    if (!trigger || !tabs.contains(trigger)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    activateModuleTab(trigger);
+  });
   summary.addEventListener('click', (event) => {
     event.preventDefault();
     participantPane?.classList.add('show-participants-overview');
-    if (participantTab && window.bootstrap?.Tab) {
-      bootstrap.Tab.getOrCreateInstance(participantTab).show();
-    }
+    activateModuleTab(participantTab);
   });
   document.addEventListener('click', (event) => {
     if (event.target.closest('.js-sidebar-view-person')) participantPane?.classList.remove('show-participants-overview');
