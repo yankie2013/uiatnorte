@@ -4,12 +4,36 @@ declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require dirname(__DIR__, 2).'/bootstrap/app.php';
 $p = App\Database\Database::connection();
+$options = getopt('', ['owner:', 'schema-only', 'apply']);
+$schemaOnly = isset($options['schema-only']);
+if ($schemaOnly && isset($options['owner'])) {
+    throw new RuntimeException('--schema-only no admite --owner: no reasigna expedientes.');
+}
+if ($schemaOnly && !isset($options['apply'])) {
+    echo "PLAN: completar columnas y tablas multiusuario, índice CIP, vistas, funciones y triggers de permisos.\n";
+    echo "Conserva filas, contraseñas, roles y responsables existentes. No rellena documentos históricos.\n";
+    echo "Los expedientes sin responsable seguirán sin responsable; un administrador deberá asignarlos desde la aplicación.\n";
+    echo "DDL no es transaccional: use respaldo y ventana de mantenimiento. Ejecute con --schema-only --apply para aplicar.\n";
+    exit;
+}
+// Validar antes del primer DDL para no instalar permisos sin una cuenta administradora.
+if ($schemaOnly) {
+    if (!$p->query("SELECT COUNT(*) FROM usuarios WHERE activo=1 AND rol='admin'")->fetchColumn()) {
+        throw new RuntimeException('No hay administrador activo con rol admin. No se modificó la base; revise los roles antes de migrar.');
+    }
+    $hasCip = $p->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='usuarios' AND column_name='cip'")->fetchColumn();
+    if ($hasCip && $p->query("SELECT COUNT(*) FROM (SELECT cip FROM usuarios WHERE cip IS NOT NULL GROUP BY cip HAVING COUNT(*)>1) duplicados")->fetchColumn()) {
+        throw new RuntimeException('CIP duplicados: no se modificó la base. Deben revisarse antes de crear el índice único.');
+    }
+}
 $p->exec('SET @rbac_migration = 1');
-$options = getopt('', ['owner:']);
+try {
 $owner = (int)($options['owner'] ?? 0);
+if (!$schemaOnly) {
 $st=$p->prepare('SELECT id,nombre FROM usuarios WHERE id=?');$st->execute([$owner]);
 $person=$st->fetch();
 if (!$person || !preg_match('/giancarlo.*merino.*sancho/i',$person['nombre'])) throw new RuntimeException('Indique el ID verificado del usuario Giancarlo Merino Sancho con --owner.');
+}
 function column(PDO $p,string $t,string $n,string $definition): void {
     $s=$p->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');$s->execute([$t,$n]);
     if (!$s->fetchColumn()) $p->exec("ALTER TABLE `$t` ADD COLUMN `$n` $definition");
@@ -26,7 +50,7 @@ $p->exec("CREATE TABLE IF NOT EXISTS auditoria (id BIGINT AUTO_INCREMENT PRIMARY
 // Las actas forman parte de los expedientes y deben existir antes de proteger sus escrituras.
 foreach(['2026-06-11_actas.sql','2026-06-12_actas_visualizacion.sql'] as $file) $p->exec(file_get_contents(dirname(__DIR__).'/sql/'.$file));
 foreach(['personas','vehiculos'] as $table) column($p,$table,'creado_por','INT NULL');
-if (!$done) {
+if (!$schemaOnly && !$done) {
     $p->beginTransaction();
     try {
         $p->prepare("UPDATE usuarios SET nombre='Giancarlo Jorge MERINO SANCHO',rol='jefe_emi',grado='ST3.PNP',cargo='JEFE EMI',unidad='DEPIAT' WHERE id=?")->execute([$owner]);
@@ -39,12 +63,20 @@ if (!$done) {
 }
 foreach(['oficios','actas','actas_visualizacion','citacion','Manifestacion'] as $table) {
     column($p,$table,'responsable_documento','JSON NULL');
-    $p->exec("UPDATE `$table` d JOIN accidentes a ON a.id=d.accidente_id JOIN usuarios u ON u.id=a.responsable_id SET d.responsable_documento=JSON_OBJECT('nombre',u.nombre,'grado',u.grado,'cip',u.cip,'cargo',u.cargo,'unidad',u.unidad,'telefono',u.telefono,'email',u.email) WHERE d.responsable_documento IS NULL");
+    if (!$schemaOnly) $p->exec("UPDATE `$table` d JOIN accidentes a ON a.id=d.accidente_id JOIN usuarios u ON u.id=a.responsable_id SET d.responsable_documento=JSON_OBJECT('nombre',u.nombre,'grado',u.grado,'cip',u.cip,'cargo',u.cargo,'unidad',u.unidad,'telefono',u.telefono,'email',u.email) WHERE d.responsable_documento IS NULL");
 }
 $p->exec('ALTER TABLE accidentes MODIFY fecha_accidente DATETIME NULL');
 $p->exec('CREATE OR REPLACE VIEW accidentes_activos AS SELECT * FROM accidentes WHERE eliminado_en IS NULL');
 require __DIR__.'/multiusuario_views.php';
 require __DIR__.'/acceso_cip_schema.php';
 require __DIR__.'/multiusuario_triggers.php';
-$p->exec('SET @rbac_migration = NULL');
-echo "Migración completa. Responsable histórico: usuario $owner.\n";
+} finally {
+    $p->exec('SET @rbac_migration = NULL');
+}
+if ($schemaOnly) {
+    $unassigned = $p->query('SELECT COUNT(*) FROM accidentes WHERE responsable_id IS NULL')->fetchColumn();
+    echo "Estructura multiusuario instalada. No se reasignaron expedientes ni se cambiaron roles o contraseñas.\n";
+    echo "Expedientes sin responsable: $unassigned. Asignarlos desde una cuenta administradora según corresponda.\n";
+} else {
+    echo "Migración completa. Responsable histórico: usuario $owner.\n";
+}
