@@ -39,8 +39,18 @@ final class Database
         // La identidad se toma de la sesión; nunca de parámetros del formulario.
         $actorId = (int) ($_SESSION['user']['id'] ?? 0);
         $identity = false;
+        $columns = [];
+        $available = [];
         if ($actorId > 0) {
-            $actor = self::$connection->prepare('SELECT id, nombre, grado, email, rol, activo, must_change_password, auth_version FROM usuarios WHERE id=?');
+            $columns = self::$connection->query("SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='usuarios'")->fetchAll(PDO::FETCH_COLUMN);
+            $available = array_fill_keys($columns, true);
+        }
+        if ($actorId > 0) {
+            $select = ['id', 'nombre', 'email', 'rol', 'activo'];
+            foreach (['grado', 'must_change_password', 'auth_version'] as $optional) {
+                $select[] = isset($available[$optional]) ? "`$optional`" : "0 AS `$optional`";
+            }
+            $actor = self::$connection->prepare('SELECT ' . implode(',', $select) . ' FROM usuarios WHERE id=?');
             $actor->execute([$actorId]);
             $identity = $actor->fetch();
         }
