@@ -13599,7 +13599,10 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   const people = page?.querySelector('.case-header-people');
   const tabs = document.getElementById('accTabs');
   const participantTab = document.getElementById('participantes-tab');
-  if (!page || !people || !tabs || !participantTab) return;
+  const participantPane = document.getElementById('participantes');
+  // La columna lateral y las pestañas no deben depender del botón de pestaña
+  // Participantes: en algunas versiones del marcado ese botón está ausente.
+  if (!page || !people || !tabs) return;
   const sidebar = document.createElement('aside');
   sidebar.className = 'case-module-sidebar';
   sidebar.setAttribute('aria-label', 'Secciones del accidente');
@@ -13644,15 +13647,16 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
 
   tabs.setAttribute('aria-orientation', 'vertical');
   details.open = false;
-  const participantPane = document.getElementById('participantes');
-  participantPane.classList.add('show-participants-overview');
+  participantPane?.classList.add('show-participants-overview');
   summary.addEventListener('click', (event) => {
     event.preventDefault();
-    participantPane.classList.add('show-participants-overview');
-    bootstrap.Tab.getOrCreateInstance(participantTab).show();
+    participantPane?.classList.add('show-participants-overview');
+    if (participantTab && window.bootstrap?.Tab) {
+      bootstrap.Tab.getOrCreateInstance(participantTab).show();
+    }
   });
   document.addEventListener('click', (event) => {
-    if (event.target.closest('.js-sidebar-view-person')) participantPane.classList.remove('show-participants-overview');
+    if (event.target.closest('.js-sidebar-view-person')) participantPane?.classList.remove('show-participants-overview');
   }, true);
   details.addEventListener('toggle', () => {
     arrow.setAttribute('aria-expanded', String(details.open));
