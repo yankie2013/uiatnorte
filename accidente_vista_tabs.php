@@ -13640,7 +13640,9 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
       page.classList.toggle('case-sticky-ready', enoughSpace);
       page.style.setProperty('--case-sticky-offset', (enoughSpace ? headerHeight + 20 : 12) + 'px');
     };
-    new ResizeObserver(updateStickyLayout).observe(caseFacts);
+    if ('ResizeObserver' in window) {
+      new ResizeObserver(updateStickyLayout).observe(caseFacts);
+    }
     window.addEventListener('resize', updateStickyLayout);
     updateStickyLayout();
   }
@@ -13676,6 +13678,7 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
     event.stopPropagation();
     activateModuleTab(trigger);
   });
+  activateModuleTab(tabs.querySelector('.nav-link.active'));
   summary.addEventListener('click', (event) => {
     event.preventDefault();
     participantPane?.classList.add('show-participants-overview');
