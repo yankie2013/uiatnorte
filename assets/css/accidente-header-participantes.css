@@ -514,7 +514,7 @@ html[data-theme-resolved="dark"] .participants-overview .overview-related-people
 
 /* Sin franja superior: navegación y contenido siguen al resumen. */
 .case-overview-layout > .case-module-sidebar,
-.case-overview-layout > .tabs-shell-main {grid-row:2}
+.case-overview-layout > .tabs-shell-main {grid-row:3}
 @media(max-width:900px){.case-overview-layout > .tabs-shell-main {grid-row:3}}
 
 .case-overview-layout .case-facts-scroll > .case-facts-card {align-self:stretch}
