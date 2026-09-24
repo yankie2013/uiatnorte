@@ -12,6 +12,18 @@ function lower_u(string $value): string {
   return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
 }
 
+function active_table(PDO $pdo, string $table): string {
+  static $cache = [];
+  if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/D', $table)) throw new InvalidArgumentException('Tabla no válida.');
+  $active = $table . '_activos';
+  if (!array_key_exists($active, $cache)) {
+    $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+    $st->execute([$active]);
+    $cache[$active] = (int) $st->fetchColumn() > 0;
+  }
+  return '`' . ($cache[$active] ? $active : $table) . '`';
+}
+
 function modalidades_oracion(array $modalidades): string {
   $items = array_values(array_filter(array_map(
     static fn($value) => lower_u(trim((string)$value)),
@@ -132,8 +144,9 @@ function involucrado_icono_resumen(?string $rol, ?string $tipoVehiculo): string 
 }
 
 function occupied_folder_map(PDO $pdo): array {
+  $accidentTable = active_table($pdo, 'accidentes');
   $sql = "SELECT id, folder
-            FROM accidentes_activos
+            FROM {$accidentTable}
            WHERE folder BETWEEN 1 AND 20
              AND COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') <> 'Resuelto'";
   $map = [];
@@ -198,14 +211,14 @@ if (($_POST['ajax'] ?? '') === 'folder') {
   } else {
     $n = (int)$raw;
     if ($n>=1 && $n<=20) {
-      $currentStatus = $pdo->prepare("SELECT COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') FROM accidentes_activos WHERE id = ? LIMIT 1");
+      $currentStatus = $pdo->prepare("SELECT COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') FROM {$accidentTable} WHERE id = ? LIMIT 1");
       $currentStatus->execute([$id]);
       if ((string)$currentStatus->fetchColumn() === 'Resuelto') {
         echo json_encode(['ok'=>false,'msg'=>'No se asigna folder a accidentes resueltos.']);
         exit;
       }
       $occupied = $pdo->prepare("SELECT id
-                                   FROM accidentes_activos
+                                   FROM {$accidentTable}
                                   WHERE folder = ?
                                     AND id <> ?
                                     AND COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') <> 'Resuelto'
@@ -293,10 +306,15 @@ $vehiculo  = trim($_GET['vehiculo'] ?? '');
 $registro_sidpol = trim($_GET['registro_sidpol'] ?? ''); // <-- NUEVO
 $nro_informe_policial = trim($_GET['nro_informe_policial'] ?? '');
 $workspaceScope = \App\Support\Access::workspacePredicate('a');
+$accidentTable = active_table($pdo, 'accidentes');
+$diligenceTable = active_table($pdo, 'diligencias_pendientes');
+$personLinkTable = active_table($pdo, 'involucrados_personas');
+$vehicleLinkTable = active_table($pdo, 'involucrados_vehiculos');
+$modalityLinkTable = active_table($pdo, 'accidente_modalidad');
 $anio = trim((string)($_GET['anio'] ?? ''));
 $aniosDisponibles = array_map(
   static fn($value) => (string)$value,
-  $pdo->query("SELECT DISTINCT YEAR(fecha_accidente) AS anio FROM accidentes_activos a WHERE fecha_accidente IS NOT NULL AND ($workspaceScope) ORDER BY anio DESC")->fetchAll(PDO::FETCH_COLUMN)
+  $pdo->query("SELECT DISTINCT YEAR(fecha_accidente) AS anio FROM {$accidentTable} a WHERE fecha_accidente IS NOT NULL AND ($workspaceScope) ORDER BY anio DESC")->fetchAll(PDO::FETCH_COLUMN)
 );
 if ($anio !== '' && (!preg_match('/^\d{4}$/', $anio) || !in_array($anio, $aniosDisponibles, true))) {
   $anio = '';
@@ -368,7 +386,7 @@ $sqlComisariasDistrito = "SELECT c.id, c.nombre AS comisaria, d.nombre AS distri
                               ON d.cod_dep = cd.cod_dep
                              AND d.cod_prov = cd.cod_prov
                              AND d.cod_dist = cd.cod_dist
-                       LEFT JOIN accidentes_activos a ON a.comisaria_id = c.id AND ($workspaceScope)
+                       LEFT JOIN {$accidentTable} a ON a.comisaria_id = c.id AND ($workspaceScope)
                         GROUP BY c.id, c.nombre, d.nombre
                         ORDER BY COALESCE(d.nombre, 'Sin distrito asignado'), c.nombre";
 foreach ($pdo->query($sqlComisariasDistrito)->fetchAll(PDO::FETCH_ASSOC) as $comisariaDistrito) {
@@ -420,7 +438,7 @@ $clearFiltersUrl = 'accidente_listar.php' . ($clearFilterParams !== [] ? ('?' . 
 $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria, ud.nombre AS distrito,
                fa.nombre AS fiscalia, TRIM(CONCAT_WS(' ', fi.nombres, fi.apellido_paterno, fi.apellido_materno)) AS fiscal,
                COALESCE(dpc.diligencias_pendientes, 0) AS diligencias_pendientes
-        FROM accidentes_activos a
+        FROM {$accidentTable} a
         LEFT JOIN comisarias c ON c.id=a.comisaria_id
         LEFT JOIN ubigeo_distrito ud
                ON ud.cod_dep = a.cod_dep
@@ -430,7 +448,7 @@ $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.l
         LEFT JOIN fiscales fi ON fi.id = a.fiscal_id
         LEFT JOIN (
           SELECT accidente_id, COUNT(*) AS diligencias_pendientes
-            FROM diligencias_pendientes
+            FROM {$diligenceTable}
            WHERE COALESCE(NULLIF(TRIM(estado), ''), 'Pendiente') = 'Pendiente'
            GROUP BY accidente_id
         ) dpc ON dpc.accidente_id = a.id
@@ -486,7 +504,7 @@ if($favoritos === '1'){
 if($persona!==''){
   $sql .= " AND EXISTS (
               SELECT 1
-                FROM involucrados_personas_activos ip
+                FROM {$personLinkTable} ip
                 JOIN personas p ON p.id = ip.persona_id
                WHERE ip.accidente_id = a.id
                  AND (
@@ -519,7 +537,7 @@ if($distrito!==''){
 if($vehiculo!==''){
   $sql .= " AND EXISTS (
               SELECT 1
-                FROM involucrados_vehiculos_activos iv
+                FROM {$vehicleLinkTable} iv
                 JOIN vehiculos v ON v.id = iv.vehiculo_id
                WHERE iv.accidente_id = a.id
                  AND v.placa LIKE ?
@@ -558,7 +576,7 @@ $accidenteIds = array_values(array_unique(array_map(static fn($row) => (int)($ro
 if ($accidenteIds !== []) {
   $marks = implode(',', array_fill(0, count($accidenteIds), '?'));
   $sqlModalidades = "SELECT am.accidente_id, m.nombre
-                       FROM accidente_modalidad_activos am
+                       FROM {$modalityLinkTable} am
                        JOIN modalidad_accidente m ON m.id = am.modalidad_id
                       WHERE am.accidente_id IN ($marks)
                       ORDER BY am.accidente_id ASC, m.nombre ASC";
@@ -577,7 +595,7 @@ if ($accidenteIds !== []) {
                     p.nombres, p.apellido_paterno, p.apellido_materno,
                     ip.lesion,
                     rp.Nombre AS rol_nombre
-               FROM involucrados_personas_activos ip
+               FROM {$personLinkTable} ip
                JOIN personas p ON p.id = ip.persona_id
                JOIN participacion_persona rp ON rp.Id = ip.rol_id
               WHERE ip.accidente_id IN ($marks)
@@ -625,7 +643,7 @@ if ($accidenteIds !== []) {
                     car.nombre AS carroceria_nombre,
                     m.nombre AS marca_nombre,
                     mo.nombre AS modelo_nombre
-               FROM involucrados_vehiculos_activos iv
+               FROM {$vehicleLinkTable} iv
                JOIN vehiculos v ON v.id = iv.vehiculo_id
                LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
                LEFT JOIN carroceria_vehiculo car ON car.id = v.carroceria_id
