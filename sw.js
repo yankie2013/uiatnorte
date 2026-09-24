@@ -1,4 +1,5 @@
-const STATIC_CACHE = "uiat-static-v4";
+// Bump this name whenever the app shell/service-worker caching strategy changes.
+const STATIC_CACHE = "uiat-static-v5";
 const PUBLIC_PAGES_CACHE = "uiat-public-pages-v1";
 const ACTIVE_CACHES = [STATIC_CACHE, PUBLIC_PAGES_CACHE];
 const STATIC_ASSETS = [
@@ -23,6 +24,25 @@ function emptyResponse(status = 204) {
 function isPublicNavigation(url) {
   const pathname = url.pathname.toLowerCase();
   return pathname === "/" || pathname.endsWith("/login.php");
+}
+
+function cacheNetworkResponse(cacheName, request, response) {
+  if (!response || !response.ok) {
+    return Promise.resolve();
+  }
+
+  // Clone before awaiting caches.open(): the browser may start consuming the
+  // response body as soon as it is returned to the page.
+  let responseCopy;
+  try {
+    responseCopy = response.clone();
+  } catch (error) {
+    return Promise.resolve();
+  }
+
+  return caches.open(cacheName)
+    .then((cache) => cache.put(request, responseCopy))
+    .catch(() => undefined);
 }
 
 self.addEventListener("install", (event) => {
@@ -70,7 +90,8 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok && isPublicNavigation(url) && !networkResponse.redirected) {
-            caches.open(PUBLIC_PAGES_CACHE).then((cache) => cache.put(request, networkResponse.clone()));
+            return cacheNetworkResponse(PUBLIC_PAGES_CACHE, request, networkResponse)
+              .then(() => networkResponse);
           }
 
           return networkResponse;
@@ -96,13 +117,10 @@ self.addEventListener("fetch", (event) => {
   if (["style", "script", "image", "font"].includes(destination)) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        const networkFetch = fetch(request)
+        return fetch(request)
           .then((networkResponse) => {
-            if (networkResponse && networkResponse.ok) {
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, networkResponse.clone()));
-            }
-
-            return networkResponse;
+            return cacheNetworkResponse(STATIC_CACHE, request, networkResponse)
+              .then(() => networkResponse);
           })
           .catch(() => {
             if (cachedResponse) {
@@ -116,7 +134,6 @@ self.addEventListener("fetch", (event) => {
             return emptyResponse();
           });
 
-        return cachedResponse || networkFetch;
       })
     );
   }

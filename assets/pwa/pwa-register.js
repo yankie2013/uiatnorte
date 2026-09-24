@@ -52,7 +52,12 @@
 
   if ("serviceWorker" in navigator && window.isSecureContext) {
     window.addEventListener("load", function () {
-      registrationPromise = navigator.serviceWorker.register(scope + "sw.js", { scope: scope });
+      // Versioned URL forces clients with an older worker to install this
+      // worker after deployment; updateViaCache avoids a stale HTTP-cached sw.js.
+      registrationPromise = navigator.serviceWorker.register(scope + "sw.js?v=5", {
+        scope: scope,
+        updateViaCache: "none"
+      });
       registrationPromise.then(function (registration) {
         listenForWaitingServiceWorker(registration, askForRefresh);
       }).catch(emptyFn);
