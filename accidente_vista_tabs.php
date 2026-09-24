@@ -5475,6 +5475,7 @@ $resumenInterventionRows = [
 ];
 
 ?>
+<?php $caseStatePanel = \App\Support\CaseStatePanel::render($pdo, (int) $accidente_id); ?>
 <!doctype html>
 <html lang="es">
 <head>
@@ -7461,6 +7462,15 @@ $resumenInterventionRows = [
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
 <?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
+  <?php if ($caseStatePanel['error'] !== null): ?>
+    <div role="alert" style="grid-column:1/-1;padding:14px;border:1px solid #e4b76a;border-radius:12px;background:#fff7e6;color:#704400">
+      <strong>No se pudo cargar Estado y colaboración.</strong>
+      El resto del expediente puede consultarse. Las acciones de Estado no están disponibles hasta corregir este error.
+      <?php if (\App\Support\Access::admin()): ?>
+        <details><summary>Detalle del error para el administrador</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= h($caseStatePanel['error']) ?></pre></details>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
   <div class="case-sticky-header">
   <section class="accident-case-header" aria-label="Resumen del accidente">
     <div class="case-header-facts case-header-facts-list">
@@ -8094,7 +8104,7 @@ $resumenInterventionRows = [
       <div class="tab-pane fade" id="estado" role="tabpanel">
         <div class="expediente-state">
           <?php if (isset($_GET['gestion_ok'])) echo '<p role="status">Cambio guardado.</p>'; ?>
-          <?php require __DIR__.'/app/Views/expedientes/estado.php'; ?>
+          <?= $caseStatePanel['html'] ?>
         </div>
       </div>
 
