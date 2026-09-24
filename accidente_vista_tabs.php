@@ -595,10 +595,24 @@ function summary_units_intervention_text(array $summaryUnits, array $summaryPeat
     return $parts !== [] ? implode("\n", $parts) : '—';
 }
 
+function resolve_active_views(PDO $pdo, string $sql): string
+{
+    static $cache = [];
+    return preg_replace_callback('/(?<![a-zA-Z0-9_])([a-zA-Z_][a-zA-Z0-9_]*)_activos(?![a-zA-Z0-9_])/u', static function (array $match) use ($pdo, &$cache): string {
+        $view = $match[1] . '_activos';
+        if (!array_key_exists($view, $cache)) {
+            $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+            $st->execute([$view]);
+            $cache[$view] = (int) $st->fetchColumn() > 0;
+        }
+        return $cache[$view] ? $view : $match[1];
+    }, $sql) ?? $sql;
+}
+
 function safe_query_all(PDO $pdo, string $sql, array $params = []): array
 {
     try {
-        $st = $pdo->prepare($sql);
+        $st = $pdo->prepare(resolve_active_views($pdo, $sql));
         $st->execute($params);
         return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
@@ -609,7 +623,7 @@ function safe_query_all(PDO $pdo, string $sql, array $params = []): array
 function safe_query_one(PDO $pdo, string $sql, array $params = []): ?array
 {
     try {
-        $st = $pdo->prepare($sql);
+        $st = $pdo->prepare(resolve_active_views($pdo, $sql));
         $st->execute($params);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
