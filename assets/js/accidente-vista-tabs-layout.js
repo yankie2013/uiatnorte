@@ -67,9 +67,9 @@
       button.setAttribute('aria-selected', String(selected));
       button.tabIndex = selected ? 0 : -1;
     });
-    page.querySelectorAll('.tabs-shell-main .tab-pane').forEach((pane) => pane.classList.remove('show', 'active'));
+    page.querySelectorAll('.tabs-shell-main > .tab-content > .tab-pane').forEach((pane) => pane.classList.remove('show', 'active'));
     targetPane.classList.add('show', 'active');
-    targetPane.dispatchEvent(new CustomEvent('shown.bs.tab', {
+    trigger.dispatchEvent(new CustomEvent('shown.bs.tab', {
       bubbles: true,
       detail: { relatedTarget: previous && previous !== trigger ? previous : null }
     }));

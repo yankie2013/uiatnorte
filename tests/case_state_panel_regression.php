@@ -52,5 +52,9 @@ namespace {
         check(str_contains($complete['html'], $label), 'Missing healthy panel section: ' . $label);
     }
     check(ob_get_level() === $level, 'Success must restore buffer depth.');
+    $pdo->exec('ALTER TABLE usuarios DROP COLUMN grado');
+    $legacy = \App\Support\CaseStatePanel::render($pdo, 1);
+    check($legacy['error'] === null, 'Missing optional grade must not break state rendering.');
+    check(str_contains($legacy['html'], 'Transferencias'), 'Legacy schema must render all sections.');
     echo "PASS: early failure, partial failure, complete render; in-memory database only.\n";
 }
