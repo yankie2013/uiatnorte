@@ -2,8 +2,8 @@
 #uiat-navigation { position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 9998; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color-scheme: light; }
 #uiat-navigation *, #uiat-navigation *::before, #uiat-navigation *::after { box-sizing: border-box; }
 body.uiat-has-sidebar { padding-left: 76px!important; }
-/* Case workspace was designed with the full institutional rail visible. */
-body.uiat-has-sidebar.uiat-case-view { padding-left: 258px!important; }
+/* Expand the institutional rail on the case workspace, matching its legacy layout. */
+body:has(.case-overview-layout).uiat-has-sidebar { padding-left: 258px!important; }
 #app-sidebar {
   position: fixed; inset: 0 auto 0 0; z-index: 9998;
   width: 76px; height: 100vh; height: 100svh; padding: 24px 12px 16px;
@@ -15,11 +15,11 @@ body.uiat-has-sidebar.uiat-case-view { padding-left: 258px!important; }
   scrollbar-width: thin; scrollbar-color: #c5d2c5 transparent;
 }
 #app-sidebar.expanded { width: 258px; box-shadow: 12px 0 36px #173c3014; }
-body.uiat-has-sidebar.uiat-case-view #app-sidebar { width: 258px; }
-body.uiat-has-sidebar.uiat-case-view #app-sidebar .uiat-label,
-body.uiat-has-sidebar.uiat-case-view #app-sidebar .uiat-department,
-body.uiat-has-sidebar.uiat-case-view #app-sidebar .uiat-nav-caption span { opacity: 1; visibility: visible; }
-body.uiat-has-sidebar.uiat-case-view #app-sidebar .uiat-active-dot { display: block; }
+body:has(.case-overview-layout).uiat-has-sidebar #app-sidebar { width: 258px; }
+body:has(.case-overview-layout).uiat-has-sidebar #app-sidebar .uiat-label,
+body:has(.case-overview-layout).uiat-has-sidebar #app-sidebar .uiat-department,
+body:has(.case-overview-layout).uiat-has-sidebar #app-sidebar .uiat-nav-caption span { opacity: 1; visibility: visible; }
+body:has(.case-overview-layout).uiat-has-sidebar #app-sidebar .uiat-active-dot { display: block; }
 #app-sidebar a { text-decoration: none; }
 #app-sidebar svg, #sidebar-toggle svg { display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
 #app-sidebar .uiat-brand { display: flex; align-items: center; gap: 12px; width: 230px; min-height: 51px; padding: 0 3px; color: #214c3c; background: transparent; border: 0; border-radius: 0; }
@@ -61,7 +61,7 @@ body.uiat-has-sidebar.uiat-case-view #app-sidebar .uiat-active-dot { display: bl
 /* Reserve only the rail width. Expansion overlays the page without shifting content. */
 body.uiat-has-sidebar .app-layout { display: block; }
 @media (max-width:760px) {
-  body.uiat-has-sidebar, body.uiat-has-sidebar.uiat-case-view { padding-left: 0!important; padding-top: 64px!important; }
+  body.uiat-has-sidebar, body:has(.case-overview-layout).uiat-has-sidebar { padding-left: 0!important; padding-top: 64px!important; }
   #app-sidebar { width: 258px; padding-top: 74px; transform: translateX(-100%); visibility: hidden; }
   #app-sidebar.expanded { width: min(280px,calc(100vw - 44px)); transform: translateX(0); visibility: visible; }
   #sidebar-toggle { position: fixed; top: 12px; left: 16px; z-index: 10000; display: grid; place-items: center; width: 40px; height: 40px; padding: 9px; margin: 0; border: 1px solid #dfe7d9; border-radius: 9px; background: #fff; color: #315c44; box-shadow: 0 3px 12px #173c3010; cursor: pointer; }
