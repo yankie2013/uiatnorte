@@ -8,8 +8,24 @@ use Throwable;
 
 final class AccidenteRepository
 {
+    private array $tableCache = [];
+
     public function __construct(private PDO $pdo)
     {
+    }
+
+    private function activeTable(string $table): string
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/D', $table)) {
+            throw new \InvalidArgumentException('Tabla no válida.');
+        }
+        $active = $table . '_activos';
+        if (!array_key_exists($active, $this->tableCache)) {
+            $st = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+            $st->execute([$active]);
+            $this->tableCache[$active] = (int) $st->fetchColumn() > 0;
+        }
+        return '`' . ($this->tableCache[$active] ? $active : $table) . '`';
     }
 
     public function departamentos(): array
@@ -24,7 +40,8 @@ final class AccidenteRepository
 
     public function accidenteById(int $accidenteId): ?array
     {
-        $sql = 'SELECT id, sidpol, registro_sidpol, tipo_registro, lugar, referencia,
+        $accidentTable = $this->activeTable('accidentes');
+        $sql = "SELECT id, sidpol, registro_sidpol, tipo_registro, lugar, referencia,
                        latitud, longitud,
                        cod_dep, cod_prov, cod_dist, comisaria_id,
                        fecha_accidente, estado, fecha_comunicacion, fecha_intervencion,
@@ -32,8 +49,8 @@ final class AccidenteRepository
                        comunicacion_decreto, comunicacion_oficio, comunicacion_carpeta_nro,
                        fiscalia_id, fiscal_id, nro_informe_policial,
                        sentido, secuencia
-                  FROM accidentes_activos
-                 WHERE id=?';
+                  FROM {$accidentTable}
+                 WHERE id=?";
         $st = $this->pdo->prepare($sql);
         $st->execute([$accidenteId]);
         $accidente = $st->fetch(PDO::FETCH_ASSOC);
@@ -273,14 +290,16 @@ final class AccidenteRepository
 
     public function modalidadIdsForAccidente(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT modalidad_id FROM accidente_modalidad_activos WHERE accidente_id=?');
+        $table = $this->activeTable('accidente_modalidad');
+        $st = $this->pdo->prepare("SELECT modalidad_id FROM {$table} WHERE accidente_id=?");
         $st->execute([$accidenteId]);
         return array_map('intval', array_column($st->fetchAll(PDO::FETCH_ASSOC), 'modalidad_id'));
     }
 
     public function consecuenciaIdsForAccidente(int $accidenteId): array
     {
-        $st = $this->pdo->prepare('SELECT consecuencia_id FROM accidente_consecuencia_activos WHERE accidente_id=?');
+        $table = $this->activeTable('accidente_consecuencia');
+        $st = $this->pdo->prepare("SELECT consecuencia_id FROM {$table} WHERE accidente_id=?");
         $st->execute([$accidenteId]);
         return array_map('intval', array_column($st->fetchAll(PDO::FETCH_ASSOC), 'consecuencia_id'));
     }
