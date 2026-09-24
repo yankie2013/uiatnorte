@@ -24,7 +24,7 @@ $s=$pdo->prepare("SELECT DISTINCT CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.a
 .reception-item{border-bottom:1px solid #d5e3dd;padding:16px 0}
 </style>
 <article class="case-detail-card">
- <div class="badges"><span class="badge"><?= $h($a['registro_sidpol']?:'#'.$id) ?></span><span class="badge status"><?= $h($a['estado']?:'Pendiente') ?></span><span class="badge type"><?= $h($a['tipo_registro']) ?></span></div>
+ <div class="badges"><span class="badge"><?= $h($a['registro_sidpol']?:'#'.$id) ?></span><span class="badge status"><?= $h($a['estado']?:'Pendiente') ?></span><?php if($a['tipo_registro']): ?><span class="badge type"><?= $h($a['tipo_registro']) ?></span><?php endif ?></div>
  <?php if($a['eliminado_en']): ?><p>Expediente eliminado</p><?php endif ?>
  <h2>📍 <?= $h($a['lugar']) ?><?= $a['distrito']?' · '.$h($a['distrito']):'' ?></h2>
  <p><span class="caption">Modalidad</span> <?= $h(implode(', ',$modalidades)?:'Sin registrar') ?></p>
