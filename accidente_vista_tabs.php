@@ -5474,7 +5474,6 @@ $resumenInterventionRows = [
     ['index' => '16.', 'label' => 'Secuencia', 'value' => compact_text((string) ($A['secuencia'] ?? '')) ?: '—', 'copy_text' => compact_text((string) ($A['secuencia'] ?? '')) ?: '—'],
 ];
 
-include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -7456,8 +7455,10 @@ include __DIR__ . '/sidebar.php';
 <link rel="stylesheet" href="assets/css/accidente-header-participantes.css?v=<?= filemtime(__DIR__ . '/assets/css/accidente-header-participantes.css') ?>">
 <link rel="stylesheet" href="assets/css/expediente_estado.css">
 <link rel="stylesheet" href="assets/css/user_topbar.css">
+<link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">
 </head>
 <body>
+<?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
 <?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
   <div class="case-sticky-header">
