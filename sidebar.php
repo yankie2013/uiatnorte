@@ -47,6 +47,7 @@ $sidebarGroups['GESTIÓN'] = [
     ['file', 'Comunicaciones de guardia', 'guardia.php', $sidebarPath === 'guardia.php'],
 ];
 if (\App\Support\Access::admin()) {
+    array_unshift($sidebarGroups['GESTIÓN'], ['folder', 'Listado general', 'listado_general.php', $sidebarPath === 'listado_general.php']);
     $sidebarGroups['ADMINISTRACIÓN'] = [
         ['people', 'Usuarios y perfiles', 'usuarios_gestion.php', in_array($sidebarPath, ['usuarios_gestion.php','usuarios_nuevo.php'], true)],
         ['grid', 'Estadísticas de gestión', 'estadisticas.php', $sidebarPath === 'estadisticas.php'],

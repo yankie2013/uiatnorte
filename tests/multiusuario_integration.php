@@ -21,6 +21,19 @@ try{
     $p->exec("USE `$test`");
     require dirname(__DIR__).'/docs/scripts/migrar_multiusuario.php';
     actor($p,1);$other=user($p,'jefe_emi');$adj=user($p,'adjunto');$guard=user($p,'guardia');$secretary=user($p,'secretaria');
+    // Expediente heredado sin responsable: origen 0 debe aparecer y poder aceptarse.
+    $p->exec('SET @rbac_migration=1');
+    $unassigned=(int)$p->query('SELECT MIN(id) FROM accidentes')->fetchColumn();
+    $p->exec("UPDATE accidentes SET responsable_id=NULL WHERE id=$unassigned");
+    $p->exec('SET @rbac_migration=NULL');
+    (new ExpedienteAccessService($p))->change($unassigned,'transferir',$other,'Asignación inicial de prueba');
+    $st=$p->prepare("SELECT t.id FROM expediente_transferencias t JOIN accidentes_activos a ON a.id=t.accidente_id LEFT JOIN usuarios u ON u.id=t.origen_id JOIN usuarios d ON d.id=t.destino_id WHERE t.estado='pendiente' AND t.destino_id=?");
+    $st->execute([$other]);check((bool)$st->fetchColumn(),'recepción incluye expediente sin responsable anterior');
+    actor($p,$other);
+    (new ExpedienteAccessService($p))->change($unassigned,'aceptar',0,'');
+    check(Access::canEdit($unassigned),'destinatario acepta expediente sin responsable anterior');
+    actor($p,1);
+    (new ExpedienteAccessService($p))->change($unassigned,'reasignar',2,'Restablecer fixture');
     $case=(int)$p->query('SELECT MIN(id) FROM accidentes WHERE responsable_id=2')->fetchColumn();
     $dashboard = new \App\Repositories\DashboardRepository($p);
     $workspaceIds = function () use ($p): array {

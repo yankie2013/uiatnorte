@@ -33,7 +33,11 @@ $state=trim((string)$a['estado'])?:'Pendiente';
  <header class="case-card-head">
    <div class="case-card-symbol"><?= $icon('badge') ?></div>
    <div class="case-card-identifiers"><span class="case-chip case-chip-sidpol">SIDPOL <?= $h($a['registro_sidpol']?:'Sin número') ?></span><?php if($a['nro_informe_policial']): ?><span class="case-chip">Informe <?= $h($a['nro_informe_policial']) ?></span><?php endif ?><?php if($a['folder']): ?><span class="case-chip case-chip-folder"><?= $icon('folder') ?> Carpeta <?= $h($a['folder']) ?></span><?php endif ?></div>
+   <?php if (!empty($caseCardBackUrl)): ?>
+   <a class="case-modal-close" href="<?= $h($caseCardBackUrl) ?>" aria-label="Volver al listado">×</a>
+   <?php else: ?>
    <button type="button" class="case-modal-close" data-case-modal-close aria-label="Cerrar">×</button>
+   <?php endif ?>
  </header>
  <div class="case-card-badges"><span class="case-chip case-status-<?= $h(mb_strtolower(str_replace(' ','-', $state))) ?>"><?= $h($state) ?></span><?php if($a['tipo_registro']): ?><span class="case-chip case-chip-type"><?= $h($a['tipo_registro']) ?></span><?php endif ?></div>
  <?php if($a['eliminado_en']): ?><p class="case-card-deleted">Expediente eliminado</p><?php endif ?>
