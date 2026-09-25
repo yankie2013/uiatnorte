@@ -14,6 +14,7 @@ if (!Access::admin()) {
 $id = max(0, (int)($_GET['id'] ?? 0));
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $json = ($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json';
     try {
         Access::checkCsrf();
         $action = (string)($_POST['action'] ?? '');
@@ -22,6 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $reason = trim((string)($_POST['motivo'] ?? ''));
         if ($action === 'reasignar' && $reason === '') $reason = 'asignado por el administrador';
         (new ExpedienteAccessService($pdo))->change($caseId, $action, (int)($_POST['usuario_id'] ?? 0), $reason);
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>true, 'message'=>'Responsable guardado.']);
+            exit;
+        }
         $query = $_GET;
         unset($query['id']);
         $query['ok'] = '1';
@@ -30,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Throwable $e) {
         http_response_code(422);
         $error = $e->getMessage();
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>false, 'message'=>$error]);
+            exit;
+        }
     }
 }
 Page::start('Listado general');
@@ -104,7 +115,7 @@ echo '<section><p>'.$total.' registros · Todos los responsables, incluidos los 
 foreach ($rows as $row) {
     $href='listado_general.php?'.http_build_query($query+['id'=>(int)$row['id']]);
     echo '<tr><td>'.$h($row['registro_sidpol']?:'Sin SIDPOL').'</td><td>'.$h($row['lugar']).'</td><td>'.$h($row['distrito']?:'Sin registrar').'</td><td>'.$h($row['comisaria']?:'Sin registrar').'</td><td>';
-    echo '<form method="post"><input type="hidden" name="action" value="reasignar"><input type="hidden" name="expediente_id" value="'.(int)$row['id'].'">';
+    echo '<form method="post" class="js-responsible-form"><input type="hidden" name="action" value="reasignar"><input type="hidden" name="expediente_id" value="'.(int)$row['id'].'">';
     Page::token();
     echo '<select name="usuario_id" required aria-label="A cargo del expediente '.$h($row['registro_sidpol']?:$row['id']).'" style="min-width:220px"><option value="">Seleccionar JEFE EMI</option>';
     if ($row['responsable_id'] && !in_array((int)$row['responsable_id'], $eligibleIds, true)) {
@@ -113,7 +124,7 @@ foreach ($rows as $row) {
     foreach ($users as $user) {
         echo '<option value="'.(int)$user['id'].'" '.((int)$row['responsable_id']===(int)$user['id']?'selected':'').'>'.$h(trim(($user['grado']??'').' '.$user['nombre'])).'</option>';
     }
-    echo '</select><button>Guardar responsable</button></form></td><td>'.$h($row['estado']).'</td><td>'.$h($row['modalidad']?:'Sin registrar').'</td><td><a href="'.$h($href).'">Ver resumen y gestionar</a></td></tr>';
+    echo '</select><button>Guardar responsable</button><span role="status" class="responsible-status" style="display:block;height:3em;overflow:auto;font-size:12px"></span></form></td><td>'.$h($row['estado']).'</td><td>'.$h($row['modalidad']?:'Sin registrar').'</td><td><a href="'.$h($href).'">Ver resumen y gestionar</a></td></tr>';
 }
 if (!$rows) echo '<tr><td colspan="8">No hay registros con estos filtros.</td></tr>';
 echo '</tbody></table></div><nav class="actions" aria-label="Paginación">';
@@ -121,4 +132,5 @@ if($page>1) echo '<a href="?'.$h(http_build_query($query+['pagina'=>$page-1])).'
 echo '<span>Página '.$page.' de '.max(1,(int)ceil($total/50)).'</span>';
 if($page*50<$total) echo '<a href="?'.$h(http_build_query($query+['pagina'=>$page+1])).'">Siguiente</a>';
 echo '</nav></section>';
+echo '<script src="assets/js/listado-general.js?v=1" defer></script>';
 Page::end();
