@@ -7781,7 +7781,7 @@ $resumenInterventionRows = [
           <h2 class="section-title">Clasificación del evento</h2>
           <div class="general-edit-grid">
             <div class="general-edit-card g-6">
-              <label>Modalidades</label>
+              <label>Modalidades</label><button type="button" class="btn-shell" data-acc-catalog="modalidad">+ Agregar</button>
               <div class="general-checkbox-grid">
                 <?php foreach ($modalidadesCatalog as $item): ?>
                   <label class="general-checkbox">
@@ -7792,7 +7792,7 @@ $resumenInterventionRows = [
               </div>
             </div>
             <div class="general-edit-card g-6">
-              <label>Consecuencias</label>
+              <label>Consecuencias</label><button type="button" class="btn-shell" data-acc-catalog="consecuencia">+ Agregar</button>
               <div class="general-checkbox-grid">
                 <?php foreach ($consecuenciasCatalog as $item): ?>
                   <label class="general-checkbox">
@@ -7821,6 +7821,7 @@ $resumenInterventionRows = [
                   <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['comisaria_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
                 <?php endforeach; ?>
               </select>
+              <button type="button" class="btn-shell" data-acc-catalog="comisaria" aria-label="Nueva comisaría">+ Nueva comisaría</button>
             </div>
             <div class="general-edit-card g-3">
               <label for="acc-nro-informe">N° informe policial</label>
@@ -7936,6 +7937,7 @@ $resumenInterventionRows = [
                   <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['fiscalia_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
                 <?php endforeach; ?>
               </select>
+              <button type="button" class="btn-shell" data-acc-catalog="fiscalia" aria-label="Nueva fiscalía">+ Nueva fiscalía</button>
             </div>
             <div class="general-edit-card g-4">
               <label for="acc-fiscal">Fiscal a cargo</label>
@@ -7945,6 +7947,7 @@ $resumenInterventionRows = [
                   <option value="<?= (int) $item['id'] ?>" <?= (int) ($accidenteBase['fiscal_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>><?= h((string) $item['nombre']) ?></option>
                 <?php endforeach; ?>
               </select>
+              <button type="button" class="btn-shell" data-acc-catalog="fiscal" aria-label="Nuevo fiscal">+ Nuevo fiscal</button>
             </div>
             <div class="general-edit-card g-4">
               <label for="acc-fiscal-tel">Tel. fiscal</label>
@@ -13727,5 +13730,6 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   updateLocation();
 })();
 </script>
+<script src="assets/js/accidente-edit-catalogs.js?v=1" defer></script>
 </body>
 </html>
