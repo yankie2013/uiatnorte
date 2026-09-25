@@ -1,39 +1,26 @@
-document.querySelectorAll('.js-responsible-form').forEach(form => {
-    const select = form.querySelector('select');
-    const button = form.querySelector('button');
-    const status = form.querySelector('.responsible-status');
-    let savedValue = select.value;
-    let saving = false;
-    form.addEventListener('submit', async event => {
-        event.preventDefault();
-        if (saving) return;
-        if (select.value === savedValue) {
-            status.textContent = 'Este responsable ya está asignado.';
-            return;
-        }
-        const body = new FormData(form);
-        const selectedValue = select.value;
-        saving = true;
-        select.disabled = button.disabled = true;
-        status.textContent = 'Guardando…';
-        try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body,
-                headers: { Accept: 'application/json' }
-            });
-            if (!response.headers.get('content-type')?.includes('application/json')) {
-                throw new Error('No se pudo confirmar el guardado. Comprueba tu sesión y recarga antes de reintentar.');
-            }
-            const result = await response.json();
-            if (!response.ok || !result.ok) throw new Error(result.message || 'No se pudo guardar.');
-            savedValue = selectedValue;
-            status.textContent = result.message;
-        } catch (error) {
-            status.textContent = error.message || 'No se pudo confirmar el guardado. Recarga antes de reintentar.';
-        } finally {
-            saving = false;
-            select.disabled = button.disabled = false;
-        }
-    });
-});
+(() => {
+ const key = 'listado-general:scroll';
+ const context = () => { const u = new URL(location.href); u.searchParams.delete('ok'); u.searchParams.sort(); return u.pathname + u.search; };
+ let saved;
+ try { saved = JSON.parse(sessionStorage.getItem(key)); sessionStorage.removeItem(key); } catch (_) {}
+ if (saved && saved.context === context() && Date.now() - saved.time < 120000) {
+  const restore = () => {
+   const form = [...document.querySelectorAll('.js-responsible-form')].find(f => f.elements.expediente_id.value === saved.id);
+   const row = form?.closest('tr');
+   const y = row ? scrollY + row.getBoundingClientRect().top - saved.top : saved.y;
+   window.scrollTo({left: saved.x, top: y, behavior: 'instant'});
+   const table = document.querySelector('.table-scroll');
+   if (table) table.scrollLeft = saved.tableX;
+  };
+  restore();
+  if (document.readyState !== 'complete') window.addEventListener('load', restore, {once:true});
+ }
+ document.querySelectorAll('.js-responsible-form').forEach(form => {
+  let submitting = false;
+  form.addEventListener('submit', event => {
+   if (submitting) { event.preventDefault(); return; }
+   try { sessionStorage.setItem(key, JSON.stringify({context:context(), time:Date.now(), id:form.elements.expediente_id.value, top:form.closest('tr').getBoundingClientRect().top, x:scrollX, y:scrollY, tableX:document.querySelector('.table-scroll')?.scrollLeft || 0})); } catch (_) {}
+   submitting = true;
+  });
+ });
+})();

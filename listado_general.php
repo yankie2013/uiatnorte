@@ -124,7 +124,7 @@ foreach ($rows as $row) {
     foreach ($users as $user) {
         echo '<option value="'.(int)$user['id'].'" '.((int)$row['responsable_id']===(int)$user['id']?'selected':'').'>'.$h(trim(($user['grado']??'').' '.$user['nombre'])).'</option>';
     }
-    echo '</select><button>Guardar responsable</button><span role="status" class="responsible-status" style="display:block;height:3em;overflow:auto;font-size:12px"></span></form></td><td>'.$h($row['estado']).'</td><td>'.$h($row['modalidad']?:'Sin registrar').'</td><td><a href="'.$h($href).'">Ver resumen y gestionar</a></td></tr>';
+    echo '</select><button>Guardar responsable</button></form></td><td>'.$h($row['estado']).'</td><td>'.$h($row['modalidad']?:'Sin registrar').'</td><td><a href="'.$h($href).'">Ver resumen y gestionar</a></td></tr>';
 }
 if (!$rows) echo '<tr><td colspan="8">No hay registros con estos filtros.</td></tr>';
 echo '</tbody></table></div><nav class="actions" aria-label="Paginación">';
@@ -132,5 +132,5 @@ if($page>1) echo '<a href="?'.$h(http_build_query($query+['pagina'=>$page-1])).'
 echo '<span>Página '.$page.' de '.max(1,(int)ceil($total/50)).'</span>';
 if($page*50<$total) echo '<a href="?'.$h(http_build_query($query+['pagina'=>$page+1])).'">Siguiente</a>';
 echo '</nav></section>';
-echo '<script src="assets/js/listado-general.js?v=1" defer></script>';
+echo '<script src="assets/js/listado-general.js?v=2" defer></script>';
 Page::end();
