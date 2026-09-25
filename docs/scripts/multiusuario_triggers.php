@@ -15,6 +15,16 @@ $p->exec("CREATE FUNCTION rbac_vehicle(vehicle_id INT) RETURNS BOOLEAN READS SQL
 $tables=$p->query("SHOW FULL TABLES WHERE Table_type='BASE TABLE'")->fetchAll(PDO::FETCH_COLUMN);
 $internal=['accidente_modalidad','accidente_consecuencia','actas_visualizacion_participantes','actas_visualizacion_documentos','actas_visualizacion_discos','actas_visualizacion_archivos','actas_visualizacion_descripciones'];
 $skip=['app_migrations','auditoria','api_persona_cache'];
+// Los botones + aportan valores nuevos; modificar o eliminar sigue reservado al administrador.
+$additiveCatalogs = [
+    'comisarias', 'comisaria_distrito', 'fiscalia', 'fiscales',
+    'modalidad_accidente', 'consecuencia_accidente',
+    'oficio_categoria_entidad', 'oficio_entidad', 'oficio_oficial_ano', 'grado_cargo',
+    'oficio_asunto', 'oficio_subentidad', 'oficio_persona_entidad',
+    'categoria_vehiculos', 'marcas_vehiculo', 'modelos_vehiculo',
+    'tipos_vehiculo', 'carroceria_vehiculo', 'enlace_interes',
+];
+$activeActor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1)";
 $operational="EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol IN ('admin','jefe_emi','adjunto'))";
 foreach($tables as $table) {
     if(in_array($table,$skip,true)) continue;
@@ -22,7 +32,11 @@ foreach($tables as $table) {
     $has=fn($c)=>in_array($c,$columns,true);
     foreach(['INSERT'=>'NEW','UPDATE'=>'NEW','DELETE'=>'OLD'] as $event=>$row) {
         $guard=''; $extra=''; $case='NULL';
-        if($table==='accidentes') {
+        if (in_array($table, $additiveCatalogs, true)) {
+            $guard = $event === 'INSERT' ? $activeActor : 'rbac_admin()';
+        } elseif ($table === 'catalogo_aportaciones') {
+            $guard = $event === 'INSERT' ? "($activeActor AND NEW.usuario_id=@actor_id)" : 'rbac_admin()';
+        } elseif($table==='accidentes') {
             $case="$row.id";
             if($event==='INSERT') {
                 $guard="(rbac_admin() OR EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='jefe_emi') OR (@rbac_guardia_assign=1 AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia')))";

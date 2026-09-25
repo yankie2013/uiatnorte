@@ -21,6 +21,23 @@ try{
     $p->exec("USE `$test`");
     require dirname(__DIR__).'/docs/scripts/migrar_multiusuario.php';
     actor($p,1);$other=user($p,'jefe_emi');$adj=user($p,'adjunto');$guard=user($p,'guardia');$secretary=user($p,'secretaria');
+    actor($p,$other);
+    foreach (['fiscalia','modalidad_accidente','consecuencia_accidente','comisarias','marcas_vehiculo'] as $catalog) {
+        $p->prepare("INSERT INTO `$catalog` (nombre) VALUES (?)")->execute(['Catálogo de prueba '.bin2hex(random_bytes(4))]);
+        $catalogId=(int)$p->lastInsertId();
+        check($catalogId>0,"JEFE EMI agrega $catalog");
+        deny(fn()=>$p->exec("UPDATE `$catalog` SET nombre='Cambio prohibido' WHERE id=$catalogId"),"JEFE EMI no edita $catalog");
+        deny(fn()=>$p->exec("DELETE FROM `$catalog` WHERE id=$catalogId"),"JEFE EMI no elimina $catalog");
+    }
+    $fiscaliaId=(int)$p->query('SELECT MIN(id) FROM fiscalia')->fetchColumn();
+    $p->prepare('INSERT INTO fiscales(fiscalia_id,nombres,apellido_paterno,apellido_materno) VALUES (?,?,?,?)')->execute([$fiscaliaId,'Fiscal','De','Prueba']);
+    $fiscalId=(int)$p->lastInsertId();
+    check($fiscalId>0,'JEFE EMI agrega fiscal desde +');
+    deny(fn()=>$p->exec("UPDATE fiscales SET nombres='No autorizado' WHERE id=$fiscalId"),'JEFE EMI no edita fiscal');
+    deny(fn()=>$p->exec("DELETE FROM fiscales WHERE id=$fiscalId"),'JEFE EMI no elimina fiscal');
+    $p->exec('SET @actor_id=0');
+    deny(fn()=>$p->exec("INSERT INTO fiscalia(nombre) VALUES ('Anónimo')"),'anónimo no agrega catálogos');
+    actor($p,1);
     // Expediente heredado sin responsable: origen 0 debe aparecer y poder aceptarse.
     $p->exec('SET @rbac_migration=1');
     $unassigned=(int)$p->query('SELECT MIN(id) FROM accidentes')->fetchColumn();
