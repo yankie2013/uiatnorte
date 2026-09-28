@@ -21,6 +21,8 @@ if (!is_dir($tmpDir)) {
 }
 \PhpOffice\PhpWord\Settings::setTempDir($tmpDir);
 
+require_once __DIR__ . '/auth.php';
+require_login();
 require __DIR__ . '/db.php';
 if (!isset($pdo) || !($pdo instanceof PDO)) {
     echo "db.php no define \$pdo.";
