@@ -328,6 +328,12 @@ final class AccidenteRepository
         }
     }
 
+    public function registerGuardiaDraft(int $id, array $data): void
+    {
+        $this->pdo->prepare('INSERT INTO comunicaciones_guardia(accidente_id,creado_por,fecha_llamada,lugar,referencia,descripcion,comunicante,telefono,cod_dep,cod_prov,cod_dist) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$id, \App\Support\Access::id(), $data['fecha_comunicacion'] ?: $data['fecha_accidente'], $data['lugar'], $data['referencia'], $data['secuencia'] ?: 'Registro inicial de accidente', $data['comunicante_nombre'], $data['comunicante_telefono'], $data['cod_dep'], $data['cod_prov'], $data['cod_dist']]);
+    }
+
     public function updateSidpol(int $accidenteId, string $sidpol): void
     {
         $st = $this->pdo->prepare('UPDATE accidentes SET sidpol=? WHERE id=?');

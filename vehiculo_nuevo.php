@@ -3,6 +3,12 @@ require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
 
+if (\App\Support\Access::role()==='guardia') {
+    $draftId=(int)($_POST['accidente_id']??$_GET['accidente_id']??0);
+    $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$draftId]);
+    if (!$check->fetchColumn()) { http_response_code(403); exit('Registro de guardia no disponible para agregar datos.'); }
+}
+
 use App\Repositories\VehiculoRepository;
 use App\Services\VehiculoService;
 

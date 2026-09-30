@@ -268,7 +268,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         'estado' => $estado,
       ]);
 
-      header("Location: accidente_creado.php?accidente_id=".(int)$result['id']);
+      header("Location: ".(\App\Support\Access::role()==='guardia'?'guardia_registro.php?paso=vehiculos&accidente_id=':'accidente_creado.php?accidente_id=').(int)$result['id']);
       exit;
 
       $pdo->beginTransaction();
@@ -336,6 +336,7 @@ include __DIR__ . '/sidebar.php';
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 </head>
 <body>
+<?php if (\App\Support\Access::role()==='guardia'): ?><div style="max-width:1100px;margin:24px auto;padding:20px;background:#e2f3ee;border-radius:16px"><strong>1 · Datos del accidente → 2 · Vehículos → 3 · Personas → 4 · Entrega</strong><p>Completa los datos conocidos. Al guardar continuarás con los vehículos y las personas involucradas.</p></div><?php endif ?>
 <div class="wrap">
   <div class="title">
     <h1>Registrar Accidente <span class="badge">Nuevo</span></h1>

@@ -101,12 +101,13 @@ final class Access
             echo '<input type="hidden" name="_csrf" value="'.self::csrf().'"><input type="hidden" name="confirm" value="1"><button>Confirmar eliminación</button></form></body></html>';exit;
         }
 
-        $newPage=in_array($script,['gestion_expedientes.php','guardia.php','usuarios_gestion.php','estadisticas.php'],true);
+        $guardiaCreation = self::role()==='guardia' && in_array($script,['accidente_nuevo.php','involucrados_vehiculos_nuevo.php','involucrados_personas_nuevo.php','persona_nuevo.php','vehiculo_nuevo.php'],true);
+        $newPage=in_array($script,['gestion_expedientes.php','guardia_registro.php','guardia.php','usuarios_gestion.php','estadisticas.php'],true);
         $catalogCreationPage = in_array($script, self::CATALOG_CREATE_PAGES, true);
         $catalogAjaxCreate = $script === 'involucrados_vehiculos_nuevo.php'
             && preg_match('/^crear_(categoria|tipo|carroceria|marca|modelo)$/', (string) ($_GET['ajax'] ?? '')) === 1;
         if($post && !$newPage && !in_array($script,['buscar_dni.php','buscar_placa.php','buscar_personas_nombre.php','documento_recibido_analizar_ia.php'],true)) {
-            if(in_array(self::role(),['secretaria','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
+            if(in_array(self::role(),['secretaria','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate && !$guardiaCreation) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
         }
     }
 }

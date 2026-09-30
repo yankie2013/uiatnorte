@@ -2,6 +2,12 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+if (\App\Support\Access::role()==='guardia') {
+    $draftId=(int)($_POST['accidente_id']??$_GET['accidente_id']??0);
+    $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$draftId]);
+    if (!$check->fetchColumn()) { http_response_code(403); exit('Solo puedes agregar datos a tu registro de guardia antes de entregarlo y dentro de las primeras 12 horas.'); }
+}
+
 
 use App\Repositories\InvolucradoVehiculoRepository;
 use App\Services\InvolucradoVehiculoService;
@@ -68,6 +74,7 @@ if (iget('ajax')==='crear_vehiculo' && $_SERVER['REQUEST_METHOD']==='POST') {
 }
 
 $accidentes = $repo->accidentes();
+if (\App\Support\Access::role()==='guardia') $accidentes=array_values(array_filter($accidentes,static fn($a)=>(int)$a['id']===$draftId));
 $accidente_id = (int)iget('accidente_id', ($accidentes[0]['id'] ?? 0));
 $return_to = safe_return_to(iget('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
 $categorias = $repo->categorias();
@@ -492,6 +499,13 @@ body.modal-open{ overflow: hidden !important; }
 </style>
 </head>
 <body>
+<?php if (\App\Support\Access::role()==='guardia'): ?>
+<div style="max-width:1100px;margin:20px auto;padding:18px;border-radius:16px;background:#e2f3ee">
+<strong>Registro guiado de guardia · Paso 2: vehículos</strong>
+<p>Busca primero el registro existente. Agrega los datos conocidos y guarda para continuar.</p>
+<a href="guardia_registro.php?accidente_id=<?= $draftId ?>&amp;paso=vehiculos">Volver al registro guiado</a></div>
+<?php endif ?>
+
 <?php require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
@@ -717,6 +731,7 @@ function abrirModalNuevoVehiculo(placa = '', targetId = 'vehiculo_id'){
   if (!frame) return;
   const url = new URL('vehiculo_nuevo.php', window.location.href);
   url.searchParams.set('embed', '1');
+  url.searchParams.set('accidente_id', String(<?= (int)$accidente_id ?>));
   url.searchParams.set('target', targetId);
   if (placa) {
     url.searchParams.set('placa', placa);
@@ -773,7 +788,7 @@ async function buscarVehiculoPorPlaca(inputId, selectId, targetId){
   const q = normalizePlateText(input.value.trim());
   input.value = q;
   sel.innerHTML = '<option value="">Buscando…</option>';
-  const r = await fetch(`?ajax=buscar_vehiculos&q=${encodeURIComponent(q)}`);
+  const r = await fetch(`?accidente_id=<?= (int)$accidente_id ?>&ajax=buscar_vehiculos&q=${encodeURIComponent(q)}`);
   const j = await r.json();
   sel.innerHTML = '<option value="">— Selecciona de la búsqueda —</option>';
   if (!j.length) {
@@ -835,31 +850,31 @@ async function postForm(url, data){
 }
 $('#btnSaveCat')?.addEventListener('click', async ()=>{
   const codigo=$('#cat_codigo').value.trim(), descripcion=$('#cat_desc').value.trim();
-  const j = await postForm('?ajax=crear_categoria',{codigo,descripcion});
+  const j = await postForm('?accidente_id=<?= (int)$accidente_id ?>&ajax=crear_categoria',{codigo,descripcion});
   $('#cat_msg').textContent = j.ok? 'Creado ✔':'Error: '+j.error;
   if(j.ok){ const s=$('#nv_categoria_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });
 $('#btnSaveTipo')?.addEventListener('click', async ()=>{
   const categoria_id=$('#t_cat').value, codigo=$('#t_codigo').value.trim(), nombre=$('#t_nombre').value.trim(), descripcion=$('#t_desc').value.trim();
-  const j = await postForm('?ajax=crear_tipo',{categoria_id,codigo,nombre,descripcion});
+  const j = await postForm('?accidente_id=<?= (int)$accidente_id ?>&ajax=crear_tipo',{categoria_id,codigo,nombre,descripcion});
   $('#t_msg').textContent = j.ok? 'Creado ✔':'Error: '+j.error;
   if(j.ok){ const s=$('#nv_tipo_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });
 $('#btnSaveCarroceria')?.addEventListener('click', async ()=>{
   const tipo_id=$('#c_tipo').value, nombre=$('#c_nombre').value.trim(), descripcion=$('#c_desc').value.trim();
-  const j = await postForm('?ajax=crear_carroceria',{tipo_id,nombre,descripcion});
+  const j = await postForm('?accidente_id=<?= (int)$accidente_id ?>&ajax=crear_carroceria',{tipo_id,nombre,descripcion});
   $('#c_msg').textContent = j.ok? 'Creado ✔':'Error: '+j.error;
   if(j.ok){ const s=$('#nv_carroceria_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });
 $('#btnSaveMarca')?.addEventListener('click', async ()=>{
   const nombre=$('#m_nombre').value.trim(), pais_origen=$('#m_pais').value.trim();
-  const j = await postForm('?ajax=crear_marca',{nombre,pais_origen});
+  const j = await postForm('?accidente_id=<?= (int)$accidente_id ?>&ajax=crear_marca',{nombre,pais_origen});
   $('#m_msg').textContent = j.ok? 'Creado ✔':'Error: '+j.error;
   if(j.ok){ const s=$('#nv_marca_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });
 $('#btnSaveModelo')?.addEventListener('click', async ()=>{
   const marca_id=$('#mo_marca').value, nombre=$('#mo_nombre').value.trim();
-  const j = await postForm('?ajax=crear_modelo',{marca_id,nombre});
+  const j = await postForm('?accidente_id=<?= (int)$accidente_id ?>&ajax=crear_modelo',{marca_id,nombre});
   $('#mo_msg').textContent = j.ok? 'Creado ✔':'Error: '+j.error;
   if(j.ok){ const s=$('#nv_modelo_id'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.nombre; s.appendChild(o); s.value=j.id; }
 });

@@ -27,7 +27,7 @@ $sidebarSvg = static fn($icon) => '<svg viewBox="0 0 24 24" aria-hidden="true">'
 $sidebarGroups = [
     'ESPACIO DE TRABAJO' => [
         ['grid', 'Resumen general', 'index.php', $sidebarPath === 'index.php'],
-        ['folder', 'Accidentes', 'accidente_listar.php', in_array($sidebarPath, ['accidente_listar.php','accidente_nuevo.php','accidente_editar.php','accidente_creado.php'], true)],
+        ['folder', 'Accidentes', 'accidente_listar.php', in_array($sidebarPath, ['guardia_historial.php','accidente_listar.php','accidente_nuevo.php','accidente_editar.php','accidente_creado.php'], true)],
         ['map', 'Mapa de accidentes', 'accidente_mapa.php', $sidebarPath === 'accidente_mapa.php'],
         ['people', 'Personas', 'persona_listar.php', str_starts_with($sidebarPath, 'persona_')],
         ['car', 'Vehículos', 'vehiculo_listar.php', str_starts_with($sidebarPath, 'vehiculo_')],

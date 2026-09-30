@@ -185,6 +185,7 @@ final class InvolucradoPersonaService
 
     private function sincronizarEdadPersona(int $personaId, int $accidenteId): void
     {
+        if (\App\Support\Access::role()==='guardia') return; // No alterar identidades compartidas.
         $fechaAccidente = $this->repository->accidenteFecha($accidenteId);
         $fechaNacimiento = $this->repository->personaFechaNacimiento($personaId);
         $edad = $this->edadAFecha($fechaNacimiento, $fechaAccidente);

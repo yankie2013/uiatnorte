@@ -3,6 +3,7 @@ require __DIR__.'/auth.php';require_login();require __DIR__.'/db.php';
 use App\Support\Access;
 use App\Support\WorkspacePage as Page;
 use App\Services\GuardiaService;
+if (Access::role()==='guardia' && isset($_GET['nueva'])) { header('Location: accidente_nuevo.php'); exit; }
 $id=(int)($_GET['id']??$_POST['id']??0);$error='';$service=new GuardiaService($pdo);
 if($_SERVER['REQUEST_METHOD']==='POST') {
     try {Access::checkCsrf();$action=(string)($_POST['action']??'guardar');
@@ -19,6 +20,10 @@ $canCreate=in_array(Access::role(),['admin','guardia'],true);
 $row=[];
 if($id){$s=$pdo->prepare('SELECT c.*,u.nombre autor, j.nombre jefe, DATE_ADD(c.registrado_en,INTERVAL 12 HOUR) limite FROM comunicaciones_guardia c JOIN usuarios u ON u.id=c.creado_por LEFT JOIN usuarios j ON j.id=c.jefe_id WHERE c.id=?'.(Access::admin()?'':' AND c.eliminado_en IS NULL'));$s->execute([$id]);$row=$s->fetch();if(!$row){Page::notice('Comunicación no encontrada.',true);Page::end();exit;}}
 $edit=($id && Access::guardEditable($row,Access::id(),Access::role())) || (!$id && $canCreate && isset($_GET['nueva']));
+if ($id && !empty($row['accidente_id']) && empty($row['jefe_id']) && (int)$row['creado_por']===Access::id() && Access::role()==='guardia') {
+    echo '<section><h2>Registro de accidente en preparación</h2><a class="button" href="guardia_registro.php?accidente_id='.(int)$row['accidente_id'].'">Continuar con vehículos y personas</a></section>';
+    Page::end();exit;
+}
 if($id || $edit){
     echo '<section><h2>'.($id?'Comunicación #'.$id:'Nueva comunicación').'</h2>';
     if($id){echo '<p>Registró: '.Page::escape($row['autor']).' · '.Page::escape($row['registrado_en']).'</p><p>Edición de guardia hasta: <strong>'.Page::escape($row['limite']).'</strong> (hora de Lima).</p>';if($row['accidente_id'])echo '<p>Asignado a '.Page::escape($row['jefe']).' · <a href="gestion_expedientes.php?id='.$row['accidente_id'].'">Expediente #'.$row['accidente_id'].'</a></p><p class="muted">Las correcciones de esta comunicación conservan lo recibido en la llamada; no sobrescriben la investigación del JEFE EMI.</p>';}
@@ -38,14 +43,14 @@ if($id || $edit){
         echo '<p class="notice">Consulta. La edición está reservada al autor durante las primeras 12 horas y al administrador.</p>';
     }
     echo '</section>';
-    if($id && !$row['eliminado_en'] && !$row['accidente_id'] && $canCreate && (Access::admin() || (int)$row['creado_por']===Access::id())){
+    if($id && !$row['eliminado_en'] && !$row['accidente_id'] && (Access::admin() || Access::guardEditable($row,Access::id(),Access::role())) && $canCreate && (Access::admin() || (int)$row['creado_por']===Access::id())){
         echo '<section><h2>Asignar a JEFE EMI</h2><p>Se abre un único expediente con los datos iniciales. La hora real del accidente queda pendiente de verificación.</p><form method="post">';Page::token();echo '<input type="hidden" name="action" value="asignar"><label>Responsable<select name="jefe_id" required><option value="">Seleccionar</option>';
         foreach($pdo->query("SELECT id,nombre FROM usuarios WHERE activo=1 AND rol='jefe_emi' ORDER BY nombre") as $u)echo '<option value="'.$u['id'].'">'.Page::escape($u['nombre']).'</option>';echo '</select></label><button>Asignar y abrir expediente</button></form></section>';
     }
     if($id && Access::admin()){$operation=$row['eliminado_en']?'restaurar':'eliminar';echo '<section><details><summary>'.ucfirst($operation).' comunicación</summary><form method="post">';Page::token();echo '<input type="hidden" name="action" value="'.$operation.'"><label>Motivo<input name="motivo" required></label><button class="danger">'.ucfirst($operation).' comunicación</button></form></details></section>';}
     echo '<a href="guardia.php">Volver a comunicaciones</a>';
 } else {
-    if($canCreate)echo '<a class="button" href="guardia.php?nueva=1">Registrar llamada</a>';
+    if($canCreate)echo '<a class="button" href="guardia.php?nueva=1">Registrar accidente paso a paso</a>';
     $deleted=Access::admin() && isset($_GET['eliminadas']);
     if(Access::admin())echo '<p><a href="guardia.php">Activas</a> · <a href="guardia.php?eliminadas=1">Eliminadas</a></p>';
     echo '<section><div class="table-scroll"><table><thead><tr><th>Registro</th><th>Lugar</th><th>Comunicante</th><th>Estado</th><th></th></tr></thead><tbody>';

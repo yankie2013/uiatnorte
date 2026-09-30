@@ -2,6 +2,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+if (\App\Support\Access::role()==='guardia') { header('Location: guardia_historial.php'); exit; }
 header('Content-Type: text/html; charset=utf-8');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");

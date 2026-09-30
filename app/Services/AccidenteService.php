@@ -93,6 +93,7 @@ final class AccidenteService
 
         $accidenteId = $this->repository->transaction(function (AccidenteRepository $repository) use ($payload): int {
             $accidenteId = $repository->insertAccidente($payload);
+            if (\App\Support\Access::role()==='guardia') $repository->registerGuardiaDraft($accidenteId, $payload);
             $repository->attachModalidades($accidenteId, $payload['modalidad_ids']);
             $repository->attachConsecuencias($accidenteId, $payload['consecuencia_ids']);
             $repository->updateSidpol($accidenteId, $this->generatedSidpol($accidenteId));

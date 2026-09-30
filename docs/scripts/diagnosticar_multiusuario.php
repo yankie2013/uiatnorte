@@ -33,7 +33,7 @@ try {
     if (!$missing) echo "Ninguna.\n";
     echo "\nFUNCIONES DE PERMISOS\n";
     $installed = $pdo->query('SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATABASE()')->fetchAll(PDO::FETCH_COLUMN);
-    foreach (['rbac_admin', 'rbac_case', 'rbac_person', 'rbac_vehicle'] as $routine) {
+    foreach (['rbac_admin', 'rbac_case', 'rbac_person', 'rbac_vehicle','rbac_guardia_draft'] as $routine) {
         echo $routine . ' | ' . (in_array($routine, $installed, true) ? 'OK' : 'FALTA') . "\n";
     }
     echo "\nTerminado. No se modificaron tablas, vistas, funciones ni registros.\n";

@@ -33,12 +33,31 @@ final class GuardiaService
             $this->pdo->commit();return $id;
         } catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
+    public function deliverDraft(int $case, int $chief): void {
+        $this->pdo->beginTransaction();
+        try {
+            $st=$this->pdo->prepare('SELECT id FROM accidentes WHERE id=? FOR UPDATE');
+            $st->execute([$case]);
+            $st=$this->pdo->prepare('SELECT rbac_guardia_draft(?)');$st->execute([$case]);
+            if (!$st->fetchColumn()) throw new RuntimeException('Este registro ya fue entregado, venció o pertenece a otro usuario.');
+            $st=$this->pdo->prepare("SELECT id FROM usuarios WHERE id=? AND activo=1 AND rol='jefe_emi'");
+            $st->execute([$chief]);if (!$st->fetchColumn()) throw new RuntimeException('Selecciona un JEFE EMI activo.');
+            $this->pdo->exec('SET @rbac_assignment=1, @rbac_guardia_assign=1');
+            $this->pdo->prepare('UPDATE accidentes SET responsable_id=?,asignado_en=NOW() WHERE id=?')->execute([$chief,$case]);
+            $this->pdo->prepare('UPDATE comunicaciones_guardia SET jefe_id=?,asignado_en=NOW() WHERE accidente_id=?')->execute([$chief,$case]);
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $e;
+        } finally { $this->pdo->exec('SET @rbac_assignment=NULL, @rbac_guardia_assign=NULL'); }
+    }
     public function assign(int $id,int $chief): int {
         if(!in_array(Access::role(),['guardia','admin'],true))throw new RuntimeException('Perfil sin permiso de asignación.');
         $this->pdo->beginTransaction();
         try {
-            $s=$this->pdo->prepare('SELECT * FROM comunicaciones_guardia WHERE id=? FOR UPDATE');$s->execute([$id]);$row=$s->fetch();
+            $s=$this->pdo->prepare('SELECT *,NOW()<DATE_ADD(registrado_en,INTERVAL 12 HOUR) dentro_plazo FROM comunicaciones_guardia WHERE id=? FOR UPDATE');$s->execute([$id]);$row=$s->fetch();
             if(!$row || $row['eliminado_en'] || (!Access::admin() && (int)$row['creado_por']!==Access::id()))throw new RuntimeException('Comunicación no disponible para asignación.');
+            if(!Access::admin() && !$row['dentro_plazo'])throw new RuntimeException('El plazo de 12 horas terminó. Solicite la asignación al administrador.');
             if($row['accidente_id'])throw new RuntimeException('La comunicación ya fue asignada. La siguiente derivación corresponde al JEFE EMI.');
             $s=$this->pdo->prepare("SELECT id FROM usuarios WHERE id=? AND activo=1 AND rol='jefe_emi'");$s->execute([$chief]);if(!$s->fetch())throw new RuntimeException('Seleccione un JEFE EMI activo.');
             $s=$this->pdo->prepare('SELECT 1 FROM ubigeo_distrito WHERE cod_dep=? AND cod_prov=? AND cod_dist=?');$s->execute([$row['cod_dep'],$row['cod_prov'],$row['cod_dist']]);if(!$s->fetch())throw new RuntimeException('Complete departamento, provincia y distrito antes de asignar el caso.');

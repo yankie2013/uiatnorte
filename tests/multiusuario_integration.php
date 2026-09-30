@@ -21,6 +21,38 @@ try{
     $p->exec("USE `$test`");
     require dirname(__DIR__).'/docs/scripts/migrar_multiusuario.php';
     actor($p,1);$other=user($p,'jefe_emi');$adj=user($p,'adjunto');$guard=user($p,'guardia');$secretary=user($p,'secretaria');
+    actor($p,$guard);
+    $draftInput=$p->query('SELECT * FROM accidentes LIMIT 1')->fetch();
+    $draftInput['registro_sidpol']=null;
+    $draftInput['modalidad_ids']=[(int)$p->query('SELECT MIN(id) FROM modalidad_accidente')->fetchColumn()];
+    $draftInput['consecuencia_ids']=[(int)$p->query('SELECT MIN(id) FROM consecuencia_accidente')->fetchColumn()];
+    $draftResult=(new \App\Services\AccidenteService(new \App\Repositories\AccidenteRepository($p)))->registerAccidente($draftInput);
+    $draft=(int)$draftResult['id'];
+    check((bool)$p->query("SELECT rbac_guardia_draft($draft)")->fetchColumn(),'guardia registra formulario completo como borrador propio');
+    $vehicle=(int)$p->query('SELECT MIN(id) FROM vehiculos')->fetchColumn();
+    $p->prepare("INSERT INTO involucrados_vehiculos(accidente_id,vehiculo_id,orden_participacion,tipo) VALUES(?,?,?,'Unidad')")->execute([$draft,$vehicle,'UT-1']);
+    check(true,'guardia agrega vehículo al borrador');
+    $person=(int)$p->query('SELECT MIN(id) FROM personas')->fetchColumn();
+    $role=(int)$p->query('SELECT MIN(Id) FROM participacion_persona')->fetchColumn();
+    (new \App\Services\InvolucradoPersonaService(new \App\Repositories\InvolucradoPersonaRepository($p)))->registrar(['accidente_id'=>$draft,'persona_id'=>$person,'rol_id'=>$role,'vehiculo_id'=>$vehicle]);
+    check(true,'guardia vincula persona con el formulario habitual sin modificar identidad compartida');
+    $p->exec('SET @rbac_migration=1');
+    $p->exec("UPDATE comunicaciones_guardia SET registrado_en=DATE_SUB(NOW(),INTERVAL 13 HOUR) WHERE accidente_id=$draft");
+    $p->exec('SET @rbac_migration=NULL');
+    check(!(bool)$p->query("SELECT rbac_guardia_draft($draft)")->fetchColumn(),'registro inicial vence a las 12 horas');
+    deny(fn()=>(new GuardiaService($p))->deliverDraft($draft,$other),'registro vencido no se entrega por guardia');
+    $p->exec('SET @rbac_migration=1');
+    $p->exec("UPDATE comunicaciones_guardia SET registrado_en=NOW() WHERE accidente_id=$draft");
+    $p->exec('SET @rbac_migration=NULL');
+
+    actor($p,$adj);
+    deny(fn()=>$p->exec("INSERT INTO involucrados_vehiculos(accidente_id,vehiculo_id,orden_participacion,tipo) VALUES($draft,$vehicle,'UT-2','Unidad')"),'otro actor no modifica borrador');
+    actor($p,$guard);
+    (new GuardiaService($p))->deliverDraft($draft,$other);
+    check(!(bool)$p->query("SELECT rbac_guardia_draft($draft)")->fetchColumn(),'entrega cierra el registro de guardia');
+    deny(fn()=>$p->exec("UPDATE accidentes SET lugar='Cambio posterior' WHERE id=$draft"),'guardia no altera investigación entregada');
+    actor($p,$other);check(Access::canEdit($draft),'jefe recibe registro completo');
+    actor($p,1);(new ExpedienteAccessService($p))->change($draft,'reasignar',2,'Restablecer fixture');
     actor($p,$other);
     foreach (['fiscalia','modalidad_accidente','consecuencia_accidente','comisarias','marcas_vehiculo'] as $catalog) {
         $p->prepare("INSERT INTO `$catalog` (nombre) VALUES (?)")->execute(['Catálogo de prueba '.bin2hex(random_bytes(4))]);
@@ -101,7 +133,7 @@ try{
     actor($p,$guard);
     $call2=$guardia->save(0,$input);
     $p->exec('SET @rbac_migration=1');$p->exec("UPDATE comunicaciones_guardia SET registrado_en=DATE_SUB(NOW(),INTERVAL 13 HOUR) WHERE id=$call2");$p->exec('SET @rbac_migration=NULL');
-    $lateCase=$guardia->assign($call2,$other);check($lateCase>0,'guardia asigna una llamada pendiente después de 12 horas sin editar su contenido');
+    deny(fn()=>$guardia->assign($call2,$other),'guardia no asigna ni modifica un ingreso vencido');
     actor($p,$other);
     $p->exec("UPDATE accidentes SET latitud=-12.05,longitud=-77.04 WHERE id=$case");$service->change($case,'verificar_ubicacion',0,'');
     check((bool)$p->query("SELECT ubicacion_verificada FROM accidentes WHERE id=$case")->fetchColumn(),'responsable verifica ubicación');

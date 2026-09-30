@@ -2,6 +2,12 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+if (\App\Support\Access::role()==='guardia') {
+    $draftId=(int)($_POST['accidente_id']??$_GET['accidente_id']??0);
+    $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$draftId]);
+    if (!$check->fetchColumn()) { http_response_code(403); exit('Solo puedes agregar datos a tu registro de guardia antes de entregarlo y dentro de las primeras 12 horas.'); }
+}
+
 
 use App\Repositories\InvolucradoPersonaRepository;
 use App\Services\InvolucradoPersonaService;
@@ -45,6 +51,7 @@ if (iget('ajax')==='vehiculos_por_accidente' && isset($_GET['accidente_id'])) {
 }
 
 $accidentes = $repo->accidentes();
+if (\App\Support\Access::role()==='guardia') $accidentes=array_values(array_filter($accidentes,static fn($a)=>(int)$a['id']===$draftId));
 $accidente_id = (int)iget('accidente_id', ($accidentes[0]['id'] ?? 0));
 $accidente_fecha = $accidente_id ? $repo->accidenteFecha($accidente_id) : null;
 $return_to = safe_return_to(iget('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
@@ -141,6 +148,13 @@ textarea{min-height:60px; resize:vertical}
 </style>
 </head>
 <body>
+<?php if (\App\Support\Access::role()==='guardia'): ?>
+<div style="max-width:1100px;margin:20px auto;padding:18px;border-radius:16px;background:#e2f3ee">
+<strong>Registro guiado de guardia · Paso 3: personas</strong>
+<p>Busca primero el registro existente. Agrega los datos conocidos y guarda para continuar.</p>
+<a href="guardia_registro.php?accidente_id=<?= $draftId ?>&amp;paso=personas">Volver al registro guiado</a></div>
+<?php endif ?>
+
 <?php require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">

@@ -1,9 +1,10 @@
 <?php
 /** Incluido exclusivamente por la migración CLI. Protege también el SQL de las pantallas heredadas. */
 if (PHP_SAPI !== 'cli' || !isset($p)) { http_response_code(404); exit; }
-foreach(['rbac_admin','rbac_case','rbac_person','rbac_vehicle'] as $f) $p->exec("DROP FUNCTION IF EXISTS $f");
+foreach(['rbac_admin','rbac_case','rbac_person','rbac_vehicle','rbac_guardia_draft'] as $f) $p->exec("DROP FUNCTION IF EXISTS $f");
 $p->exec("CREATE FUNCTION rbac_admin() RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='admin')");
 $p->exec("CREATE FUNCTION rbac_case(case_id INT) RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM accidentes a JOIN usuarios u ON u.id=@actor_id AND u.activo=1 WHERE a.id=case_id AND a.eliminado_en IS NULL AND (u.rol='admin' OR (u.rol='jefe_emi' AND a.responsable_id=u.id) OR (u.rol='adjunto' AND EXISTS(SELECT 1 FROM expediente_colaboradores c WHERE c.accidente_id=a.id AND c.usuario_id=u.id AND c.revocado_en IS NULL))))");
+$p->exec("CREATE FUNCTION rbac_guardia_draft(case_id INT) RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM comunicaciones_guardia c JOIN accidentes a ON a.id=c.accidente_id JOIN usuarios u ON u.id=@actor_id WHERE a.id=case_id AND a.responsable_id IS NULL AND a.eliminado_en IS NULL AND c.creado_por=u.id AND u.activo=1 AND u.rol='guardia' AND c.jefe_id IS NULL AND c.eliminado_en IS NULL AND NOW()<DATE_ADD(c.registrado_en,INTERVAL 12 HOUR))");
 // Un dato de identidad compartido no se modifica si afecta expedientes fuera del permiso del actor.
 $p->exec("CREATE FUNCTION rbac_person(person_id INT) RETURNS BOOLEAN READS SQL DATA BEGIN
 DECLARE total INT DEFAULT 0; DECLARE denied INT DEFAULT 0;
@@ -39,11 +40,12 @@ foreach($tables as $table) {
         } elseif($table==='accidentes') {
             $case="$row.id";
             if($event==='INSERT') {
-                $guard="(rbac_admin() OR EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='jefe_emi') OR (@rbac_guardia_assign=1 AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia')))";
-                $extra="SET NEW.creado_por=@actor_id; IF COALESCE(@rbac_guardia_assign,0)=0 THEN SET NEW.responsable_id=@actor_id; END IF; SET NEW.asignado_en=NOW();";
+                $guard="(rbac_admin() OR EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol IN ('jefe_emi','guardia')) OR (@rbac_guardia_assign=1 AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia')))";
+                $extra="SET NEW.creado_por=@actor_id; IF COALESCE(@rbac_guardia_assign,0)=0 THEN SET NEW.responsable_id=@actor_id; END IF; SET NEW.asignado_en=NOW(); IF COALESCE(@rbac_guardia_assign,0)=0 AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND rol='guardia') THEN SET NEW.responsable_id=NULL; SET NEW.asignado_en=NULL; END IF;";
             } elseif($event==='UPDATE') {
                 $guard="(rbac_admin() OR (OLD.eliminado_en IS NULL AND (EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='jefe_emi' AND id=OLD.responsable_id) OR EXISTS(SELECT 1 FROM expediente_colaboradores c JOIN usuarios u ON u.id=c.usuario_id WHERE c.accidente_id=OLD.id AND c.usuario_id=@actor_id AND c.revocado_en IS NULL AND u.activo=1 AND u.rol='adjunto'))))";
                 $guard .= " OR (COALESCE(@rbac_assignment,0)=1 AND OLD.eliminado_en IS NULL AND EXISTS(SELECT 1 FROM expediente_transferencias t JOIN usuarios u ON u.id=t.destino_id WHERE t.accidente_id=OLD.id AND t.origen_id=COALESCE(OLD.responsable_id,0) AND t.destino_id=@actor_id AND t.estado='pendiente' AND u.activo=1 AND u.rol='jefe_emi'))";
+                $guard .= " OR rbac_guardia_draft(OLD.id)";
                 $extra="IF NOT (NEW.creado_por <=> OLD.creado_por) OR NOT (NEW.creado_en <=> OLD.creado_en) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='La autoría y fecha original son inmutables'; END IF;
 IF (NOT (NEW.responsable_id <=> OLD.responsable_id) OR NOT (NEW.asignado_en <=> OLD.asignado_en)) AND COALESCE(@rbac_assignment,0)<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Use el flujo de transferencia'; END IF;
 IF (NOT (NEW.eliminado_en <=> OLD.eliminado_en) OR NOT (NEW.eliminado_por <=> OLD.eliminado_por)) AND NOT rbac_admin() THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Solo el administrador elimina registros'; END IF;
@@ -56,7 +58,7 @@ IF NEW.primera_actuacion_en IS NULL AND COALESCE(@rbac_assignment,0)=0 THEN SET 
                 $guard="(rbac_admin() OR EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia'))";
                 $extra='SET NEW.creado_por=@actor_id; SET NEW.registrado_en=NOW();';
             } elseif($event==='UPDATE') {
-                $guard="(rbac_admin() OR (OLD.eliminado_en IS NULL AND OLD.creado_por=@actor_id AND (NOW()<DATE_ADD(OLD.registrado_en,INTERVAL 12 HOUR) OR COALESCE(@rbac_guardia_assign,0)=1) AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia')))";
+                $guard="(rbac_admin() OR (OLD.eliminado_en IS NULL AND OLD.creado_por=@actor_id AND NOW()<DATE_ADD(OLD.registrado_en,INTERVAL 12 HOUR) AND EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia')))";
                 $extra="IF NOT rbac_admin() AND NOW()>=DATE_ADD(OLD.registrado_en,INTERVAL 12 HOUR) AND (NOT (NEW.fecha_llamada <=> OLD.fecha_llamada) OR NOT (NEW.comunicante <=> OLD.comunicante) OR NOT (NEW.telefono <=> OLD.telefono) OR NOT (NEW.lugar <=> OLD.lugar) OR NOT (NEW.referencia <=> OLD.referencia) OR NOT (NEW.descripcion <=> OLD.descripcion) OR NOT (NEW.tipo_hecho <=> OLD.tipo_hecho) OR NOT (NEW.vehiculos <=> OLD.vehiculos) OR NOT (NEW.afectados <=> OLD.afectados) OR NOT (NEW.latitud <=> OLD.latitud) OR NOT (NEW.longitud <=> OLD.longitud) OR NOT (NEW.cod_dep <=> OLD.cod_dep) OR NOT (NEW.cod_prov <=> OLD.cod_prov) OR NOT (NEW.cod_dist <=> OLD.cod_dist)) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Plazo de edición de 12 horas vencido'; END IF;
 IF NOT (NEW.registrado_en <=> OLD.registrado_en) OR NOT (NEW.creado_por <=> OLD.creado_por) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='No puede reiniciar el plazo de 12 horas'; END IF;
 IF (NOT (NEW.jefe_id <=> OLD.jefe_id) OR NOT (NEW.accidente_id <=> OLD.accidente_id) OR NOT (NEW.asignado_en <=> OLD.asignado_en)) AND COALESCE(@rbac_guardia_assign,0)<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Use la asignación al JEFE EMI'; END IF;
@@ -68,7 +70,7 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
         } elseif($table==='personas' || $table==='vehiculos') {
             $func=$table==='personas'?'rbac_person':'rbac_vehicle';
             $guard=$event==='INSERT'?$operational:"$func(OLD.id)";
-            if($event==='INSERT') $extra='SET NEW.creado_por=@actor_id;';
+            if($event==='INSERT') { $guard="($guard OR EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='guardia'))"; $extra='SET NEW.creado_por=@actor_id;'; }
             if($event==='UPDATE') $extra="IF NOT (NEW.creado_por <=> OLD.creado_por) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Autoría inmutable'; END IF;";
         } elseif($has('accidente_id')) {
             $case="$row.accidente_id"; $guard="rbac_case($case)";
@@ -88,6 +90,9 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
             if($event==='UPDATE') $guard.=' AND rbac_person(OLD.persona_id)';
         } else {
             $guard='rbac_admin()'; // Catálogos y cuentas: administración.
+        }
+        if ($event==='INSERT' && in_array($table,['accidente_modalidad','accidente_consecuencia','involucrados_vehiculos','involucrados_personas'],true)) {
+            $guard = "($guard OR rbac_guardia_draft(NEW.accidente_id))";
         }
         if($table==='usuarios' && $event==='UPDATE') {
             $unchanged=[];
