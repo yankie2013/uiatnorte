@@ -1,0 +1,27 @@
+.gestion{max-width:1780px}
+.gestion > section:first-of-type form{display:flex;flex-wrap:wrap;align-items:end;gap:14px}
+.gestion > section:first-of-type label{min-width:190px;flex:1}
+.guard-card-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.guard-card{min-width:0;border:1px solid #d7e1ed;border-radius:18px;background:linear-gradient(180deg,#fff,#f8faff);box-shadow:0 10px 24px #1c315314,inset 5px 0 #b5c9f9;padding:22px;display:flex;flex-direction:column;gap:14px;color:#24324a}
+.guard-card-head,.guard-card-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.guard-sidpol,.guard-report,.guard-chip{display:inline-flex;border-radius:999px;padding:5px 11px;font-weight:800;font-size:12px;line-height:1.35}
+.guard-sidpol{background:#fff4d9;color:#a87500;font-size:15px}
+.guard-report{background:#edf1f7;color:#526277}
+.guard-chip{background:#fae2e5;color:#9b2638}
+.guard-derived{background:#dff3e9;color:#17684d}
+.guard-type{background:#d5f6fc;color:#196378}
+.guard-card h2{font-size:16px;line-height:1.4;margin:2px 0 0;color:#24324a;overflow-wrap:anywhere}
+.guard-card h2 span{color:#64748b}
+.guard-card p{margin:0;color:#34445f;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.guard-card small{font-size:10px;letter-spacing:.05em;color:#79889c;font-weight:850}
+.guard-modality{display:flex;gap:9px;align-items:baseline}
+.guard-card-meta{display:grid;grid-template-columns:1fr 1.25fr;gap:14px}
+.guard-card-meta div{display:grid;gap:3px}
+.guard-card-meta strong{font-size:12px;line-height:1.35}
+.guard-card-section{border-top:1px solid #dce4ee;padding-top:13px;display:grid;gap:8px}
+.guard-card-section p span{font-size:11px;color:#64748b;padding-left:23px}
+.guard-card-footer{border-top:1px solid #dce4ee;padding-top:13px;margin-top:auto;display:flex;flex-direction:column;align-items:start;gap:6px;font-size:12px}
+.guard-card-footer span{color:#68798d}
+.guard-card-footer .button{margin-top:6px}
+@media(max-width:1150px){.guard-card-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.guard-card-list{grid-template-columns:1fr}.guard-card{padding:17px}}

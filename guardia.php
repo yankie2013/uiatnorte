@@ -26,7 +26,7 @@ if ($id && !empty($row['accidente_id']) && empty($row['jefe_id']) && (int)$row['
 }
 if($id || $edit){
     echo '<section><h2>'.($id?'Comunicación #'.$id:'Nueva comunicación').'</h2>';
-    if($id){echo '<p>Registró: '.Page::escape($row['autor']).' · '.Page::escape($row['registrado_en']).'</p><p>Edición de guardia hasta: <strong>'.Page::escape($row['limite']).'</strong> (hora de Lima).</p>';if($row['accidente_id'])echo '<p>Asignado a '.Page::escape($row['jefe']).' · <a href="gestion_expedientes.php?id='.$row['accidente_id'].'">Expediente #'.$row['accidente_id'].'</a></p><p class="muted">Las correcciones de esta comunicación conservan lo recibido en la llamada; no sobrescriben la investigación del JEFE EMI.</p>';}
+    if($id){echo '<p>Registró: '.Page::escape($row['autor']).' · '.Page::escape($row['registrado_en']).'</p><p>Edición de guardia hasta: <strong>'.Page::escape($row['limite']).'</strong> (hora de Lima).</p>';if($row['accidente_id'])echo '<p>Asignado a '.Page::escape($row['jefe']).' · Expediente #'.(int)$row['accidente_id'].'</p><p class="muted">Las correcciones de esta comunicación conservan lo recibido en la llamada; no sobrescriben la investigación del JEFE EMI.</p>';}
     if($edit){
         $data=$error!==''?array_merge($row,$_POST):$row;
         echo '<form method="post">';Page::token();echo '<input type="hidden" name="action" value="guardar"><div class="grid">';

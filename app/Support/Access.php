@@ -36,7 +36,8 @@ final class Access
     public static function canViewWorkspaceCase(int $case): bool {
         $role = self::role();
         if ($role === 'admin' || in_array($role, ['secretaria','viewer','editor'], true)) return true;
-        if (!in_array($role, ['jefe_emi','adjunto','guardia'], true)) return false;
+        // Guardia conserva sus tarjetas y su registro guiado, pero no abre el expediente de investigación.
+        if (!in_array($role, ['jefe_emi','adjunto'], true)) return false;
         $predicate = self::workspacePredicate('a');
         $s = Database::connection()->prepare("SELECT 1 FROM accidentes_activos a WHERE a.id=? AND ($predicate) LIMIT 1");
         $s->execute([$case]);
@@ -45,7 +46,7 @@ final class Access
     public static function requireWorkspaceCase(int $case): void {
         if ($case <= 0 || !self::canViewWorkspaceCase($case)) {
             http_response_code(403);
-            exit('No tienes autorización para abrir este expediente fuera de tu espacio de trabajo. Puedes consultarlo desde el buscador general.');
+            exit(self::role()==='guardia' ? 'Guardia solo puede consultar las tarjetas de sus registros.' : 'No tienes autorización para abrir este expediente fuera de tu espacio de trabajo. Puedes consultarlo desde el buscador general.');
         }
     }
     public static function canEdit(int $case): bool {

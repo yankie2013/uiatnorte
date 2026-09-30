@@ -7,6 +7,10 @@ function responsible_label(?string $name, ?string $grade = null): string {
 }
 
 $id=(int)($_GET['id']??$_POST['id']??0);$error='';$ok='';
+if (Access::role()==='guardia') {
+    if ($id>0 || $_SERVER['REQUEST_METHOD']==='POST') { http_response_code(403); exit('Guardia solo puede consultar las tarjetas de sus registros.'); }
+    header('Location: guardia_historial.php'); exit;
+}
 if($_SERVER['REQUEST_METHOD']==='POST') { require __DIR__.'/expediente_estado.php'; exit; }
 if($id && ($_GET['modal']??'')==='1') {
     header('Content-Type: text/html; charset=utf-8');
