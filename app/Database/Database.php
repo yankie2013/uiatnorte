@@ -25,6 +25,13 @@ final class Database
         $collation = preg_replace('/[^a-zA-Z0-9_]/', '', (string) ($config['collation'] ?? 'utf8mb4_general_ci')) ?: 'utf8mb4_general_ci';
         $timeZone = (string) ($config['time_zone'] ?? '-05:00');
 
+        if (!empty($config['local_only']) && (
+            !in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true)
+            || !preg_match('/_(?:dev|test)$/i', $name)
+        )) {
+            throw new \RuntimeException('Protección de desarrollo: DB_LOCAL_ONLY permite únicamente MySQL local y bases terminadas en _dev o _test. No se abrió ninguna conexión.');
+        }
+
         $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $host, $port, $name, $charset);
 
         self::$connection = new PDO($dsn, $user, $pass, [

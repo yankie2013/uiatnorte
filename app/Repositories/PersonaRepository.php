@@ -32,6 +32,7 @@ final class PersonaRepository
         'nombre_madre',
         'celular',
         'email',
+        'numero_hijos',
         'notas',
         'foto_path',
         'api_fuente',
@@ -150,7 +151,7 @@ final class PersonaRepository
 
     public function involvementCount(int $id): int
     {
-        return $this->safeCount('SELECT COUNT(*) FROM involucrados_personas_activos WHERE persona_id = ?', [$id]);
+        return $this->safeCount('SELECT COUNT(*) FROM involucrados_personas WHERE persona_id = ?', [$id]);
     }
 
     public function referenceSummary(int $id): array

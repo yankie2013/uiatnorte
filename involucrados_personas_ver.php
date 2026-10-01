@@ -69,6 +69,17 @@ $sql = "
   SELECT ip.*,
          p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno,
          p.sexo, p.fecha_nacimiento,
+         p.tipo_doc, p.nombre_padre, p.nombre_madre, p.departamento_nac, p.provincia_nac, p.distrito_nac,
+         IF(ip.snapshot_guardado=1,ip.edad_snapshot,TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)) AS edad,
+         IF(ip.snapshot_guardado=1,ip.estado_civil_snapshot,p.estado_civil) AS estado_civil,
+         IF(ip.snapshot_guardado=1,ip.grado_instruccion_snapshot,p.grado_instruccion) AS grado_instruccion,
+         IF(ip.snapshot_guardado=1,ip.numero_hijos_snapshot,p.numero_hijos) AS numero_hijos,
+         IF(ip.snapshot_guardado=1,ip.domicilio_snapshot,p.domicilio) AS domicilio,
+         IF(ip.snapshot_guardado=1,ip.domicilio_departamento_snapshot,p.domicilio_departamento) AS domicilio_departamento,
+         IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
+         IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
+         IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+         IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email,
          a.fecha_accidente, a.lugar AS lugar_accidente,
          v.id AS veh_id, v.placa AS veh_placa, v.color AS veh_color, v.anio AS veh_anio, v.marca AS veh_marca, v.modelo AS veh_modelo,
          pp.Nombre AS rol_nombre, COALESCE(pp.RequiereVehiculo,0) AS rol_reqveh
@@ -273,6 +284,11 @@ if (!$show['occ'] && count($occList)) {
         <div class="rowv"><div class="mut">DNI</div><div><?= h(dash($inv['num_doc'] ?? '')) ?></div></div>
         <div class="rowv"><div class="mut">Sexo</div><div><?= h(dash($inv['sexo'] ?? '')) ?></div></div>
         <div class="rowv"><div class="mut">Fecha nac.</div><div><?= h(dash($inv['fecha_nacimiento'] ?? '')) ?><?= !empty($inv['fecha_nacimiento']) ? (' - ' . edad_ref($inv['fecha_nacimiento'], $inv['fecha_accidente'] ?? '') . ' anios') : '' ?></div></div>
+        <div class="rowv"><div class="mut">Estado civil</div><div><?= h(dash($inv['estado_civil'] ?? '')) ?></div></div>
+        <div class="rowv"><div class="mut">Instrucción</div><div><?= h(dash($inv['grado_instruccion'] ?? '')) ?></div></div>
+        <div class="rowv"><div class="mut">Número de hijos</div><div><?= h(dash($inv['numero_hijos'] ?? '')) ?></div></div>
+        <div class="rowv"><div class="mut">Domicilio</div><div><?= h(dash($inv['domicilio'] ?? '')) ?></div></div>
+        <div class="rowv"><div class="mut">Celular / correo</div><div><?= h(dash($inv['celular'] ?? '')) ?><?= !empty($inv['email']) ? ' / ' . h($inv['email']) : '' ?></div></div>
         <div class="rowv"><div class="mut">Rol</div><div><?= h(dash($inv['rol_nombre'] ?? '')) ?><?= $inv['rol_reqveh'] ? '<span class="chip">requiere vehiculo</span>' : '' ?></div></div>
         <div class="rowv"><div class="mut">Vehiculo</div><div><?= !empty($inv['veh_placa']) ? h(trim(($inv['veh_placa'] ?? '') . ' ' . ($inv['veh_marca'] ?? '') . ' ' . ($inv['veh_modelo'] ?? '') . ' ' . ($inv['veh_color'] ?? '') . ' ' . ($inv['veh_anio'] ?? ''))) : '-' ?></div></div>
         <div class="rowv"><div class="mut">Lesion</div><div><?= h(dash($inv['lesion'] ?? '')) ?></div></div>

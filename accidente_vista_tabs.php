@@ -3887,6 +3887,16 @@ $personas = safe_query_all(
             ip.creado_en AS involucrado_creado_en,
             ip.actualizado_en AS involucrado_actualizado_en,
             p.*,
+            IF(ip.snapshot_guardado=1,ip.edad_snapshot,TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)) AS edad,
+            IF(ip.snapshot_guardado=1,ip.estado_civil_snapshot,p.estado_civil) AS estado_civil,
+            IF(ip.snapshot_guardado=1,ip.grado_instruccion_snapshot,p.grado_instruccion) AS grado_instruccion,
+            IF(ip.snapshot_guardado=1,ip.numero_hijos_snapshot,p.numero_hijos) AS numero_hijos,
+            IF(ip.snapshot_guardado=1,ip.domicilio_snapshot,p.domicilio) AS domicilio,
+            IF(ip.snapshot_guardado=1,ip.domicilio_departamento_snapshot,p.domicilio_departamento) AS domicilio_departamento,
+            IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
+            IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
+            IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+            IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email,
             COALESCE(pp.Nombre, '') AS rol_nombre,
             COALESCE(pp.RequiereVehiculo, 0) AS rol_requiere_vehiculo,
             COALESCE(pp.Orden, 999) AS rol_orden,
@@ -3917,6 +3927,7 @@ $personas = safe_query_all(
             v.creado_en AS veh_creado_en,
             v.actualizado_en AS veh_actualizado_en
        FROM involucrados_personas_activos ip
+       JOIN accidentes_activos a ON a.id = ip.accidente_id
        JOIN personas p ON p.id = ip.persona_id
   LEFT JOIN participacion_persona pp ON pp.Id = ip.rol_id
   LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id = ip.accidente_id AND iv.vehiculo_id = ip.vehiculo_id

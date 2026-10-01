@@ -6,6 +6,7 @@ require __DIR__ . '/google_calendar.php';
 
 use App\Repositories\CitacionRepository;
 use App\Services\CitacionService;
+use App\Support\CalendarAccess;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -18,6 +19,7 @@ if (!function_exists('h')) {
 
 $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
+$calendarOwner = CalendarAccess::ownsConnectedCalendar();
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
@@ -34,6 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
             $citacion = $service->detail($id);
             if ($citacion !== null) {
                 $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
+                if ($eventId !== '' && !$calendarOwner) {
+                    throw new RuntimeException('Esta citación está vinculada al calendario de otro usuario; solo su propietario puede eliminarla.');
+                }
                 if ($eventId !== '') {
                     gc_eliminar_evento_citacion($eventId);
                 }
@@ -173,7 +178,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
               <?php if ($syncStatus === 'error' && !empty($row['google_calendar_last_error'])): ?>
                 <div class="small" style="color:var(--danger);"><?= h((string) $row['google_calendar_last_error']) ?></div>
               <?php endif; ?>
-              <?php if ($calendarEventLink !== ''): ?>
+              <?php if ($calendarOwner && $calendarEventLink !== ''): ?>
                 <div class="small"><a href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a></div>
               <?php endif; ?>
             </td>
@@ -183,6 +188,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                 <a class="btn" href="citacion_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>">Editar</a>
                 <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">DOCX</a>
                 <?php if ($pdfDisponible): ?><a class="btn" href="citacion_diligencia_pdf.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">PDF</a><?php endif; ?>
+                <?php if ($calendarEventId !== '' && !$calendarOwner): ?>
+                  <span class="muted">Evento en calendario de otro usuario</span>
+                <?php else: ?>
                 <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
                   <input type="hidden" name="action" value="delete">
                   <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
@@ -190,6 +198,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                   <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                   <button class="btn danger" type="submit">Eliminar</button>
                 </form>
+                <?php endif; ?>
               </div>
             </td>
           </tr>

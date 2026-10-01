@@ -2,6 +2,7 @@
 
 return [
     'driver' => 'mysql',
+    'local_only' => filter_var(getenv('DB_LOCAL_ONLY') ?: 'false', FILTER_VALIDATE_BOOL),
     'host' => getenv('DB_HOST') ?: '127.0.0.1',
     'port' => (int) (getenv('DB_PORT') ?: 3306),
     'name' => getenv('DB_NAME') ?: '',

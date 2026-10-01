@@ -5,6 +5,9 @@ require __DIR__ . '/vendor/autoload.php';
 const GCAL_CITACIONES_ID = '7ntbm9hablm4jm0lbi1sv2o7a4@group.calendar.google.com';
 
 function gc_get_client() {
+    if (!\App\Support\CalendarAccess::ownsConnectedCalendar()) {
+        throw new RuntimeException('Este Google Calendar pertenece a otro usuario.');
+    }
     $credPath  = __DIR__ . '/google/credentials.json';
     $tokenPath = __DIR__ . '/google/token.json';
 
@@ -27,7 +30,11 @@ function gc_get_client() {
     if ($client->isAccessTokenExpired()) {
         if ($client->getRefreshToken()) {
             $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-            file_put_contents($tokenPath, json_encode($client->getAccessToken()));
+            $refreshed = $client->getAccessToken();
+            if (empty($refreshed['refresh_token']) && !empty($accessToken['refresh_token'])) {
+                $refreshed['refresh_token'] = $accessToken['refresh_token'];
+            }
+            file_put_contents($tokenPath, json_encode($refreshed), LOCK_EX);
         } else {
             throw new RuntimeException('Token de Google expirado y sin refresh token.');
         }

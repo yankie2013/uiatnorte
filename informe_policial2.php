@@ -148,7 +148,18 @@ LIMIT 4";
   step("query PERSONAS");
   $sqlPer = "
   SELECT ip.id AS invp_id, ip.accidente_id, ip.persona_id, ip.rol_id, ip.orden_persona, ip.vehiculo_id, ip.lesion, ip.observaciones,
-         p.*, rol.Nombre AS rol_nombre, rol.RequiereVehiculo
+         p.*,
+         IF(ip.snapshot_guardado=1,ip.edad_snapshot,p.edad) AS edad,
+         IF(ip.snapshot_guardado=1,ip.estado_civil_snapshot,p.estado_civil) AS estado_civil,
+         IF(ip.snapshot_guardado=1,ip.grado_instruccion_snapshot,p.grado_instruccion) AS grado_instruccion,
+         IF(ip.snapshot_guardado=1,ip.numero_hijos_snapshot,p.numero_hijos) AS numero_hijos,
+         IF(ip.snapshot_guardado=1,ip.domicilio_snapshot,p.domicilio) AS domicilio,
+         IF(ip.snapshot_guardado=1,ip.domicilio_departamento_snapshot,p.domicilio_departamento) AS domicilio_departamento,
+         IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
+         IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
+         IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+         IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email,
+         rol.Nombre AS rol_nombre, rol.RequiereVehiculo
   FROM involucrados_personas_activos ip
   JOIN personas p                  ON p.id = ip.persona_id
   LEFT JOIN participacion_persona rol ON rol.Id = ip.rol_id

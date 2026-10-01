@@ -51,15 +51,7 @@ if ($accidenteId <= 0) {
 $error = '';
 $data = $service->defaultData(null, $accidenteId);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = [
-        'accidente_id' => $_POST['accidente_id'] ?? $accidenteId,
-        'fallecido_inv_id' => $_POST['fallecido_inv_id'] ?? '',
-        'familiar_persona_id' => $_POST['familiar_persona_id'] ?? '',
-        'parentesco' => $_POST['parentesco'] ?? '',
-        'observaciones' => $_POST['observaciones'] ?? '',
-        'celular' => $_POST['celular'] ?? '',
-        'email' => $_POST['email'] ?? '',
-    ];
+    $data = $service->submittedData($_POST, $accidenteId);
 
     try {
         $service->create($data);

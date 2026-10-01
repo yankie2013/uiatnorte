@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteRule ^google/(?:credentials|token)\.json$ - [F,L,NC]
 RewriteCond %{HTTP_HOST} !^localhost(:[0-9]+)?$ [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:[0-9]+)?$ [NC]
 RewriteCond %{HTTPS} !=on

@@ -644,7 +644,7 @@ $personas = safe_fetch_all_doc($pdo, "
            p.nombres,
            p.apellido_paterno,
            p.apellido_materno,
-           p.edad,
+           IF(ip.snapshot_guardado=1,ip.edad_snapshot,p.edad) AS edad,
            p.nacionalidad,
            pr.Nombre AS rol_nombre,
            iv.id AS inv_vehiculo_id,

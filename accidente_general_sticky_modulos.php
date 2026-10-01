@@ -192,7 +192,9 @@ $vehiculos = $stV->fetchAll(PDO::FETCH_ASSOC);
 $stPV = $pdo->prepare("
   SELECT ip.id AS inv_per_id, ip.rol_id, ip.lesion, ip.observaciones,
          p.id AS persona_id, p.nombres, p.apellido_paterno, p.apellido_materno,
-         p.num_doc, p.edad, p.celular, p.email,
+         p.num_doc, IF(ip.snapshot_guardado=1,ip.edad_snapshot,p.edad) AS edad,
+         IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+         IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email,
          pr.Nombre AS rol_nombre
   FROM involucrados_personas_activos ip
   JOIN personas p ON p.id=ip.persona_id
@@ -204,7 +206,9 @@ $stPV = $pdo->prepare("
 $stPSV = $pdo->prepare("
   SELECT ip.id AS inv_per_id, ip.rol_id, ip.lesion, ip.observaciones,
          p.id AS persona_id, p.nombres, p.apellido_paterno, p.apellido_materno,
-         p.num_doc, p.edad, p.celular, p.email,
+         p.num_doc, IF(ip.snapshot_guardado=1,ip.edad_snapshot,p.edad) AS edad,
+         IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+         IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email,
          pr.Nombre AS rol_nombre
   FROM involucrados_personas_activos ip
   JOIN personas p ON p.id=ip.persona_id

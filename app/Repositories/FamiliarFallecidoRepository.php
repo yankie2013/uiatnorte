@@ -59,8 +59,51 @@ final class FamiliarFallecidoRepository
 
     public function updatePersonaContact(int $id, ?string $celular, ?string $email): void
     {
+        $current = $this->personaById($id);
+        if ($current === null) throw new \InvalidArgumentException('La persona seleccionada ya no existe.');
+        if (trim((string) $current['celular']) === trim((string) $celular)
+            && trim((string) $current['email']) === trim((string) $email)) return;
+        $permission = $this->pdo->prepare('SELECT rbac_person(?)');
+        $permission->execute([$id]);
+        if (!(bool) $permission->fetchColumn()) {
+            throw new \RuntimeException('Puedes vincular a este familiar, pero no modificar su celular o correo porque su ficha es compartida o pertenece a otro usuario. Conserva los datos actuales para guardar el vínculo.');
+        }
         $st = $this->pdo->prepare('UPDATE personas SET celular = ?, email = ? WHERE id = ?');
         $st->execute([$celular, $email, $id]);
+    }
+
+    public function canEditCase(int $id): bool
+    {
+        $st = $this->pdo->prepare('SELECT rbac_case(?)');
+        $st->execute([$id]);
+        return (bool) $st->fetchColumn();
+    }
+
+    public function fallecidoBelongsToCase(int $id, int $accidenteId): bool
+    {
+        $st = $this->pdo->prepare("SELECT 1 FROM involucrados_personas_activos WHERE id=? AND accidente_id=? AND LOWER(COALESCE(lesion,'')) LIKE '%falle%' LIMIT 1");
+        $st->execute([$id, $accidenteId]);
+        return (bool) $st->fetchColumn();
+    }
+
+    public function transaction(callable $operation): mixed
+    {
+        $nested = $this->pdo->inTransaction();
+        $savepoint = 'familiar_' . bin2hex(random_bytes(6));
+        if ($nested) $this->pdo->exec("SAVEPOINT $savepoint");
+        else $this->pdo->beginTransaction();
+        try {
+            $result = $operation();
+            if ($nested) $this->pdo->exec("RELEASE SAVEPOINT $savepoint");
+            else $this->pdo->commit();
+            return $result;
+        } catch (\Throwable $error) {
+            if ($nested) {
+                $this->pdo->exec("ROLLBACK TO SAVEPOINT $savepoint");
+                $this->pdo->exec("RELEASE SAVEPOINT $savepoint");
+            } elseif ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     public function listByAccidente(int $accidenteId): array

@@ -6,6 +6,7 @@ require __DIR__ . '/google_calendar.php';
 
 use App\Repositories\CitacionRepository;
 use App\Services\CitacionService;
+use App\Support\CalendarAccess;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -18,6 +19,7 @@ if (!function_exists('h')) {
 
 $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
+$calendarOwner = CalendarAccess::ownsConnectedCalendar();
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
@@ -54,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $created = $service->create($accidenteId, $data);
         $newId = (int) $created['id'];
         $success = 'Citación registrada correctamente.';
-        try {
+        if ($calendarOwner) try {
             $calendarDetail = gc_crear_evento_citacion_detalle($service->calendarPayload($accidenteId, $newId, $created));
             $linkEvento = (string) ($calendarDetail['html_link'] ?? '');
             $service->updateCalendarSync($newId, [
@@ -206,6 +208,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
     </div>
   </form>
 
+  <?php if ($calendarOwner): ?>
   <div class="card" style="margin-top:16px;">
     <h2 style="margin-top:0;font-size:15px;">Calendario de turnos</h2>
     <p class="small">Aquí puedes ver tus días de servicio y franco.</p>
@@ -213,6 +216,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
       <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FLima&showPrint=0&src=YTg4ZTg1MjI3NDkwZDZhMzJlNDcyMzIwMDZjMDYxZjljMDYyNmIzMmM2M2E1ZmQ2NWRkMGVlNGVkNTFlNTYwZUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MjUzNmFiZGUzMWY3YjA5ZmNhMDBhMGQ4NjEwZTY0ZDM3MWMwNDBmMGQ4ZWU0YTlhZTdlMWJhMmZhY2RiNjFkYUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=N250Ym05aGFibG00am0wbGJpMXN2Mm83YTRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%2333b679&color=%23d50000&color=%23009688" style="border:solid 1px #777;width:100%;height:600px;" frameborder="0" scrolling="no"></iframe>
     </div>
   </div>
+  <?php endif; ?>
 </div>
 <script>
 (function(){

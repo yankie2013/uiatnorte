@@ -29,10 +29,8 @@ $sidebarGroups = [
         ['grid', 'Resumen general', 'index.php', $sidebarPath === 'index.php'],
         ['folder', 'Accidentes', 'accidente_listar.php', in_array($sidebarPath, ['guardia_historial.php','accidente_listar.php','accidente_nuevo.php','accidente_editar.php','accidente_creado.php'], true)],
         ['map', 'Mapa de accidentes', 'accidente_mapa.php', $sidebarPath === 'accidente_mapa.php'],
-        ['people', 'Personas', 'persona_listar.php', str_starts_with($sidebarPath, 'persona_')],
-        ['car', 'Vehículos', 'vehiculo_listar.php', str_starts_with($sidebarPath, 'vehiculo_')],
         ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],
-        ['calendar', 'Google Calendar', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],
+        ['calendar', \App\Support\CalendarAccess::ownsConnectedCalendar() ? 'Google Calendar' : 'Agenda de citaciones', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],
     ],
 ];
 if ($sidebarAccidentId > 0) {
@@ -57,6 +55,8 @@ if ($sidebarAccidentId > 0) {
     $sidebarGroups['EXPEDIENTE ACTUAL'][] = ['people', 'Estado y colaboración', 'accidente_vista_tabs.php?tab=estado&accidente_id=' . $sidebarAccidentId, false];
 }
 $sidebarGroups['DIRECTORIO'] = [
+    ['people', 'Personas', 'persona_listar.php', str_starts_with($sidebarPath, 'persona_')],
+    ['car', 'Vehículos', 'vehiculo_listar.php', str_starts_with($sidebarPath, 'vehiculo_')],
     ['building', 'Comisarías', 'comisarias_listar.php', str_starts_with($sidebarPath, 'comisarias_')],
     ['book', 'Entidades', 'oficio_entidades_listar.php', str_starts_with($sidebarPath, 'oficio_entidad')],
     ['link', 'Enlaces de interés', 'enlaces_interes_listar.php', str_starts_with($sidebarPath, 'enlace')],

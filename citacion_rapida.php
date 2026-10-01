@@ -6,6 +6,8 @@ require __DIR__ . '/google_calendar.php';
 
 use App\Repositories\CitacionRepository;
 use App\Services\CitacionService;
+use App\Support\Access;
+use App\Support\CalendarAccess;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -18,6 +20,7 @@ if (!function_exists('h')) {
 
 $citacionRepository = new CitacionRepository($pdo);
 $service = new CitacionService($citacionRepository);
+$calendarOwner = CalendarAccess::ownsConnectedCalendar();
 $accidenteId = (int) ($_GET['accidente_id'] ?? $_POST['accidente_id'] ?? 0);
 $personaSelector = trim((string) ($_GET['persona'] ?? $_POST['persona'] ?? ''));
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
@@ -78,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') =
         }
 
         $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
+        if ($eventId !== '' && !$calendarOwner) {
+            throw new RuntimeException('Esta citación está vinculada al calendario de otro usuario; solo su propietario puede eliminarla.');
+        }
         if ($eventId !== '') {
             gc_eliminar_evento_citacion($eventId);
             $success = 'La citación fue eliminada y también se quitó de Google Calendar.';
@@ -95,9 +101,11 @@ try {
     $upcomingSql = "SELECT c.*,
                            a.registro_sidpol,
                            a.lugar AS accidente_lugar
-                      FROM citacion_activos c
-                 LEFT JOIN accidentes_activos a ON a.id = c.accidente_id
-                     WHERE TIMESTAMP(c.fecha, COALESCE(c.hora, '23:59:59')) >= NOW()";
+                      FROM citacion c
+                      JOIN accidentes a ON a.id = c.accidente_id
+                     WHERE a.eliminado_en IS NULL
+                       AND (" . Access::workspacePredicate('a') . ")
+                       AND TIMESTAMP(c.fecha, COALESCE(c.hora, '23:59:59')) >= NOW()";
     $upcomingParams = [];
     if ($accidenteId > 0) {
         $upcomingSql .= " AND c.accidente_id = ?";
@@ -154,10 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $context !== null) {
     try {
         $created = $service->create($accidenteId, ['persona' => $personaSelector] + $data);
         $newId = (int) $created['id'];
-        $calendarStatus = 'ok';
+        $calendarStatus = $calendarOwner ? 'ok' : 'sin_conexion';
         $linkEvento = '';
 
-        try {
+        if ($calendarOwner) try {
             $calendarDetail = gc_crear_evento_citacion_detalle($service->calendarPayload($accidenteId, $newId, $created));
             $linkEvento = (string) ($calendarDetail['html_link'] ?? '');
             $service->updateCalendarSync($newId, [
@@ -234,7 +242,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
 <div class="wrap">
   <div class="toolbar">
     <div>
-      <h1 style="margin:0;">Google Calendar</h1>
+      <h1 style="margin:0;"><?= $calendarOwner ? 'Google Calendar' : 'Agenda de citaciones' ?></h1>
       <div class="muted">
         <?php if ($accidenteId > 0): ?>
           Agenda del accidente actual y acceso rapido a sus proximas citaciones.
@@ -261,7 +269,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
           Se muestran solo las citaciones futuras del accidente seleccionado.
         <?php endif; ?>
       <?php else: ?>
-        Se muestran las citaciones futuras de todos los casos. Cada registro incluye acceso a la citación y al caso correspondiente.
+        Se muestran las citaciones futuras de tus casos. Cada registro incluye acceso a la citación y al caso correspondiente.
       <?php endif; ?>
     </div>
 
@@ -313,7 +321,8 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
             <div class="agenda-actions">
               <a class="btn" href="<?= h($citacionUrl) ?>">Ver citación</a>
               <?php if (!empty($row['accidente_id'])): ?><a class="btn" href="<?= h($casoUrl) ?>">Ir al caso</a><?php endif; ?>
-              <?php if ($calendarEventLink !== ''): ?><a class="btn" href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a><?php endif; ?>
+              <?php if ($calendarOwner && $calendarEventLink !== ''): ?><a class="btn" href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a><?php endif; ?>
+              <?php if ($calendarEventId !== '' && !$calendarOwner): ?><span class="muted">Evento en calendario de otro usuario</span><?php else: ?>
               <form method="post" onsubmit="return confirm('¿Eliminar esta citación<?= $calendarEventId !== '' ? ' y también su evento en Google Calendar' : '' ?>?');" style="display:inline;">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= (int) ($row['id'] ?? 0) ?>">
@@ -322,6 +331,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
                 <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>
                 <button class="btn danger" type="submit">Eliminar</button>
               </form>
+              <?php endif; ?>
             </div>
           </article>
         <?php endforeach; ?>
@@ -469,6 +479,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
     </div>
   <?php endif; ?>
 
+  <?php if ($calendarOwner): ?>
   <div class="card calendar-card">
     <h2 style="margin:0 0 8px;font-size:16px;">Calendario de turnos</h2>
     <div class="muted" style="margin-bottom:12px;">Aqui puedes ver tus dias de servicio, franco y las citaciones creadas en Google Calendar.</div>
@@ -476,6 +487,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
       <iframe src="<?= h($calendarEmbedUrl) ?>" frameborder="0" scrolling="no"></iframe>
     </div>
   </div>
+  <?php endif; ?>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {

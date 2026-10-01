@@ -11,17 +11,23 @@ if(!$a || ($a['eliminado_en'] && !\App\Support\Access::admin())){
     return;
 }
 $h=static fn($v)=>\App\Support\WorkspacePage::escape($v);
-$s=$pdo->prepare('SELECT m.nombre FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?');$s->execute([$id]);$modalidades=$s->fetchAll(PDO::FETCH_COLUMN);
+$guardiaConsulta=\App\Support\Access::role()==='guardia';
+// La tarjeta de consulta ya comprobó que el accidente está activo. Para guardia
+// se usan las tablas base porque las vistas importadas pueden conservar un DEFINER ajeno.
+$modalidadTabla=$guardiaConsulta?'accidente_modalidad':'accidente_modalidad_activos';
+$personasTabla=$guardiaConsulta?'involucrados_personas':'involucrados_personas_activos';
+$vehiculosTabla=$guardiaConsulta?'involucrados_vehiculos':'involucrados_vehiculos_activos';
+$s=$pdo->prepare("SELECT m.nombre FROM $modalidadTabla am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?");$s->execute([$id]);$modalidades=$s->fetchAll(PDO::FETCH_COLUMN);
 $s=$pdo->prepare("SELECT p.nombres,p.apellido_paterno,p.apellido_materno,COALESCE(ip.lesion,'') lesion,COALESCE(r.Nombre,'Participante') rol,
  v.placa,mv.nombre marca,modv.nombre modelo,iv.orden_participacion
- FROM involucrados_personas_activos ip JOIN personas p ON p.id=ip.persona_id
+ FROM $personasTabla ip JOIN personas p ON p.id=ip.persona_id
  LEFT JOIN participacion_persona r ON r.Id=ip.rol_id
  LEFT JOIN vehiculos v ON v.id=ip.vehiculo_id
  LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id
- LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id=ip.accidente_id AND iv.vehiculo_id=ip.vehiculo_id
+ LEFT JOIN $vehiculosTabla iv ON iv.accidente_id=ip.accidente_id AND iv.vehiculo_id=ip.vehiculo_id
  WHERE ip.accidente_id=? ORDER BY COALESCE(iv.orden_participacion,''),ip.id");$s->execute([$id]);$people=$s->fetchAll(PDO::FETCH_ASSOC);
 $s=$pdo->prepare("SELECT iv.orden_participacion,v.placa,mv.nombre marca,modv.nombre modelo,v.color,tv.nombre tipo
- FROM involucrados_vehiculos_activos iv JOIN vehiculos v ON v.id=iv.vehiculo_id
+ FROM $vehiculosTabla iv JOIN vehiculos v ON v.id=iv.vehiculo_id
  LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id WHERE iv.accidente_id=? ORDER BY iv.orden_participacion");$s->execute([$id]);$vehicles=$s->fetchAll(PDO::FETCH_ASSOC);
 $icon=static function(string $name): string {
     $paths=['place'=>'<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>','date'=>'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>','station'=>'<path d="M3 10h18M5 10v10m4-10v10m6-10v10m4-10v10M3 20h18M12 3 2 8h20L12 3Z"/>','people'=>'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1"/>','car'=>'<path d="m5 11 2-5h10l2 5M3 11h18v8H3zM5 19v2m14-2v2M6 15h.01M18 15h.01"/>','court'=>'<path d="m12 3 9 5H3l9-5ZM5 8v11m5-11v11m4-11v11m5-11v11M3 20h18"/>','badge'=>'<circle cx="12" cy="8" r="5"/><path d="M8 12 7 22l5-3 5 3-1-10"/>','folder'=>'<path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>','file'=>'<path d="M6 3h8l5 5v13H6zM14 3v6h5M9 14h7m-7 4h7"/>'];

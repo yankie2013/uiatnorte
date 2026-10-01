@@ -111,7 +111,7 @@ final class InvolucradoPersonaService
         }
 
         [$vehiculoId, $ordenPersona] = $this->resolverReglasRol($rolId, $vehiculoId, $ordenIn);
-        $this->sincronizarEdadPersona($personaId, $accidenteId);
+        $snapshot = $this->snapshotDatos($personaId, $accidenteId, $input);
 
         $this->repository->createInvolucrado([
             'accidente_id' => $accidenteId,
@@ -121,6 +121,7 @@ final class InvolucradoPersonaService
             'lesion' => $lesion,
             'observaciones' => $observaciones,
             'orden_persona' => $ordenPersona,
+            ...$snapshot,
         ]);
 
         return [
@@ -151,6 +152,11 @@ final class InvolucradoPersonaService
         }
 
         [$vehiculoId, $ordenPersona] = $this->resolverReglasRol($rolId, $vehiculoId, $ordenIn);
+        $actual = $this->repository->involucradoById($involucradoId);
+        if (!$actual) {
+            throw new InvalidArgumentException('El participante ya no está disponible.');
+        }
+        $snapshot = $this->snapshotDatos($personaId, (int) $actual['accidente_id'], $input);
 
         $this->repository->updateInvolucrado($involucradoId, [
             'persona_id' => $personaId,
@@ -159,6 +165,7 @@ final class InvolucradoPersonaService
             'lesion' => $lesion,
             'observaciones' => $observaciones,
             'orden_persona' => $ordenPersona,
+            ...$snapshot,
         ]);
     }
 
@@ -167,7 +174,7 @@ final class InvolucradoPersonaService
         $rol = $this->repository->rolById($rolId) ?: ['req' => 0, 'Nombre' => ''];
         $requiereVehiculo = (int) ($rol['req'] ?? 0);
         if ($requiereVehiculo && !$vehiculoId) {
-            throw new InvalidArgumentException('Este rol requiere seleccionar un veh�culo.');
+            throw new InvalidArgumentException('Este rol requiere seleccionar un veh�culo.');
         }
         if (!$requiereVehiculo) {
             $vehiculoId = null;
@@ -175,7 +182,7 @@ final class InvolucradoPersonaService
 
         $ordenPersona = null;
         $nombreRol = mb_strtolower(trim((string) ($rol['Nombre'] ?? '')), 'UTF-8');
-        $allowOrden = preg_match('/peat(�|o)n|pasajero|ocupante|testigo/u', $nombreRol) === 1;
+       $allowOrden = preg_match('/peat(?:o|\x{00F3})n|pasajero|ocupante|testigo/u', $nombreRol) === 1;
         if ($allowOrden && $ordenIn !== '' && preg_match('/^[A-Z]$/', $ordenIn)) {
             $ordenPersona = $ordenIn;
         }
@@ -183,15 +190,39 @@ final class InvolucradoPersonaService
         return [$vehiculoId, $ordenPersona];
     }
 
-    private function sincronizarEdadPersona(int $personaId, int $accidenteId): void
+    private function snapshotDatos(int $personaId, int $accidenteId, array $input): array
     {
-        if (\App\Support\Access::role()==='guardia') return; // No alterar identidades compartidas.
-        $fechaAccidente = $this->repository->accidenteFecha($accidenteId);
-        $fechaNacimiento = $this->repository->personaFechaNacimiento($personaId);
-        $edad = $this->edadAFecha($fechaNacimiento, $fechaAccidente);
-        if ($edad !== null) {
-            $this->repository->updatePersonaEdad($personaId, $edad);
+        $base = $this->repository->personaSnapshot($personaId, $accidenteId);
+        if (!$base) {
+            throw new InvalidArgumentException('No se encontraron los datos de la persona o del accidente.');
         }
+        $fields = [
+            'estado_civil' => 'estado_civil_snapshot',
+            'grado_instruccion' => 'grado_instruccion_snapshot',
+            'numero_hijos' => 'numero_hijos_snapshot',
+            'domicilio' => 'domicilio_snapshot',
+            'domicilio_departamento' => 'domicilio_departamento_snapshot',
+            'domicilio_provincia' => 'domicilio_provincia_snapshot',
+            'domicilio_distrito' => 'domicilio_distrito_snapshot',
+            'celular' => 'celular_snapshot',
+            'email' => 'email_snapshot',
+        ];
+        $snapshot = ['edad_snapshot' => $base['edad_calculada'] === null ? null : (int) $base['edad_calculada']];
+        foreach ($fields as $source => $target) {
+            $value = array_key_exists($source, $input) ? trim((string) $input[$source]) : (string) ($base[$source] ?? '');
+            if ($source === 'numero_hijos') {
+                $value = $value === '' ? null : filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 99]]);
+                if ($value === false) {
+                    throw new InvalidArgumentException('El número de hijos debe ser un número entre 0 y 99.');
+                }
+            } elseif ($source === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                throw new InvalidArgumentException('El correo electrónico no es válido.');
+            } else {
+                $value = $value === '' ? null : $value;
+            }
+            $snapshot[$target] = $value;
+        }
+        return $snapshot;
     }
 
     private function edadAFecha(?string $fechaNac, ?string $referencia): ?int

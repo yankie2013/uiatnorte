@@ -39,6 +39,7 @@ final class PersonaService
             'nombre_madre' => '',
             'celular' => '',
             'email' => '',
+            'numero_hijos' => '',
             'notas' => '',
             'foto_path' => '',
             'api_fuente' => '',
@@ -100,10 +101,31 @@ final class PersonaService
 
     public function update(int $id, array $input): void
     {
-        if ($this->repository->find($id) === null) {
+        $existing = $this->repository->find($id);
+        if ($existing === null) {
             throw new InvalidArgumentException('Persona no encontrada.');
         }
+        foreach (['tipo_doc', 'num_doc', 'apellido_paterno', 'apellido_materno', 'nombres', 'sexo', 'fecha_nacimiento', 'departamento_nac', 'provincia_nac', 'distrito_nac', 'nombre_padre', 'nombre_madre'] as $field) {
+            $old = mb_strtoupper(trim((string) ($existing[$field] ?? '')), 'UTF-8');
+            $new = mb_strtoupper(trim((string) ($input[$field] ?? '')), 'UTF-8');
+            if ($old !== $new) {
+                throw new InvalidArgumentException('Los datos de identidad (documento, nombres, nacimiento y padres) no se modifican desde una ficha ya registrada.');
+            }
+        }
+        $hasInvolvements = $this->repository->involvementCount($id) > 0;
+        if ($hasInvolvements) {
+            foreach (['estado_civil', 'grado_instruccion', 'numero_hijos', 'domicilio', 'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito', 'celular', 'email'] as $field) {
+                $old = trim((string) ($existing[$field] ?? ''));
+                $new = trim((string) ($input[$field] ?? ''));
+                if ($old !== $new) {
+                    throw new InvalidArgumentException('Esta persona ya participa en expedientes. Cambia esos datos desde el registro de cada accidente para conservar el historial.');
+                }
+            }
+        }
         $payload = $this->payload($input, $id);
+        if ($hasInvolvements) {
+            $payload['edad'] = $existing['edad'];
+        }
         $this->repository->update($id, $payload);
     }
 
@@ -193,6 +215,7 @@ final class PersonaService
             'nombre_madre' => $this->nullableTitleText($input['nombre_madre'] ?? null),
             'celular' => $this->nullableTrim($input['celular'] ?? null),
             'email' => $email,
+            'numero_hijos' => $this->nullableInteger($input['numero_hijos'] ?? null, 'Número de hijos'),
             'notas' => $this->nullableTrim($input['notas'] ?? null),
             'foto_path' => $this->nullableTrim($input['foto_path'] ?? null),
             'api_fuente' => $this->nullableTrim($input['api_fuente'] ?? null),
@@ -220,6 +243,19 @@ final class PersonaService
     {
         $text = trim((string) ($value ?? ''));
         return $text === '' ? null : $text;
+    }
+
+    private function nullableInteger(mixed $value, string $label): ?int
+    {
+        $text = trim((string) ($value ?? ''));
+        if ($text === '') {
+            return null;
+        }
+        $number = filter_var($text, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 99]]);
+        if ($number === false) {
+            throw new InvalidArgumentException($label . ' debe estar entre 0 y 99.');
+        }
+        return $number;
     }
 
     private function cleanSpaces(mixed $value): string

@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'nombre_madre' => $_POST['nombre_madre'] ?? '',
         'celular' => $_POST['celular'] ?? '',
         'email' => $_POST['email'] ?? '',
+        'numero_hijos' => $_POST['numero_hijos'] ?? '',
         'notas' => $_POST['notas'] ?? '',
         'foto_path' => $_POST['foto_path'] ?? '',
         'api_fuente' => $_POST['api_fuente'] ?? '',
@@ -108,6 +109,7 @@ if (!$embed) {
   </div>
 
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
+  <div class="small" style="margin-bottom:12px">Documento, nombres, fecha y lugar de nacimiento y nombres de los padres son datos de identidad. Si la persona ya está vinculada a accidentes, los datos variables se actualizan desde cada expediente.</div>
 
   <form method="post" class="card" id="frmPersona" autocomplete="off">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
@@ -117,30 +119,31 @@ if (!$embed) {
     <input type="hidden" name="api_fuente" value="<?= h((string) $data['api_fuente']) ?>">
     <input type="hidden" name="api_ref" value="<?= h((string) $data['api_ref']) ?>">
     <div class="grid">
-      <div class="c3 field"><label class="label">Tipo de documento*</label><select name="tipo_doc" required><?php foreach (['DNI','CE','PAS','OTRO'] as $opt): ?><option value="<?= $opt ?>" <?= (string) $data['tipo_doc'] === $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?></select></div>
-      <div class="c3 field"><label class="label">Numero de documento*</label><input type="text" name="num_doc" value="<?= h((string) $data['num_doc']) ?>" maxlength="20" required></div>
+      <div class="c3 field"><label class="label">Tipo de documento*</label><select disabled><?php foreach (['DNI','CE','PAS','OTRO'] as $opt): ?><option value="<?= $opt ?>" <?= (string) $data['tipo_doc'] === $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?></select><input type="hidden" name="tipo_doc" value="<?= h((string) $data['tipo_doc']) ?>"></div>
+      <div class="c3 field"><label class="label">Numero de documento*</label><input type="text" name="num_doc" value="<?= h((string) $data['num_doc']) ?>" maxlength="20" required readonly></div>
       <div class="c6 field"><label class="label">Foto / fuente API</label><div class="small"><?= h((string) (($data['foto_path'] !== '' ? $data['foto_path'] : 'Sin foto') . (($data['api_fuente'] !== '' ? ' - ' . $data['api_fuente'] : '')))) ?></div><?php if ((string) $data['foto_path'] !== ''): ?><img class="photo" src="<?= h((string) $data['foto_path']) ?>" alt="Foto persona"><?php endif; ?></div>
-      <div class="c4 field"><label class="label">Apellido paterno*</label><input type="text" name="apellido_paterno" value="<?= h((string) $data['apellido_paterno']) ?>" required></div>
-      <div class="c4 field"><label class="label">Apellido materno*</label><input type="text" name="apellido_materno" value="<?= h((string) $data['apellido_materno']) ?>" required></div>
-      <div class="c4 field"><label class="label">Nombres*</label><input type="text" name="nombres" value="<?= h((string) $data['nombres']) ?>" required></div>
-      <div class="c3 field"><label class="label">Sexo*</label><select name="sexo" required><option value="">Selecciona</option><option value="M" <?= (string) $data['sexo'] === 'M' ? 'selected' : '' ?>>Masculino</option><option value="F" <?= (string) $data['sexo'] === 'F' ? 'selected' : '' ?>>Femenino</option></select></div>
-      <div class="c3 field"><label class="label">Fecha de nacimiento*</label><input type="date" name="fecha_nacimiento" id="fecha_nacimiento" value="<?= h((string) $data['fecha_nacimiento']) ?>" required></div>
+      <div class="c4 field"><label class="label">Apellido paterno*</label><input type="text" name="apellido_paterno" value="<?= h((string) $data['apellido_paterno']) ?>" required readonly></div>
+      <div class="c4 field"><label class="label">Apellido materno*</label><input type="text" name="apellido_materno" value="<?= h((string) $data['apellido_materno']) ?>" required readonly></div>
+      <div class="c4 field"><label class="label">Nombres*</label><input type="text" name="nombres" value="<?= h((string) $data['nombres']) ?>" required readonly></div>
+      <div class="c3 field"><label class="label">Sexo*</label><select disabled><option value="M" <?= (string) $data['sexo'] === 'M' ? 'selected' : '' ?>>Masculino</option><option value="F" <?= (string) $data['sexo'] === 'F' ? 'selected' : '' ?>>Femenino</option></select><input type="hidden" name="sexo" value="<?= h((string) $data['sexo']) ?>"></div>
+      <div class="c3 field"><label class="label">Fecha de nacimiento*</label><input type="date" name="fecha_nacimiento" id="fecha_nacimiento" value="<?= h((string) $data['fecha_nacimiento']) ?>" required readonly></div>
       <div class="c3 field"><label class="label">Edad</label><input type="number" id="edad" value="<?= h((string) $data['edad']) ?>" readonly></div>
       <div class="c3 field"><label class="label">Estado civil</label><select name="estado_civil"><?php $states=[''=>'Selecciona','Soltero'=>'Soltero','Casado'=>'Casado','Viudo'=>'Viudo','Divorciado'=>'Divorciado','Conviviente'=>'Conviviente']; foreach($states as $value=>$label): ?><option value="<?= h((string) $value) ?>" <?= (string) $data['estado_civil'] === (string) $value ? 'selected' : '' ?>><?= h($label) ?></option><?php endforeach; ?></select></div>
       <div class="c3 field"><label class="label">Nacionalidad</label><input type="text" name="nacionalidad" value="<?= h((string) $data['nacionalidad']) ?>"></div>
-      <div class="c3 field"><label class="label">Departamento nacimiento</label><input type="text" name="departamento_nac" value="<?= h((string) $data['departamento_nac']) ?>"></div>
-      <div class="c3 field"><label class="label">Provincia nacimiento</label><input type="text" name="provincia_nac" value="<?= h((string) $data['provincia_nac']) ?>"></div>
-      <div class="c3 field"><label class="label">Distrito nacimiento</label><input type="text" name="distrito_nac" value="<?= h((string) $data['distrito_nac']) ?>"></div>
+      <div class="c3 field"><label class="label">Departamento nacimiento</label><input type="text" name="departamento_nac" value="<?= h((string) $data['departamento_nac']) ?>" readonly></div>
+      <div class="c3 field"><label class="label">Provincia nacimiento</label><input type="text" name="provincia_nac" value="<?= h((string) $data['provincia_nac']) ?>" readonly></div>
+      <div class="c3 field"><label class="label">Distrito nacimiento</label><input type="text" name="distrito_nac" value="<?= h((string) $data['distrito_nac']) ?>" readonly></div>
       <div class="c12 field"><label class="label">Domicilio</label><textarea name="domicilio"><?= h((string) $data['domicilio']) ?></textarea></div>
       <div class="c4 field"><label class="label">Departamento domicilio</label><input type="text" name="domicilio_departamento" value="<?= h((string) $data['domicilio_departamento']) ?>"></div>
       <div class="c4 field"><label class="label">Provincia domicilio</label><input type="text" name="domicilio_provincia" value="<?= h((string) $data['domicilio_provincia']) ?>"></div>
       <div class="c4 field"><label class="label">Distrito domicilio</label><input type="text" name="domicilio_distrito" value="<?= h((string) $data['domicilio_distrito']) ?>"></div>
       <div class="c4 field"><label class="label">Ocupacion</label><input type="text" name="ocupacion" value="<?= h((string) $data['ocupacion']) ?>"></div>
       <div class="c4 field"><label class="label">Grado de instruccion</label><input type="text" name="grado_instruccion" value="<?= h((string) $data['grado_instruccion']) ?>"></div>
+      <div class="c4 field"><label class="label">Número de hijos</label><input type="number" name="numero_hijos" min="0" max="99" value="<?= h((string) ($data['numero_hijos'] ?? '')) ?>"></div>
       <div class="c4 field"><label class="label">Celular</label><input type="text" name="celular" value="<?= h((string) $data['celular']) ?>"></div>
       <div class="c6 field"><label class="label">Email</label><input type="email" name="email" value="<?= h((string) $data['email']) ?>"></div>
-      <div class="c6 field"><label class="label">Nombre del padre</label><input type="text" name="nombre_padre" value="<?= h((string) $data['nombre_padre']) ?>"></div>
-      <div class="c6 field"><label class="label">Nombre de la madre</label><input type="text" name="nombre_madre" value="<?= h((string) $data['nombre_madre']) ?>"></div>
+      <div class="c6 field"><label class="label">Nombre del padre</label><input type="text" name="nombre_padre" value="<?= h((string) $data['nombre_padre']) ?>" readonly></div>
+      <div class="c6 field"><label class="label">Nombre de la madre</label><input type="text" name="nombre_madre" value="<?= h((string) $data['nombre_madre']) ?>" readonly></div>
       <div class="c12 field"><label class="label">Notas</label><textarea name="notas"><?= h((string) $data['notas']) ?></textarea></div>
     </div>
     <div class="actions"><?php if (!$embed): ?><a class="btn" href="<?= h($returnTo) ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar</button></div>

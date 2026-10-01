@@ -35,6 +35,14 @@ if (iget('ajax')==='buscar_persona' && isset($_GET['dni'])) {
   $persona = $service->buscarPersona($dni, $accId);
   okjson(['ok'=>!!$persona,'persona'=>$persona]);
 }
+if (iget('ajax')==='persona_por_id' && isset($_GET['id'])) {
+  $persona = $repo->personaBasicaById((int)iget('id',0));
+  if ($persona && $accId=(int)iget('accidente_id',0)) {
+    $fecha=$repo->accidenteFecha($accId);
+    $persona['edad_calculada']=!empty($fecha)?(new DateTime($persona['fecha_nacimiento']))->diff(new DateTime($fecha))->y:null;
+  }
+  okjson(['ok'=>!!$persona,'persona'=>$persona]);
+}
 
 if (iget('ajax')==='crear_persona' && $_SERVER['REQUEST_METHOD']==='POST') {
   try{
@@ -70,6 +78,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
       'observaciones' => ipost('observaciones',''),
       'next' => (int)ipost('next',0),
       'orden_persona' => strtoupper(trim(ipost('orden_persona',''))),
+      'estado_civil' => ipost('estado_civil',''),
+      'grado_instruccion' => ipost('grado_instruccion',''),
+      'numero_hijos' => ipost('numero_hijos',''),
+      'domicilio' => ipost('domicilio',''),
+      'domicilio_departamento' => ipost('domicilio_departamento',''),
+      'domicilio_provincia' => ipost('domicilio_provincia',''),
+      'domicilio_distrito' => ipost('domicilio_distrito',''),
+      'celular' => ipost('celular',''),
+      'email' => ipost('email',''),
     ]);
 
     $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
@@ -201,6 +218,21 @@ textarea{min-height:60px; resize:vertical}
       <div><label>Sexo</label><input type="text" id="sexo" readonly></div>
     </div>
 
+    <details style="margin-top:10px" open>
+      <summary><strong>Datos vigentes para este accidente</strong> <span class="subtitle">(solo esta copia; no cambia otros registros)</span></summary>
+      <div class="grid-3" style="margin-top:8px">
+        <div><label>Estado civil</label><input name="estado_civil" id="estado_civil"></div>
+        <div><label>Grado de instrucción</label><input name="grado_instruccion" id="grado_instruccion"></div>
+        <div><label>Número de hijos</label><input type="number" min="0" max="99" name="numero_hijos" id="numero_hijos"></div>
+        <div><label>Domicilio</label><input name="domicilio" id="domicilio"></div>
+        <div><label>Departamento del domicilio</label><input name="domicilio_departamento" id="domicilio_departamento"></div>
+        <div><label>Provincia del domicilio</label><input name="domicilio_provincia" id="domicilio_provincia"></div>
+        <div><label>Distrito del domicilio</label><input name="domicilio_distrito" id="domicilio_distrito"></div>
+        <div><label>Celular</label><input name="celular" id="celular"></div>
+        <div><label>Correo</label><input type="email" name="email" id="email"></div>
+      </div>
+    </details>
+
     <div class="grid-3">
       <div>
         <label>Rol</label>
@@ -320,10 +352,26 @@ $('#btnBuscarDNI').addEventListener('click', async ()=>{
       $('#dni_show').value = p.num_doc||dni;
       $('#sexo').value = p.sexo||'';
       $('#edad').value = (p.edad_calculada ?? p.edad ?? '');
+      ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const e=$('#'+k);if(e)e.value=p[k]||'';});
     }else{
       alert('No se encontró. Usa “Nueva” para registrarla.');
     }
   }catch(_){ alert('Error al buscar'); }
+});
+
+window.addEventListener('message', async (event)=>{
+  if(event.data?.type!=='persona_creada' || !event.data.id) return;
+  closeModal('modal-per','frame-per');
+  try {
+    const response=await fetch(`?ajax=persona_por_id&id=${encodeURIComponent(event.data.id)}&accidente_id=${encodeURIComponent($('#accidente_id').value)}`);
+    const result=await response.json();
+    if(result.ok) {
+      const p=result.persona; $('#persona_id').value=p.id; $('#dni').value=p.num_doc||'';
+      $('#nombres').value=p.nombres||''; $('#ap').value=p.apellido_paterno||''; $('#am').value=p.apellido_materno||'';
+      $('#dni_show').value=p.num_doc||''; $('#sexo').value=p.sexo||''; $('#edad').value=p.edad_calculada??'';
+      ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const field=$('#'+k);if(field)field.value=p[k]||'';});
+    }
+  } catch (_) {}
 });
 
 /* Normalizar texto (sin tildes, minúsculas) */

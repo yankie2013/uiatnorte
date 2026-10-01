@@ -54,8 +54,16 @@ final class InvolucradoPersonaRepository
 
     public function personaByDniBasic(string $dni): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, num_doc, nombres, apellido_paterno, apellido_materno, sexo, fecha_nacimiento FROM personas WHERE num_doc=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, num_doc, nombres, apellido_paterno, apellido_materno, sexo, fecha_nacimiento, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE num_doc=? LIMIT 1');
         $st->execute([$dni]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function personaBasicaById(int $personaId): ?array
+    {
+        $st = $this->pdo->prepare('SELECT id, num_doc, nombres, apellido_paterno, apellido_materno, sexo, fecha_nacimiento, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE id=? LIMIT 1');
+        $st->execute([$personaId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
@@ -186,7 +194,7 @@ final class InvolucradoPersonaRepository
 
     public function createInvolucrado(array $payload): int
     {
-        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona) VALUES (?,?,?,?,?,?,?)');
+        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona,edad_snapshot,estado_civil_snapshot,grado_instruccion_snapshot,numero_hijos_snapshot,domicilio_snapshot,domicilio_departamento_snapshot,domicilio_provincia_snapshot,domicilio_distrito_snapshot,celular_snapshot,email_snapshot,snapshot_guardado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)');
         $st->execute([
             $payload['accidente_id'],
             $payload['persona_id'],
@@ -195,6 +203,16 @@ final class InvolucradoPersonaRepository
             $payload['lesion'],
             $payload['observaciones'],
             $payload['orden_persona'],
+            $payload['edad_snapshot'],
+            $payload['estado_civil_snapshot'],
+            $payload['grado_instruccion_snapshot'],
+            $payload['numero_hijos_snapshot'],
+            $payload['domicilio_snapshot'],
+            $payload['domicilio_departamento_snapshot'],
+            $payload['domicilio_provincia_snapshot'],
+            $payload['domicilio_distrito_snapshot'],
+            $payload['celular_snapshot'],
+            $payload['email_snapshot'],
         ]);
         return (int) $this->pdo->lastInsertId();
     }
@@ -204,7 +222,18 @@ final class InvolucradoPersonaRepository
         $sql = "SELECT ip.id, ip.accidente_id, ip.persona_id, ip.rol_id, ip.vehiculo_id, ip.lesion, ip.observaciones,
                        ip.orden_persona,
                        a.fecha_accidente, a.lugar,
-                       p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno, p.sexo, p.fecha_nacimiento
+                       p.tipo_doc, p.num_doc, p.nombres, p.apellido_paterno, p.apellido_materno, p.sexo, p.fecha_nacimiento,
+                       p.nombre_padre, p.nombre_madre, p.departamento_nac, p.provincia_nac, p.distrito_nac,
+                       IF(ip.snapshot_guardado=1,ip.edad_snapshot,TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)) AS edad,
+                       IF(ip.snapshot_guardado=1,ip.estado_civil_snapshot,p.estado_civil) AS estado_civil,
+                       IF(ip.snapshot_guardado=1,ip.grado_instruccion_snapshot,p.grado_instruccion) AS grado_instruccion,
+                       IF(ip.snapshot_guardado=1,ip.numero_hijos_snapshot,p.numero_hijos) AS numero_hijos,
+                       IF(ip.snapshot_guardado=1,ip.domicilio_snapshot,p.domicilio) AS domicilio,
+                       IF(ip.snapshot_guardado=1,ip.domicilio_departamento_snapshot,p.domicilio_departamento) AS domicilio_departamento,
+                       IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
+                       IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
+                       IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
+                       IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email
                   FROM involucrados_personas_activos ip
                   JOIN accidentes_activos a ON a.id = ip.accidente_id
                   JOIN personas   p ON p.id = ip.persona_id
@@ -218,7 +247,10 @@ final class InvolucradoPersonaRepository
     public function updateInvolucrado(int $involucradoId, array $payload): void
     {
         $st = $this->pdo->prepare("UPDATE involucrados_personas
-                         SET persona_id=?, rol_id=?, vehiculo_id=?, lesion=?, observaciones=?, orden_persona=?
+                         SET persona_id=?, rol_id=?, vehiculo_id=?, lesion=?, observaciones=?, orden_persona=?,
+                             edad_snapshot=?, estado_civil_snapshot=?, grado_instruccion_snapshot=?, numero_hijos_snapshot=?,
+                             domicilio_snapshot=?, domicilio_departamento_snapshot=?, domicilio_provincia_snapshot=?,
+                             domicilio_distrito_snapshot=?, celular_snapshot=?, email_snapshot=?, snapshot_guardado=1
                          WHERE id=? LIMIT 1");
         $st->execute([
             $payload['persona_id'],
@@ -227,8 +259,23 @@ final class InvolucradoPersonaRepository
             $payload['lesion'],
             $payload['observaciones'],
             $payload['orden_persona'],
+            $payload['edad_snapshot'], $payload['estado_civil_snapshot'], $payload['grado_instruccion_snapshot'],
+            $payload['numero_hijos_snapshot'], $payload['domicilio_snapshot'], $payload['domicilio_departamento_snapshot'],
+            $payload['domicilio_provincia_snapshot'], $payload['domicilio_distrito_snapshot'], $payload['celular_snapshot'],
+            $payload['email_snapshot'],
             $involucradoId,
         ]);
+    }
+
+    public function personaSnapshot(int $personaId, int $accidenteId): ?array
+    {
+        $st = $this->pdo->prepare("SELECT p.estado_civil,p.grado_instruccion,p.numero_hijos,p.domicilio,p.domicilio_departamento,
+                    p.domicilio_provincia,p.domicilio_distrito,p.celular,p.email,
+                    TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente) AS edad_calculada
+              FROM personas p JOIN accidentes a ON a.id=? WHERE p.id=?");
+        $st->execute([$accidenteId, $personaId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     public function licenciasPersona(int $personaId): array
@@ -286,4 +333,13 @@ final class InvolucradoPersonaRepository
         $st->execute([$personaId, $accidenteId]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
+
+public function puedeActualizarPersona(int $personaId): bool
+{
+    $st = $this->pdo->prepare('SELECT rbac_person(?)');
+    $st->execute([$personaId]);
+
+    return (int) $st->fetchColumn() === 1;
+}
+
 }

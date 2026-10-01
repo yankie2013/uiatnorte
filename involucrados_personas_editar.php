@@ -88,6 +88,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])){
       'observaciones' => p('observaciones',''),
       'orden_persona' => strtoupper(trim(p('orden_persona',''))),
       'dni' => p('dni',''),
+      'estado_civil' => p('estado_civil',''),
+      'grado_instruccion' => p('grado_instruccion',''),
+      'numero_hijos' => p('numero_hijos',''),
+      'domicilio' => p('domicilio',''),
+      'domicilio_departamento' => p('domicilio_departamento',''),
+      'domicilio_provincia' => p('domicilio_provincia',''),
+      'domicilio_distrito' => p('domicilio_distrito',''),
+      'celular' => p('celular',''),
+      'email' => p('email',''),
     ]);
     header('Location: ' . $returnTo . (str_contains($returnTo, '?') ? '&' : '?') . 'ok=updated');
     exit;
@@ -101,6 +110,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])){
       'observaciones' => p('observaciones',''),
       'orden_persona' => strtoupper(trim(p('orden_persona',''))),
       'num_doc' => p('dni',$inv['num_doc'] ?? ''),
+      'estado_civil' => p('estado_civil',$inv['estado_civil'] ?? ''),
+      'grado_instruccion' => p('grado_instruccion',$inv['grado_instruccion'] ?? ''),
+      'numero_hijos' => p('numero_hijos',$inv['numero_hijos'] ?? ''),
+      'domicilio' => p('domicilio',$inv['domicilio'] ?? ''),
+      'domicilio_departamento' => p('domicilio_departamento',$inv['domicilio_departamento'] ?? ''),
+      'domicilio_provincia' => p('domicilio_provincia',$inv['domicilio_provincia'] ?? ''),
+      'domicilio_distrito' => p('domicilio_distrito',$inv['domicilio_distrito'] ?? ''),
+      'celular' => p('celular',$inv['celular'] ?? ''),
+      'email' => p('email',$inv['email'] ?? ''),
     ]);
   }
 }
@@ -187,8 +205,19 @@ include __DIR__ . '/sidebar.php';
       </div>
       <div class="col-4">
         <label>Edad (referencial)</label>
-        <input type="text" id="edad" value="" readonly>
+        <input type="text" id="edad" value="<?=h($inv['edad'] ?? '')?>" readonly>
       </div>
+
+      <div class="col-12"><strong>Datos vigentes para este accidente</strong><div class="note">Los cambios aquí solo se guardan en este accidente y no alteran expedientes anteriores.</div></div>
+      <div class="col-4"><label>Estado civil</label><input name="estado_civil" value="<?=h($inv['estado_civil'] ?? '')?>"></div>
+      <div class="col-4"><label>Grado de instrucción</label><input name="grado_instruccion" value="<?=h($inv['grado_instruccion'] ?? '')?>"></div>
+      <div class="col-4"><label>Número de hijos</label><input type="number" min="0" max="99" name="numero_hijos" value="<?=h($inv['numero_hijos'] ?? '')?>"></div>
+      <div class="col-6"><label>Domicilio</label><input name="domicilio" value="<?=h($inv['domicilio'] ?? '')?>"></div>
+      <div class="col-2"><label>Departamento domicilio</label><input name="domicilio_departamento" value="<?=h($inv['domicilio_departamento'] ?? '')?>"></div>
+      <div class="col-2"><label>Provincia domicilio</label><input name="domicilio_provincia" value="<?=h($inv['domicilio_provincia'] ?? '')?>"></div>
+      <div class="col-2"><label>Distrito domicilio</label><input name="domicilio_distrito" value="<?=h($inv['domicilio_distrito'] ?? '')?>"></div>
+      <div class="col-6"><label>Celular</label><input name="celular" value="<?=h($inv['celular'] ?? '')?>"></div>
+      <div class="col-6"><label>Correo</label><input type="email" name="email" value="<?=h($inv['email'] ?? '')?>"></div>
 
       <div class="col-6">
         <label>Rol</label>
@@ -396,6 +425,7 @@ document.getElementById('btnBuscar').addEventListener('click', async ()=>{
     document.getElementById('am').value        = p.apellido_materno||'';
     document.getElementById('sexo').value      = p.sexo||'';
     document.getElementById('fnac').value      = p.fecha_nacimiento||'';
+    ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const field=document.querySelector('[name="'+k+'"]');if(field)field.value=p[k]||'';});
     (function(){
       const fn = document.getElementById('fnac').value;
       const fa = "<?= h($inv['fecha_accidente']) ?>";
@@ -414,6 +444,17 @@ document.getElementById('btnBuscar').addEventListener('click', async ()=>{
     loadMAN();
     maybeToggleOCC(true);
   }catch(e){ alert('Error al buscar'); }
+});
+
+window.addEventListener('message', async (event)=>{
+  if(event.data?.type!=='persona_saved' || !event.data.id) return;
+  try {
+    const response=await fetch('involucrados_personas_editar.php?ajax=buscar_dni&dni='+encodeURIComponent(document.getElementById('dni').value)+'&id=<?=$inv_id?>');
+    const result=await response.json();
+    if(!result.ok) return;
+    const p=result.persona;
+    ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const field=document.querySelector('[name="'+k+'"]');if(field)field.value=p[k]||'';});
+  } catch (_) {}
 });
 
 /* ===== helpers ===== */
