@@ -20,7 +20,7 @@ final class InvolucradoPersonaService
             return null;
         }
 
-        $persona = $this->repository->personaByDniBasic($dni);
+        $persona = $this->repository->personaByDni($dni);
         if (!$persona) {
             return null;
         }
@@ -234,9 +234,6 @@ final class InvolucradoPersonaService
         try {
             $nacimiento = new \DateTime(substr($fechaNac, 0, 10));
             $ref = new \DateTime($referencia);
-            if ($ref < $nacimiento) {
-                return null;
-            }
             return $nacimiento->diff($ref)->y;
         } catch (\Exception) {
             return null;

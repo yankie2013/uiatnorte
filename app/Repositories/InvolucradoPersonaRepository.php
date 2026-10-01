@@ -54,7 +54,7 @@ final class InvolucradoPersonaRepository
 
     public function personaByDniBasic(string $dni): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, tipo_doc, num_doc, nombres, apellido_paterno, apellido_materno, sexo, edad, fecha_nacimiento, nacionalidad, departamento_nac, provincia_nac, distrito_nac, nombre_padre, nombre_madre, ocupacion, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE num_doc=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, num_doc, nombres, apellido_paterno, apellido_materno, sexo, fecha_nacimiento, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE num_doc=? LIMIT 1');
         $st->execute([$dni]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -62,7 +62,7 @@ final class InvolucradoPersonaRepository
 
     public function personaBasicaById(int $personaId): ?array
     {
-        $st = $this->pdo->prepare('SELECT id, tipo_doc, num_doc, nombres, apellido_paterno, apellido_materno, sexo, edad, fecha_nacimiento, nacionalidad, departamento_nac, provincia_nac, distrito_nac, nombre_padre, nombre_madre, ocupacion, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, num_doc, nombres, apellido_paterno, apellido_materno, sexo, fecha_nacimiento, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE id=? LIMIT 1');
         $st->execute([$personaId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -271,9 +271,7 @@ final class InvolucradoPersonaRepository
     {
         $st = $this->pdo->prepare("SELECT p.estado_civil,p.grado_instruccion,p.numero_hijos,p.domicilio,p.domicilio_departamento,
                     p.domicilio_provincia,p.domicilio_distrito,p.celular,p.email,
-                    CASE WHEN p.fecha_nacimiento IS NOT NULL AND a.fecha_accidente >= p.fecha_nacimiento
-                         THEN TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)
-                         ELSE p.edad END AS edad_calculada
+                    TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente) AS edad_calculada
               FROM personas p JOIN accidentes a ON a.id=? WHERE p.id=?");
         $st->execute([$accidenteId, $personaId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);

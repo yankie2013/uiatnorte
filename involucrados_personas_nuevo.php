@@ -39,9 +39,7 @@ if (iget('ajax')==='persona_por_id' && isset($_GET['id'])) {
   $persona = $repo->personaBasicaById((int)iget('id',0));
   if ($persona && $accId=(int)iget('accidente_id',0)) {
     $fecha=$repo->accidenteFecha($accId);
-    $persona['edad_calculada']=!empty($fecha) && !empty($persona['fecha_nacimiento']) && $fecha >= $persona['fecha_nacimiento']
-      ? (new DateTime($persona['fecha_nacimiento']))->diff(new DateTime($fecha))->y
-      : null;
+    $persona['edad_calculada']=!empty($fecha)?(new DateTime($persona['fecha_nacimiento']))->diff(new DateTime($fecha))->y:null;
   }
   okjson(['ok'=>!!$persona,'persona'=>$persona]);
 }
@@ -220,20 +218,6 @@ textarea{min-height:60px; resize:vertical}
       <div><label>Sexo</label><input type="text" id="sexo" readonly></div>
     </div>
 
-    <details style="margin-top:10px">
-      <summary><strong>Datos de la ficha de la persona</strong> <span class="subtitle">(solo lectura)</span></summary>
-      <div class="grid-3" style="margin-top:8px">
-        <div><label>Fecha de nacimiento</label><input type="text" id="fecha_nacimiento" readonly></div>
-        <div><label>Nacionalidad</label><input type="text" id="nacionalidad" readonly></div>
-        <div><label>Ocupación registrada</label><input type="text" id="ocupacion" readonly></div>
-        <div><label>Departamento de nacimiento</label><input type="text" id="departamento_nac" readonly></div>
-        <div><label>Provincia de nacimiento</label><input type="text" id="provincia_nac" readonly></div>
-        <div><label>Distrito de nacimiento</label><input type="text" id="distrito_nac" readonly></div>
-        <div><label>Nombre del padre</label><input type="text" id="nombre_padre" readonly></div>
-        <div><label>Nombre de la madre</label><input type="text" id="nombre_madre" readonly></div>
-      </div>
-    </details>
-
     <details style="margin-top:10px" open>
       <summary><strong>Datos vigentes para este accidente</strong> <span class="subtitle">(solo esta copia; no cambia otros registros)</span></summary>
       <div class="grid-3" style="margin-top:8px">
@@ -348,43 +332,8 @@ async function cargarVehiculos(){
     });
   }catch(_){}
 }
-$('#accidente_id').addEventListener('change', async ()=>{
-  await cargarVehiculos();
-  const personaId=$('#persona_id').value;
-  if (!personaId || personaId==='0') return;
-  try {
-    const r=await fetch(`?ajax=persona_por_id&id=${encodeURIComponent(personaId)}&accidente_id=${encodeURIComponent($('#accidente_id').value)}`);
-    const j=await r.json();
-    if (j.ok) $('#edad').value=j.persona.edad_calculada ?? j.persona.edad ?? '';
-  } catch (_) {}
-});
+$('#accidente_id').addEventListener('change', cargarVehiculos);
 cargarVehiculos();
-
-/* -------- Datos de la persona y copia para este accidente -------- */
-const camposFicha = ['fecha_nacimiento','nacionalidad','ocupacion','departamento_nac','provincia_nac','distrito_nac','nombre_padre','nombre_madre'];
-const camposCopia = ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'];
-function limpiarPersona(){
-  $('#persona_id').value = '0';
-  ['nombres','ap','am','dni_show','sexo','edad',...camposFicha,...camposCopia].forEach(k=>{
-    const campo=$('#'+k); if(campo) campo.value='';
-  });
-}
-function cargarPersona(p){
-  $('#persona_id').value = p.id;
-  $('#dni').value = p.num_doc || '';
-  $('#nombres').value = p.nombres || '';
-  $('#ap').value = p.apellido_paterno || '';
-  $('#am').value = p.apellido_materno || '';
-  $('#dni_show').value = p.num_doc || '';
-  $('#sexo').value = p.sexo || '';
-  $('#edad').value = p.edad_calculada ?? p.edad ?? '';
-  [...camposFicha,...camposCopia].forEach(k=>{
-    const campo=$('#'+k); if(campo) campo.value=p[k] ?? '';
-  });
-}
-$('#dni').addEventListener('input', ()=>{
-  if ($('#dni').value.trim() !== $('#dni_show').value) limpiarPersona();
-});
 
 /* -------- Buscar por DNI -------- */
 $('#btnBuscarDNI').addEventListener('click', async ()=>{
@@ -394,14 +343,20 @@ $('#btnBuscarDNI').addEventListener('click', async ()=>{
   try{
     const r = await fetch(`?ajax=buscar_persona&dni=${encodeURIComponent(dni)}&accidente_id=${encodeURIComponent(accId)}`);
     const j = await r.json();
-    if ($('#dni').value.trim() !== dni || $('#accidente_id').value !== accId) return;
     if(j.ok){
-      cargarPersona(j.persona);
+      const p=j.persona;
+      $('#persona_id').value = p.id;
+      $('#nombres').value = p.nombres||'';
+      $('#ap').value = p.apellido_paterno||'';
+      $('#am').value = p.apellido_materno||'';
+      $('#dni_show').value = p.num_doc||dni;
+      $('#sexo').value = p.sexo||'';
+      $('#edad').value = (p.edad_calculada ?? p.edad ?? '');
+      ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const e=$('#'+k);if(e)e.value=p[k]||'';});
     }else{
-      limpiarPersona();
       alert('No se encontró. Usa “Nueva” para registrarla.');
     }
-  }catch(_){ limpiarPersona(); alert('Error al buscar'); }
+  }catch(_){ alert('Error al buscar'); }
 });
 
 window.addEventListener('message', async (event)=>{
@@ -411,7 +366,10 @@ window.addEventListener('message', async (event)=>{
     const response=await fetch(`?ajax=persona_por_id&id=${encodeURIComponent(event.data.id)}&accidente_id=${encodeURIComponent($('#accidente_id').value)}`);
     const result=await response.json();
     if(result.ok) {
-      cargarPersona(result.persona);
+      const p=result.persona; $('#persona_id').value=p.id; $('#dni').value=p.num_doc||'';
+      $('#nombres').value=p.nombres||''; $('#ap').value=p.apellido_paterno||''; $('#am').value=p.apellido_materno||'';
+      $('#dni_show').value=p.num_doc||''; $('#sexo').value=p.sexo||''; $('#edad').value=p.edad_calculada??'';
+      ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'].forEach(k=>{const field=$('#'+k);if(field)field.value=p[k]||'';});
     }
   } catch (_) {}
 });
