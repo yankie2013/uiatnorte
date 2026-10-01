@@ -2,7 +2,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
-if (\App\Support\Access::role()==='guardia') { header('Location: guardia_historial.php'); exit; }
+$isGuardia = \App\Support\Access::role() === 'guardia';
 header('Content-Type: text/html; charset=utf-8');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
@@ -16,6 +16,13 @@ function lower_u(string $value): string {
 function active_table(PDO $pdo, string $table): string {
   static $cache = [];
   if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/D', $table)) throw new InvalidArgumentException('Tabla no válida.');
+  // Guardia consulta únicamente sus accidentes activos, sin depender de los
+  // DEFINER de vistas importadas de otro servidor. Los hijos se filtran por esos IDs.
+  if (\App\Support\Access::role() === 'guardia') {
+    return $table === 'accidentes'
+      ? '(SELECT * FROM accidentes WHERE eliminado_en IS NULL)'
+      : '`' . $table . '`';
+  }
   $active = $table . '_activos';
   if (!array_key_exists($active, $cache)) {
     $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
@@ -567,7 +574,19 @@ if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
   $st->execute($params);
   $rows=$st->fetchAll(PDO::FETCH_ASSOC);
 }
-$occupiedFolders = occupied_folder_map($pdo);
+$occupiedFolders = $isGuardia ? [] : occupied_folder_map($pdo);
+$guardiaRecords = [];
+if ($isGuardia && $rows !== []) {
+  $ids = array_column($rows, 'id');
+  $marks = implode(',', array_fill(0, count($ids), '?'));
+  $st = $pdo->prepare("SELECT c.*,u.nombre jefe,u.grado,
+      NOW()<DATE_ADD(c.registrado_en,INTERVAL 12 HOUR) vigente
+      FROM comunicaciones_guardia c LEFT JOIN usuarios u ON u.id=c.jefe_id
+      WHERE c.creado_por=? AND c.eliminado_en IS NULL AND c.accidente_id IN ($marks)
+      ORDER BY c.id");
+  $st->execute(array_merge([\App\Support\Access::id()], $ids));
+  foreach ($st as $record) $guardiaRecords[(int)$record['accidente_id']] = $record;
+}
 
 $personasResumenPorAccidente = [];
 $personasDetallePorAccidente = [];
@@ -1381,6 +1400,8 @@ html[data-theme-resolved="dark"] .acc-prosecution-value{color:#dbe5f2}
 .acc-summary-title{font-size:11px;font-weight:700;color:#7b8794;text-transform:uppercase}
 .acc-summary-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .acc-hint{font-size:12px;font-weight:600;color:#64748b}
+.acc-guardia-status{grid-column:1/-1;padding-top:12px;border-top:1px solid rgba(148,163,184,.25)}
+.acc-guardia-status p{margin:0 0 10px}
 .acc-card-right{position:absolute;z-index:5;top:14px;right:14px;display:flex;align-items:flex-end}
 .acc-top-actions{position:relative;display:flex;align-items:center;justify-content:flex-end}
 .acc-actions-trigger{
@@ -1709,10 +1730,11 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>" data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" <?php if (!$isGuardia): ?>tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>"<?php endif; ?> data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
+                <?php if (!$isGuardia): ?>
                 <div class="col-folder folder-cell acc-head-priority">
                   <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
                           data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
@@ -1727,7 +1749,12 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                 <select class="select-folder acc-folder-select" data-id="<?=$r['id']?>" aria-label="Número de Folder" title="Número de Folder">
                   <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
                 </select>
-                <span class="estado-badge <?=$cls?>"
+                <?php else: ?>
+                <span class="badge sidpol-reg"><?=h($r['registro_sidpol'] ?: 'Ingreso #'.$r['id'])?></span>
+                <span class="acc-report"><?=h($r['nro_informe_policial'] ?? '-')?></span>
+                <?php if ($folderVal !== ''): ?><span class="badge">Folder <?=h($folderVal)?></span><?php endif; ?>
+                <?php endif; ?>
+                <span class="<?= $isGuardia ? 'badge' : 'estado-badge' ?> <?=$cls?>"
                       data-id="<?=$r['id']?>"
                       data-estado="<?=h($estado)?>">
                   <?=h($estado)?>
@@ -1806,6 +1833,14 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
               <?php endif; ?>
             </div>
 
+            <?php if ($isGuardia): $guardiaRecord = $guardiaRecords[(int)$r['id']] ?? []; ?>
+            <div class="acc-guardia-status">
+              <p><?= !empty($guardiaRecord['jefe_id']) ? 'JEFE EMI: '.h(trim(($guardiaRecord['grado'] ?? '').' '.($guardiaRecord['jefe'] ?? ''))) : 'Pendiente de entrega al JEFE EMI' ?></p>
+              <?php if (!empty($guardiaRecord['vigente']) && empty($guardiaRecord['jefe_id'])): ?>
+                <a class="btn small" href="guardia_registro.php?accidente_id=<?= (int)$r['id'] ?>">Continuar registro</a>
+              <?php endif; ?>
+            </div>
+            <?php else: ?>
             <div class="acc-card-right">
               <div class="acc-top-actions">
                 <button class="acc-actions-trigger js-acc-actions-trigger" type="button" aria-expanded="false" aria-controls="acc-actions-<?= (int)$r['id'] ?>" title="Más acciones" aria-label="Más acciones">&#8942;</button>
@@ -1827,11 +1862,13 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                 </div>
               </div>
             </div>
+            <?php endif; ?>
           </div>
         </article>
       <?php endforeach; endif; ?>
     </div>
 
+    <?php if (!$isGuardia): ?>
     <div class="table-wrap" role="region" aria-label="Lista de accidentes">
       <table class="compact" role="table" aria-describedby="tbl-desc">
 <thead>
@@ -1949,6 +1986,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
         </tbody>
       </table>
     </div>
+    <?php endif; ?>
   </div>
         </div>
       </div>
