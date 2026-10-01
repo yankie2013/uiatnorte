@@ -192,6 +192,9 @@ final class InvolucradoPersonaService
 
     private function snapshotDatos(int $personaId, int $accidenteId, array $input): array
     {
+        if ($this->repository->missingSnapshotColumns() !== []) {
+            throw new InvalidArgumentException('Falta aplicar la migración de copias históricas en la base de datos del servidor.');
+        }
         $base = $this->repository->personaSnapshot($personaId, $accidenteId);
         if (!$base) {
             throw new InvalidArgumentException('No se encontraron los datos de la persona o del accidente.');

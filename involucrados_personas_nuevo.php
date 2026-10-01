@@ -30,20 +30,32 @@ $repo = new InvolucradoPersonaRepository($pdo);
 $service = new InvolucradoPersonaService($repo);
 
 if (iget('ajax')==='buscar_persona' && isset($_GET['dni'])) {
-  $dni   = preg_replace('/\D/','',iget('dni',''));
-  $accId = (int)iget('accidente_id',0);
-  $persona = $service->buscarPersona($dni, $accId);
-  okjson(['ok'=>!!$persona,'persona'=>$persona]);
+  try {
+    $dni   = preg_replace('/\D/','',iget('dni',''));
+    $accId = (int)iget('accidente_id',0);
+    $persona = $service->buscarPersona($dni, $accId);
+    okjson(['ok'=>!!$persona,'persona'=>$persona,'schema_ready'=>$repo->missingSnapshotColumns()===[]]);
+  } catch (Throwable $e) {
+    error_log('Error al buscar involucrado: '.$e->getMessage());
+    http_response_code(500);
+    okjson(['ok'=>false,'msg'=>'No se pudo consultar la persona. Revisa el registro de errores PHP del servidor.']);
+  }
 }
 if (iget('ajax')==='persona_por_id' && isset($_GET['id'])) {
-  $persona = $repo->personaBasicaById((int)iget('id',0));
-  if ($persona && $accId=(int)iget('accidente_id',0)) {
-    $fecha=$repo->accidenteFecha($accId);
-    $persona['edad_calculada']=!empty($fecha) && !empty($persona['fecha_nacimiento']) && $fecha >= $persona['fecha_nacimiento']
-      ? (new DateTime($persona['fecha_nacimiento']))->diff(new DateTime($fecha))->y
-      : null;
+  try {
+    $persona = $repo->personaBasicaById((int)iget('id',0));
+    if ($persona && $accId=(int)iget('accidente_id',0)) {
+      $fecha=$repo->accidenteFecha($accId);
+      $persona['edad_calculada']=!empty($fecha) && !empty($persona['fecha_nacimiento']) && $fecha >= $persona['fecha_nacimiento']
+        ? (new DateTime($persona['fecha_nacimiento']))->diff(new DateTime($fecha))->y
+        : null;
+    }
+    okjson(['ok'=>!!$persona,'persona'=>$persona,'schema_ready'=>$repo->missingSnapshotColumns()===[]]);
+  } catch (Throwable $e) {
+    error_log('Error al cargar involucrado: '.$e->getMessage());
+    http_response_code(500);
+    okjson(['ok'=>false,'msg'=>'No se pudo cargar la persona. Revisa el registro de errores PHP del servidor.']);
   }
-  okjson(['ok'=>!!$persona,'persona'=>$persona]);
 }
 
 if (iget('ajax')==='crear_persona' && $_SERVER['REQUEST_METHOD']==='POST') {
@@ -182,6 +194,7 @@ textarea{min-height:60px; resize:vertical}
 
   <?php if($ok): ?><div class="ok">Guardado correctamente.</div><?php endif; ?>
   <?php if($err): ?><div class="err"><?=h($err)?></div><?php endif; ?>
+  <div class="err" id="schemaWarning" style="display:none">La base de datos del servidor necesita la migración de copias históricas antes de guardar personas involucradas.</div>
 
   <form method="post" class="card" autocomplete="off" id="formIP">
     <input type="hidden" name="next" id="next" value="0">
@@ -393,13 +406,19 @@ $('#btnBuscarDNI').addEventListener('click', async ()=>{
   const accId = $('#accidente_id').value || '';
   try{
     const r = await fetch(`?ajax=buscar_persona&dni=${encodeURIComponent(dni)}&accidente_id=${encodeURIComponent(accId)}`);
+    if (r.status === 403) {
+      limpiarPersona();
+      alert('El registro de guardia ya no permite agregar personas. Vuelve al registro guiado.');
+      return;
+    }
     const j = await r.json();
     if ($('#dni').value.trim() !== dni || $('#accidente_id').value !== accId) return;
+    $('#schemaWarning').style.display = j.schema_ready === false ? 'block' : 'none';
     if(j.ok){
       cargarPersona(j.persona);
     }else{
       limpiarPersona();
-      alert('No se encontró. Usa “Nueva” para registrarla.');
+      alert(j.msg || 'No se encontró. Usa “Nueva” para registrarla.');
     }
   }catch(_){ limpiarPersona(); alert('Error al buscar'); }
 });
@@ -410,10 +429,13 @@ window.addEventListener('message', async (event)=>{
   try {
     const response=await fetch(`?ajax=persona_por_id&id=${encodeURIComponent(event.data.id)}&accidente_id=${encodeURIComponent($('#accidente_id').value)}`);
     const result=await response.json();
+    $('#schemaWarning').style.display = result.schema_ready === false ? 'block' : 'none';
     if(result.ok) {
       cargarPersona(result.persona);
+    } else if (result.msg) {
+      alert(result.msg);
     }
-  } catch (_) {}
+  } catch (_) { alert('No se pudo cargar la persona recién registrada.'); }
 });
 
 /* Normalizar texto (sin tildes, minúsculas) */
