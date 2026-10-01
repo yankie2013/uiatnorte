@@ -7,8 +7,6 @@ use PDO;
 
 final class InvolucradoPersonaRepository
 {
-    private ?string $personaBasicSelect = null;
-
     public function __construct(private PDO $pdo)
     {
     }
@@ -56,7 +54,7 @@ final class InvolucradoPersonaRepository
 
     public function personaByDniBasic(string $dni): ?array
     {
-        $st = $this->pdo->prepare('SELECT ' . $this->personaBasicSelect() . ' FROM personas WHERE num_doc=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, tipo_doc, num_doc, nombres, apellido_paterno, apellido_materno, sexo, edad, fecha_nacimiento, nacionalidad, departamento_nac, provincia_nac, distrito_nac, nombre_padre, nombre_madre, ocupacion, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE num_doc=? LIMIT 1');
         $st->execute([$dni]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -64,57 +62,10 @@ final class InvolucradoPersonaRepository
 
     public function personaBasicaById(int $personaId): ?array
     {
-        $st = $this->pdo->prepare('SELECT ' . $this->personaBasicSelect() . ' FROM personas WHERE id=? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT id, tipo_doc, num_doc, nombres, apellido_paterno, apellido_materno, sexo, edad, fecha_nacimiento, nacionalidad, departamento_nac, provincia_nac, distrito_nac, nombre_padre, nombre_madre, ocupacion, estado_civil, grado_instruccion, numero_hijos, domicilio, domicilio_departamento, domicilio_provincia, domicilio_distrito, celular, email FROM personas WHERE id=? LIMIT 1');
         $st->execute([$personaId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
-    }
-
-    private function personaBasicSelect(): string
-    {
-        if ($this->personaBasicSelect !== null) {
-            return $this->personaBasicSelect;
-        }
-        $available = array_fill_keys($this->pdo->query('SHOW COLUMNS FROM personas')->fetchAll(PDO::FETCH_COLUMN), true);
-        $fields = [
-            'id', 'tipo_doc', 'num_doc', 'nombres', 'apellido_paterno', 'apellido_materno',
-            'sexo', 'edad', 'fecha_nacimiento', 'nacionalidad', 'departamento_nac',
-            'provincia_nac', 'distrito_nac', 'nombre_padre', 'nombre_madre', 'ocupacion',
-            'estado_civil', 'grado_instruccion', 'numero_hijos', 'domicilio',
-            'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito',
-            'celular', 'email',
-        ];
-        return $this->personaBasicSelect = implode(', ', array_map(
-            static fn(string $field): string => isset($available[$field]) ? "`{$field}`" : "NULL AS `{$field}`",
-            $fields
-        ));
-    }
-
-    public function missingSnapshotColumns(): array
-    {
-        $required = [
-            'personas' => ['numero_hijos', 'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito'],
-            'involucrados_personas' => [
-                'snapshot_guardado', 'edad_snapshot', 'estado_civil_snapshot',
-                'grado_instruccion_snapshot', 'numero_hijos_snapshot', 'domicilio_snapshot',
-                'domicilio_departamento_snapshot', 'domicilio_provincia_snapshot',
-                'domicilio_distrito_snapshot', 'celular_snapshot', 'email_snapshot',
-            ],
-        ];
-        $rows = $this->pdo->query("SELECT table_name AS tabla, column_name AS columna FROM information_schema.columns
-            WHERE table_schema=DATABASE() AND table_name IN ('personas','involucrados_personas')")
-            ->fetchAll(PDO::FETCH_ASSOC);
-        $available = [];
-        foreach ($rows as $row) {
-            $available[$row['tabla']][$row['columna']] = true;
-        }
-        $missing = [];
-        foreach ($required as $table => $columns) {
-            foreach ($columns as $column) {
-                if (!isset($available[$table][$column])) $missing[] = "{$table}.{$column}";
-            }
-        }
-        return $missing;
     }
 
     public function createPersona(array $payload): int

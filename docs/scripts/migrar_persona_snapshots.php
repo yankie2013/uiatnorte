@@ -21,7 +21,7 @@ echo "Destino: {$host}:{$port} / {$schema}\n";
 $required = [
     'usuarios' => 'id,activo,rol',
     'accidentes' => 'id,fecha_accidente,eliminado_en',
-    'personas' => 'id,tipo_doc,num_doc,apellido_paterno,apellido_materno,nombres,sexo,fecha_nacimiento,departamento_nac,provincia_nac,distrito_nac,nombre_padre,nombre_madre,edad,estado_civil,grado_instruccion,domicilio,celular,email',
+    'personas' => 'id,tipo_doc,num_doc,apellido_paterno,apellido_materno,nombres,sexo,fecha_nacimiento,departamento_nac,provincia_nac,distrito_nac,nombre_padre,nombre_madre,edad,estado_civil,grado_instruccion,domicilio,domicilio_departamento,domicilio_provincia,domicilio_distrito,celular,email',
     'involucrados_personas' => 'id,accidente_id,persona_id,orden_persona',
     'familiar_fallecido' => 'id,accidente_id,familiar_persona_id',
     'policial_interviniente' => 'id,accidente_id,persona_id',
@@ -41,9 +41,6 @@ if ($invalidAges > 0) throw new RuntimeException("Hay {$invalidAges} relaciones 
 $columns = [
     'personas' => [
         'numero_hijos' => 'ALTER TABLE personas ADD COLUMN numero_hijos TINYINT UNSIGNED NULL AFTER grado_instruccion',
-        'domicilio_departamento' => 'ALTER TABLE personas ADD COLUMN domicilio_departamento VARCHAR(60) NULL',
-        'domicilio_provincia' => 'ALTER TABLE personas ADD COLUMN domicilio_provincia VARCHAR(60) NULL',
-        'domicilio_distrito' => 'ALTER TABLE personas ADD COLUMN domicilio_distrito VARCHAR(60) NULL',
     ],
     'involucrados_personas' => [
         'edad_snapshot' => 'ALTER TABLE involucrados_personas ADD COLUMN edad_snapshot TINYINT UNSIGNED NULL AFTER orden_persona',
