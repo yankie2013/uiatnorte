@@ -40,8 +40,10 @@ final class PropietarioVehiculoService
             'domicilio_fiscal' => $row['domicilio_fiscal'] ?? '',
             'rol_legal' => $row['rol_legal'] ?? 'Representante legal',
             'observaciones' => $row['observaciones'] ?? '',
+            'domicilio_nat' => $row['dom_nat'] ?? '',
             'celular_nat' => $row['cel_nat'] ?? '',
             'email_nat' => $row['em_nat'] ?? '',
+            'domicilio_rep' => $row['dom_rep'] ?? '',
             'celular_rep' => $row['cel_rep'] ?? '',
             'email_rep' => $row['em_rep'] ?? '',
         ];
@@ -92,7 +94,6 @@ final class PropietarioVehiculoService
     public function create(array $input): int
     {
         $payload = $this->payload($input, null);
-        $this->syncContacts($payload);
         return $this->repository->create($payload);
     }
 
@@ -103,7 +104,6 @@ final class PropietarioVehiculoService
             throw new InvalidArgumentException('Registro no encontrado.');
         }
         $payload = $this->payload($input, $id);
-        $this->syncContacts($payload);
         $this->repository->update($id, $payload);
     }
 
@@ -135,8 +135,10 @@ final class PropietarioVehiculoService
             'rol_legal' => $this->nullableTrim($input['rol_legal'] ?? null),
             'representante_persona_id' => (int) ($input['representante_persona_id'] ?? 0),
             'observaciones' => $this->nullableTrim($input['observaciones'] ?? null),
+            'domicilio_nat' => $this->nullableTrim($input['domicilio_nat'] ?? null),
             'celular_nat' => $this->nullableTrim($input['celular_nat'] ?? null),
             'email_nat' => $this->nullableTrim($input['email_nat'] ?? null),
+            'domicilio_rep' => $this->nullableTrim($input['domicilio_rep'] ?? null),
             'celular_rep' => $this->nullableTrim($input['celular_rep'] ?? null),
             'email_rep' => $this->nullableTrim($input['email_rep'] ?? null),
         ];
@@ -190,16 +192,6 @@ final class PropietarioVehiculoService
         }
 
         return $payload;
-    }
-
-    private function syncContacts(array $payload): void
-    {
-        if ($payload['tipo_propietario'] === 'NATURAL' && $payload['propietario_persona_id'] > 0) {
-            $this->repository->updatePersonaContact($payload['propietario_persona_id'], $payload['celular_nat'], $payload['email_nat']);
-        }
-        if ($payload['tipo_propietario'] === 'JURIDICA' && $payload['representante_persona_id'] > 0) {
-            $this->repository->updatePersonaContact($payload['representante_persona_id'], $payload['celular_rep'], $payload['email_rep']);
-        }
     }
 
     private function nullableTrim(mixed $value): ?string

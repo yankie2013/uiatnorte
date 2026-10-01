@@ -144,7 +144,8 @@ include __DIR__ . '/sidebar.php';
       </div>
       <div class="c12 field">
         <label class="label">Domicilio</label>
-        <input type="text" id="persona_domicilio" value="<?= h((string) $data['domicilio']) ?>" readonly>
+        <input type="text" id="persona_domicilio" name="domicilio" value="<?= h((string) $data['domicilio']) ?>">
+        <div class="small">Estos datos se guardan en este vínculo familiar y no cambian la ficha ni otros expedientes.</div>
       </div>
       <div class="c6 field">
         <label class="label" for="celular">Celular</label>

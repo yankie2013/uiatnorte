@@ -76,7 +76,6 @@ final class PolicialIntervinienteService
     public function create(array $input): int
     {
         $payload = $this->payload($input, null);
-        $this->repository->updatePersonaContact((int) $payload['persona_id'], $payload['celular'], $payload['email']);
         return $this->repository->create($payload);
     }
 
@@ -87,7 +86,6 @@ final class PolicialIntervinienteService
             throw new InvalidArgumentException('Registro no encontrado.');
         }
         $payload = $this->payload($input, $id);
-        $this->repository->updatePersonaContact((int) $payload['persona_id'], $payload['celular'], $payload['email']);
         $this->repository->update($id, $payload);
     }
 
@@ -116,6 +114,7 @@ final class PolicialIntervinienteService
             'dependencia_policial' => trim((string) ($input['dependencia_policial'] ?? '')),
             'rol_funcion' => $this->nullableTrim($input['rol_funcion'] ?? 'INTERVINIENTE') ?? 'INTERVINIENTE',
             'observaciones' => $this->nullableTrim($input['observaciones'] ?? null),
+            'domicilio' => $this->nullableTrim($input['domicilio'] ?? null),
             'celular' => $this->nullableTrim($input['celular'] ?? null),
             'email' => $this->nullableTrim($input['email'] ?? null),
         ];

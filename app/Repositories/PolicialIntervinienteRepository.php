@@ -39,12 +39,6 @@ final class PolicialIntervinienteRepository
         return $row ?: null;
     }
 
-    public function updatePersonaContact(int $id, ?string $celular, ?string $email): void
-    {
-        $st = $this->pdo->prepare('UPDATE personas SET celular = ?, email = ? WHERE id = ?');
-        $st->execute([$celular, $email, $id]);
-    }
-
     public function existsDuplicate(int $accidenteId, int $personaId, ?int $excludeId = null): bool
     {
         $sql = 'SELECT COUNT(*) FROM policial_interviniente_activos WHERE accidente_id = ? AND persona_id = ?';
@@ -60,7 +54,7 @@ final class PolicialIntervinienteRepository
 
     public function create(array $payload): int
     {
-        $sql = 'INSERT INTO policial_interviniente (accidente_id, persona_id, grado_policial, cip, dependencia_policial, rol_funcion, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        $sql = 'INSERT INTO policial_interviniente (accidente_id, persona_id, grado_policial, cip, dependencia_policial, rol_funcion, observaciones, domicilio_snapshot, celular_snapshot, email_snapshot, snapshot_guardado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)';
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['accidente_id'],
@@ -70,13 +64,16 @@ final class PolicialIntervinienteRepository
             $payload['dependencia_policial'],
             $payload['rol_funcion'],
             $payload['observaciones'],
+            $payload['domicilio'],
+            $payload['celular'],
+            $payload['email'],
         ]);
         return (int) $this->pdo->lastInsertId();
     }
 
     public function update(int $id, array $payload): void
     {
-        $sql = 'UPDATE policial_interviniente SET persona_id = ?, grado_policial = ?, cip = ?, dependencia_policial = ?, rol_funcion = ?, observaciones = ? WHERE id = ? LIMIT 1';
+        $sql = 'UPDATE policial_interviniente SET persona_id = ?, grado_policial = ?, cip = ?, dependencia_policial = ?, rol_funcion = ?, observaciones = ?, domicilio_snapshot = ?, celular_snapshot = ?, email_snapshot = ?, snapshot_guardado = 1 WHERE id = ? LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['persona_id'],
@@ -85,6 +82,9 @@ final class PolicialIntervinienteRepository
             $payload['dependencia_policial'],
             $payload['rol_funcion'],
             $payload['observaciones'],
+            $payload['domicilio'],
+            $payload['celular'],
+            $payload['email'],
             $id,
         ]);
     }
@@ -105,7 +105,10 @@ final class PolicialIntervinienteRepository
 
     public function detail(int $id): ?array
     {
-        $sql = "SELECT pi.*, p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.fecha_nacimiento, p.domicilio, p.celular, p.email,
+        $sql = "SELECT pi.*, p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.fecha_nacimiento,
+                       IF(pi.snapshot_guardado=1,pi.domicilio_snapshot,p.domicilio) AS domicilio,
+                       IF(pi.snapshot_guardado=1,pi.celular_snapshot,p.celular) AS celular,
+                       IF(pi.snapshot_guardado=1,pi.email_snapshot,p.email) AS email,
                        a.id AS accidente_id, a.sidpol, a.registro_sidpol, a.lugar, a.fecha_accidente
                 FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id
@@ -121,7 +124,9 @@ final class PolicialIntervinienteRepository
     public function listByAccidente(int $accidenteId): array
     {
         $sql = "SELECT pi.id, pi.accidente_id, pi.persona_id, pi.grado_policial, pi.cip, pi.dependencia_policial, pi.rol_funcion, pi.observaciones,
-                       p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.celular, p.email
+                       p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres,
+                       IF(pi.snapshot_guardado=1,pi.celular_snapshot,p.celular) AS celular,
+                       IF(pi.snapshot_guardado=1,pi.email_snapshot,p.email) AS email
                 FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id
                 WHERE pi.accidente_id = ?
@@ -134,7 +139,9 @@ final class PolicialIntervinienteRepository
     public function listAll(): array
     {
         $sql = "SELECT pi.id, pi.accidente_id, pi.persona_id, pi.grado_policial, pi.cip, pi.dependencia_policial, pi.rol_funcion,
-                       p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres, p.celular, p.email,
+                       p.tipo_doc, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres,
+                       IF(pi.snapshot_guardado=1,pi.celular_snapshot,p.celular) AS celular,
+                       IF(pi.snapshot_guardado=1,pi.email_snapshot,p.email) AS email,
                        a.sidpol, a.registro_sidpol, a.lugar, a.fecha_accidente
                 FROM policial_interviniente_activos pi
                 JOIN personas p ON p.id = pi.persona_id

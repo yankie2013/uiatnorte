@@ -53,14 +53,16 @@ final class FamiliarFallecidoService
     public function submittedData(array $input, int $accidenteId): array
     {
         $data = array_replace($this->defaultData(null, $accidenteId), array_intersect_key($input, array_flip([
-            'fallecido_inv_id', 'familiar_persona_id', 'parentesco', 'observaciones', 'celular', 'email',
+            'fallecido_inv_id', 'familiar_persona_id', 'parentesco', 'observaciones', 'domicilio', 'celular', 'email',
         ])));
         $person = $this->repository->personaById((int) $data['familiar_persona_id']);
         if ($person !== null) {
             $data['tipo_doc'] = $person['tipo_doc'];
             $data['num_doc'] = $person['num_doc'];
             $data['nombre_familiar'] = trim(implode(' ', [$person['apellido_paterno'] ?? '', $person['apellido_materno'] ?? '', $person['nombres'] ?? '']));
-            $data['domicilio'] = $person['domicilio'] ?? '';
+            if (!array_key_exists('domicilio', $input)) {
+                $data['domicilio'] = $person['domicilio'] ?? '';
+            }
         }
         return $data;
     }
@@ -92,10 +94,7 @@ final class FamiliarFallecidoService
     public function create(array $input): int
     {
         $payload = $this->payload($input, null);
-        return $this->repository->transaction(function () use ($payload): int {
-            $this->repository->updatePersonaContact((int) $payload['familiar_persona_id'], $payload['celular'], $payload['email']);
-            return $this->repository->create($payload);
-        });
+        return $this->repository->create($payload);
     }
 
     public function update(int $id, array $input): void
@@ -108,10 +107,7 @@ final class FamiliarFallecidoService
             throw new InvalidArgumentException('El registro no pertenece a este accidente.');
         }
         $payload = $this->payload($input, $id);
-        $this->repository->transaction(function () use ($id, $payload): void {
-            $this->repository->updatePersonaContact((int) $payload['familiar_persona_id'], $payload['celular'], $payload['email']);
-            $this->repository->update($id, $payload);
-        });
+        $this->repository->update($id, $payload);
     }
 
     public function delete(int $id, int $accidenteId): void
@@ -137,6 +133,7 @@ final class FamiliarFallecidoService
             'familiar_persona_id' => (int) ($input['familiar_persona_id'] ?? 0),
             'parentesco' => $this->nullableTrim($input['parentesco'] ?? null),
             'observaciones' => $this->nullableTrim($input['observaciones'] ?? null),
+            'domicilio' => $this->nullableTrim($input['domicilio'] ?? null),
             'celular' => $this->nullableTrim($input['celular'] ?? null),
             'email' => $this->nullableTrim($input['email'] ?? null),
         ];

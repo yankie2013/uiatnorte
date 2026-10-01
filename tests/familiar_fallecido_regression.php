@@ -26,7 +26,8 @@ if (!$family) throw new RuntimeException('Se necesita una persona compartida par
 $repo = new App\Repositories\FamiliarFallecidoRepository($p);
 $service = new App\Services\FamiliarFallecidoService($repo);
 $input = ['accidente_id'=>$caseId,'fallecido_inv_id'=>$fixture['fallecido_id'],'familiar_persona_id'=>$family['id'],
- 'parentesco'=>'Prueba temporal','observaciones'=>'Se revierte al finalizar','celular'=>$family['celular'],'email'=>$family['email']];
+ 'parentesco'=>'Prueba temporal','observaciones'=>'Se revierte al finalizar','domicilio'=>$family['domicilio'],
+ 'celular'=>$family['celular'],'email'=>$family['email']];
 $checks = 0;
 function checkFamily(bool $ok, string $message): void {
  global $checks;
@@ -42,9 +43,12 @@ try {
     $changed = $input;
     $changed['celular'] = '999999991';
     if ((string)$family['celular'] === $changed['celular']) $changed['celular'] = '999999992';
-    try { $service->update($newId, $changed); throw new RuntimeException('Se permitió editar una ficha ajena.'); }
-    catch (RuntimeException $e) { checkFamily(str_contains($e->getMessage(), 'ficha es compartida'), 'El rechazo de contacto no es claro.'); }
-    checkFamily($repo->personaById((int)$family['id'])['celular'] === $family['celular'], 'El rechazo dejó cambios parciales.');
+    $changed['domicilio'] = 'Domicilio de prueba solo para este expediente';
+    $service->update($newId, $changed);
+    $snapshot = $repo->detail($newId);
+    checkFamily($snapshot['cel_fam'] === $changed['celular'], 'No se guardó el celular propio del vínculo.');
+    checkFamily($snapshot['dom_fam'] === $changed['domicilio'], 'No se guardó el domicilio propio del vínculo.');
+    checkFamily($repo->personaById((int)$family['id'])['celular'] === $family['celular'], 'Se alteró el teléfono compartido.');
     $wrongActor = (int)$p->query("SELECT id FROM usuarios WHERE activo=1 AND rol='jefe_emi' AND id<>".(int)$fixture['responsable_id'].' LIMIT 1')->fetchColumn();
     $p->exec('SET @actor_id='.$wrongActor);
     try { $service->update($newId, $input); throw new RuntimeException('Se permitió modificar un expediente ajeno.'); }
@@ -52,14 +56,6 @@ try {
     $p->exec('SET @actor_id='.(int)$fixture['responsable_id']);
     $form = $service->submittedData($input, $caseId);
     foreach (['tipo_doc','num_doc','nombre_familiar','domicilio','celular','email'] as $key) checkFamily(array_key_exists($key,$form), 'Falta campo tras error: '.$key);
-    // Verifica que una operación compuesta fallida deshaga incluso cambios autorizados.
-    $admin = (int)$p->query("SELECT id FROM usuarios WHERE activo=1 AND rol='admin' LIMIT 1")->fetchColumn();
-    $p->exec('SET @actor_id='.$admin);
-    try { $repo->transaction(function () use ($repo,$family,$changed): void {
-        $repo->updatePersonaContact((int)$family['id'],$changed['celular'],$family['email']);
-        throw new RuntimeException('Fallo deliberado posterior al contacto');
-    }); } catch (RuntimeException $e) { checkFamily($e->getMessage()==='Fallo deliberado posterior al contacto', 'Falló la prueba de transacción.'); }
-    checkFamily($repo->personaById((int)$family['id'])['celular'] === $family['celular'], 'El rollback no restauró el contacto.');
     $p->rollBack();
     // Reproduce un POST rechazado y comprueba el HTML completo sin imprimir datos personales.
     $st=$p->prepare('SELECT id,nombre,rol,email,auth_version FROM usuarios WHERE id=?');

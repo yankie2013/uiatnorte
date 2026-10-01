@@ -69,12 +69,6 @@ final class PropietarioVehiculoRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function updatePersonaContact(int $id, ?string $celular, ?string $email): void
-    {
-        $st = $this->pdo->prepare('UPDATE personas SET celular = ?, email = ? WHERE id = ?');
-        $st->execute([$celular, $email, $id]);
-    }
-
     public function existsDuplicate(int $accidenteId, int $vehiculoInvId, string $tipoPropietario, int $propietarioPersonaId, string $ruc, ?int $excludeId = null): bool
     {
         $sql = "SELECT COUNT(*) FROM propietario_vehiculo_activos
@@ -97,8 +91,10 @@ final class PropietarioVehiculoRepository
     {
         $sql = "INSERT INTO propietario_vehiculo
                 (accidente_id, vehiculo_inv_id, tipo_propietario, propietario_persona_id,
-                 ruc, razon_social, domicilio_fiscal, rol_legal, representante_persona_id, observaciones)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 ruc, razon_social, domicilio_fiscal, rol_legal, representante_persona_id, observaciones,
+                 domicilio_nat_snapshot, celular_nat_snapshot, email_nat_snapshot,
+                 domicilio_rep_snapshot, celular_rep_snapshot, email_rep_snapshot, snapshot_guardado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['accidente_id'],
@@ -111,6 +107,8 @@ final class PropietarioVehiculoRepository
             $payload['rol_legal'],
             $payload['representante_persona_id'],
             $payload['observaciones'],
+            $payload['domicilio_nat'], $payload['celular_nat'], $payload['email_nat'],
+            $payload['domicilio_rep'], $payload['celular_rep'], $payload['email_rep'],
         ]);
         return (int) $this->pdo->lastInsertId();
     }
@@ -127,6 +125,8 @@ final class PropietarioVehiculoRepository
                   rol_legal = ?,
                   representante_persona_id = ?,
                   observaciones = ?
+                  , domicilio_nat_snapshot = ?, celular_nat_snapshot = ?, email_nat_snapshot = ?,
+                  domicilio_rep_snapshot = ?, celular_rep_snapshot = ?, email_rep_snapshot = ?, snapshot_guardado = 1
                 WHERE id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -140,6 +140,8 @@ final class PropietarioVehiculoRepository
             $payload['rol_legal'],
             $payload['representante_persona_id'],
             $payload['observaciones'],
+            $payload['domicilio_nat'], $payload['celular_nat'], $payload['email_nat'],
+            $payload['domicilio_rep'], $payload['celular_rep'], $payload['email_rep'],
             $id,
         ]);
     }
@@ -162,8 +164,14 @@ final class PropietarioVehiculoRepository
     {
         $sql = "SELECT pv.*, a.id AS accidente, a.sidpol, a.registro_sidpol, a.lugar, a.fecha_accidente,
                        iv.orden_participacion, v.placa,
-                       pn.tipo_doc AS tipo_doc_nat, pn.num_doc AS dni_nat, pn.apellido_paterno AS ap_nat, pn.apellido_materno AS am_nat, pn.nombres AS no_nat, pn.domicilio AS dom_nat, pn.celular AS cel_nat, pn.email AS em_nat,
-                       pr.tipo_doc AS tipo_doc_rep, pr.num_doc AS dni_rep, pr.apellido_paterno AS ap_rep, pr.apellido_materno AS am_rep, pr.nombres AS no_rep, pr.domicilio AS dom_rep, pr.celular AS cel_rep, pr.email AS em_rep
+                       pn.tipo_doc AS tipo_doc_nat, pn.num_doc AS dni_nat, pn.apellido_paterno AS ap_nat, pn.apellido_materno AS am_nat, pn.nombres AS no_nat,
+                       IF(pv.snapshot_guardado=1,pv.domicilio_nat_snapshot,pn.domicilio) AS dom_nat,
+                       IF(pv.snapshot_guardado=1,pv.celular_nat_snapshot,pn.celular) AS cel_nat,
+                       IF(pv.snapshot_guardado=1,pv.email_nat_snapshot,pn.email) AS em_nat,
+                       pr.tipo_doc AS tipo_doc_rep, pr.num_doc AS dni_rep, pr.apellido_paterno AS ap_rep, pr.apellido_materno AS am_rep, pr.nombres AS no_rep,
+                       IF(pv.snapshot_guardado=1,pv.domicilio_rep_snapshot,pr.domicilio) AS dom_rep,
+                       IF(pv.snapshot_guardado=1,pv.celular_rep_snapshot,pr.celular) AS cel_rep,
+                       IF(pv.snapshot_guardado=1,pv.email_rep_snapshot,pr.email) AS em_rep
                 FROM propietario_vehiculo_activos pv
                 JOIN accidentes_activos a ON a.id = pv.accidente_id
                 JOIN involucrados_vehiculos_activos iv ON iv.id = pv.vehiculo_inv_id

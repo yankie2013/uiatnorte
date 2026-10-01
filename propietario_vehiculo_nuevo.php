@@ -66,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'domicilio_fiscal' => $_POST['domicilio_fiscal'] ?? '',
         'rol_legal' => $_POST['rol_legal'] ?? '',
         'observaciones' => $_POST['observaciones'] ?? '',
+        'domicilio_nat' => $_POST['domicilio_nat'] ?? '',
+        'domicilio_rep' => $_POST['domicilio_rep'] ?? '',
         'celular_nat' => $_POST['celular_nat'] ?? '',
         'email_nat' => $_POST['email_nat'] ?? '',
         'celular_rep' => $_POST['celular_rep'] ?? '',
@@ -163,7 +165,7 @@ include __DIR__ . '/sidebar.php';
         </div>
         <div class="grid" style="margin-top:12px;">
           <div class="c12 field"><label class="label">Nombre completo</label><input type="text" id="nat_nombre" readonly></div>
-          <div class="c12 field"><label class="label">Domicilio</label><input type="text" id="nat_dom" readonly></div>
+          <div class="c12 field"><label class="label">Domicilio</label><input type="text" name="domicilio_nat" id="nat_dom"></div>
           <div class="c6 field"><label class="label">Celular</label><input type="text" name="celular_nat" id="nat_cel" value="<?= h((string) $data['celular_nat']) ?>"></div>
           <div class="c6 field"><label class="label">Email</label><input type="email" name="email_nat" id="nat_email" value="<?= h((string) $data['email_nat']) ?>"></div>
         </div>
@@ -189,7 +191,7 @@ include __DIR__ . '/sidebar.php';
         </div>
         <div class="grid" style="margin-top:12px;">
           <div class="c12 field"><label class="label">Nombre completo</label><input type="text" id="rep_nombre" readonly></div>
-          <div class="c12 field"><label class="label">Domicilio</label><input type="text" id="rep_dom" readonly></div>
+          <div class="c12 field"><label class="label">Domicilio</label><input type="text" name="domicilio_rep" id="rep_dom"></div>
           <div class="c6 field"><label class="label">Celular</label><input type="text" name="celular_rep" id="rep_cel" value="<?= h((string) $data['celular_rep']) ?>"></div>
           <div class="c6 field"><label class="label">Email</label><input type="email" name="email_rep" id="rep_email" value="<?= h((string) $data['email_rep']) ?>"></div>
         </div>

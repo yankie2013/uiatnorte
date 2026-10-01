@@ -37,6 +37,27 @@ $columns = [
         'celular_snapshot' => 'ALTER TABLE involucrados_personas ADD COLUMN celular_snapshot VARCHAR(20) NULL',
         'email_snapshot' => 'ALTER TABLE involucrados_personas ADD COLUMN email_snapshot VARCHAR(120) NULL',
     ],
+    'familiar_fallecido' => [
+        'domicilio_snapshot' => 'ALTER TABLE familiar_fallecido ADD COLUMN domicilio_snapshot VARCHAR(200) NULL',
+        'celular_snapshot' => 'ALTER TABLE familiar_fallecido ADD COLUMN celular_snapshot VARCHAR(20) NULL',
+        'email_snapshot' => 'ALTER TABLE familiar_fallecido ADD COLUMN email_snapshot VARCHAR(120) NULL',
+        'snapshot_guardado' => 'ALTER TABLE familiar_fallecido ADD COLUMN snapshot_guardado TINYINT(1) NOT NULL DEFAULT 0',
+    ],
+    'policial_interviniente' => [
+        'domicilio_snapshot' => 'ALTER TABLE policial_interviniente ADD COLUMN domicilio_snapshot VARCHAR(200) NULL',
+        'celular_snapshot' => 'ALTER TABLE policial_interviniente ADD COLUMN celular_snapshot VARCHAR(20) NULL',
+        'email_snapshot' => 'ALTER TABLE policial_interviniente ADD COLUMN email_snapshot VARCHAR(120) NULL',
+        'snapshot_guardado' => 'ALTER TABLE policial_interviniente ADD COLUMN snapshot_guardado TINYINT(1) NOT NULL DEFAULT 0',
+    ],
+    'propietario_vehiculo' => [
+        'domicilio_nat_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN domicilio_nat_snapshot VARCHAR(200) NULL',
+        'celular_nat_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN celular_nat_snapshot VARCHAR(20) NULL',
+        'email_nat_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN email_nat_snapshot VARCHAR(120) NULL',
+        'domicilio_rep_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN domicilio_rep_snapshot VARCHAR(200) NULL',
+        'celular_rep_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN celular_rep_snapshot VARCHAR(20) NULL',
+        'email_rep_snapshot' => 'ALTER TABLE propietario_vehiculo ADD COLUMN email_rep_snapshot VARCHAR(120) NULL',
+        'snapshot_guardado' => 'ALTER TABLE propietario_vehiculo ADD COLUMN snapshot_guardado TINYINT(1) NOT NULL DEFAULT 0',
+    ],
 ];
 
 foreach ($columns as $table => $tableColumns) {
@@ -74,9 +95,49 @@ $pdo->exec("UPDATE involucrados_personas ip
            ip.email_snapshot=COALESCE(ip.email_snapshot,p.email),
            ip.snapshot_guardado=1");
 
+$pdo->exec("UPDATE familiar_fallecido ff
+    JOIN personas p ON p.id=ff.familiar_persona_id
+    JOIN accidentes a ON a.id=ff.accidente_id AND a.eliminado_en IS NULL
+       SET ff.domicilio_snapshot=COALESCE(ff.domicilio_snapshot,p.domicilio),
+           ff.celular_snapshot=COALESCE(ff.celular_snapshot,p.celular),
+           ff.email_snapshot=COALESCE(ff.email_snapshot,p.email),
+           ff.snapshot_guardado=1");
+
+$pdo->exec("UPDATE policial_interviniente pi
+    JOIN personas p ON p.id=pi.persona_id
+    JOIN accidentes a ON a.id=pi.accidente_id AND a.eliminado_en IS NULL
+       SET pi.domicilio_snapshot=COALESCE(pi.domicilio_snapshot,p.domicilio),
+           pi.celular_snapshot=COALESCE(pi.celular_snapshot,p.celular),
+           pi.email_snapshot=COALESCE(pi.email_snapshot,p.email),
+           pi.snapshot_guardado=1");
+
+$pdo->exec("UPDATE propietario_vehiculo pv
+    JOIN accidentes a ON a.id=pv.accidente_id AND a.eliminado_en IS NULL
+    LEFT JOIN personas pn ON pn.id=pv.propietario_persona_id
+    LEFT JOIN personas pr ON pr.id=pv.representante_persona_id
+       SET pv.domicilio_nat_snapshot=COALESCE(pv.domicilio_nat_snapshot,pn.domicilio),
+           pv.celular_nat_snapshot=COALESCE(pv.celular_nat_snapshot,pn.celular),
+           pv.email_nat_snapshot=COALESCE(pv.email_nat_snapshot,pn.email),
+           pv.domicilio_rep_snapshot=COALESCE(pv.domicilio_rep_snapshot,pr.domicilio),
+           pv.celular_rep_snapshot=COALESCE(pv.celular_rep_snapshot,pr.celular),
+           pv.email_rep_snapshot=COALESCE(pv.email_rep_snapshot,pr.email),
+           pv.snapshot_guardado=1");
+
 // La vista heredada enumeraba las columnas anteriores y ocultaba las nuevas instantáneas.
 $pdo->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW involucrados_personas_activos AS
     SELECT d.* FROM involucrados_personas d
+    LEFT JOIN accidentes a ON a.id=d.accidente_id
+    WHERE d.accidente_id IS NULL OR a.eliminado_en IS NULL");
+$pdo->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW familiar_fallecido_activos AS
+    SELECT d.* FROM familiar_fallecido d
+    LEFT JOIN accidentes a ON a.id=d.accidente_id
+    WHERE d.accidente_id IS NULL OR a.eliminado_en IS NULL");
+$pdo->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW policial_interviniente_activos AS
+    SELECT d.* FROM policial_interviniente d
+    LEFT JOIN accidentes a ON a.id=d.accidente_id
+    WHERE d.accidente_id IS NULL OR a.eliminado_en IS NULL");
+$pdo->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW propietario_vehiculo_activos AS
+    SELECT d.* FROM propietario_vehiculo d
     LEFT JOIN accidentes a ON a.id=d.accidente_id
     WHERE d.accidente_id IS NULL OR a.eliminado_en IS NULL");
 

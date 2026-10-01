@@ -57,21 +57,6 @@ final class FamiliarFallecidoRepository
         return $row ?: null;
     }
 
-    public function updatePersonaContact(int $id, ?string $celular, ?string $email): void
-    {
-        $current = $this->personaById($id);
-        if ($current === null) throw new \InvalidArgumentException('La persona seleccionada ya no existe.');
-        if (trim((string) $current['celular']) === trim((string) $celular)
-            && trim((string) $current['email']) === trim((string) $email)) return;
-        $permission = $this->pdo->prepare('SELECT rbac_person(?)');
-        $permission->execute([$id]);
-        if (!(bool) $permission->fetchColumn()) {
-            throw new \RuntimeException('Puedes vincular a este familiar, pero no modificar su celular o correo porque su ficha es compartida o pertenece a otro usuario. Conserva los datos actuales para guardar el vínculo.');
-        }
-        $st = $this->pdo->prepare('UPDATE personas SET celular = ?, email = ? WHERE id = ?');
-        $st->execute([$celular, $email, $id]);
-    }
-
     public function canEditCase(int $id): bool
     {
         $st = $this->pdo->prepare('SELECT rbac_case(?)');
@@ -114,6 +99,9 @@ final class FamiliarFallecidoRepository
                        ff.familiar_persona_id,
                        ff.parentesco,
                        ff.observaciones,
+                       IF(ff.snapshot_guardado=1,ff.domicilio_snapshot,pr.domicilio) AS dom_fam,
+                       IF(ff.snapshot_guardado=1,ff.celular_snapshot,pr.celular) AS cel_fam,
+                       IF(ff.snapshot_guardado=1,ff.email_snapshot,pr.email) AS em_fam,
                        ip.persona_id AS fallecido_persona_id,
                        pf.num_doc AS dni_fall,
                        pf.apellido_paterno AS ap_fall,
@@ -125,9 +113,9 @@ final class FamiliarFallecidoRepository
                        pr.apellido_paterno AS ap_fam,
                        pr.apellido_materno AS am_fam,
                        pr.nombres AS no_fam,
-                       pr.celular AS cel_fam,
-                       pr.email AS em_fam,
-                       pr.domicilio AS dom_fam
+                       pr.celular,
+                       pr.email,
+                       pr.domicilio
                 FROM familiar_fallecido_activos ff
                 JOIN involucrados_personas_activos ip ON ip.id = ff.fallecido_inv_id
                 JOIN personas pf ON pf.id = ip.persona_id
@@ -155,6 +143,9 @@ final class FamiliarFallecidoRepository
                        ff.familiar_persona_id,
                        ff.parentesco,
                        ff.observaciones,
+                       IF(ff.snapshot_guardado=1,ff.domicilio_snapshot,pr.domicilio) AS dom_fam,
+                       IF(ff.snapshot_guardado=1,ff.celular_snapshot,pr.celular) AS cel_fam,
+                       IF(ff.snapshot_guardado=1,ff.email_snapshot,pr.email) AS em_fam,
                        a.sidpol,
                        a.registro_sidpol,
                        a.lugar,
@@ -172,9 +163,9 @@ final class FamiliarFallecidoRepository
                        pr.apellido_materno AS am_fam,
                        pr.nombres AS no_fam,
                        pr.fecha_nacimiento AS fecha_nacimiento_fam,
-                       pr.domicilio AS dom_fam,
-                       pr.celular AS cel_fam,
-                       pr.email AS em_fam
+                       pr.domicilio,
+                       pr.celular,
+                       pr.email
                 FROM familiar_fallecido_activos ff
                 JOIN accidentes_activos a ON a.id = ff.accidente_id
                 JOIN involucrados_personas_activos ip ON ip.id = ff.fallecido_inv_id
@@ -203,7 +194,7 @@ final class FamiliarFallecidoRepository
 
     public function create(array $payload): int
     {
-        $sql = 'INSERT INTO familiar_fallecido (accidente_id, fallecido_inv_id, familiar_persona_id, parentesco, observaciones) VALUES (?, ?, ?, ?, ?)';
+        $sql = 'INSERT INTO familiar_fallecido (accidente_id, fallecido_inv_id, familiar_persona_id, parentesco, observaciones, domicilio_snapshot, celular_snapshot, email_snapshot, snapshot_guardado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)';
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['accidente_id'],
@@ -211,19 +202,25 @@ final class FamiliarFallecidoRepository
             $payload['familiar_persona_id'],
             $payload['parentesco'],
             $payload['observaciones'],
+            $payload['domicilio'],
+            $payload['celular'],
+            $payload['email'],
         ]);
         return (int) $this->pdo->lastInsertId();
     }
 
     public function update(int $id, array $payload): void
     {
-        $sql = 'UPDATE familiar_fallecido SET fallecido_inv_id = ?, familiar_persona_id = ?, parentesco = ?, observaciones = ? WHERE id = ? LIMIT 1';
+        $sql = 'UPDATE familiar_fallecido SET fallecido_inv_id = ?, familiar_persona_id = ?, parentesco = ?, observaciones = ?, domicilio_snapshot = ?, celular_snapshot = ?, email_snapshot = ?, snapshot_guardado = 1 WHERE id = ? LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['fallecido_inv_id'],
             $payload['familiar_persona_id'],
             $payload['parentesco'],
             $payload['observaciones'],
+            $payload['domicilio'],
+            $payload['celular'],
+            $payload['email'],
             $id,
         ]);
     }

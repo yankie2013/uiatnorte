@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'dependencia_policial' => $_POST['dependencia_policial'] ?? '',
         'rol_funcion' => $_POST['rol_funcion'] ?? '',
         'observaciones' => $_POST['observaciones'] ?? '',
+        'domicilio' => $_POST['domicilio'] ?? '',
         'celular' => $_POST['celular'] ?? '',
         'email' => $_POST['email'] ?? '',
     ];
@@ -116,7 +117,7 @@ include __DIR__ . '/sidebar.php';
     <div class="grid">
       <div class="c12 field"><label class="label">DNI de la persona*</label><div class="search-row"><input type="text" id="dni" maxlength="8" value="<?= h((string) $data['num_doc']) ?>" placeholder="Ingresa DNI"><button type="button" class="btn" id="btnBuscar">Buscar</button><button type="button" class="btn" id="btnNuevo">+</button><button type="button" class="btn" id="btnRecargar">Recargar</button></div><div class="small" id="persona_info"><?= $data['nombre_persona'] !== '' ? 'Persona: ' . h($data['nombre_persona']) : '-' ?></div></div>
       <div class="c12 field"><label class="label">Nombre completo</label><input type="text" id="persona_nombre" value="<?= h((string) $data['nombre_persona']) ?>" readonly></div>
-      <div class="c12 field"><label class="label">Domicilio</label><input type="text" id="persona_domicilio" value="<?= h((string) $data['domicilio']) ?>" readonly></div>
+      <div class="c12 field"><label class="label">Domicilio</label><input type="text" name="domicilio" id="persona_domicilio" value="<?= h((string) $data['domicilio']) ?>"></div>
       <div class="c6 field"><label class="label">Celular</label><input type="text" name="celular" id="persona_celular" value="<?= h((string) $data['celular']) ?>"></div>
       <div class="c6 field"><label class="label">Email</label><input type="email" name="email" id="persona_email" value="<?= h((string) $data['email']) ?>"></div>
       <div class="c6 field"><label class="label">Grado policial*</label><input type="text" name="grado_policial" value="<?= h((string) $data['grado_policial']) ?>" required></div>
