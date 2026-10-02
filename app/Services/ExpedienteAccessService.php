@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace App\Services;
 use App\Support\Access;
+use App\Support\ArchiveReference;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -9,7 +10,7 @@ use Throwable;
 final class ExpedienteAccessService
 {
     public function __construct(private PDO $pdo) {}
-    public function change(int $case, string $action, int $target, string $reason): void {
+    public function change(int $case, string $action, int $target, string $reason, array $archiveNumbers = []): void {
         $actor=Access::id();
         $this->pdo->beginTransaction();
         try {
@@ -18,11 +19,11 @@ final class ExpedienteAccessService
             $owner=(int)$row['responsable_id'];
             if(!empty($row['eliminado_en']) && $action!=='restaurar')throw new RuntimeException('El expediente está eliminado.');
             if(in_array($action,['verificar_ubicacion','cambiar_estado'],true)) Access::requireEdit($case);
-            if(!Access::admin() && !in_array($action,['verificar_ubicacion','cambiar_estado'],true) && ($action!=='aceptar' && ($owner!==$actor || Access::role()!=='jefe_emi')))throw new RuntimeException('Solo el JEFE EMI responsable puede administrar este expediente.');
+            if(!Access::admin() && !in_array($action,['verificar_ubicacion','cambiar_estado'],true) && $action!=='aceptar' && ($owner!==$actor || Access::role()!=='jefe_emi'))throw new RuntimeException('Solo el JEFE EMI responsable puede administrar este expediente.');
             $this->pdo->exec('SET @rbac_assignment=1');
-            if(in_array($action,['compartir','transferir','reasignar'],true)) {
+            if(in_array($action,['compartir','transferir','archivar','reasignar'],true)) {
                 $s=$this->pdo->prepare('SELECT rol FROM usuarios WHERE id=? AND activo=1');$s->execute([$target]);$role=$s->fetchColumn();
-                if($role!==($action==='compartir'?'adjunto':'jefe_emi'))throw new RuntimeException('Seleccione un usuario activo del perfil correspondiente.');
+                if($action==='archivar' ? !in_array($role,['secretaria','administracion'],true) : $role!==($action==='compartir'?'adjunto':'jefe_emi'))throw new RuntimeException('Seleccione un usuario activo del perfil correspondiente.');
             }
             switch($action) {
                 case 'cambiar_estado':
@@ -35,14 +36,22 @@ final class ExpedienteAccessService
                     $this->pdo->prepare('INSERT INTO expediente_colaboradores(accidente_id,usuario_id,asignado_por) VALUES(?,?,?) ON DUPLICATE KEY UPDATE asignado_por=VALUES(asignado_por),asignado_en=NOW(),revocado_en=NULL')->execute([$case,$target,$actor]);break;
                 case 'revocar':
                     $this->pdo->prepare('UPDATE expediente_colaboradores SET revocado_en=NOW() WHERE accidente_id=? AND usuario_id=? AND revocado_en IS NULL')->execute([$case,$target]);break;
+                case 'archivar':
+                    if(!in_array($row['estado'],['Resuelto','Desestimado'],true))throw new RuntimeException('Concluya la investigación antes de enviarla a Archivo.');
+                    $reportNumber=ArchiveReference::report((string)($row['nro_informe_policial']??''));
+                    $officeNumber=ArchiveReference::office((string)($archiveNumbers['oficio_numero']??''),(string)($archiveNumbers['oficio_anio']??''));
+                    // Continúa por el mismo flujo de recepción que las transferencias de investigación.
                 case 'transferir':
                     if($target===$owner)throw new RuntimeException('El destinatario ya es responsable.');
                     if(trim($reason)==='')throw new RuntimeException('Indique el motivo de la transferencia.');
                     $s=$this->pdo->prepare("SELECT id FROM expediente_transferencias WHERE accidente_id=? AND estado='pendiente'");$s->execute([$case]);if($s->fetch())throw new RuntimeException('Ya existe una transferencia pendiente.');
-                    $this->pdo->prepare('INSERT INTO expediente_transferencias(accidente_id,origen_id,destino_id,motivo) VALUES(?,?,?,?)')->execute([$case,$owner,$target,$reason]);break;
+                    $this->pdo->prepare('INSERT INTO expediente_transferencias(accidente_id,origen_id,destino_id,motivo,tipo,informe_remision,oficio_remision) VALUES(?,?,?,?,?,?,?)')->execute([$case,$owner ?: (int)($row['creado_por'] ?? 0),$target,$reason,$action==='archivar'?'archivo':'investigacion',$reportNumber??null,$officeNumber??null]);break;
                 case 'aceptar':
                     $s=$this->pdo->prepare("SELECT * FROM expediente_transferencias WHERE accidente_id=? AND estado='pendiente' AND destino_id=? FOR UPDATE");$s->execute([$case,$actor]);$transfer=$s->fetch();
-                    if(!$transfer || Access::role()!=='jefe_emi' || (int)$transfer['origen_id']!==$owner)throw new RuntimeException('No existe una transferencia vigente dirigida a usted.');
+                    $expectedRole=$transfer && $transfer['tipo']==='archivo' ? in_array(Access::role(),['secretaria','administracion'],true) : Access::role()==='jefe_emi';
+                    $expectedOrigin=$owner ?: (int)$row['creado_por'];
+                    if(!$transfer || !$expectedRole || (int)$transfer['origen_id']!==$expectedOrigin)throw new RuntimeException('No existe una transferencia vigente dirigida a usted.');
+                    if($transfer['tipo']==='archivo' && !in_array($row['estado'],['Resuelto','Desestimado'],true))throw new RuntimeException('La investigación ya no está concluida.');
                     $this->pdo->prepare('UPDATE accidentes SET responsable_id=?,asignado_en=NOW() WHERE id=?')->execute([$actor,$case]);
                     $this->pdo->prepare('UPDATE expediente_colaboradores SET revocado_en=NOW() WHERE accidente_id=? AND revocado_en IS NULL')->execute([$case]);
                     $this->pdo->prepare("UPDATE expediente_transferencias SET estado='aceptada',resuelto_en=NOW() WHERE id=?")->execute([$transfer['id']]);break;

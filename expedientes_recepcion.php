@@ -4,9 +4,9 @@ use App\Support\Access;
 use App\Support\WorkspacePage as Page;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Access::checkCsrf();
-    if (Access::role() !== 'jefe_emi') {
+    if (!in_array(Access::role(), ['jefe_emi','secretaria','administracion'], true)) {
         http_response_code(403);
-        exit('Solo el JEFE EMI destinatario puede aceptar la recepción.');
+        exit('Solo el destinatario puede aceptar la recepción.');
     }
     $ids = isset($_POST['aceptar_uno']) ? [$_POST['aceptar_uno']] : ($_POST['expedientes'] ?? []);
     if (!is_array($ids)) $ids = [];
@@ -36,23 +36,26 @@ if ($result) {
     if ($result['accepted']) Page::notice('Recepción aceptada: '.$result['accepted'].' expediente(s). Ya están en tu espacio de trabajo.');
     foreach ($result['errors'] as $error) Page::notice($error, true);
 }
-$where=Access::admin()?'1=1':'t.destino_id=?';
+$archiveRole=in_array(Access::role(), ['secretaria','administracion'], true);
+$where=Access::admin()?'1=1':"t.destino_id=? AND t.tipo='".($archiveRole?'archivo':'investigacion')."'";
 $s=$pdo->prepare("SELECT t.*,a.registro_sidpol,a.lugar,u.nombre origen,u.grado origen_grado,d.nombre destino,d.grado destino_grado
  FROM expediente_transferencias t JOIN accidentes_activos a ON a.id=t.accidente_id
  LEFT JOIN usuarios u ON u.id=t.origen_id JOIN usuarios d ON d.id=t.destino_id
  WHERE t.estado='pendiente' AND $where ORDER BY t.creado_en,t.id");
 $s->execute(Access::admin()?[]:[Access::id()]);$rows=$s->fetchAll();
-echo '<section><p>La responsabilidad cambia cuando el JEFE EMI destinatario acepta la transferencia.</p>';
+echo '<section><p>'.($archiveRole?'Solo aparecen expedientes enviados para archivo. La responsabilidad pasa a usted al aceptar la recepción.':'La responsabilidad cambia cuando el JEFE EMI destinatario acepta la transferencia.').'</p>';
 if(!$rows)echo '<p>No hay expedientes pendientes de recepción.</p>';
-if ($rows && Access::role()==='jefe_emi') {
+if ($rows && in_array(Access::role(), ['jefe_emi','secretaria','administracion'], true)) {
     echo '<form method="post" id="recepcion-lote">';
     Page::token();
     echo '<label class="reception-select"><input type="checkbox" id="seleccionar-todos"> Seleccionar todos</label><button type="submit">Aceptar seleccionados</button><span id="seleccion-total" role="status">0 seleccionados</span></form>';
 }
 foreach($rows as $row){
     $id=(int)$row['accidente_id'];
-    echo '<article class="reception-item"><h2>Expediente '.Page::escape($row['registro_sidpol']?:'#'.$id).'</h2><p>'.Page::escape($row['lugar']).'</p><p>De: '.Page::escape(trim(($row['origen_grado']??'').' '.($row['origen']??''))?:'Sin responsable anterior').'<br>Para: '.Page::escape(trim($row['destino_grado'].' '.$row['destino'])).'</p><p>'.Page::escape($row['motivo']).' · '.Page::escape($row['creado_en']).'</p><div class="actions"><a href="gestion_expedientes.php?id='.$id.'">Ver expediente</a><a href="accidente_vista_tabs.php?accidente_id='.$id.'&tab=estado">Ver transferencia</a></div>';
-    if(Access::role()==='jefe_emi' && (int)$row['destino_id']===Access::id()){
+    echo '<article class="reception-item"><h2>Expediente '.Page::escape($row['registro_sidpol']?:'#'.$id).'</h2><p>'.Page::escape($row['lugar']).'</p><p>Destino: '.($row['tipo']==='archivo'?'Archivo':'Investigación').'</p><p>De: '.Page::escape(trim(($row['origen_grado']??'').' '.($row['origen']??''))?:'Sin responsable anterior').'<br>Para: '.Page::escape(trim(($row['destino_grado']??'').' '.$row['destino'])).'</p>';
+    if ($row['tipo']==='archivo') echo '<p><strong>Informe N°:</strong> '.Page::escape($row['informe_remision']?:'No registrado').'<br><strong>Oficio N°:</strong> '.Page::escape($row['oficio_remision']?:'No registrado').'</p>';
+    echo '<p>'.Page::escape($row['motivo']).' · '.Page::escape($row['creado_en']).'</p>';
+    if(in_array(Access::role(), ['jefe_emi','secretaria','administracion'], true) && (int)$row['destino_id']===Access::id()){
         echo '<label class="reception-select"><input type="checkbox" name="expedientes[]" value="'.$id.'" form="recepcion-lote" class="reception-check"> Seleccionar expediente '.Page::escape($row['registro_sidpol']?:'#'.$id).'</label>';
         echo '<form method="post">';Page::token();
         echo '<button name="aceptar_uno" value="'.$id.'">Aceptar recepción</button></form>';

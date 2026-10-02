@@ -43,7 +43,7 @@ $row = $id > 0 ? $repo->find($id) : null;
 if ($id > 0 && !$row) { http_response_code(404); exit('Acta no encontrada.'); }
 $accidenteId = $row ? (int) $row['accidente_id'] : (int) ($_GET['accidente_id'] ?? $_POST['accidente_id'] ?? 0);
 if ($accidenteId <= 0) { http_response_code(400); exit('Falta accidente_id.'); }
-Access::requireWorkspaceCase($accidenteId);
+Access::requireInvestigationCase($accidenteId);
 $accident = $repo->accident($accidenteId);
 if (!$accident) { http_response_code(404); exit('Accidente no encontrado.'); }
 $instructor = current_user() ?? [];

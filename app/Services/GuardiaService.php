@@ -43,7 +43,7 @@ final class GuardiaService
             $st=$this->pdo->prepare("SELECT id FROM usuarios WHERE id=? AND activo=1 AND rol='jefe_emi'");
             $st->execute([$chief]);if (!$st->fetchColumn()) throw new RuntimeException('Selecciona un JEFE EMI activo.');
             $this->pdo->exec('SET @rbac_assignment=1, @rbac_guardia_assign=1');
-            $this->pdo->prepare('UPDATE accidentes SET responsable_id=?,asignado_en=NOW() WHERE id=?')->execute([$chief,$case]);
+            $this->pdo->prepare("INSERT INTO expediente_transferencias(accidente_id,origen_id,destino_id,motivo,tipo) VALUES(?,?,?,'Registro inicial entregado por Guardia','investigacion')")->execute([$case,Access::id(),$chief]);
             $this->pdo->prepare('UPDATE comunicaciones_guardia SET jefe_id=?,asignado_en=NOW() WHERE accidente_id=?')->execute([$chief,$case]);
             $this->pdo->commit();
         } catch (Throwable $e) {
@@ -61,12 +61,13 @@ final class GuardiaService
             if($row['accidente_id'])throw new RuntimeException('La comunicación ya fue asignada. La siguiente derivación corresponde al JEFE EMI.');
             $s=$this->pdo->prepare("SELECT id FROM usuarios WHERE id=? AND activo=1 AND rol='jefe_emi'");$s->execute([$chief]);if(!$s->fetch())throw new RuntimeException('Seleccione un JEFE EMI activo.');
             $s=$this->pdo->prepare('SELECT 1 FROM ubigeo_distrito WHERE cod_dep=? AND cod_prov=? AND cod_dist=?');$s->execute([$row['cod_dep'],$row['cod_prov'],$row['cod_dist']]);if(!$s->fetch())throw new RuntimeException('Complete departamento, provincia y distrito antes de asignar el caso.');
-            $this->pdo->exec('SET @rbac_guardia_assign=1');
-            $this->pdo->prepare("INSERT INTO accidentes(registro_sidpol,tipo_registro,lugar,referencia,cod_dep,cod_prov,cod_dist,fecha_accidente,fecha_comunicacion,comunicante_nombre,comunicante_telefono,latitud,longitud,responsable_id,creado_por) VALUES(NULL,'Intervencion',?,?,?,?,?,NULL,?,?,?,?,?,?,?)")->execute([$row['lugar'],$row['referencia'],$row['cod_dep'],$row['cod_prov'],$row['cod_dist'],$row['fecha_llamada'],$row['comunicante'],$row['telefono'],$row['latitud'],$row['longitud'],$chief,Access::id()]);
+            $this->pdo->exec('SET @rbac_guardia_assign=1, @rbac_assignment=1');
+            $this->pdo->prepare("INSERT INTO accidentes(registro_sidpol,tipo_registro,lugar,referencia,cod_dep,cod_prov,cod_dist,fecha_accidente,fecha_comunicacion,comunicante_nombre,comunicante_telefono,latitud,longitud,responsable_id,creado_por) VALUES(NULL,'Intervencion',?,?,?,?,?,NULL,?,?,?,?,?,?,?)")->execute([$row['lugar'],$row['referencia'],$row['cod_dep'],$row['cod_prov'],$row['cod_dist'],$row['fecha_llamada'],$row['comunicante'],$row['telefono'],$row['latitud'],$row['longitud'],null,Access::id()]);
             $case=(int)$this->pdo->lastInsertId();
+            $this->pdo->prepare("INSERT INTO expediente_transferencias(accidente_id,origen_id,destino_id,motivo,tipo) VALUES(?,?,?,'Registro inicial entregado por Guardia','investigacion')")->execute([$case,Access::id(),$chief]);
             $this->pdo->prepare('UPDATE comunicaciones_guardia SET accidente_id=?,jefe_id=?,asignado_en=NOW() WHERE id=?')->execute([$case,$chief,$id]);
             $this->pdo->commit();return $case;
         } catch(Throwable $e) {if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
-        finally {$this->pdo->exec('SET @rbac_guardia_assign=NULL');}
+        finally {$this->pdo->exec('SET @rbac_guardia_assign=NULL, @rbac_assignment=NULL');}
     }
 }

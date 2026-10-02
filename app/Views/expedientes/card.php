@@ -1,5 +1,5 @@
 <?php
-$s=$pdo->prepare("SELECT a.*,u.nombre responsable,u.grado responsable_grado,c.nombre comisaria,d.nombre distrito,f.nombre fiscalia,
+$s=$pdo->prepare("SELECT a.*,u.nombre responsable,u.grado responsable_grado,u.rol responsable_rol,c.nombre comisaria,d.nombre distrito,f.nombre fiscalia,
  TRIM(CONCAT_WS(' ',fi.nombres,fi.apellido_paterno,fi.apellido_materno)) fiscal
  FROM accidentes a LEFT JOIN usuarios u ON u.id=a.responsable_id
  LEFT JOIN comisarias c ON c.id=a.comisaria_id
@@ -11,6 +11,12 @@ if(!$a || ($a['eliminado_en'] && !\App\Support\Access::admin())){
     return;
 }
 $h=static fn($v)=>\App\Support\WorkspacePage::escape($v);
+$archiveTransfer=null;
+if (in_array(\App\Support\Access::role(), ['secretaria','administracion'], true) && (int)($a['responsable_id']??0)===\App\Support\Access::id()) {
+    $archiveQuery=$pdo->prepare("SELECT informe_remision,oficio_remision FROM expediente_transferencias WHERE accidente_id=? AND destino_id=? AND tipo='archivo' AND estado='aceptada' ORDER BY id DESC LIMIT 1");
+    $archiveQuery->execute([$id,\App\Support\Access::id()]);
+    $archiveTransfer=$archiveQuery->fetch(PDO::FETCH_ASSOC)?:null;
+}
 $guardiaConsulta=\App\Support\Access::role()==='guardia';
 // La tarjeta de consulta ya comprobó que el accidente está activo. Para guardia
 // se usan las tablas base porque las vistas importadas pueden conservar un DEFINER ajeno.
@@ -46,6 +52,12 @@ $state=trim((string)$a['estado'])?:'Pendiente';
    <?php endif ?>
  </header>
  <div class="case-card-badges"><span class="case-chip case-status-<?= $h(mb_strtolower(str_replace(' ','-', $state))) ?>"><?= $h($state) ?></span><?php if($a['tipo_registro']): ?><span class="case-chip case-chip-type"><?= $h($a['tipo_registro']) ?></span><?php endif ?></div>
+ <?php if ($archiveTransfer): ?>
+ <section class="case-card-section case-card-archive"><h3><?= $icon('file') ?> REMISIÓN A ARCHIVO</h3>
+  <div class="case-card-person"><span class="case-person-icon"><?= $icon('file') ?></span><div><span class="case-card-label">INFORME N°</span><strong><?= $h($archiveTransfer['informe_remision']?:'No registrado') ?></strong></div></div>
+  <div class="case-card-person"><span class="case-person-icon"><?= $icon('file') ?></span><div><span class="case-card-label">OFICIO N°</span><strong><?= $h($archiveTransfer['oficio_remision']?:'No registrado') ?></strong></div></div>
+ </section>
+ <?php endif; ?>
  <?php if($a['eliminado_en']): ?><p class="case-card-deleted">Expediente eliminado</p><?php endif ?>
  <h2 class="case-card-place"><?= $icon('place') ?><span><?= $h($a['lugar']) ?><?= $a['distrito']?' <span class="case-card-muted">· '. $h($a['distrito']).'</span>':'' ?></span></h2>
  <p class="case-card-modality"><span>MODALIDAD</span><?= $h(implode(', ',$modalidades)?:'Sin registrar') ?></p>
@@ -63,7 +75,7 @@ $state=trim((string)$a['estado'])?:'Pendiente';
   <div class="case-card-person"><span class="case-person-icon"><?= $icon('badge') ?></span><div><span class="case-card-label">FISCAL A CARGO</span><strong><?= $h($a['fiscal']?:'Sin registrar') ?></strong></div></div>
  </section>
  <section class="case-card-section case-card-owner"><h3><?= $icon('badge') ?> ENCARGADO DEL EXPEDIENTE</h3>
-  <div class="case-card-person"><span class="case-person-icon"><?= $icon('badge') ?></span><div><strong><?= $h(trim(($a['responsable_grado']??'').' '.($a['responsable']??''))?:'Pendiente de asignación') ?></strong><small>JEFE EMI responsable</small></div></div>
+  <div class="case-card-person"><span class="case-person-icon"><?= $icon('badge') ?></span><div><strong><?= $h(trim(($a['responsable_grado']??'').' '.($a['responsable']??''))?:'Pendiente de asignación') ?></strong><small><?= in_array($a['responsable_rol'],['secretaria','administracion'],true) ? 'Archivo · '. $h(\App\Support\Access::ROLES[$a['responsable_rol']]) : 'JEFE EMI responsable' ?></small></div></div>
  </section>
 
 </article>

@@ -2,7 +2,9 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+use App\Support\AccidentNavigation;
 $isGuardia = \App\Support\Access::role() === 'guardia';
+$isArchivo = in_array(\App\Support\Access::role(), ['secretaria','administracion'], true);
 header('Content-Type: text/html; charset=utf-8');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
@@ -342,9 +344,9 @@ $estadoOpciones = [
   'Resuelto' => 'RESUELTO',
   'Con diligencias' => 'CON DILIGENCIAS',
 ];
-$estadoFiltro = trim($_GET['estado'] ?? 'Pendiente');
+$estadoFiltro = trim($_GET['estado'] ?? ($isArchivo ? 'todos' : 'Pendiente'));
 if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
-  $estadoFiltro = 'Pendiente';
+  $estadoFiltro = $isArchivo ? 'todos' : 'Pendiente';
 }
 $ordenOpciones = [
   'registro_desc' => 'RECIÉN REGISTRADO',
@@ -429,6 +431,11 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
     break;
   }
 }
+$listContextUrl = AccidentNavigation::listUrl((string)($_SERVER['REQUEST_URI'] ?? '')) ?? 'accidente_listar.php';
+$userTopbarBreadcrumbs = AccidentNavigation::breadcrumbs($listContextUrl);
+$caseLink = $isArchivo
+  ? static fn(int $id, array $extra = []): string => 'gestion_expedientes.php?' . http_build_query(['id' => $id, 'lista' => $listContextUrl])
+  : static fn(int $id, array $extra = []): string => AccidentNavigation::caseUrl($id, $listContextUrl, $extra);
 $clearFilterParams = [];
 if ($favoritos === '1') {
   $clearFilterParams = ['favoritos' => '1', 'estado' => 'todos'];
@@ -444,6 +451,7 @@ $clearFiltersUrl = 'accidente_listar.php' . ($clearFilterParams !== [] ? ('?' . 
 ============================ */
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
 $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria, ud.nombre AS distrito,
+               archive_transfer.informe_remision,archive_transfer.oficio_remision,
                fa.nombre AS fiscalia, TRIM(CONCAT_WS(' ', fi.nombres, fi.apellido_paterno, fi.apellido_materno)) AS fiscal,
                COALESCE(dpc.diligencias_pendientes, 0) AS diligencias_pendientes
         FROM {$accidentTable} a
@@ -454,6 +462,11 @@ $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.l
               AND ud.cod_dist = a.cod_dist
         LEFT JOIN fiscalia fa ON fa.id = a.fiscalia_id
         LEFT JOIN fiscales fi ON fi.id = a.fiscal_id
+        LEFT JOIN expediente_transferencias archive_transfer ON archive_transfer.id = (
+          SELECT MAX(archive_match.id) FROM expediente_transferencias archive_match
+          WHERE archive_match.accidente_id=a.id AND archive_match.destino_id=a.responsable_id
+            AND archive_match.tipo='archivo' AND archive_match.estado='aceptada'
+        )
         LEFT JOIN (
           SELECT accidente_id, COUNT(*) AS diligencias_pendientes
             FROM {$diligenceTable}
@@ -574,7 +587,7 @@ if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
   $st->execute($params);
   $rows=$st->fetchAll(PDO::FETCH_ASSOC);
 }
-$occupiedFolders = $isGuardia ? [] : occupied_folder_map($pdo);
+$occupiedFolders = ($isGuardia || $isArchivo) ? [] : occupied_folder_map($pdo);
 $guardiaRecords = [];
 if ($isGuardia && $rows !== []) {
   $ids = array_column($rows, 'id');
@@ -1332,6 +1345,8 @@ html[data-theme-resolved="dark"]{
   gap:16px;padding:18px;align-items:start;height:100%;
 }
 .acc-card-left{grid-area:left;display:flex;flex-direction:column;gap:12px;min-width:0}
+.acc-archive-references{display:grid;gap:8px;padding:11px 12px;border:1px solid #d8e7dd;border-radius:10px;background:#f2f8f3}
+.acc-archive-references div{display:grid;gap:2px;min-width:0}.acc-archive-references small{color:#62796a;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.acc-archive-references strong{color:#244a39;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
 .acc-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-right:40px}
 .acc-head-priority{display:inline-flex;align-items:center;min-width:auto}
 .acc-report{
@@ -1499,7 +1514,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
       <a class="btn" href="#" onclick="history.back();return false;">Atras</a>
       <a class="btn" href="index.php">Inicio</a>
       <a class="btn" href="accidente_mapa.php">Mapa</a>
-      <a class="btn primary" href="accidente_nuevo.php">Nuevo</a>
+      <?php if (!$isArchivo): ?><a class="btn primary" href="accidente_nuevo.php">Nuevo</a><?php endif; ?>
     </nav>
   </div>
 
@@ -1730,11 +1745,11 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" <?php if (!$isGuardia): ?>tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>"<?php endif; ?> data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" <?php if (!$isGuardia): ?>tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="<?= h($caseLink((int)$r['id'])) ?>"<?php endif; ?> data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
-                <?php if (!$isGuardia): ?>
+                <?php if (!$isGuardia && !$isArchivo): ?>
                 <div class="col-folder folder-cell acc-head-priority">
                   <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
                           data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
@@ -1742,7 +1757,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                     <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '&#9733;' : '&#9734;' ?></span>
                   </button>
                 </div>
-                <a class="sidpol-link" href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>" title="Ver detalles">
+                <a class="sidpol-link" href="<?= h($caseLink((int)$r['id'])) ?>" title="Ver detalles">
                   <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
                 </a>
                 <span class="acc-report"><?=h($r['nro_informe_policial'] ?? '-')?></span>
@@ -1750,11 +1765,13 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
                 </select>
                 <?php else: ?>
+                <?php if ($isArchivo): ?><a class="sidpol-link" href="<?= h($caseLink((int)$r['id'])) ?>" title="Ver expediente archivado"><?php endif; ?>
                 <span class="badge sidpol-reg"><?=h($r['registro_sidpol'] ?: 'Ingreso #'.$r['id'])?></span>
+                <?php if ($isArchivo): ?></a><?php endif; ?>
                 <span class="acc-report"><?=h($r['nro_informe_policial'] ?? '-')?></span>
                 <?php if ($folderVal !== ''): ?><span class="badge">Folder <?=h($folderVal)?></span><?php endif; ?>
                 <?php endif; ?>
-                <span class="<?= $isGuardia ? 'badge' : 'estado-badge' ?> <?=$cls?>"
+                <span class="<?= ($isGuardia || $isArchivo) ? 'badge' : 'estado-badge' ?> <?=$cls?>"
                       data-id="<?=$r['id']?>"
                       data-estado="<?=h($estado)?>">
                   <?=h($estado)?>
@@ -1783,6 +1800,12 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <span class="acc-meta-value"><?=h($r['comisaria'] ?? '-')?></span>
                 </div>
               </div>
+              <?php if ($isArchivo): ?>
+                <div class="acc-archive-references" aria-label="Documentos de remisión a Archivo">
+                  <div><small>Informe N°</small><strong><?= h($r['informe_remision'] ?: 'No registrado') ?></strong></div>
+                  <div><small>Oficio N°</small><strong><?= h($r['oficio_remision'] ?: 'No registrado') ?></strong></div>
+                </div>
+              <?php endif; ?>
             </div>
 
             <div class="acc-card-center">
@@ -1840,7 +1863,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                 <a class="btn small" href="guardia_registro.php?accidente_id=<?= (int)$r['id'] ?>">Continuar registro</a>
               <?php endif; ?>
             </div>
-            <?php else: ?>
+            <?php elseif (!$isArchivo): ?>
             <div class="acc-card-right">
               <div class="acc-top-actions">
                 <button class="acc-actions-trigger js-acc-actions-trigger" type="button" aria-expanded="false" aria-controls="acc-actions-<?= (int)$r['id'] ?>" title="Más acciones" aria-label="Más acciones">&#8942;</button>
@@ -1850,9 +1873,9 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <?php endif; ?>
                   <a class="acc-actions-item" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>"><span aria-hidden="true">📄</span>Carátula</a>
                   <div class="acc-actions-divider" aria-hidden="true"></div>
-                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=oficios"><span aria-hidden="true">📨</span>Oficios</a>
-                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=recibidos"><span aria-hidden="true">📥</span>Documentos recibidos</a>
-                  <a class="acc-actions-item" href="accidente_vista_tabs.php?accidente_id=<?= (int)$r['id'] ?>&tab=documentos&subtab=actas"><span aria-hidden="true">📝</span>Actas</a>
+                  <a class="acc-actions-item" href="<?= h($caseLink((int)$r['id'],['tab'=>'documentos','subtab'=>'oficios'])) ?>"><span aria-hidden="true">📨</span>Oficios</a>
+                  <a class="acc-actions-item" href="<?= h($caseLink((int)$r['id'],['tab'=>'documentos','subtab'=>'recibidos'])) ?>"><span aria-hidden="true">📥</span>Documentos recibidos</a>
+                  <a class="acc-actions-item" href="<?= h($caseLink((int)$r['id'],['tab'=>'documentos','subtab'=>'actas'])) ?>"><span aria-hidden="true">📝</span>Actas</a>
                   <div class="acc-actions-divider" aria-hidden="true"></div>
                   <form class="acc-actions-form" action="accidente_eliminar.php" method="post"
                         onsubmit="return confirm('Eliminar este accidente de forma permanente?');">
@@ -1904,7 +1927,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           ?>
             <tr class="<?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened-row' : '' ?>" data-id="<?= (int)$r['id'] ?>" role="row">
   <td role="cell">
-    <a class="sidpol-link" href="accidente_vista_tabs.php?accidente_id=<?= $r['id'] ?>" title="Ver detalles">
+    <a class="sidpol-link" href="<?= h($caseLink((int)$r['id'])) ?>" title="Ver detalles">
       <span class="badge sidpol-reg"><?=h($r['registro_sidpol'])?></span>
     </a>
   </td>
@@ -1956,7 +1979,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   <!-- FOLDER + ESTRELLA prioridad -->
   <td class="col-folder folder-cell" role="cell">
     <?php $isPrior = !empty($r['priority']) && (int)$r['priority']===1; ?>
-    <button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
+    <?php if (!$isArchivo): ?><button class="prio-btn" title="<?= $isPrior ? 'Quitar prioridad' : 'Marcar prioridad' ?>"
             data-id="<?= $r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>"
             aria-pressed="<?= $isPrior ? 'true' : 'false' ?>">
       <span class="star <?= $isPrior ? 'star-on' : 'star-off' ?>"><?= $isPrior ? '&#9733;' : '&#9734;' ?></span>
@@ -1964,10 +1987,10 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 
     <select class="select-folder" data-id="<?=$r['id']?>" aria-label="Folder">
       <?php render_folder_options($folderVal, (int)$r['id'], $occupiedFolders); ?>
-    </select>
+    </select><?php else: ?><span><?= $isPrior ? '★ ' : '' ?><?= $folderVal !== '' ? 'Folder '.h($folderVal) : '—' ?></span><?php endif; ?>
   </td>
   <td role="cell">
-    <span class="estado-badge <?=$cls?>"
+    <span class="<?= $isArchivo ? 'badge' : 'estado-badge' ?> <?=$cls?>"
           data-id="<?=$r['id']?>"
           data-estado="<?=h($estado)?>">
       <?=h($estado)?>
@@ -1975,11 +1998,11 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </td>
   <td class="td-actions" role="cell">
     <a class="btn small" href="word_caratula_accidente.php?accidente_id=<?= (int)$r['id'] ?>" title="Descargar carátula resumen">Carátula</a>
-    <form action="accidente_eliminar.php" method="post" style="display:inline"
+    <?php if (!$isArchivo): ?><form action="accidente_eliminar.php" method="post" style="display:inline"
           onsubmit="return confirm('Eliminar este accidente de forma permanente?');">
       <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
       <button class="btn danger small btn-x" title="Eliminar" aria-label="Eliminar">&times;</button>
-    </form>
+    </form><?php endif; ?>
   </td>
 </tr>
           <?php endforeach; endif; ?>
@@ -2562,6 +2585,18 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
     initColumnSort();
   }
 
+})();
+</script>
+<script>
+(() => {
+  const listUrl = new URL(<?= json_encode($listContextUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, location.href).href;
+  const key = 'uiat-list-scroll:' + listUrl;
+  if (sessionStorage.getItem('uiat-restore-list') === listUrl) {
+    sessionStorage.removeItem('uiat-restore-list');
+    const position = Number(sessionStorage.getItem(key));
+    if (Number.isFinite(position) && position > 0) requestAnimationFrame(() => scrollTo(0, position));
+  }
+  addEventListener('pagehide', () => sessionStorage.setItem(key, String(scrollY)));
 })();
 </script>
 </body>

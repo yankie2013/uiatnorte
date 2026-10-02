@@ -12,7 +12,7 @@ final class Access
         'oficio_asunto_nuevo.php', 'oficio_cargo_nuevo.php', 'oficio_oficial_ano_nuevo.php',
         'add_catalogo.php', 'involucrados_vehiculos_nuevo.php',
     ];
-    public const ROLES = ['admin'=>'Administrador','jefe_emi'=>'JEFE EMI','adjunto'=>'ADJUNTO','secretaria'=>'Secretaría','guardia'=>'Comandante de guardia','viewer'=>'Consulta (anterior)','editor'=>'Consulta (anterior)'];
+    public const ROLES = ['admin'=>'Administrador','jefe_emi'=>'JEFE EMI','adjunto'=>'ADJUNTO','secretaria'=>'Secretaría','administracion'=>'Administración','guardia'=>'Comandante de guardia','viewer'=>'Consulta (anterior)','editor'=>'Consulta (anterior)'];
     public static function actor(): array { Database::connection(); return $_SESSION['user'] ?? []; }
     public static function id(): int { return (int)(self::actor()['id'] ?? 0); }
     public static function role(): string { return (string)(self::actor()['rol'] ?? ''); }
@@ -30,14 +30,15 @@ final class Access
             'jefe_emi' => "$alias.responsable_id = $id",
             'adjunto' => "EXISTS (SELECT 1 FROM expediente_colaboradores workspace_ec WHERE workspace_ec.accidente_id = $alias.id AND workspace_ec.usuario_id = $id AND workspace_ec.revocado_en IS NULL)",
             'guardia' => "EXISTS (SELECT 1 FROM comunicaciones_guardia workspace_cg WHERE workspace_cg.accidente_id = $alias.id AND workspace_cg.creado_por = $id AND workspace_cg.eliminado_en IS NULL)",
+            'secretaria', 'administracion' => "EXISTS (SELECT 1 FROM expediente_transferencias workspace_archive WHERE workspace_archive.accidente_id = $alias.id AND workspace_archive.destino_id = $id AND workspace_archive.tipo = 'archivo' AND workspace_archive.estado = 'aceptada' AND $alias.responsable_id = $id)",
             default => '1=0',
         };
     }
     public static function canViewWorkspaceCase(int $case): bool {
         $role = self::role();
-        if ($role === 'admin' || in_array($role, ['secretaria','viewer','editor'], true)) return true;
-        // Guardia conserva sus tarjetas y su registro guiado, pero no abre el expediente de investigación.
-        if (!in_array($role, ['jefe_emi','adjunto'], true)) return false;
+        if ($role === 'admin' || in_array($role, ['viewer','editor'], true)) return true;
+        // Archivo consulta solo sus expedientes aceptados; Guardia conserva sus tarjetas y registro guiado.
+        if (!in_array($role, ['jefe_emi','adjunto','secretaria','administracion'], true)) return false;
         $predicate = self::workspacePredicate('a');
         $s = Database::connection()->prepare("SELECT 1 FROM accidentes_activos a WHERE a.id=? AND ($predicate) LIMIT 1");
         $s->execute([$case]);
@@ -47,6 +48,15 @@ final class Access
         if ($case <= 0 || !self::canViewWorkspaceCase($case)) {
             http_response_code(403);
             exit(self::role()==='guardia' ? 'Guardia solo puede consultar las tarjetas de sus registros.' : 'No tienes autorización para abrir este expediente fuera de tu espacio de trabajo. Puedes consultarlo desde el buscador general.');
+        }
+    }
+    public static function canOpenInvestigationCase(int $case): bool {
+        return !in_array(self::role(), ['secretaria','administracion'], true) && self::canViewWorkspaceCase($case);
+    }
+    public static function requireInvestigationCase(int $case): void {
+        if (!self::canOpenInvestigationCase($case)) {
+            http_response_code(403);
+            exit('Archivo permite consultar la ficha del expediente, sin abrir el espacio de edición.');
         }
     }
     public static function canEdit(int $case): bool {
@@ -65,7 +75,10 @@ final class Access
         return empty($row['eliminado_en']) && ($role==='admin' || ($role==='guardia' && (int)$row['creado_por']===$actor && empty($row['eliminado_en']) && ($now ?? time()) < strtotime($row['registrado_en'])+43200));
     }
     public static function profile(int $case): array {
-        $s=Database::connection()->prepare('SELECT u.nombre,u.grado,u.cip,u.cargo,u.unidad,u.telefono,u.email FROM accidentes a JOIN usuarios u ON u.id=a.responsable_id WHERE a.id=?');$s->execute([$case]);
+        $s=Database::connection()->prepare("SELECT COALESCE(investigador.nombre,u.nombre) nombre,COALESCE(investigador.grado,u.grado) grado,COALESCE(investigador.cip,u.cip) cip,COALESCE(investigador.cargo,u.cargo) cargo,COALESCE(investigador.unidad,u.unidad) unidad,COALESCE(investigador.telefono,u.telefono) telefono,COALESCE(investigador.email,u.email) email
+            FROM accidentes a JOIN usuarios u ON u.id=a.responsable_id
+            LEFT JOIN expediente_transferencias archivo ON archivo.id=(SELECT MAX(t.id) FROM expediente_transferencias t WHERE t.accidente_id=a.id AND t.destino_id=a.responsable_id AND t.tipo='archivo' AND t.estado='aceptada')
+            LEFT JOIN usuarios investigador ON investigador.id=archivo.origen_id WHERE a.id=?");$s->execute([$case]);
         return $s->fetch() ?: ['nombre'=>'Responsable pendiente de asignación','grado'=>'','cip'=>'','cargo'=>'','unidad'=>'DEPIAT'];
     }
     public static function documentProfile(array $document): array {
@@ -108,7 +121,7 @@ final class Access
         $catalogAjaxCreate = $script === 'involucrados_vehiculos_nuevo.php'
             && preg_match('/^crear_(categoria|tipo|carroceria|marca|modelo)$/', (string) ($_GET['ajax'] ?? '')) === 1;
         if($post && !$newPage && !in_array($script,['buscar_dni.php','buscar_placa.php','buscar_personas_nombre.php','documento_recibido_analizar_ia.php'],true)) {
-            if(in_array(self::role(),['secretaria','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate && !$guardiaCreation) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
+            if(in_array(self::role(),['secretaria','administracion','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate && !$guardiaCreation && $script!=='expedientes_recepcion.php') {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
         }
     }
 }

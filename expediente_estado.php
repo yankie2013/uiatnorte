@@ -10,7 +10,10 @@ try {
     Access::checkCsrf();
     $action=(string)($_POST['action']??'');
     $reason=trim((string)($action==='cambiar_estado'?($_POST['estado']??''):($_POST['motivo']??'')));
-    (new ExpedienteAccessService($pdo))->change($id,$action,(int)($_POST['usuario_id']??0),$reason);
+    (new ExpedienteAccessService($pdo))->change($id,$action,(int)($_POST['usuario_id']??0),$reason,[
+        'oficio_numero' => is_scalar($_POST['oficio_numero']??null) ? (string)$_POST['oficio_numero'] : '',
+        'oficio_anio' => is_scalar($_POST['oficio_anio']??null) ? (string)$_POST['oficio_anio'] : '',
+    ]);
     header('Location: '.$url.'&gestion_ok=1');exit;
 } catch(Throwable $e) {
     http_response_code(422);

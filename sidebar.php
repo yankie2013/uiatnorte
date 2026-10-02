@@ -85,5 +85,7 @@ if (\App\Support\Access::admin()) {
     </nav>
     <div class="uiat-nav-bottom"><div class="uiat-institution"><span class="uiat-nav-icon"><?= $sidebarSvg('shield') ?></span><span class="uiat-label">Gestión institucional<small>Policía Nacional del Perú</small></span></div><a class="uiat-nav-link" href="logout.php" title="Cerrar sesión" aria-label="Cerrar sesión"><span class="uiat-nav-icon"><?= $sidebarSvg('logout') ?></span><span class="uiat-label">Cerrar sesión</span></a></div>
 </aside>
+<template id="uiat-accountbar-template"><?php include __DIR__ . '/app/Views/user_topbar.php'; ?></template>
 </div>
+<link rel="stylesheet" href="assets/css/user_topbar.css?v=<?= filemtime(__DIR__ . '/assets/css/user_topbar.css') ?>">
 <script src="assets/js/sidebar.js?v=<?= filemtime(__DIR__ . '/assets/js/sidebar.js') ?>" defer></script>

@@ -6,12 +6,14 @@ $error='';$id=(int)($_GET['id']??$_POST['id']??0);
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         Access::checkCsrf();$role=(string)($_POST['rol']??'');$active=(int)($_POST['activo']??0);
-        if(!in_array($role,['admin','jefe_emi','adjunto','secretaria','guardia'],true))throw new RuntimeException('Perfil inválido.');
+        if(!in_array($role,['admin','jefe_emi','adjunto','secretaria','administracion','guardia'],true))throw new RuntimeException('Perfil inválido.');
         if($id===Access::id() && ($role!=='admin'||!$active))throw new RuntimeException('No puede quitarse su propio acceso administrativo.');
         $pdo->beginTransaction();
-        $s=$pdo->prepare('SELECT id FROM usuarios WHERE id=? FOR UPDATE');$s->execute([$id]);if(!$s->fetch())throw new RuntimeException('Usuario no encontrado.');
+        $s=$pdo->prepare('SELECT id,rol FROM usuarios WHERE id=? FOR UPDATE');$s->execute([$id]);$current=$s->fetch();if(!$current)throw new RuntimeException('Usuario no encontrado.');
         $s=$pdo->prepare('SELECT COUNT(*) FROM accidentes WHERE responsable_id=? AND eliminado_en IS NULL');$s->execute([$id]);
-        if((!in_array($role,['jefe_emi','admin'],true)||!$active) && $s->fetchColumn())throw new RuntimeException('Transfiera sus expedientes antes de desactivar al usuario o cambiar su perfil.');
+        $ownsCases=(int)$s->fetchColumn()>0;
+        if((!in_array($role,['jefe_emi','secretaria','administracion'],true)||!$active) && $ownsCases)throw new RuntimeException('Transfiera sus expedientes antes de desactivar al usuario o cambiar su perfil.');
+        if($ownsCases && $role!==$current['rol'] && !(in_array($role,['secretaria','administracion'],true) && in_array($current['rol'],['secretaria','administracion'],true)))throw new RuntimeException('Transfiera los expedientes antes de cambiar entre investigación y archivo.');
         $cip=trim((string)($_POST['cip']??''));
         if($cip!=='') {
             $cip=\App\Support\PasswordPolicy::cip($cip);

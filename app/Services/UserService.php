@@ -26,7 +26,7 @@ final class UserService
     {
         return match ($actorRole) {
             'kayiosama' => [],
-            'admin' => ['jefe_emi', 'adjunto', 'secretaria', 'guardia', 'admin'],
+            'admin' => ['jefe_emi', 'adjunto', 'secretaria', 'administracion', 'guardia', 'admin'],
             default => [],
         };
     }

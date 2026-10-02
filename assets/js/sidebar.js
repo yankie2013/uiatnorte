@@ -14,6 +14,19 @@
   let closeTimer;
   const links = [...sidebar.querySelectorAll('a')];
   document.body.classList.add('uiat-has-sidebar');
+  if (!document.body.classList.contains('uiat-dashboard') && !document.querySelector('.uiat-user-topbar')) {
+    const template = root.querySelector('#uiat-accountbar-template');
+    const bar = template?.content.firstElementChild?.cloneNode(true);
+    if (bar) {
+      const heading = document.querySelector('main h1, .wrap h1, .page h1, h1');
+      const section = heading?.textContent?.trim() || document.title.split(/[|·]/)[0].trim() || 'Panel general';
+      const breadcrumb = bar.querySelector('.uiat-user-breadcrumb strong');
+      if (breadcrumb && !bar.hasAttribute('data-custom-breadcrumb')) breadcrumb.textContent = section;
+      bar.classList.add('uiat-global-topbar');
+      document.body.prepend(bar);
+      document.body.classList.add('uiat-has-accountbar');
+    }
+  }
   const setOpen = (open, restoreFocus = false) => {
     clearTimeout(closeTimer);
     sidebar.classList.toggle('expanded', open);
@@ -67,6 +80,13 @@
   backdrop.addEventListener('click', () => setOpen(false, true));
   document.addEventListener('pointerdown', event => {
     if (!root.contains(event.target) && sidebar.classList.contains('expanded')) setOpen(false);
+  });
+  document.addEventListener('click', event => {
+    const returnLink = event.target.closest('.uiat-user-breadcrumb a[data-restore-list]');
+    if (returnLink) sessionStorage.setItem('uiat-restore-list', new URL(returnLink.href, location.href).href);
+    document.querySelectorAll('.uiat-user-menu[open]').forEach(menu => {
+      if (!menu.contains(event.target)) menu.open = false;
+    });
   });
   links.forEach(link => link.addEventListener('click', () => setOpen(false)));
   mobile.addEventListener('change', () => {

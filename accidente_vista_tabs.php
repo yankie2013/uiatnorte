@@ -3767,8 +3767,17 @@ if (!$accidente) {
 }
 
 $accidente_id = (int) $accidente['id'];
-\App\Support\Access::requireWorkspaceCase($accidente_id);
+\App\Support\Access::requireInvestigationCase($accidente_id);
 $_SESSION['accidente_ultimo_abierto'] = $accidente_id;
+$requestedListUrl = is_string($_GET['lista'] ?? null) ? \App\Support\AccidentNavigation::listUrl($_GET['lista']) : null;
+if ($requestedListUrl !== null) $_SESSION['accidente_lista_origen'][$accidente_id] = $requestedListUrl;
+$listReturnUrl = $requestedListUrl
+    ?? \App\Support\AccidentNavigation::listUrl((string)($_SESSION['accidente_lista_origen'][$accidente_id] ?? ''))
+    ?? 'accidente_listar.php?ver_todos=1&estado=todos';
+$userTopbarBreadcrumbs = \App\Support\AccidentNavigation::breadcrumbs(
+    $listReturnUrl,
+    'Expediente '.(trim((string)($accidente['registro_sidpol'] ?? '')) ?: '#'.$accidente_id)
+);
 $abogadoInlineService = new AbogadoService(new AbogadoRepository($pdo));
 $abogadoInlineContext = $abogadoInlineService->formContext($accidente_id);
 $accidenteBase = $accidenteRepo->accidenteById($accidente_id) ?: $accidente;
@@ -10637,7 +10646,7 @@ $resumenInterventionRows = [
         window.history.back();
         return;
       }
-      window.location.href = 'accidente_listar.php';
+      window.location.href = <?= json_encode($listReturnUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     });
     const caseSummaryModal = document.getElementById('case-summary-modal');
     const caseSummaryOpen = document.querySelector('.js-case-summary-open');

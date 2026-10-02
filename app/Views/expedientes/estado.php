@@ -1,5 +1,6 @@
 <?php
 use App\Support\Access;
+use App\Support\ArchiveReference;
 use App\Support\WorkspacePage as Page;
 (function (PDO $pdo, int $id): void {
     // Older production schemas do not yet store the user's grade.
@@ -15,13 +16,15 @@ use App\Support\WorkspacePage as Page;
         $grade = 'NULL';
     }
     $qualifiedGrade = $grade === 'NULL' ? 'NULL' : 'u.grado';
-    $users=$pdo->query("SELECT id,nombre,$grade AS grado,rol FROM usuarios WHERE activo=1 AND rol IN ('jefe_emi','adjunto') ORDER BY nombre")->fetchAll();
+    $users=$pdo->query("SELECT id,nombre,$grade AS grado,rol FROM usuarios WHERE activo=1 AND rol IN ('jefe_emi','adjunto','secretaria','administracion') ORDER BY nombre")->fetchAll();
     $responsibleLabel = static fn($name, $grade = null) => trim(trim((string)$grade).' '.trim((string)$name)) ?: 'Sin asignar';
     $s=$pdo->prepare("SELECT a.*,u.nombre responsable,$qualifiedGrade responsable_grado FROM accidentes a LEFT JOIN usuarios u ON u.id=a.responsable_id WHERE a.id=?");$s->execute([$id]);$a=$s->fetch();
     if(!$a || ($a['eliminado_en'] && !Access::admin())){Page::notice('Expediente no disponible.',true);return;}
     $manager=Access::admin() || (Access::role()==='jefe_emi' && (int)$a['responsable_id']===Access::id());
     echo '<div class="state-workspace-grid">';
-    echo '<section class="state-block state-block-case"><h2>Expediente #'.$id.' · '.Page::escape($a['registro_sidpol']??'Sin SIDPOL').'</h2><p>'.Page::escape($a['lugar']).'</p><p>Responsable: <strong>'.Page::escape($responsibleLabel($a['responsable'], $a['responsable_grado'])).'</strong></p><div class="actions"><a href="accidente_vista_tabs.php?accidente_id='.$id.'">Abrir expediente</a><a href="gestion_expedientes.php">Buscador general</a></div>';
+    echo '<section class="state-block state-block-case"><h2>Expediente #'.$id.' · '.Page::escape($a['registro_sidpol']??'Sin SIDPOL').'</h2><p>'.Page::escape($a['lugar']).'</p><p>Responsable: <strong>'.Page::escape($responsibleLabel($a['responsable'], $a['responsable_grado'])).'</strong></p><div class="actions">';
+    if(!in_array(Access::role(),['secretaria','administracion'],true))echo '<a href="accidente_vista_tabs.php?accidente_id='.$id.'">Abrir expediente</a>';
+    echo '<a href="gestion_expedientes.php">Buscador general</a></div>';
     if($a['eliminado_en'])echo '<p class="notice error">Eliminado el '.Page::escape($a['eliminado_en']).': '.Page::escape($a['motivo_eliminacion']).'</p>';
     echo '<p>Ubicación: <strong>'.($a['ubicacion_verificada']?'Verificada':'Pendiente de verificación').'</strong></p>';
     if(!$a['ubicacion_verificada'] && Access::canEdit($id) && $a['latitud']!==null && $a['longitud']!==null){echo '<form method="post" action="expediente_estado.php?id='.$id.'">';Page::token();echo '<input type="hidden" name="action" value="verificar_ubicacion"><button>Confirmar ubicación verificada</button></form>';}
@@ -41,8 +44,26 @@ use App\Support\WorkspacePage as Page;
     if($manager && !$a['eliminado_en']){echo '<form method="post" action="expediente_estado.php?id='.$id.'">';Page::token();echo '<input type="hidden" name="action" value="compartir"><label>Compartir con ADJUNTO<select name="usuario_id" required><option value="">Seleccionar</option>';foreach($users as $u)if($u['rol']==='adjunto')echo '<option value="'.$u['id'].'">'.Page::escape($responsibleLabel($u['nombre'], $u['grado'])).'</option>';echo '</select></label><button>Compartir expediente</button></form>';}
     echo '</section><section class="state-block state-block-transfers"><h2>Transferencias</h2><p>El responsable cambia cuando el destinatario acepta. Al aceptar, se cierran las colaboraciones anteriores.</p>';
     $s=$pdo->prepare("SELECT t.*,u.nombre destino,$qualifiedGrade destino_grado FROM expediente_transferencias t JOIN usuarios u ON u.id=t.destino_id WHERE t.accidente_id=? ORDER BY t.id DESC");$s->execute([$id]);$transfers=$s->fetchAll();$pending=false;
-    foreach($transfers as $t){echo '<p><strong>'.Page::escape($responsibleLabel($t['destino'], $t['destino_grado'])).'</strong> · '.Page::escape($t['estado']).' · '.Page::escape($t['creado_en']).'<br>'.Page::escape($t['motivo']).'</p>';if($t['estado']==='pendiente'){$pending=true;if(!$a['eliminado_en'] && ((int)$t['destino_id']===Access::id() || $manager)){echo '<form method="post" action="expediente_estado.php?id='.$id.'">';Page::token();$action=(int)$t['destino_id']===Access::id()?'aceptar':'cancelar_transferencia';echo '<input type="hidden" name="action" value="'.$action.'"><button>'.($action==='aceptar'?'Aceptar transferencia':'Cancelar transferencia').'</button></form>';}}}
+    foreach($transfers as $t){echo '<p><strong>'.Page::escape($responsibleLabel($t['destino'], $t['destino_grado'])).'</strong> · '.($t['tipo']==='archivo'?'Archivo':'Investigación').' · '.Page::escape($t['estado']).' · '.Page::escape($t['creado_en']).'<br>'.Page::escape($t['motivo']);if($t['tipo']==='archivo')echo '<br>Informe N° '.Page::escape($t['informe_remision'] ?: 'No registrado').' · Oficio N° '.Page::escape($t['oficio_remision'] ?: 'No registrado');echo '</p>';if($t['estado']==='pendiente'){$pending=true;if(!$a['eliminado_en'] && ((int)$t['destino_id']===Access::id() || $manager)){echo '<form method="post" action="expediente_estado.php?id='.$id.'">';Page::token();$action=(int)$t['destino_id']===Access::id()?'aceptar':'cancelar_transferencia';echo '<input type="hidden" name="action" value="'.$action.'"><button>'.($action==='aceptar'?'Aceptar recepción':'Cancelar transferencia').'</button></form>';}}}
     if($manager && !$pending && !$a['eliminado_en']){echo '<form method="post" action="expediente_estado.php?id='.$id.'">';Page::token();echo '<input type="hidden" name="action" value="transferir"><label>Derivar a JEFE EMI<select name="usuario_id" required><option value="">Seleccionar</option>';foreach($users as $u)if($u['rol']==='jefe_emi' && (int)$u['id']!==(int)$a['responsable_id'])echo '<option value="'.$u['id'].'">'.Page::escape($responsibleLabel($u['nombre'], $u['grado'])).'</option>';echo '</select></label><label>Motivo<textarea name="motivo" required></textarea></label><button>Solicitar transferencia</button></form>';}
+    if($manager && !$pending && !$a['eliminado_en'] && in_array($a['estado'],['Resuelto','Desestimado'],true)){
+        $archiveUsers=array_filter($users,static fn($u)=>in_array($u['rol'],['secretaria','administracion'],true));
+        if(!$archiveUsers) echo '<p class="muted">No hay un usuario activo de Secretaría o Administración para recibir el archivo.</p>';
+        else {
+            try {$reportForArchive=ArchiveReference::report((string)($a['nro_informe_policial']??''));}
+            catch(\RuntimeException $e) {$reportForArchive='';echo '<p class="muted">'.Page::escape($e->getMessage()).'</p>';}
+            if($reportForArchive!==''){
+            echo '<form method="post" action="expediente_estado.php?id='.$id.'" data-archive-form data-suffix="'.Page::escape(ArchiveReference::SUFFIX).'">';Page::token();echo '<input type="hidden" name="action" value="archivar"><label>Enviar para archivo a Secretaría o Administración<select name="usuario_id" required><option value="">Seleccionar destinatario</option>';
+            foreach($archiveUsers as $u)echo '<option value="'.$u['id'].'">'.Page::escape($responsibleLabel($u['nombre'], $u['grado']).' · '.(Access::ROLES[$u['rol']]??$u['rol'])).'</option>';
+            echo '</select></label><label>N° de informe con siglas<input value="'.Page::escape($reportForArchive).'" readonly></label>';
+            echo '<label>N° de oficio<input name="oficio_numero" inputmode="numeric" pattern="[0-9]{1,8}" maxlength="8" placeholder="Ej.: 001" required></label>';
+            echo '<label>Año del oficio<input name="oficio_anio" inputmode="numeric" pattern="20[0-9]{2}" maxlength="4" value="'.date('Y').'" required></label>';
+            echo '<p class="muted">Oficio completo: <output data-archive-preview>Ingrese el número de oficio</output></p>';
+            echo '<label>Motivo<textarea name="motivo" required></textarea></label><button>Enviar a espera de recepción para archivo</button></form>';
+            echo '<script>(()=>{const form=document.querySelector("[data-archive-form]");if(!form)return;const number=form.elements.oficio_numero,year=form.elements.oficio_anio,preview=form.querySelector("[data-archive-preview]");const update=()=>{preview.textContent=/^\\d{1,8}$/.test(number.value.trim())&&/^20\\d{2}$/.test(year.value.trim())?number.value.trim()+"-"+year.value.trim()+"-"+form.dataset.suffix:"Ingrese el número y año del oficio"};number.addEventListener("input",update);year.addEventListener("input",update);update()})();</script>';
+            }
+        }
+    }
     echo '</section>';
     echo '</div>';
     if(Access::admin()){

@@ -19,7 +19,7 @@ if(!isset($steps[$step]))$step='vehiculos';
 echo '<section><h2>'.Page::escape($record['registro_sidpol']?:'Accidente #'.$id).'</h2><p>'.Page::escape($record['lugar']).'</p><p>✓ 1 · Datos del accidente guardados</p><nav class="actions">';
 foreach($steps as $key=>$label)echo '<a '.($key===$step?'aria-current="step"':'').' href="?accidente_id='.$id.'&paso='.$key.'">'.Page::escape($label).'</a>';
 echo '</nav></section>';
-if(!$editable){Page::notice($record['jefe_id']?'Registro entregado al JEFE EMI. Los vehículos y personas registrados se conservaron.':'El plazo de 12 horas para completar este registro terminó. Solicita apoyo al administrador.');echo '<a href="guardia.php">Volver a comunicaciones</a>';Page::end();exit;}
+if(!$editable){Page::notice($record['jefe_id']?'Registro enviado al JEFE EMI y en espera de recepción. Los vehículos y personas registrados se conservaron.':'El plazo de 12 horas para completar este registro terminó. Solicita apoyo al administrador.');echo '<a href="guardia.php">Volver a comunicaciones</a>';Page::end();exit;}
 $st=$pdo->prepare('SELECT v.placa FROM involucrados_vehiculos iv JOIN vehiculos v ON v.id=iv.vehiculo_id WHERE iv.accidente_id=?');$st->execute([$id]);$vehicles=$st->fetchAll();
 $st=$pdo->prepare("SELECT CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.apellido_materno) nombre FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id WHERE ip.accidente_id=?");$st->execute([$id]);$people=$st->fetchAll();
 $return='guardia_registro.php?accidente_id='.$id.'&paso='.$step;
@@ -33,7 +33,7 @@ if($step==='vehiculos'){
  foreach($people as $person)echo '<li>👤 '.Page::escape($person['nombre']).'</li>';
  echo '</ul><div class="actions"><a class="button" href="involucrados_personas_nuevo.php?accidente_id='.$id.'&return_to='.rawurlencode($return).'">+ Agregar persona</a><a class="button" href="?accidente_id='.$id.'&paso=entrega">Revisar y entregar →</a></div>';
 }else{
- echo '<p>Revisa lo registrado antes de asignar la investigación: <strong>'.count($vehicles).' vehículos · '.count($people).' personas</strong>.</p><p>Al entregar, el JEFE EMI recibe el expediente completo y finaliza la incorporación de datos por guardia.</p><form method="post">';Page::token();echo '<label>JEFE EMI responsable<select name="jefe_id" required><option value="">Seleccionar</option>';
+ echo '<p>Revisa lo registrado antes de asignar la investigación: <strong>'.count($vehicles).' vehículos · '.count($people).' personas</strong>.</p><p>Al entregar, el expediente quedará en espera de recepción hasta que el JEFE EMI lo acepte.</p><form method="post">';Page::token();echo '<label>JEFE EMI destinatario<select name="jefe_id" required><option value="">Seleccionar</option>';
  foreach($pdo->query("SELECT id,nombre,grado FROM usuarios WHERE activo=1 AND rol='jefe_emi' ORDER BY nombre") as $u)echo '<option value="'.(int)$u['id'].'">'.Page::escape(trim(($u['grado']??'').' '.$u['nombre'])).'</option>';
  echo '</select></label><button>Entregar expediente</button></form>';
 }

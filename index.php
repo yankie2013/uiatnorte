@@ -108,7 +108,7 @@ $axisMax = $tick * 4;
 <div class="page">
     <header class="topbar">
         <div class="breadcrumb">Gestión de la información <span>/</span> <b>Panel general</b></div>
-        <div class="topbar-right"><a class="search-link" href="<?= dh(dlink()) ?>"><?= di('search') ?><span>Buscar expediente</span></a><div class="profile"><span class="avatar"><?= dh($initial) ?></span><div><strong><?= dh($name) ?></strong><small><?= dh(ucfirst((string)($yo['rol'] ?? 'Personal autorizado'))) ?></small></div></div></div>
+        <div class="topbar-right"><a class="search-link" href="<?= dh(dlink()) ?>"><?= di('search') ?><span>Buscar expediente</span></a><details class="uiat-user-menu"><summary class="profile" aria-label="Cuenta: <?= dh($name) ?>"><span class="avatar"><?= dh($initial) ?></span><div><strong><?= dh($name) ?></strong><small><?= dh(\App\Support\Access::ROLES[(string)($yo['rol'] ?? '')] ?? 'Personal autorizado') ?></small></div></summary><div class="uiat-user-menu-panel"><a href="logout.php">Cerrar sesión</a></div></details></div>
     </header>
     <main id="main">
         <div class="page-heading"><div><div class="greeting"><?= dh($greeting) ?>, <?= dh($name) ?></div><h1>Panorama de investigaciones<span>.</span></h1><p><?= \App\Support\Access::admin() ? 'Todos los expedientes de Lima Norte.' : 'Expedientes asignados a tu espacio de trabajo.' ?> <a href="gestion_expedientes.php">Consulta general</a></p></div><a class="button primary" href="accidente_nuevo.php"><?= di('plus') ?> Registrar accidente</a></div>

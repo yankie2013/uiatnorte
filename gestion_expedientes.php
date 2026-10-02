@@ -1,12 +1,15 @@
 <?php
 require __DIR__.'/auth.php';require_login();require __DIR__.'/db.php';
 use App\Support\Access;
+use App\Support\AccidentNavigation;
 use App\Support\WorkspacePage as Page;
 function responsible_label(?string $name, ?string $grade = null): string {
     return trim(trim((string)$grade).' '.trim((string)$name)) ?: 'Sin asignar';
 }
 
 $id=(int)($_GET['id']??$_POST['id']??0);$error='';$ok='';
+$archiveRole=in_array(Access::role(), ['secretaria','administracion'], true);
+$archiveListUrl=AccidentNavigation::listUrl(is_string($_GET['lista']??null) ? $_GET['lista'] : '') ?? 'accidente_listar.php';
 if (Access::role()==='guardia' && $_SERVER['REQUEST_METHOD']==='POST') {
     http_response_code(403);
     exit('El buscador general es de consulta para el comandante de guardia.');
@@ -17,8 +20,11 @@ if($id && ($_GET['modal']??'')==='1') {
     require __DIR__.'/app/Views/expedientes/card.php';
     exit;
 }
-Page::start('Buscador general');Page::notice($error,true);
+Page::start($archiveRole && $id ? 'Ficha de archivo' : 'Buscador general', '',
+    $archiveRole && $id ? AccidentNavigation::breadcrumbs($archiveListUrl, 'Expediente #'.$id) : null
+);Page::notice($error,true);
 if($id) {
+    if ($archiveRole) $caseCardBackUrl=$archiveListUrl;
     require __DIR__.'/app/Views/expedientes/card.php';
     Page::end();exit;
 }
