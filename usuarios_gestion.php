@@ -19,7 +19,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if($s->fetch())throw new RuntimeException('El CIP ya pertenece a otro usuario.');
         }
         $name=trim((string)($_POST['nombre']??''));if($name==='')throw new RuntimeException('Indique el nombre completo.');
-        $pdo->prepare('UPDATE usuarios SET nombre=?,rol=?,activo=?,grado=?,cip=?,cargo=?,unidad=?,telefono=? WHERE id=?')->execute([$name,$role,$active?1:0,trim($_POST['grado']??''),$cip!==''?$cip:null,trim($_POST['cargo']??''),trim($_POST['unidad']??''),trim($_POST['telefono']??''),$id]);
+        $grade=trim((string)($_POST['grado']??''));
+        if($role==='jefe_emi' && ($grade==='' || $cip===''))throw new RuntimeException('El JEFE EMI debe tener nombre completo, grado y CIP.');
+        $pdo->prepare('UPDATE usuarios SET nombre=?,rol=?,activo=?,grado=?,cip=?,cargo=?,unidad=?,telefono=? WHERE id=?')->execute([$name,$role,$active?1:0,$grade,$cip!==''?$cip:null,trim($_POST['cargo']??''),trim($_POST['unidad']??''),trim($_POST['telefono']??''),$id]);
         $password=(string)($_POST['clave']??'');if($password!==''){\App\Support\PasswordPolicy::validate($password,$cip);$pdo->prepare('UPDATE usuarios SET pass_hash=?,must_change_password=1 WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),$id]);}
         $pdo->commit();header('Location: usuarios_gestion.php?id='.$id.'&ok=1');exit;
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$error=$e->getMessage();}

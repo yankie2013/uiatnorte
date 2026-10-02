@@ -4532,6 +4532,9 @@ $actas = safe_table_exists($pdo, 'actas')
 $actasVisualizacion = safe_table_exists($pdo, 'actas_visualizacion')
     ? (new \App\Repositories\ActaVisualizacionRepository($pdo))->listByAccidente((int) $accidente_id)
     : [];
+$actasRecepcionVideo = safe_table_exists($pdo, 'actas_recepcion_video')
+    ? (new \App\Repositories\ActaRecepcionVideoRepository($pdo))->listByAccidente((int) $accidente_id)
+    : [];
 $actaEntregaTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_entrega_vehiculo.docx') || is_file(__DIR__ . '/acta_entrega_vehiculo.docx');
 $actaVisualizacionTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_visualizacion_video.docx') || is_file(__DIR__ . '/acta_visualizacion_video.docx');
 
@@ -8084,7 +8087,7 @@ $resumenInterventionRows = [
             ['id' => 'itp', 'label' => 'ITP', 'count' => count($itps)],
             ['id' => 'oficios', 'label' => 'Oficios', 'count' => count($oficios)],
             ['id' => 'documentos-recibidos', 'label' => 'Documentos recibidos', 'count' => count($documentosRecibidos)],
-            ['id' => 'documentos-actas', 'label' => 'Actas', 'count' => count($actas) + count($actasVisualizacion)],
+            ['id' => 'documentos-actas', 'label' => 'Actas', 'count' => count($actas) + count($actasVisualizacion) + count($actasRecepcionVideo)],
             ['id' => 'diligencias-pendientes', 'label' => 'Diligencias pendientes', 'count' => count($diligencias)],
             ['id' => 'analisis', 'label' => 'Análisis', 'count' => $analysisTabCount],
             ['id' => 'componentes-informe', 'label' => 'Componentes Informe', 'sub' => 'Descargos Word'],
@@ -10239,14 +10242,29 @@ $resumenInterventionRows = [
                 <div class="module-actions" style="margin-bottom:8px;">
                   <a class="btn-shell js-inline-open" href="acta_entrega_vehiculo_form.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nueva acta de entrega de vehiculo">+ Acta de entrega de vehiculo</a>
                   <a class="btn-shell" href="acta_visualizacion_form.php?accidente_id=<?= (int) $accidente_id ?>" target="_blank" rel="noopener">+ Acta de visualizacion</a>
+                  <?php if (safe_table_exists($pdo, 'actas_recepcion_video')): ?><a class="btn-shell js-inline-open" href="acta_recepcion_video_form.php?accidente_id=<?= (int) $accidente_id ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Nueva acta de recepción de video">+ Acta de recepción de video</a><?php endif; ?>
                 </div>
                 <?php if (!$actaEntregaTemplateAvailable): ?>
                   <div class="empty-state" style="margin-bottom:10px;">Para habilitar la descarga, sube la plantilla como <strong>acta_entrega_vehiculo.docx</strong> en la raiz o dentro de <strong>plantillas/</strong>.</div>
                 <?php endif; ?>
-                <?php if (!$actas && !$actasVisualizacion): ?>
+                <?php if (!$actas && !$actasVisualizacion && !$actasRecepcionVideo): ?>
                   <div class="empty-state">No hay actas registradas para este accidente.</div>
                 <?php else: ?>
                   <div class="module-grid">
+                    <?php foreach ($actasRecepcionVideo as $row): $videoData = $row['datos']; ?>
+                      <article class="module-card">
+                        <header><div><h4>Acta de recepción de video #<?= (int) $row['id'] ?></h4><p>Recepción, transferencia a PC, grabación y lacrado</p></div></header>
+                        <div class="module-meta">
+                          <span class="chip-simple">Fecha: <?= h(fecha_simple($videoData['fecha_acta'] ?? null)) ?></span>
+                          <span class="chip-simple">Archivo: <?= h((string) ($videoData['nombre_archivo'] ?? '')) ?></span>
+                          <span class="chip-simple">Medio: <?= h((string) ($videoData['medio_grabacion'] ?? '')) ?></span>
+                        </div>
+                        <div class="module-actions">
+                          <a class="btn-shell btn-docx" href="acta_recepcion_video_descargar.php?id=<?= (int) $row['id'] ?>">Descargar Word</a>
+                          <a class="btn-shell js-inline-open" href="acta_recepcion_video_form.php?id=<?= (int) $row['id'] ?>&embed=1" data-workbench="documentos-workbench" data-frame="documentos-workbench-frame" data-title="Editar acta de recepción de video">Editar</a>
+                        </div>
+                      </article>
+                    <?php endforeach; ?>
                     <?php foreach ($actasVisualizacion as $row): ?>
                       <?php $actaVisualEstado=(string)($row['estado']??'Pendiente'); $actaVisualClass=$actaVisualEstado==='Realizada'?'chip-status-ok':($actaVisualEstado==='Anulada'?'chip-testigo':'chip-status-warn'); ?>
                       <article class="module-card">

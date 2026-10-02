@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <form method="post" autocomplete="off">
     <input type="hidden" name="_csrf" value="<?= h(\App\Support\Access::csrf()) ?>">
-    <div class="row"><label>Grado<input name="grado" maxlength="40" value="<?= h($data['grado']) ?>"></label><label>CIP*<input name="cip" maxlength="30" inputmode="numeric" pattern="[0-9]+" value="<?= h($data['cip']) ?>" required></label></div>
+    <div class="row"><label id="grado-label">Grado<?= $data['rol'] === 'jefe_emi' ? '*' : '' ?><input id="grado" name="grado" maxlength="40" value="<?= h($data['grado']) ?>" <?= $data['rol'] === 'jefe_emi' ? 'required' : '' ?>></label><label>CIP*<input name="cip" maxlength="30" inputmode="numeric" pattern="[0-9]+" value="<?= h($data['cip']) ?>" required></label></div>
     <div class="row"><label>Cargo<input name="cargo" maxlength="80" value="<?= h($data['cargo']) ?>"></label><label>Unidad<input name="unidad" value="<?= h($data['unidad']) ?>" maxlength="160"></label></div>
     <div class="row">
       <div class="field">
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="row">
       <div class="field">
         <label>Rol*</label>
-        <select name="rol" required>
+        <select name="rol" id="rol" required>
           <?php foreach ($allowedRoles as $role): ?>
             <option value="<?= h($role) ?>" <?= (string) $data['rol'] === $role ? 'selected' : '' ?>><?= h(\App\Support\Access::ROLES[$role] ?? $role) ?></option>
           <?php endforeach; ?>
@@ -111,5 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </form>
 </div>
+<script>
+const role = document.getElementById('rol');
+const grade = document.getElementById('grado');
+const gradeLabel = document.getElementById('grado-label');
+function syncChiefFields() {
+  const required = role.value === 'jefe_emi';
+  grade.required = required;
+  gradeLabel.firstChild.textContent = required ? 'Grado*' : 'Grado';
+}
+role.addEventListener('change', syncChiefFields);
+syncChiefFields();
+</script>
 </body>
 </html>

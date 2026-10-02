@@ -55,6 +55,10 @@ final class UserService
         if (!in_array($rol, $allowed, true)) {
             throw new InvalidArgumentException('Perfil no permitido.');
         }
+        $grado = trim((string) ($input['grado'] ?? ''));
+        if ($rol === 'jefe_emi' && $grado === '') {
+            throw new InvalidArgumentException('Indique el grado del JEFE EMI.');
+        }
         if ($this->repository->findByEmail($email) !== null) {
             throw new InvalidArgumentException('El email ya esta registrado.');
         }
@@ -66,7 +70,7 @@ final class UserService
             'nombre' => $nombre,
             'rol' => $rol,
             'pass_hash' => password_hash($cip, PASSWORD_DEFAULT),
-            'grado' => trim((string)($input['grado'] ?? '')),
+            'grado' => $grado,
             'cip' => $cip,
             'cargo' => trim((string)($input['cargo'] ?? '')),
             'unidad' => trim((string)($input['unidad'] ?? 'DEPIAT')),
