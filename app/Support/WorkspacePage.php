@@ -7,7 +7,7 @@ final class WorkspacePage {
         $userTopbarSection = $title;
         $userTopbarBreadcrumbs = $breadcrumbs;
         $title=self::escape($title);
-        echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.' · DEPIAT</title><link rel="stylesheet" href="assets/css/gestion.css"><link rel="stylesheet" href="assets/css/expediente_card.css">'.($extraCss !== '' ? '<link rel="stylesheet" href="'.self::escape($extraCss).'">' : '').'</head><body>';
+        echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.$title.' · DEPIAT</title><link rel="stylesheet" href="assets/css/gestion.css"><link rel="stylesheet" href="assets/css/expediente_card.css?v='.(int)filemtime(base_path('assets/css/expediente_card.css')).'">'.($extraCss !== '' ? '<link rel="stylesheet" href="'.self::escape($extraCss).'">' : '').'</head><body>';
         require base_path('sidebar.php');
         echo '<main class="gestion"><header><p class="eyebrow">DEPIAT · GESTIÓN DE EXPEDIENTES</p><h1>'.$title.'</h1><p>'.self::escape(Access::actor()['nombre']??'').' · '.self::escape(Access::ROLES[Access::role()]??'').'</p></header>';
     }

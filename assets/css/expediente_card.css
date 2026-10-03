@@ -34,7 +34,7 @@
 .case-person-icon{width:22px;text-align:center;font-size:16px;line-height:1.2}
 .case-card-person>div{min-width:0;display:grid;gap:2px}
 .case-card-person strong{font-size:12px;line-height:1.25;font-weight:800;color:#24324a;overflow-wrap:anywhere}
-.case-card-person strong.is-deceased{color:#b42318}
+.case-detail-card .case-card-person strong.is-deceased{color:#c71919}
 .case-card-person strong.is-injured{color:#a16207}
 .case-card-person small{font-size:10px;line-height:1.35;font-weight:650;color:#64748b;overflow-wrap:anywhere}
 .case-card-person .case-card-label{margin-bottom:1px;font-size:9px}
@@ -55,3 +55,7 @@ html[data-theme-resolved="dark"] .case-card-person strong.is-injured{color:#facc
 html[data-theme-resolved="dark"] .case-card-person small,html[data-theme-resolved="dark"] .case-card-muted,html[data-theme-resolved="dark"] .case-card-modality{color:#9fb0c6}
 html[data-theme-resolved="dark"] .case-card-facts,html[data-theme-resolved="dark"] .case-detail-card .case-card-section{border-color:#334155}
 html[data-theme-resolved="dark"] .case-modal-dialog{background:#111c2e;border-color:#334155}
+
+.case-detail-card .case-card-section h3,.case-detail-card .case-card-label,.case-detail-card .case-card-modality>span{color:#315b91;font-weight:850}
+.case-detail-card .case-card-section h3{letter-spacing:.065em}
+html[data-theme-resolved="dark"] .case-detail-card .case-card-section h3,html[data-theme-resolved="dark"] .case-detail-card .case-card-label,html[data-theme-resolved="dark"] .case-detail-card .case-card-modality>span{color:#9fc5fa}

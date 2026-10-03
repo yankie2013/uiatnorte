@@ -179,7 +179,7 @@ include __DIR__ . '/sidebar.php';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Oficios | Listado</title>
 <link rel="stylesheet" href="style_mushu.css">
-<link rel="stylesheet" href="assets/css/expediente_card.css">
+<link rel="stylesheet" href="assets/css/expediente_card.css?v=<?= (int)filemtime(__DIR__ . '/assets/css/expediente_card.css') ?>">
 <style>
 :root{
   --page:#f4f7fb;
