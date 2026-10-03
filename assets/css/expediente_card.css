@@ -55,3 +55,9 @@ html[data-theme-resolved="dark"] .case-card-person strong.is-injured{color:#facc
 html[data-theme-resolved="dark"] .case-card-person small,html[data-theme-resolved="dark"] .case-card-muted,html[data-theme-resolved="dark"] .case-card-modality{color:#9fb0c6}
 html[data-theme-resolved="dark"] .case-card-facts,html[data-theme-resolved="dark"] .case-detail-card .case-card-section{border-color:#334155}
 html[data-theme-resolved="dark"] .case-modal-dialog{background:#111c2e;border-color:#334155}
+
+.case-card-unit{padding:5px 0 9px;margin-bottom:7px;border-bottom:1px dashed #d8e0eb}
+.case-card-unit:last-child{margin-bottom:0;border-bottom:0}
+.case-card-unit-people{margin:3px 0 0 10px;padding-left:12px;border-left:2px solid hsl(var(--district-hue) 72% 58% / .28)}
+.case-card-unit-people .case-card-empty{margin:5px 0;font-size:11px}
+html[data-theme-resolved="dark"] .case-card-unit{border-bottom-color:#334155}

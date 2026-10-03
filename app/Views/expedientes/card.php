@@ -24,7 +24,7 @@ $modalidadTabla=$guardiaConsulta?'accidente_modalidad':'accidente_modalidad_acti
 $personasTabla=$guardiaConsulta?'involucrados_personas':'involucrados_personas_activos';
 $vehiculosTabla=$guardiaConsulta?'involucrados_vehiculos':'involucrados_vehiculos_activos';
 $s=$pdo->prepare("SELECT m.nombre FROM $modalidadTabla am JOIN modalidad_accidente m ON m.id=am.modalidad_id WHERE am.accidente_id=?");$s->execute([$id]);$modalidades=$s->fetchAll(PDO::FETCH_COLUMN);
-$s=$pdo->prepare("SELECT p.nombres,p.apellido_paterno,p.apellido_materno,COALESCE(ip.lesion,'') lesion,COALESCE(r.Nombre,'Participante') rol,
+$s=$pdo->prepare("SELECT ip.vehiculo_id,p.nombres,p.apellido_paterno,p.apellido_materno,COALESCE(ip.lesion,'') lesion,COALESCE(r.Nombre,'Participante') rol,
  v.placa,mv.nombre marca,modv.nombre modelo,iv.orden_participacion,tv.nombre vehiculo_tipo
  FROM $personasTabla ip JOIN personas p ON p.id=ip.persona_id
  LEFT JOIN participacion_persona r ON r.Id=ip.rol_id
@@ -33,7 +33,7 @@ $s=$pdo->prepare("SELECT p.nombres,p.apellido_paterno,p.apellido_materno,COALESC
  LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id
  LEFT JOIN $vehiculosTabla iv ON iv.accidente_id=ip.accidente_id AND iv.vehiculo_id=ip.vehiculo_id
  WHERE ip.accidente_id=? ORDER BY COALESCE(iv.orden_participacion,''),ip.id");$s->execute([$id]);$people=$s->fetchAll(PDO::FETCH_ASSOC);
-$s=$pdo->prepare("SELECT iv.orden_participacion,v.placa,mv.nombre marca,modv.nombre modelo,v.color,tv.nombre tipo
+$s=$pdo->prepare("SELECT iv.vehiculo_id,iv.orden_participacion,v.placa,mv.nombre marca,modv.nombre modelo,v.color,tv.nombre tipo
  FROM $vehiculosTabla iv JOIN vehiculos v ON v.id=iv.vehiculo_id
  LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id WHERE iv.accidente_id=? ORDER BY iv.orden_participacion");$s->execute([$id]);$vehicles=$s->fetchAll(PDO::FETCH_ASSOC);
 $icon=static function(string $name): string {
@@ -48,6 +48,25 @@ $vehicleIcon=static function(string $type): string {
     if (str_contains($type,'bus') || str_contains($type,'ómnibus') || str_contains($type,'omnibus')) return '🚌';
     if (str_contains($type,'bicic')) return '🚲';
     return '🚘';
+};
+// Agrupar por el vínculo real con el vehículo; los peatones conservan su fila propia.
+$peopleByVehicle=[];
+$unlinkedPeople=[];
+$vehicleIds=array_fill_keys(array_map(static fn(array $v): int => (int)$v['vehiculo_id'], $vehicles), true);
+foreach ($people as $person) {
+    $vehicleId=(int)($person['vehiculo_id']??0);
+    if ($vehicleId>0 && isset($vehicleIds[$vehicleId]) && !str_contains(mb_strtolower($person['rol']), 'peat')) {
+        $peopleByVehicle[$vehicleId][]=$person;
+    } else {
+        $unlinkedPeople[]=$person;
+    }
+}
+$renderPerson=static function(array $person) use ($h): void {
+    $role=mb_strtolower($person['rol']);
+    $injury=mb_strtolower($person['lesion']);
+    $class=str_contains($injury,'fallec')?'is-deceased':(preg_match('/herid|lesion/iu',$injury)?'is-injured':'');
+    $symbol=str_contains($role,'peat')?'🚶':(str_contains($role,'conduc')?'🧑‍✈️':'👤');
+    echo '<div class="case-card-person"><span class="case-person-icon" aria-hidden="true">'.$symbol.'</span><div><strong class="'.$class.'">'.$h(trim($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno'])).'</strong><small>'.$h($person['rol'].($person['lesion']?' · '.$person['lesion']:'')).'</small></div></div>';
 };
 $districtColors=['ancón'=>326,'ancon'=>326,'carabayllo'=>266,'comas'=>220,'independencia'=>190,'los olivos'=>158,'puente piedra'=>42,'san martín de porres'=>18,'san martin de porres'=>18,'santa rosa'=>350,'santa rosa de quives'=>286];
 $cardHue=$districtColors[mb_strtolower(trim((string)($a['distrito']??'')), 'UTF-8')]??220;
@@ -78,8 +97,19 @@ $state=trim((string)$a['estado'])?:'Pendiente';
  </div>
  <section class="case-card-section"><h3>INVOLUCRADOS</h3>
  <?php if(!$people && !$vehicles): ?><p class="case-card-empty">Sin participantes registrados</p><?php endif ?>
- <?php foreach($vehicles as $v): ?><div class="case-card-person case-card-vehicle"><span class="case-person-icon"><span aria-hidden="true"><?= $vehicleIcon((string)($v['tipo']??'')) ?></span></span><div><strong><?= $h(trim(($v['orden_participacion']?:'Unidad').' · '.($v['marca']?:'Vehículo').' '.($v['modelo']??''))) ?></strong><small><?= $h(trim(($v['tipo']??'Vehículo').' · '.($v['placa']?:'Sin placa').' · '.($v['color']??''),' ·')) ?></small></div></div><?php endforeach ?>
- <?php foreach($people as $person): ?><div class="case-card-person"><span class="case-person-icon"><span aria-hidden="true"><?= str_contains(mb_strtolower($person['rol']),'peat')?'🚶':(str_contains(mb_strtolower($person['rol']),'conduc')?$vehicleIcon((string)($person['vehiculo_tipo']??'')):'👤') ?></span></span><div><strong class="<?= str_contains(mb_strtolower($person['lesion']),'fallec')?'is-deceased':(preg_match('/herid|lesion/iu',$person['lesion'])?'is-injured':'') ?>"><?= $h(trim($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno'])) ?></strong><small><?= $h($person['rol'].($person['lesion']?' · '.$person['lesion']:'')) ?><?= $person['placa']?' · '. $h($person['placa']):'' ?></small></div></div><?php endforeach ?>
+ <?php foreach($vehicles as $v):
+     $vehiclePeople=$peopleByVehicle[(int)$v['vehiculo_id']]??[];
+     usort($vehiclePeople,static fn(array $left,array $right): int => (int)!str_contains(mb_strtolower($left['rol']),'conduc') <=> (int)!str_contains(mb_strtolower($right['rol']),'conduc'));
+ ?>
+ <div class="case-card-unit">
+   <div class="case-card-person case-card-vehicle"><span class="case-person-icon" aria-hidden="true"><?= $vehicleIcon((string)($v['tipo']??'')) ?></span><div><strong><?= $h(trim(($v['orden_participacion']?:'Unidad sin número').' · '.($v['marca']?:'Vehículo').' '.($v['modelo']??''))) ?></strong><small><?= $h(implode(' · ',array_filter([$v['tipo']??'', $v['placa']?:'Sin placa', $v['color']??'']))) ?></small></div></div>
+   <div class="case-card-unit-people">
+     <?php foreach($vehiclePeople as $person) $renderPerson($person); ?>
+     <?php if(!$vehiclePeople): ?><p class="case-card-empty">Sin conductor registrado</p><?php endif ?>
+   </div>
+ </div>
+ <?php endforeach ?>
+ <?php foreach($unlinkedPeople as $person) $renderPerson($person); ?>
  </section>
  <section class="case-card-section case-card-prosecutor">
   <div class="case-card-person"><span class="case-person-icon"><?= $icon('court') ?></span><div><span class="case-card-label">FISCALÍA</span><strong><?= $h($a['fiscalia']?:'Sin registrar') ?></strong></div></div>
