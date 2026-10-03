@@ -15,7 +15,7 @@ final class AccidentNavigation
     {
         $parts = parse_url($raw);
         if ($parts === false || isset($parts['scheme']) || isset($parts['host'])
-            || !in_array($parts['path'] ?? '', ['accidente_listar.php', '/uiatnorte/accidente_listar.php'], true)) {
+            || !in_array($parts['path'] ?? '', ['accidente_listar.php', '/accidente_listar.php', '/uiatnorte/accidente_listar.php'], true)) {
             return null;
         }
         parse_str((string) ($parts['query'] ?? ''), $query);

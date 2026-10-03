@@ -431,7 +431,7 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
     break;
   }
 }
-$listContextUrl = AccidentNavigation::listUrl((string)($_SERVER['REQUEST_URI'] ?? '')) ?? 'accidente_listar.php';
+$listContextUrl = AccidentNavigation::listUrl('accidente_listar.php?' . http_build_query($_GET)) ?? 'accidente_listar.php';
 $userTopbarBreadcrumbs = AccidentNavigation::breadcrumbs($listContextUrl);
 $caseLink = $isArchivo
   ? static fn(int $id, array $extra = []): string => 'gestion_expedientes.php?' . http_build_query(['id' => $id, 'lista' => $listContextUrl])

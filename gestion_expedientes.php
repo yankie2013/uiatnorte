@@ -10,6 +10,10 @@ function responsible_label(?string $name, ?string $grade = null): string {
 $id=(int)($_GET['id']??$_POST['id']??0);$error='';$ok='';
 $archiveRole=in_array(Access::role(), ['secretaria','administracion'], true);
 $archiveListUrl=AccidentNavigation::listUrl(is_string($_GET['lista']??null) ? $_GET['lista'] : '') ?? 'accidente_listar.php';
+if ($archiveListUrl === 'accidente_listar.php' && is_array($_SESSION['accidente_listar_ultimo_filtro'] ?? null)) {
+    $rememberedListUrl=AccidentNavigation::listUrl('accidente_listar.php?'.http_build_query($_SESSION['accidente_listar_ultimo_filtro']));
+    if ($rememberedListUrl !== null && $rememberedListUrl !== 'accidente_listar.php') $archiveListUrl=$rememberedListUrl;
+}
 if (Access::role()==='guardia' && $_SERVER['REQUEST_METHOD']==='POST') {
     http_response_code(403);
     exit('El buscador general es de consulta para el comandante de guardia.');

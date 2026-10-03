@@ -3770,6 +3770,13 @@ $accidente_id = (int) $accidente['id'];
 \App\Support\Access::requireInvestigationCase($accidente_id);
 $_SESSION['accidente_ultimo_abierto'] = $accidente_id;
 $requestedListUrl = is_string($_GET['lista'] ?? null) ? \App\Support\AccidentNavigation::listUrl($_GET['lista']) : null;
+$lastListFilters = $_SESSION['accidente_listar_ultimo_filtro'] ?? null;
+if ($requestedListUrl === 'accidente_listar.php' && is_array($lastListFilters)) {
+    $rememberedListUrl = \App\Support\AccidentNavigation::listUrl('accidente_listar.php?' . http_build_query($lastListFilters));
+    if ($rememberedListUrl !== null && $rememberedListUrl !== 'accidente_listar.php') {
+        $requestedListUrl = $rememberedListUrl;
+    }
+}
 if ($requestedListUrl !== null) $_SESSION['accidente_lista_origen'][$accidente_id] = $requestedListUrl;
 $listReturnUrl = $requestedListUrl
     ?? \App\Support\AccidentNavigation::listUrl((string)($_SESSION['accidente_lista_origen'][$accidente_id] ?? ''))
