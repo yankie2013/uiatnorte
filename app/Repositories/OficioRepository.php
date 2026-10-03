@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Support\OficioContenido;
 use PDO;
 
 final class OficioRepository
@@ -135,23 +136,47 @@ final class OficioRepository
 
     public function allAsuntos(?int $preferredId = null): array
     {
-        $sql = "SELECT id, nombre
+        $sql = "SELECT id, tipo, nombre, COALESCE(detalle,'') AS detalle
                 FROM oficio_asunto
                 WHERE COALESCE(activo,1)=1
                 ORDER BY id ASC";
         $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $groups = [];
+        $keysById = [];
         foreach ($rows as $row) {
-            $key = $this->asuntoCatalogKey((string) ($row['nombre'] ?? ''));
+            $key = (string) $row['tipo'] . ':' . $this->asuntoCatalogKey((string) ($row['nombre'] ?? ''));
+            $keysById[(int) $row['id']] = $key;
             if (!isset($groups[$key])) {
                 $groups[$key] = $row;
+                $groups[$key]['busqueda'] = (string) $row['detalle'];
+                $groups[$key]['ids'] = [(int) $row['id']];
+                $groups[$key]['textos'] = [];
                 continue;
             }
 
+            $groups[$key]['busqueda'] .= ' ' . (string) $row['detalle'];
+            $groups[$key]['ids'][] = (int) $row['id'];
+
             if ($preferredId > 0 && (int) $row['id'] === $preferredId) {
+                $row['busqueda'] = $groups[$key]['busqueda'];
+                $row['ids'] = $groups[$key]['ids'];
+                $row['textos'] = $groups[$key]['textos'];
                 $groups[$key] = $row;
             }
+        }
+
+        foreach ($rows as $row) {
+            $key = $keysById[(int) $row['id']];
+            $texto = trim((string) ($row['detalle'] ?? ''));
+            if ($texto !== '') $groups[$key]['textos'][mb_strtolower($texto, 'UTF-8')] = $texto;
+        }
+        $oficiosTable = $this->activeTable('oficios');
+        foreach ($this->pdo->query("SELECT asunto_id, motivo FROM {$oficiosTable} WHERE asunto_id IS NOT NULL AND TRIM(COALESCE(motivo,'')) <> '' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $key = $keysById[(int) $row['asunto_id']] ?? null;
+            if ($key === null) continue;
+            $texto = OficioContenido::asuntoBase((string) $row['motivo']);
+            if ($texto !== '') $groups[$key]['textos'][mb_strtolower($texto, 'UTF-8')] = $texto;
         }
 
         $items = [];
@@ -159,6 +184,11 @@ final class OficioRepository
             $items[] = [
                 'id' => (int) ($row['id'] ?? 0),
                 'nombre' => $this->asuntoCatalogLabel((string) ($row['nombre'] ?? '')),
+                'tipo' => (string) $row['tipo'],
+                'detalle' => (string) $row['detalle'],
+                'busqueda' => trim((string) $row['busqueda']),
+                'ids' => $row['ids'],
+                'textos' => array_values($row['textos']),
             ];
         }
 
@@ -167,6 +197,51 @@ final class OficioRepository
         });
 
         return $items;
+    }
+
+    public function findAsuntoByExactName(string $tipo, string $nombre): ?array
+    {
+        $key = $this->asuntoCatalogKey($nombre);
+        $st = $this->pdo->prepare("SELECT id, entidad_id, tipo, nombre, COALESCE(detalle,'') AS detalle FROM oficio_asunto WHERE tipo = ? AND COALESCE(activo,1)=1 ORDER BY id");
+        $st->execute([$tipo]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if ($this->asuntoCatalogKey((string) $row['nombre']) === $key) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    public function sameAsuntoCatalogName(string $first, string $second): bool
+    {
+        return $this->asuntoCatalogKey($first) === $this->asuntoCatalogKey($second);
+    }
+
+    public function saveWithTemplate(array $payload, string $newTemplate = '', ?int $id = null): int
+    {
+        $this->pdo->beginTransaction();
+        try {
+            if ($newTemplate !== '') {
+                $existing = $this->findAsuntoByExactName((string) $payload['tipo'], $newTemplate);
+                if ($existing !== null) {
+                    $payload['asunto_id'] = (int) $existing['id'];
+                } else {
+                    $st = $this->pdo->prepare('INSERT INTO oficio_asunto (entidad_id, tipo, nombre, detalle, orden, activo) VALUES (?, ?, ?, ?, ?, 1)');
+                    $st->execute([(int) $payload['entidad_id_destino'], (string) $payload['tipo'], $newTemplate, '', 0]);
+                    $payload['asunto_id'] = (int) $this->pdo->lastInsertId();
+                }
+            }
+            if ($id === null) {
+                $id = $this->create($payload);
+            } else {
+                $this->update($id, $payload);
+            }
+            $this->pdo->commit();
+            return $id;
+        } catch (\Throwable $error) {
+            $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     public function asuntoInfo(int $id): ?array
@@ -228,8 +303,8 @@ final class OficioRepository
             return [];
         }
         $key = $this->asuntoCatalogKey((string) ($base['nombre'] ?? ''));
-        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE entidad_id = ? AND tipo = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
-        $st->execute([(int) $base['entidad_id'], (string) $base['tipo']]);
+        $st = $this->pdo->prepare('SELECT id, nombre, COALESCE(detalle,\'\') AS detalle FROM oficio_asunto WHERE tipo = ? AND COALESCE(activo,1)=1 ORDER BY COALESCE(orden,999999), id');
+        $st->execute([(string) $base['tipo']]);
 
         $items = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -586,6 +661,7 @@ final class OficioRepository
         $vehicleTable = $this->activeTable('involucrados_vehiculos');
         $select = [
             'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
+            "COALESCE(o.motivo,'') AS motivo",
             'COALESCE(NULLIF(e.siglas, \'\'), e.nombre) AS entidad',
             'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
             'a.registro_sidpol',
@@ -594,12 +670,22 @@ final class OficioRepository
             'COALESCE(s.nombre,\'\') AS asunto_nombre',
             'COALESCE(s.tipo,\'\') AS asunto_tipo'
         ];
+        if ($this->columnExists('oficios', 'creado_por')) {
+            $select[] = "COALESCE(u.nombre,'') AS registrante_nombre";
+            $select[] = "COALESCE(u.grado,'') AS registrante_grado";
+        } else {
+            $select[] = "'' AS registrante_nombre";
+            $select[] = "'' AS registrante_grado";
+        }
         $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             "LEFT JOIN {$accidentTable} a ON a.id = o.accidente_id",
             'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id'
         ];
+        if ($this->columnExists('oficios', 'creado_por')) {
+            $joins[] = 'LEFT JOIN usuarios u ON u.id = o.creado_por';
+        }
 
         if ($this->columnExists('oficios', 'involucrado_vehiculo_id')) {
             $joins[] = "LEFT JOIN {$vehicleTable} iv ON iv.id = o.involucrado_vehiculo_id";
@@ -613,8 +699,13 @@ final class OficioRepository
 
         if ($this->columnExists('oficios', 'involucrado_persona_id')) {
             $select[] = 'o.involucrado_persona_id AS inv_per_id';
+            $personTable = $this->activeTable('involucrados_personas');
+            $joins[] = "LEFT JOIN {$personTable} ip ON ip.id = o.involucrado_persona_id";
+            $joins[] = 'LEFT JOIN personas pe ON pe.id = ip.persona_id';
+            $select[] = "TRIM(CONCAT(COALESCE(pe.nombres,''),' ',COALESCE(pe.apellido_paterno,''),' ',COALESCE(pe.apellido_materno,''))) AS persona_nombre";
         } else {
             $select[] = 'NULL AS inv_per_id';
+            $select[] = "'' AS persona_nombre";
         }
 
         $sql = 'SELECT ' . implode(', ', $select) . " FROM {$oficiosTable} o " . implode(' ', $joins) . ' WHERE 1=1';
@@ -650,8 +741,8 @@ final class OficioRepository
         }
         if (!empty($filters['q'])) {
             $like = '%' . $filters['q'] . '%';
-            $sql .= ' AND (o.numero LIKE ? OR COALESCE(o.referencia_texto,\'\') LIKE ? OR COALESCE(a.registro_sidpol,\'\') LIKE ? OR COALESCE(s.detalle,\'\') LIKE ? OR COALESCE(s.nombre,\'\') LIKE ? OR COALESCE(e.nombre,\'\') LIKE ? OR COALESCE(e.siglas,\'\') LIKE ? OR COALESCE(v.placa,\'\') LIKE ?)';
-            array_push($params, $like, $like, $like, $like, $like, $like, $like, $like);
+            $sql .= ' AND (o.numero LIKE ? OR COALESCE(o.referencia_texto,\'\') LIKE ? OR COALESCE(o.motivo,\'\') LIKE ? OR COALESCE(a.registro_sidpol,\'\') LIKE ? OR COALESCE(s.detalle,\'\') LIKE ? OR COALESCE(s.nombre,\'\') LIKE ? OR COALESCE(e.nombre,\'\') LIKE ? OR COALESCE(e.siglas,\'\') LIKE ? OR COALESCE(v.placa,\'\') LIKE ?)';
+            array_push($params, $like, $like, $like, $like, $like, $like, $like, $like, $like);
         }
 
         $sql .= ' ORDER BY o.anio DESC, o.numero DESC LIMIT 300';
@@ -693,6 +784,10 @@ final class OficioRepository
         if ($this->columnExists('oficios', 'categoria')) {
             $columns[] = 'categoria';
             $values[] = $payload['categoria'] ?? null;
+        }
+        if ($this->columnExists('oficios', 'creado_por')) {
+            $columns[] = 'creado_por';
+            $values[] = $payload['creado_por'] ?? null;
         }
         $placeholders = implode(',', array_fill(0, count($columns), '?'));
         $sql = 'INSERT INTO oficios (' . implode(',', $columns) . ') VALUES (' . $placeholders . ')';

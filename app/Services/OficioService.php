@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Repositories\OficioRepository;
+use App\Support\Auth;
 use InvalidArgumentException;
 
 final class OficioService
@@ -69,7 +70,8 @@ final class OficioService
     public function create(array $input): array
     {
         $payload = $this->payload($input, null);
-        $id = $this->repository->create($payload);
+        $payload['creado_por'] = (int) (Auth::user()['id'] ?? 0) ?: null;
+        $id = $this->repository->saveWithTemplate($payload, (string) ($payload['plantilla_nueva'] ?? ''));
         return ['id' => $id, 'numero' => $payload['numero'], 'anio' => $payload['anio']];
     }
 
@@ -79,7 +81,7 @@ final class OficioService
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
         $payload = $this->payload($input, $id);
-        $this->repository->update($id, $payload);
+        $this->repository->saveWithTemplate($payload, (string) ($payload['plantilla_nueva'] ?? ''), $id);
     }
 
     public function delete(int $id): void
@@ -171,7 +173,7 @@ final class OficioService
             throw new InvalidArgumentException('El numero de oficio es obligatorio.');
         }
         if ($motivo === '') {
-            throw new InvalidArgumentException('El motivo / contexto es obligatorio.');
+            throw new InvalidArgumentException('El asunto es obligatorio.');
         }
         if (!$this->repository->entidadExists($entidadId)) {
             throw new InvalidArgumentException('Selecciona una entidad de destino valida.');
@@ -202,6 +204,7 @@ final class OficioService
             'oficial_ano_id' => $oficialAnoId,
             'estado' => 'BORRADOR',
             'involucrado_persona_id' => null,
+            'creado_por' => (int) (Auth::user()['id'] ?? 0) ?: null,
         ]);
 
         return ['id' => $id, 'numero' => $numero, 'anio' => $anio];
@@ -604,7 +607,8 @@ final class OficioService
         $gradoCargoId = ($input['grado_cargo_id'] ?? '') !== '' ? (int) $input['grado_cargo_id'] : null;
         $tipo = strtoupper(trim((string) ($input['tipo'] ?? 'SOLICITAR')));
         $asuntoId = (int) ($input['asunto_id'] ?? 0);
-        $motivo = trim((string) ($input['motivo'] ?? ''));
+        $plantillaNombre = trim((string) ($input['plantilla_nombre'] ?? ''));
+        $motivo = trim((string) ($input['asunto_texto'] ?? $input['motivo'] ?? ''));
         $diligenciasSolicitadas = trim((string) ($input['diligencias_solicitadas'] ?? ''));
         $referencia = trim((string) ($input['referencia_texto'] ?? ''));
         $personaDestinoManual = trim((string) ($input['persona_destino_manual'] ?? ''));
@@ -626,26 +630,53 @@ final class OficioService
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new InvalidArgumentException('Tipo de asunto inválido.');
         }
-        if ($asuntoId <= 0) {
-            throw new InvalidArgumentException('Selecciona el asunto.');
+        if ($plantillaNombre === '' && $asuntoId <= 0) {
+            throw new InvalidArgumentException('Escribe o selecciona una plantilla/asunto.');
         }
-        $asuntoInfo = $this->repository->asuntoInfo($asuntoId);
-        if ($asuntoInfo === null) {
+        if (mb_strlen($plantillaNombre) > 160) {
+            throw new InvalidArgumentException('La plantilla admite hasta 160 caracteres.');
+        }
+        $asuntoInfo = $asuntoId > 0 ? $this->repository->asuntoInfo($asuntoId) : null;
+        if ($asuntoId > 0 && $asuntoInfo === null) {
             throw new InvalidArgumentException('El asunto seleccionado no existe.');
         }
+        if ($plantillaNombre !== '' && $asuntoInfo !== null && !$this->repository->sameAsuntoCatalogName((string) $asuntoInfo['nombre'], $plantillaNombre)) {
+            $asuntoId = 0;
+            $asuntoInfo = null;
+        }
+        if ($asuntoInfo === null && $plantillaNombre !== '') {
+            $asuntoInfo = $this->repository->findAsuntoByExactName($tipo, $plantillaNombre);
+            if ($asuntoInfo !== null) {
+                $asuntoId = (int) $asuntoInfo['id'];
+            }
+        }
+        $plantillaNueva = $asuntoInfo === null ? $plantillaNombre : '';
+        $asuntoInfo ??= ['nombre' => $plantillaNombre, 'detalle' => '', 'tipo' => $tipo];
         if (strtoupper((string) ($asuntoInfo['tipo'] ?? '')) !== $tipo) {
             throw new InvalidArgumentException('El asunto no corresponde al tipo seleccionado.');
         }
-        if ((int) ($asuntoInfo['entidad_id'] ?? 0) !== $entidadId) {
-            throw new InvalidArgumentException('El asunto no corresponde a la entidad destino seleccionada.');
-        }
-        if ($categoria === '') {
-            $categoria = $this->inferirCategoria((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+        if ($plantillaNombre !== '') {
+            $categoria = mb_substr($plantillaNombre, 0, 100, 'UTF-8');
+        } elseif ($categoria === '') {
+            $categoria = mb_substr((string) ($asuntoInfo['nombre'] ?? ''), 0, 100, 'UTF-8');
         }
         if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
         $asuntoRules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+        if (array_key_exists('asunto_texto', $input)) {
+            $motivo = preg_replace('/\s*\R\s*/u', ' ', $motivo) ?? $motivo;
+            if ($asuntoRules['requires_camara_range']) {
+                $desde = trim((string) ($input['camara_rango_desde'] ?? ''));
+                $hasta = trim((string) ($input['camara_rango_hasta'] ?? ''));
+                if (($desde !== '' || $hasta !== '') && (!preg_match('/^\d{2}:\d{2}$/D', $desde) || !preg_match('/^\d{2}:\d{2}$/D', $hasta))) {
+                    throw new InvalidArgumentException('Completa ambas horas del rango de cámaras.');
+                }
+                if ($desde !== '' && $hasta !== '') {
+                    $motivo .= "\nRango solicitado: entre las {$desde} hasta las {$hasta}.";
+                }
+            }
+        }
         if ($asuntoRules['requires_fallecido'] && $personaInvId === null) {
             throw new InvalidArgumentException('Selecciona la persona fallecida para este asunto.');
         }
@@ -662,7 +693,7 @@ final class OficioService
             throw new InvalidArgumentException('Selecciona el nombre oficial del año.');
         }
         if ($motivo === '') {
-            throw new InvalidArgumentException('El motivo es obligatorio.');
+            throw new InvalidArgumentException('El asunto es obligatorio.');
         }
         if ($vehiculoId !== null && !$this->repository->vehiculoBelongsAccidente($accidenteId, $vehiculoId)) {
             throw new InvalidArgumentException('El vehículo involucrado no pertenece al accidente seleccionado.');
@@ -699,6 +730,8 @@ final class OficioService
             'persona_destino_manual' => ($personaId === null && $personaDestinoManual !== '') ? $personaDestinoManual : null,
             'grado_cargo_id' => $gradoCargoId,
             'asunto_id' => $asuntoId,
+            'plantilla_nueva' => $plantillaNueva,
+            'tipo' => $tipo,
             'categoria' => $categoria !== '' ? $categoria : null,
             'motivo' => $motivo,
             'diligencias_solicitadas' => $diligenciasSolicitadas !== '' ? $diligenciasSolicitadas : null,

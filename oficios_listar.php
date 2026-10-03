@@ -5,6 +5,7 @@ require __DIR__ . '/db.php';
 
 use App\Repositories\OficioRepository;
 use App\Services\OficioService;
+use App\Support\OficioContenido;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -97,6 +98,22 @@ function normalize_match_text(?string $value): string
     ]);
     $text = preg_replace('/[^a-z0-9]+/', ' ', $text) ?? $text;
     return trim(preg_replace('/\s+/', ' ', $text) ?? $text);
+}
+
+function registrante_breve(array $row): string
+{
+    $nombre = trim((string) ($row['registrante_nombre'] ?? ''));
+    if ($nombre === '') return 'Sin registro';
+    $partes = preg_split('/\s+/u', $nombre) ?: [];
+    $apellido = '';
+    foreach ($partes as $parte) {
+        if (mb_strlen($parte, 'UTF-8') > 1 && $parte === mb_strtoupper($parte, 'UTF-8') && preg_match('/\p{L}/u', $parte)) {
+            $apellido = $parte;
+            break;
+        }
+    }
+    if ($apellido === '') $apellido = $partes[count($partes) >= 3 ? count($partes) - 2 : count($partes) - 1] ?? $nombre;
+    return trim((string) ($row['registrante_grado'] ?? '') . ' ' . mb_strtoupper($apellido, 'UTF-8'));
 }
 
 $estadoStats = array_fill_keys($ctx['estados'], 0);
@@ -272,14 +289,15 @@ body{background:var(--page);color:var(--text);font-size:13px}
 .table-area{padding:0 14px 14px}
 .table-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 0 9px}
 .table-shell{border:1px solid var(--border);border-radius:14px;overflow:auto;background:var(--card)}
-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1120px;table-layout:fixed}
-thead th:nth-child(1){width:10%}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:1320px;table-layout:fixed}
+thead th:nth-child(1){width:9%}
 thead th:nth-child(2){width:9%}
-thead th:nth-child(3){width:19%}
-thead th:nth-child(4){width:26%}
-thead th:nth-child(5){width:9%}
-thead th:nth-child(6){width:12%}
-thead th:nth-child(7){width:15%}
+thead th:nth-child(3){width:9%}
+thead th:nth-child(4){width:14%}
+thead th:nth-child(5){width:27%}
+thead th:nth-child(6){width:14%}
+thead th:nth-child(7){width:10%}
+thead th:nth-child(8){width:8%}
 thead th{
   position:sticky;
   top:0;
@@ -313,6 +331,12 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
 .tools{gap:5px}
 .action-links{margin-top:6px;gap:5px;align-items:center;flex-wrap:nowrap}
 .action-links form{margin:0}
+.office-menu{position:relative}
+.office-menu summary{list-style:none;cursor:pointer;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--card-soft);font-weight:800;white-space:nowrap}
+.office-menu summary::-webkit-details-marker{display:none}
+.office-menu[open] .office-menu-body{position:absolute;right:calc(100% + 6px);top:0;z-index:5;width:250px;max-width:calc(100vw - 40px);padding:11px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+.office-menu .tools,.office-menu .action-links{display:flex;flex-wrap:wrap;margin-top:8px}
+.office-content{line-height:1.42;overflow-wrap:anywhere}
 .state{
   width:100%;
   min-width:105px;
@@ -513,19 +537,20 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
         <table>
           <thead>
             <tr>
-              <th>SIDPOL</th>
               <th>N&uacute;mero</th>
-              <th>Categoría / Entidad / Asunto</th>
-              <th>Referencia</th>
               <th>Fecha</th>
-              <th>Estado</th>
+              <th>Tipo de asunto</th>
+              <th>Categoría</th>
+              <th>Contenido</th>
+              <th>Entidad de destino</th>
+              <th>Registrado por</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <?php if (!$rows): ?>
               <tr>
-                <td colspan="7">
+                <td colspan="8">
                   <div class="empty">
                     <strong>No hay resultados para los filtros aplicados.</strong>
                     <div class="small" style="margin-top:8px;">Prueba limpiando filtros o usando una b&uacute;squeda m&aacute;s amplia.</div>
@@ -546,40 +571,31 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 $isInformacionCertificadoUper = str_contains($txt, 'informacion') && str_contains($txt, 'certificado');
                 $isInformacionDiligencias = str_contains($txt, 'informacion') && str_contains($txt, 'diligenc');
                 $isInformeMedico = str_contains($txt, 'informe') && str_contains($txt, 'medico');
-                $referenciaFull = trim((string) ($row['detalle'] ?? ''));
-                $referenciaCorta = $referenciaFull !== '' ? mb_strimwidth($referenciaFull, 0, 110, '...') : '-';
-                $vehiculo = trim((string) (($row['veh_ut'] ?? '') . ' ' . ($row['veh_placa'] ?? '')));
+                $contenido = OficioContenido::componer($row);
               ?>
               <tr>
-                <td data-label="SIDPOL">
-                  <div class="sidpol-main"><?= h($row['registro_sidpol'] ?: '-') ?></div>
-                  <div class="sidpol-sub">Acc. <?= h($row['accid'] ?: '-') ?></div>
-                </td>
                 <td data-label="N&uacute;mero">
                   <div class="numero-main"><?= h($row['numero']) ?>/<?= h($row['anio']) ?></div>
-                  <div class="muted">ID <?= h($row['id']) ?></div>
-                </td>
-                <td data-label="Entidad / Asunto">
-                  <div class="cell-subtitle"><?= h($row['categoria'] ?: 'Sin categoría') ?></div>
-                  <div class="cell-title"><?= h($row['entidad'] ?: ($row['persona_destino_manual'] ?: '-')) ?></div>
-                  <div class="cell-subtitle"><?= h($row['asunto_nombre'] ?: '-') ?></div>
-                  <?php if ($vehiculo !== ''): ?><div class="cell-subtitle">Veh&iacute;culo: <?= h($vehiculo) ?></div><?php endif; ?>
-                </td>
-                <td data-label="Referencia">
-                  <div class="ref-text" title="<?= h($referenciaFull !== '' ? $referenciaFull : '-') ?>"><?= h($referenciaCorta) ?></div>
                 </td>
                 <td data-label="Fecha">
                   <div class="cell-title"><?= h(format_display_date((string) ($row['fecha_emision'] ?? ''))) ?></div>
-                  <div class="cell-subtitle"><?= h((string) ($row['fecha_emision'] ?? '')) ?></div>
                 </td>
-                <td data-label="Estado">
-                  <select class="state js-state" data-id="<?= h($row['id']) ?>">
-                    <?php foreach ($ctx['estados'] as $item): ?>
-                      <option value="<?= h($item) ?>" <?= (string) ($row['estado'] ?? '') === $item ? 'selected' : '' ?>><?= h($item) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </td>
+                <td data-label="Tipo de asunto"><?= h($row['asunto_tipo'] === 'REMITIR' ? 'Remite' : 'Solicita') ?></td>
+                <td data-label="Categoría"><?= h($row['categoria'] ?: ($row['asunto_nombre'] ?: '-')) ?></td>
+                <td data-label="Contenido"><div class="office-content"><?= h($contenido !== '' ? $contenido : ($row['asunto_nombre'] ?: '-')) ?></div></td>
+                <td data-label="Entidad de destino"><?= h($row['entidad'] ?: ($row['persona_destino_manual'] ?: '-')) ?></td>
+                <td data-label="Registrado por"><?= h(registrante_breve($row)) ?></td>
                 <td data-label="Acciones">
+                  <details class="office-menu">
+                    <summary>Acciones ▾</summary>
+                    <div class="office-menu-body">
+                    <div class="small">Estado</div>
+                    <select class="state js-state" data-id="<?= h($row['id']) ?>">
+                      <?php foreach ($ctx['estados'] as $item): ?>
+                        <option value="<?= h($item) ?>" <?= (string) ($row['estado'] ?? '') === $item ? 'selected' : '' ?>><?= h($item) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                    <div class="small" style="margin-top:7px;">SIDPOL <?= h($row['registro_sidpol'] ?: '-') ?> · Acc. <?= h($row['accid'] ?: '-') ?></div>
                   <div class="tools">
                     <?php if ($isCamaraVideo): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_camaras.php?oficio_id=<?= h($row['id']) ?>">&#128249; Camara</a><?php endif; ?>
                     <?php if ($isRemitir): ?><a class="tool" target="_blank" rel="noopener" href="oficio_remitir_diligencia.php?oficio_id=<?= h($row['id']) ?><?= !empty($row['accid']) ? '&accidente_id=' . h($row['accid']) : '' ?>">Remitir</a><?php endif; ?>
@@ -601,6 +617,8 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                       <button class="btn sm danger" type="submit">Eliminar</button>
                     </form>
                   </div>
+                    </div>
+                  </details>
                 </td>
               </tr>
             <?php endforeach; ?>

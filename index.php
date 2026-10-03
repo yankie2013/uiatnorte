@@ -8,17 +8,20 @@ use App\Repositories\DashboardRepository;
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 $yo = $_SESSION['user'];
+$archiveDashboard = in_array(\App\Support\Access::role(), ['secretaria', 'administracion'], true);
 $now = new DateTimeImmutable('now', new DateTimeZone('America/Lima'));
 $yearInput = is_string($_GET['anio'] ?? null) ? $_GET['anio'] : '';
 $year = preg_match('/^[1-9][0-9]{3}$/D', $yearInput) ? (int)$yearInput : null;
 $years = [];
 $data = null;
+$archiveData = null;
 $error = false;
 try {
     $repository = new DashboardRepository(Database::connection());
-    $years = $repository->years();
+    $years = $repository->years($archiveDashboard);
     if ($year !== null && !in_array($year, $years, true)) $year = null;
-    $data = $repository->snapshot($year);
+    $data = $repository->snapshot($year, $archiveDashboard);
+    if ($archiveDashboard) $archiveData = $repository->archiveSnapshot($year);
 } catch (Throwable $e) {
     error_log('Dashboard read failed: ' . $e->getMessage());
     $error = true;
@@ -77,7 +80,7 @@ $axisMax = $tick * 4;
 <meta name="theme-color" content="#163c31">
 <title>Panel de gestión · DIVPIAT Lima Norte</title>
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="assets/css/dashboard.css?v=1">
+<link rel="stylesheet" href="assets/css/dashboard.css?v=<?= filemtime(__DIR__ . '/assets/css/dashboard.css') ?>">
 
 </head>
 <body class="uiat-dashboard">
@@ -111,10 +114,40 @@ $axisMax = $tick * 4;
         <div class="topbar-right"><a class="search-link" href="<?= dh(dlink()) ?>"><?= di('search') ?><span>Buscar expediente</span></a><details class="uiat-user-menu"><summary class="profile" aria-label="Cuenta: <?= dh($name) ?>"><span class="avatar"><?= dh($initial) ?></span><div><strong><?= dh($name) ?></strong><small><?= dh(\App\Support\Access::ROLES[(string)($yo['rol'] ?? '')] ?? 'Personal autorizado') ?></small></div></summary><div class="uiat-user-menu-panel"><a href="logout.php">Cerrar sesión</a></div></details></div>
     </header>
     <main id="main">
-        <div class="page-heading"><div><div class="greeting"><?= dh($greeting) ?>, <?= dh($name) ?></div><h1>Panorama de investigaciones<span>.</span></h1><p><?= \App\Support\Access::admin() ? 'Todos los expedientes de Lima Norte.' : 'Expedientes asignados a tu espacio de trabajo.' ?> <a href="gestion_expedientes.php">Consulta general</a></p></div><a class="button primary" href="accidente_nuevo.php"><?= di('plus') ?> Registrar accidente</a></div>
+        <div class="page-heading"><div><div class="greeting"><?= dh($greeting) ?>, <?= dh($name) ?></div><h1><?= $archiveDashboard ? 'Panorama de expedientes' : 'Panorama de investigaciones' ?><span>.</span></h1><p><?= $archiveDashboard ? 'Resumen institucional de casos y archivo.' : (\App\Support\Access::admin() ? 'Todos los expedientes de Lima Norte.' : 'Expedientes asignados a tu espacio de trabajo.') ?> <a href="gestion_expedientes.php">Consulta general</a></p></div><?php if ($archiveDashboard): ?><a class="button primary" href="expedientes_recepcion.php"><?= di('folder') ?> Recepciones para archivo</a><?php else: ?><a class="button primary" href="accidente_nuevo.php"><?= di('plus') ?> Registrar accidente</a><?php endif; ?></div>
         <div class="scope-row"><div class="scope-label"><span class="live-dot <?= $error ? 'offline' : '' ?>"></span><?= $error ? 'Datos no disponibles' : 'Consultado a las ' . $now->format('H:i') ?> <span class="scope-date">· <?= $now->format('d/m/Y') ?></span></div><form class="period-form" method="get"><label for="year"><?= di('calendar') ?> Año del accidente</label><select id="year" name="anio"><option value="">Todo el historial</option><?php foreach ($years as $option): ?><option value="<?= $option ?>" <?= $year === $option ? 'selected' : '' ?>><?= $option ?></option><?php endforeach; ?></select><button type="submit" class="apply-button">Aplicar</button></form></div>
         <?php if ($error): ?>
             <section class="error-panel" role="alert"><?= di('activity') ?><h2>No pudimos cargar el resumen</h2><p>La información no está disponible en este momento. Intenta actualizar la página.</p><a class="button primary" href="index.php">Volver a intentar</a></section>
+        <?php else: ?>
+        <?php if ($archiveDashboard): ?>
+        <?php $archiveCounts = $archiveData['counts']; ?>
+        <section class="kpi-grid archive-kpi-grid" aria-label="Indicadores institucionales de expedientes">
+          <?php foreach ([
+            ['total','folder','Casos vigentes','vigentes','Sin recepción de archivo aceptada'],
+            ['resolved','check','Casos resueltos','resueltos','Estado actual: resuelto'],
+            ['pending','clock','Casos pendientes','pendientes','Pendiente o con diligencias'],
+            ['process','book','Casos archivados','archivados','Recepción de archivo aceptada'],
+            ['pending','file','Por aceptar para archivo','por_aceptar',($archiveCounts['por_aceptar_mios'] ?? 0) . ' asignados a tu cuenta'],
+          ] as [$kind,$icon,$label,$key,$description]): ?>
+          <?php if ($key === 'por_aceptar'): ?><a class="kpi <?= $kind ?>" href="expedientes_recepcion.php"><?php else: ?><div class="kpi <?= $kind ?>"><?php endif; ?>
+            <div class="kpi-top"><span><?= dh($label) ?></span><span class="kpi-icon"><?= di($icon) ?></span></div>
+            <div class="kpi-value"><?= dn($archiveCounts[$key] ?? 0) ?></div>
+            <div class="kpi-bottom"><span><?= dh($description) ?></span><?php if ($key === 'por_aceptar') echo di('arrow'); ?></div>
+          <?= $key === 'por_aceptar' ? '</a>' : '</div>' ?>
+          <?php endforeach; ?>
+        </section>
+        <div class="archive-grid">
+          <section class="panel district-panel" aria-labelledby="archive-district-title"><div class="panel-heading"><div><h2 id="archive-district-title">Accidentes por distrito</h2><p>Total institucional según el año del accidente</p></div><?= di('map', 'muted') ?></div>
+            <?php if ($data['districts']): ?><div class="district-list"><?php foreach ($data['districts'] as $district): ?><div class="district-row"><div><span><?= dh($district['label']) ?></span><strong><?= dn($district['total']) ?> <small><?= dp((int)$district['total'], $total) ?></small></strong></div><div class="district-track"><i style="width:<?= $total ? (int)$district['total'] * 100 / $total : 0 ?>%"></i></div></div><?php endforeach; ?></div><?php else: ?><div class="empty-state"><p>Sin accidentes para mostrar.</p></div><?php endif; ?>
+          </section>
+          <section class="panel archive-history-panel" aria-labelledby="archive-history-title"><div class="panel-heading"><div><h2 id="archive-history-title">Historial de casos</h2><p>Registros, resoluciones y archivos por mes · <?= $year === null ? 'Todo el historial' : 'Accidentes de ' . $year ?></p></div><span class="small-tag">Por fecha del evento</span></div>
+            <?php if ($archiveData['history'] || $archiveData['undated_resolved']): ?><div class="table-scroll"><table><thead><tr><th>Mes</th><th>Registrados</th><th>Resueltos</th><th>Archivados</th></tr></thead><tbody><?php foreach (array_reverse($archiveData['history'], true) as $period => $values): ?><tr><td><strong><?= dh($period) ?></strong></td><td><?= dn($values['Registrado']) ?></td><td><?= dn($values['Resuelto']) ?></td><td><?= dn($values['Archivado']) ?></td></tr><?php endforeach; ?><?php if ($archiveData['undated_resolved']): ?><tr><td><strong>Sin fecha registrada</strong></td><td>—</td><td><?= dn($archiveData['undated_resolved']) ?></td><td>—</td></tr><?php endif; ?></tbody></table></div><?php else: ?><div class="empty-state"><p>Sin eventos para mostrar.</p></div><?php endif; ?>
+            <p class="archive-history-note">Las resoluciones históricas se muestran cuando existe un cambio de estado con fecha registrada.</p>
+          </section>
+        </div>
+        <section class="panel archive-events-panel" aria-labelledby="archive-events-title"><div class="panel-heading"><div><h2 id="archive-events-title">Actividad reciente</h2><p>Nuevos casos registrados, resueltos y archivados</p></div></div>
+          <?php if ($archiveData['events']): ?><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Expediente</th><th>Distrito</th><th></th></tr></thead><tbody><?php foreach ($archiveData['events'] as $event): ?><tr><td><?= ddate($event['at']) ?></td><td><span class="status <?= $event['kind'] === 'Archivado' ? 'process' : ($event['kind'] === 'Resuelto' ? 'resolved' : 'pending') ?>"><i></i><?= dh($event['kind']) ?></span></td><td><?= dh($event['sidpol'] ?: 'Expediente #' . $event['id']) ?></td><td><?= dh($event['district']) ?></td><td><a class="row-open" href="gestion_expedientes.php?id=<?= (int)$event['id'] ?>" aria-label="Consultar expediente <?= (int)$event['id'] ?>"><?= di('arrow') ?></a></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><div class="empty-state"><p>Sin actividad reciente.</p></div><?php endif; ?>
+        </section>
         <?php else: ?>
         <section class="kpi-grid" aria-label="Indicadores del período seleccionado">
         <?php $cards = [
@@ -163,8 +196,9 @@ $axisMax = $tick * 4;
             </section>
         </div>
         <?php endif; ?>
-        <section class="quick-section" aria-labelledby="quick-title"><div class="quick-heading"><h2 id="quick-title">Tu trabajo, a un clic</h2><span>Accesos rápidos</span></div><div class="quick-grid"><?php foreach ([['folder','Explorar expedientes','Consulta y seguimiento',dlink()], ['people','Personas','Registro de involucrados','persona_listar.php'], ['car','Vehículos','Consulta del registro vehicular','vehiculo_listar.php'], ['file','Oficios','Documentación y comunicaciones','oficios_listar.php']] as [$icon,$label,$description,$url]): ?><a class="quick-card" href="<?= dh($url) ?>"><span class="quick-icon"><?= di($icon) ?></span><div><strong><?= dh($label) ?></strong><small><?= dh($description) ?></small></div><?= di('arrow') ?></a><?php endforeach; ?></div></section>
-        <footer class="page-footer"><span>DIVPIAT <b>/</b> Investigación de Accidentes de Tránsito · Lima Norte</span><details><summary>Acerca de los indicadores</summary><p>Fuente: expedientes de tu espacio de trabajo; el administrador ve el total institucional. Cada accidente cuenta una vez. El filtro usa la fecha del accidente; los estados corresponden a su situación actual. Los porcentajes se calculan sobre el total filtrado. Los registros recientes se ordenan por fecha de creación. Los datos se consultan al cargar o actualizar esta página.</p></details></footer>
+        <?php endif; ?>
+        <section class="quick-section" aria-labelledby="quick-title"><div class="quick-heading"><h2 id="quick-title">Tu trabajo, a un clic</h2><span>Accesos rápidos</span></div><div class="quick-grid"><?php foreach ($archiveDashboard ? [['folder','Consultar expedientes','Búsqueda institucional','gestion_expedientes.php'], ['book','Recepción para archivo','Pendientes de aceptar','expedientes_recepcion.php'], ['file','Oficios','Documentación y comunicaciones','oficios_listar.php'], ['map','Mapa de accidentes','Distribución territorial','accidente_mapa.php']] : [['folder','Explorar expedientes','Consulta y seguimiento',dlink()], ['people','Personas','Registro de involucrados','persona_listar.php'], ['car','Vehículos','Consulta del registro vehicular','vehiculo_listar.php'], ['file','Oficios','Documentación y comunicaciones','oficios_listar.php']] as [$icon,$label,$description,$url]): ?><a class="quick-card" href="<?= dh($url) ?>"><span class="quick-icon"><?= di($icon) ?></span><div><strong><?= dh($label) ?></strong><small><?= dh($description) ?></small></div><?= di('arrow') ?></a><?php endforeach; ?></div></section>
+        <footer class="page-footer"><span>DIVPIAT <b>/</b> Investigación de Accidentes de Tránsito · Lima Norte</span><details><summary>Acerca de los indicadores</summary><p><?= $archiveDashboard ? 'Fuente: expedientes institucionales activos. Cada caso cuenta una vez. Vigentes excluye los recibidos en Archivo; pendientes incluye los que tienen diligencias. El filtro utiliza la fecha del accidente. El historial usa la fecha registrada de cada evento; las resoluciones antiguas sin fecha de cambio no se inventan.' : 'Fuente: expedientes de tu espacio de trabajo; el administrador ve el total institucional. Cada accidente cuenta una vez. El filtro usa la fecha del accidente; los estados corresponden a su situación actual. Los porcentajes se calculan sobre el total filtrado. Los registros recientes se ordenan por fecha de creación. Los datos se consultan al cargar o actualizar esta página.' ?></p></details></footer>
     </main>
 </div>
 </div>

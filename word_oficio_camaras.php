@@ -17,6 +17,7 @@ require __DIR__.'/db.php';
 require_once __DIR__.'/vendor/autoload.php';
 
 use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
+use App\Support\OficioContenido;
 
 // Silenciar salida de errores al navegador (para no corromper el DOCX)
 ini_set('display_errors', 0);
@@ -171,6 +172,10 @@ $tpl = new TemplateProcessor($plantilla);
 
 /* -------------------- Set valores (marcadores) -------------------- */
 $rangoCamara = extraer_rango_camaras($of['motivo'] ?? '');
+$asuntoExportado = OficioContenido::componer([
+  'motivo' => $of['motivo'] ?? '',
+  'asunto_nombre' => $of['asunto_nombre'] ?? '',
+]);
 $modalidadNombre = lista_espanol(explode('||', (string) ($of['modalidad_nombre'] ?? '')));
 $consecuenciaNombre = lista_espanol(explode('||', (string) ($of['consecuencia_nombre'] ?? '')));
 
@@ -179,7 +184,8 @@ $tpl->setValue('oficio_numero',        h($of['numero']));
 $tpl->setValue('oficio_anio',          h($of['anio']));
 $tpl->setValue('oficio_fecha',         fecha_larga($of['fecha_emision']));
 $tpl->setValue('oficio_fecha_abrev',   fecha_abrev($of['fecha_emision']));
-$tpl->setValue('oficio_motivo',        h($of['motivo']));
+$tpl->setValue('oficio_motivo',        h($asuntoExportado));
+$tpl->setValue('oficio_asunto',       h($asuntoExportado));
 $tpl->setValue('oficio_rango_camaras', h($rangoCamara['texto']));
 $tpl->setValue('oficio_rango_desde',   h($rangoCamara['desde']));
 $tpl->setValue('oficio_rango_hasta',   h($rangoCamara['hasta']));
@@ -222,7 +228,7 @@ $tpl->setValue('oficio_entidad_linea', h($linea));
 $tpl->setValue('entidad_linea', h($linea));
 
 /* Asunto */
-$tpl->setValue('asunto_nombre',  h($of['asunto_nombre']));
+$tpl->setValue('asunto_nombre',  h($asuntoExportado));
 $tpl->setValue('asunto_detalle', h($of['asunto_detalle']));
 
 /* Accidente (si aplica) */

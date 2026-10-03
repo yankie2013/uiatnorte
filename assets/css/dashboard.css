@@ -92,6 +92,17 @@ h1>span { color: #b49b5e; }
 .kpi.total .kpi-bottom { color: #a4bdae; }
 .kpi.resolved .kpi-icon,.kpi.resolved .kpi-ratio { background: #eaf4ed; color: #508763; }
 .kpi.process .kpi-icon,.kpi.process .kpi-ratio { background: #edf1f8; color: #7185a4; }
+.archive-kpi-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.archive-kpi-grid .kpi { min-height: 178px; display: flex; flex-direction: column; justify-content: space-between; }
+.archive-kpi-grid .kpi-value { margin-top: 10px; }
+.archive-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 20px; margin-top: 22px; align-items: start; }
+.archive-grid .district-list { max-height: 465px; overflow-y: auto; }
+.archive-history-panel .table-scroll { max-height: 430px; overflow-y: auto; }
+.archive-history-panel table { min-width: 400px; }
+.archive-history-note { margin: 0; padding: 13px 24px 20px; color: #73816e; font-size: 11px; line-height: 1.5; }
+.archive-events-panel { margin-top: 22px; }
+.archive-events-panel .table-scroll { padding-bottom: 22px; }
+.archive-events-panel table { min-width: 560px; }
 .charts-grid { display: grid; grid-template-columns: minmax(0,1.8fr) minmax(0,1fr); gap: 20px; margin-top: 22px; }
 .panel { min-width: 0; background: #fff; border: 1px solid var(--border); border-radius: 15px; box-shadow: 0 3px 9px #223b2b02; overflow: hidden; }
 .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 23px 24px 0; }
@@ -197,6 +208,7 @@ td:nth-child(2) { white-space: nowrap; }
   .donut>div { width: 139px; height: 139px; }
 }
 @media(max-width:1250px) {
+  .archive-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .app-layout { grid-template-columns: 210px minmax(0,1fr); }
   .sidebar { padding: 25px 14px 18px; }
   main { padding: 28px 25px 20px; }
@@ -214,6 +226,8 @@ td:nth-child(2) { white-space: nowrap; }
   .quick-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media(max-width:1020px) {
+  .archive-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .archive-grid { grid-template-columns: 1fr; }
   .app-layout { grid-template-columns: 190px minmax(0,1fr); }
   .brand { gap: 9px; }
   .brand strong { font-size: 18px; }
@@ -295,6 +309,7 @@ td:nth-child(2) { white-space: nowrap; }
   .page-footer details { text-align: left; }
 }
 @media(max-width:370px) {
+  .archive-kpi-grid { grid-template-columns: 1fr; }
   main { padding-inline: 14px; }
   .kpi-grid { gap: 9px; }
   .kpi { padding: 15px 12px; }

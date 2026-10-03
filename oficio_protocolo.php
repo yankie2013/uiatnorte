@@ -21,6 +21,7 @@ if (!class_exists(\PhpOffice\PhpWord\TemplateProcessor::class) && file_exists(__
 }
 
 use App\Support\ResponsibleTemplateProcessor as TemplateProcessor;
+use App\Support\OficioContenido;
 
 if (!class_exists(TemplateProcessor::class)) {
     http_response_code(500);
@@ -169,6 +170,11 @@ $apPat=$fallecido['apellido_paterno']??'';
 $apMat=$fallecido['apellido_materno']??'';
 $nombres=$fallecido['nombres']??'';
 $docu=trim(($fallecido['tipo_doc']??'').' '.($fallecido['num_doc']??''));
+$asuntoExportado = OficioContenido::componer([
+  'motivo' => $of['motivo'] ?? '',
+  'asunto_nombre' => $of['asunto_nombre'] ?? '',
+  'persona_nombre' => trim("$nombres $apPat $apMat"),
+]);
 $edad=edad_anios($fallecido['fecha_nacimiento']??'', $of['fecha_accidente']??$of['fecha_emision']);
 
 // -------------------- Cargar plantilla
@@ -181,11 +187,12 @@ $tpl->setValue('oficio_numero',h($of['numero']));
 $tpl->setValue('oficio_anio',h($of['anio']));
 $tpl->setValue('oficio_fecha',fecha_larga($of['fecha_emision']));
 $tpl->setValue('oficio_fecha_abrev',fecha_abrev($of['fecha_emision']));
-$tpl->setValue('oficio_motivo',h($of['motivo']));
+$tpl->setValue('oficio_motivo',h($asuntoExportado));
+$tpl->setValue('oficio_asunto',h($asuntoExportado));
 $tpl->setValue('oficio_referencia',h($of['referencia_texto']));
 $tpl->setValue('entidad_nombre',h($of['entidad_nombre']));
 $tpl->setValue('entidad_siglas',h($of['entidad_siglas']));
-$tpl->setValue('asunto_nombre',h($of['asunto_nombre']));
+$tpl->setValue('asunto_nombre',h($asuntoExportado));
 $tpl->setValue('asunto_detalle',h($of['asunto_detalle']));
 $tpl->setValue('nombre_oficial_ano',h($nombreOficialAno));
 

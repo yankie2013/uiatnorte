@@ -6,6 +6,7 @@ require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\OficioRepository;
 use App\Services\OficioService;
+use App\Support\OficioContenido;
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -101,8 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'persona_destino_manual' => $_POST['persona_destino_manual'] ?? '',
         'tipo' => $_POST['tipo'] ?? 'SOLICITAR',
         'asunto_id' => $_POST['asunto_id'] ?? '',
+        'plantilla_nombre' => $_POST['plantilla_nombre'] ?? '',
         'categoria' => $_POST['categoria'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
+        'asunto_texto' => $_POST['asunto_texto'] ?? '',
+        'camara_rango_desde' => $_POST['camara_rango_desde'] ?? '',
+        'camara_rango_hasta' => $_POST['camara_rango_hasta'] ?? '',
         'diligencias_solicitadas' => $_POST['diligencias_solicitadas'] ?? '',
         'referencia_texto' => $_POST['referencia_texto'] ?? '',
         'involucrado_vehiculo_id' => $_POST['involucrado_vehiculo_id'] ?? '',
@@ -150,11 +155,23 @@ $entidadActual = (int) ($data['entidad_id'] ?: 0);
 $tipoActual = (string) ($data['tipo'] ?: 'SOLICITAR');
 $subentidadesActuales = $entidadActual > 0 ? $service->subentidades($entidadActual) : [];
 $personasActuales = $entidadActual > 0 ? $service->personas($entidadActual) : [];
-$asuntosActuales = $entidadActual > 0 ? $service->asuntos($entidadActual, $tipoActual) : [];
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $plantillasAsunto = $service->asuntosCatalogo(!empty($data['asunto_id']) ? (int) $data['asunto_id'] : null);
 $asuntoActualInfo = !empty($data['asunto_id']) ? $service->asuntoInfo((int) $data['asunto_id']) : null;
+$plantillaNombreActual = trim((string) ($data['plantilla_nombre'] ?? ($asuntoActualInfo['nombre'] ?? '')));
+$asuntoTextoActual = trim((string) ($data['asunto_texto'] ?? OficioContenido::asuntoBase((string) ($data['motivo'] ?? ''))));
+[$camaraDesdeInicial, $camaraHastaInicial] = OficioContenido::rango((string) ($data['motivo'] ?? ''));
+$camaraDesdeInicial = (string) ($data['camara_rango_desde'] ?? $camaraDesdeInicial);
+$camaraHastaInicial = (string) ($data['camara_rango_hasta'] ?? $camaraHastaInicial);
+if (!isset($data['plantilla_nombre']) && $asuntoActualInfo !== null) {
+    foreach ($plantillasAsunto as $plantilla) {
+        if (in_array((int) $data['asunto_id'], $plantilla['ids'], true)) {
+            $plantillaNombreActual = (string) $plantilla['nombre'];
+            break;
+        }
+    }
+}
 $asuntoActualMatch = mb_strtolower((string) (($asuntoActualInfo['nombre'] ?? '') . ' ' . ($asuntoActualInfo['detalle'] ?? '')), 'UTF-8');
 $asuntoActualMatch = strtr($asuntoActualMatch, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n']);
 $showVehiculoInicial = (str_contains($asuntoActualMatch, 'peritaje') && str_contains($asuntoActualMatch, 'constat'))
@@ -299,13 +316,6 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <?= case_summary_widget_render($caseSummaryContext, 'oficio-nuevo') ?>
     </div>
     <div class="toolbar">
-      <?php if ($embed): ?>
-        <button class="btn" type="button" onclick="try{window.parent&&window.parent.postMessage({type:'oficio.close'},'*');}catch(e){}">Cerrar</button>
-      <?php else: ?>
-        <button class="btn" type="button" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) $preselectedAccidenteId ?>&tab=documentos';}">← Volver atrás</button>
-        <a class="btn" href="index.php">Ir al panel</a>
-        <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
-      <?php endif; ?>
       <button class="btn" type="button" onclick="if(window.history.length>1){window.history.back();}else{window.location.href='accidente_vista_tabs.php?accidente_id=<?= (int) $preselectedAccidenteId ?>&tab=documentos';}">← Volver atrás</button>
       <a class="btn" href="index.php">Ir al panel</a>
       <a class="btn primary" id="linkListado" href="<?= h($listarHref) ?>">Ver listado</a>
@@ -324,50 +334,23 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <div class="office-accordion-body grid">
       <input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>">
 
-      <div class="c4">
-        <label for="tipo">Tipo de asunto*</label>
-        <select name="tipo" id="tipo" required>
-          <?php foreach ($ctx['tipos'] as $tipo): ?>
-            <option value="<?= h($tipo) ?>" <?= $data['tipo'] === $tipo ? 'selected' : '' ?>><?= h($tipo === 'REMITIR' ? 'Remite' : 'Solicita') ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="c12">
-        <label for="categoria">Categoría</label>
-        <div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias_documento']), JSON_UNESCAPED_UNICODE)) ?>">
-          <input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar una categoría" role="combobox" aria-autocomplete="list" aria-expanded="false">
-        </div>
-      </div>
-
-      <div class="c12">
-        <label for="plantilla_asunto_id">Plantilla / asunto base</label>
-        <select id="plantilla_asunto_id">
-          <option value="">Selecciona una plantilla para cargar la ultima configuracion usada</option>
-          <?php foreach ($plantillasAsunto as $plantilla): ?>
-            <option value="<?= h($plantilla['id']) ?>" <?= (string) $data['asunto_id'] === (string) $plantilla['id'] ? 'selected' : '' ?>><?= h($plantilla['nombre']) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div class="combo-hint" id="plantillaHint">Al elegir una plantilla se rellenan entidad, cargo y persona con el ultimo uso del mismo asunto. Puedes cambiar cualquier campo antes de guardar.</div>
-      </div>
-
       <div class="c2">
-        <label>Año*</label>
+        <label for="anio_oficio">Año*</label>
         <input type="number" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>" required>
       </div>
       <div class="c3">
-        <label>Número*</label>
+        <label for="numero_oficio">Número*</label>
         <div class="field-row">
           <input type="number" name="numero_oficio" id="numero_oficio" value="<?= h($data['numero_oficio']) ?>" placeholder="Correlativo">
           <button class="btn mini" type="button" onclick="recalcularNumero()">↻</button>
         </div>
       </div>
       <div class="c3">
-        <label>Fecha de emisión*</label>
+        <label for="fecha_emision">Fecha de emisión*</label>
         <input type="date" name="fecha_emision" id="fecha_emision" value="<?= h($data['fecha_emision']) ?>" required>
       </div>
       <div class="c4">
-        <label>Nombre oficial del año*</label>
+        <label for="oficial_ano_id">Nombre oficial del año*</label>
         <div class="field-row">
           <select name="oficial_ano_id" id="oficial_ano_id" required>
             <option value="">Selecciona</option>
@@ -379,6 +362,24 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <button class="btn mini" type="button" onclick="openCreate('ano')">+</button>
         </div>
       </div>
+
+      <div class="c4">
+        <label for="tipo">Tipo de asunto*</label>
+        <select name="tipo" id="tipo" required>
+          <?php foreach ($ctx['tipos'] as $tipo): ?>
+            <option value="<?= h($tipo) ?>" <?= $data['tipo'] === $tipo ? 'selected' : '' ?>><?= h($tipo === 'REMITIR' ? 'Remite' : 'Solicita') ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="c8">
+        <label for="plantilla_nombre">Categoría / plantilla*</label>
+        <div class="category-combobox" data-creatable-combobox data-filter-select="#tipo" data-options="<?= h(json_encode(array_map(static fn(array $item): array => ['label' => $item['nombre'], 'search' => $item['busqueda'], 'tipo' => $item['tipo']], $plantillasAsunto), JSON_UNESCAPED_UNICODE)) ?>">
+          <input id="plantilla_nombre" type="text" name="plantilla_nombre" value="<?= h($plantillaNombreActual) ?>" maxlength="160" autocomplete="off" placeholder="Escribe para buscar o crear una plantilla" role="combobox" aria-autocomplete="list" aria-expanded="false" required>
+        </div>
+        <div class="combo-hint" id="plantillaHint">Busca por nombre o contenido. Si no existe, el texto escrito se guardará como una plantilla nueva.</div>
+      </div>
+
     </div>
     </section>
 
@@ -451,29 +452,13 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
       <div class="office-accordion-body grid">
+      <input type="hidden" name="asunto_id" id="asunto_id" value="<?= h($data['asunto_id']) ?>">
       <div class="c12">
-        <label>Asunto*</label>
-        <div class="field-row">
-          <select name="asunto_id" id="asunto_id" required>
-            <option value="">Selecciona el asunto</option>
-            <?php foreach ($asuntosActuales as $asunto): ?>
-              <option value="<?= h($asunto['id']) ?>" <?= (string) $data['asunto_id'] === (string) $asunto['id'] ? 'selected' : '' ?>><?= h($asunto['nombre']) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <button class="btn mini" type="button" onclick="openCreate('asunto')">+</button>
+        <label for="asunto_texto">Asunto*</label>
+        <div class="category-combobox" id="asuntoCombobox" data-creatable-combobox data-options="[]">
+          <input type="text" name="asunto_texto" id="asunto_texto" value="<?= h($asuntoTextoActual) ?>" maxlength="500" required autocomplete="off" placeholder="Escribe o selecciona un asunto" role="combobox" aria-autocomplete="list" aria-expanded="false">
         </div>
-        <div class="muted">Este selector muestra solo los asuntos registrados para la entidad destino seleccionada.</div>
-      </div>
-
-      <div class="c12">
-        <div id="asuntoPreview" class="preview" style="display:none;">
-          <h4 id="asuntoNombre"></h4>
-          <div class="field-row" id="asuntoVarBox" style="display:none; margin:0 0 .6rem 0;">
-            <label style="margin:0;">Variante</label>
-            <select id="asuntoVarSelect"></select>
-          </div>
-          <div id="asuntoDetalle"></div>
-        </div>
+        <div class="combo-hint">Puedes cambiarlo. Al guardar, el nuevo texto quedará disponible para esta categoría / plantilla.</div>
       </div>
 
       <div class="c12" id="camaraRangoBox" style="display:none;">
@@ -482,21 +467,16 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <div class="field-row" style="margin-bottom:10px; flex-wrap:wrap;">
             <div style="flex:1 1 220px;">
               <label for="camara_rango_desde">Entre las</label>
-              <input type="time" id="camara_rango_desde">
+              <input type="time" name="camara_rango_desde" id="camara_rango_desde" value="<?= h($camaraDesdeInicial) ?>">
             </div>
             <div style="flex:1 1 220px;">
               <label for="camara_rango_hasta">Hasta las</label>
-              <input type="time" id="camara_rango_hasta">
+              <input type="time" name="camara_rango_hasta" id="camara_rango_hasta" value="<?= h($camaraHastaInicial) ?>">
             </div>
           </div>
-          <div class="muted">Al completar ambos campos se agregara al motivo una linea como: "Rango solicitado: entre las 08:00 hasta las 10:00".</div>
+          <div class="muted">El rango elegido se incorporará al asunto del oficio y al documento Word.</div>
           <div class="muted" style="margin-top:6px;">Marcadores disponibles en la plantilla Word: <strong>${oficio_rango_camaras}</strong>, <strong>${oficio_rango_desde}</strong> y <strong>${oficio_rango_hasta}</strong>.</div>
         </div>
-      </div>
-
-      <div class="c12">
-        <label>Motivo / contexto*</label>
-        <textarea name="motivo" id="motivo" required><?= h($data['motivo']) ?></textarea>
       </div>
 
       <div class="c12" id="diligenciasSolicitadasBox" style="display:none;">
@@ -585,7 +565,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
 <script>
 const accSel = document.getElementById('accidente_id');
-const plantillaSel = document.getElementById('plantilla_asunto_id');
+const plantillaInput = document.getElementById('plantilla_nombre');
+const plantillasCatalogo = <?= json_encode($plantillasAsunto, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+let lastPresetAsuntoId = String(<?= json_encode((string) ($data['asunto_id'] ?? '')) ?>);
 const plantillaHint = document.getElementById('plantillaHint');
 const entidadSel = document.getElementById('entidad_id');
 const entidadTextInp = document.getElementById('entidad_id_text');
@@ -596,7 +578,8 @@ const personaTextInp = document.getElementById('persona_id_text');
 const personaManualInp = document.getElementById('persona_destino_manual');
 const tipoSel = document.getElementById('tipo');
 const asuntoSel = document.getElementById('asunto_id');
-const motivoTxt = document.getElementById('motivo');
+const motivoTxt = document.getElementById('asunto_texto');
+const asuntoCombobox = document.getElementById('asuntoCombobox');
 const camaraRangoBox = document.getElementById('camaraRangoBox');
 const camaraRangoDesdeInp = document.getElementById('camara_rango_desde');
 const camaraRangoHastaInp = document.getElementById('camara_rango_hasta');
@@ -615,7 +598,7 @@ let personaItemsCache = <?= json_encode($personasActuales, JSON_UNESCAPED_UNICOD
 let lastEntidadLoaded = String(entidadSel ? (entidadSel.value || '') : '');
 let entidadSuggestions = [];
 let handlingInvalidField = false;
-let applyingPlantilla = false;
+let plantillaRequestSerial = 0;
 
 function openAccordionSection(section) {
   if (!section || !accordionSections.includes(section)) return;
@@ -680,10 +663,7 @@ function camaraRangeLine() {
 }
 
 function syncCamaraRangeIntoMotivo() {
-  if (!motivoTxt) return;
-  const base = stripCamaraRangeLine(motivoTxt.value);
-  const line = camaraRangeLine();
-  motivoTxt.value = line ? (base ? (base + '\n' + line) : line) : base;
+  // Las horas se guardan junto con el asunto en el servidor; el campo visible conserva solo el texto editable.
 }
 
 function addDiligenciaSolicitada(value) {
@@ -701,10 +681,24 @@ function addDiligenciaSolicitada(value) {
 }
 
 function hydrateCamaraRangeFromMotivo() {
-  if (!camaraRangoDesdeInp || !camaraRangoHastaInp || !motivoTxt) return;
-  const parsed = extractCamaraRange(motivoTxt.value);
-  camaraRangoDesdeInp.value = parsed.desde;
-  camaraRangoHastaInp.value = parsed.hasta;
+  // Los valores iniciales se cargan desde el oficio en los campos de hora.
+}
+
+function defaultAsuntoTexto(item) {
+  if (!item) return plantillaInput.value.trim();
+  const name = normalizeText(item.nombre);
+  if (name.includes('necropsia') || name.includes('autopsia')) return 'Protocolo de necropsia, por motivo que se indica.';
+  if (name.includes('peritaje') && name.includes('constat')) return 'Peritaje técnico de constatación de daños y sistemas en vehículo, por motivo que se indica.';
+  if (name.includes('camara') && (name.includes('video') || name.includes('vigilancia'))) return 'Cámara de video vigilancia, por motivo que se indica.';
+  return stripCamaraRangeLine(String(item.detalle || item.nombre || ''));
+}
+
+function actualizarOpcionesAsunto(item) {
+  if (!asuntoCombobox) return;
+  const candidates = item ? [defaultAsuntoTexto(item), ...(item.textos || [])] : [];
+  const unique = [...new Map(candidates.map((value) => [normalizeText(stripCamaraRangeLine(value)), stripCamaraRangeLine(value)])).values()]
+    .filter((value) => value.trim() !== '');
+  asuntoCombobox.dispatchEvent(new CustomEvent('combobox:set-options', { detail: unique }));
 }
 
 async function fetchJSON(url) {
@@ -794,60 +788,31 @@ async function selectEntidadSuggestion(item) {
 }
 
 async function applyPlantillaPreset(asuntoId) {
-  if (!asuntoId || applyingPlantilla) return;
-  applyingPlantilla = true;
+  if (!asuntoId) return;
+  const requestSerial = ++plantillaRequestSerial;
   try {
     const data = await fetchJSON('?ajax=plantilla_info&asunto_id=' + encodeURIComponent(asuntoId));
+    if (requestSerial !== plantillaRequestSerial || String(asuntoSel.value) !== String(asuntoId)) return;
     const item = data.item || {};
-    if (!item.entidad_id) return;
-
     if (plantillaHint) {
       const downloadLabel = item.download && item.download.label ? ' Descarga habilitada: ' + item.download.label + '.' : ' Este asunto aun no tiene descarga Word configurada.';
-      plantillaHint.textContent = (item.source === 'latest' ? 'Se cargo la ultima configuracion usada para este asunto.' : 'Se cargo la configuracion base del catalogo.') + downloadLabel;
+      plantillaHint.textContent = 'Se cargó el asunto inicial; puedes editarlo antes de guardar.' + downloadLabel;
     }
-
-    if (tipoSel && item.tipo) tipoSel.value = item.tipo;
-    if (entidadSel) entidadSel.value = String(item.entidad_id || '');
-    setEntidadTextById(item.entidad_id || '');
-    lastEntidadLoaded = '';
-    await loadSubentidades(item.entidad_id || '', item.subentidad_id || '');
-    await loadPersonas(item.entidad_id || '', item.persona_id || '');
-    await loadAsuntos(item.entidad_id || '', item.tipo || 'SOLICITAR', item.asunto_id || asuntoId);
-    if (asuntoSel) asuntoSel.value = String(item.asunto_id || asuntoId);
-    lastEntidadLoaded = String(item.entidad_id || '');
-
-    const cargoSel = document.getElementById('grado_cargo_id');
-    if (cargoSel) cargoSel.value = item.grado_cargo_id ? String(item.grado_cargo_id) : '';
-    if (personaSel) personaSel.value = item.persona_id ? String(item.persona_id) : '';
-    if (personaTextInp) {
-      if (item.persona_id) {
-        const matched = personaItemsCache.find((persona) => String(persona.id || '') === String(item.persona_id));
-        personaTextInp.value = matched ? String(matched.nombre || '').trim() : '';
-      } else {
-        personaTextInp.value = String(item.persona_destino_manual || '');
-      }
-    }
-    if (personaManualInp) personaManualInp.value = item.persona_id ? '' : String(item.persona_destino_manual || '');
-    if (motivoTxt) motivoTxt.value = String(item.motivo || '');
-    if (referenciaInp) referenciaInp.value = String(item.referencia_texto || '');
+    if (asuntoSel) asuntoSel.value = String(asuntoId);
+    const catalogItem = plantillasCatalogo.find((template) => template.ids.includes(Number(asuntoId)));
+    actualizarOpcionesAsunto(catalogItem);
+    if (motivoTxt) motivoTxt.value = defaultAsuntoTexto(catalogItem);
+    if (camaraRangoDesdeInp) camaraRangoDesdeInp.value = '';
+    if (camaraRangoHastaInp) camaraRangoHastaInp.value = '';
+    if (referenciaInp) referenciaInp.value = '';
     const diligenciasInput = document.getElementById('diligencias_solicitadas');
-    if (diligenciasInput) diligenciasInput.value = String(item.diligencias_solicitadas || '');
+    if (diligenciasInput) diligenciasInput.value = '';
 
-    syncPersonaDestinoManual();
     await refreshAsuntoPreview();
     await toggleBoxesPorAsunto();
   } catch (error) {
     if (plantillaHint) plantillaHint.textContent = error.message || 'No se pudo cargar la configuracion de la plantilla.';
     console.error(error);
-  } finally {
-    openAccordionSection(accordionSections[0]);
-    if (numInp) {
-      requestAnimationFrame(() => {
-        numInp.focus({ preventScroll: true });
-        numInp.select();
-      });
-    }
-    applyingPlantilla = false;
   }
 }
 
@@ -864,13 +829,6 @@ function clearEntidadDependents() {
   if (personaSel) personaSel.value = '';
   if (personaTextInp) personaTextInp.value = '';
   if (personaManualInp) personaManualInp.value = '';
-  fillSelect(asuntoSel, [], '', 'Selecciona el asunto');
-  const asuntoPreview = document.getElementById('asuntoPreview');
-  const asuntoVarBox = document.getElementById('asuntoVarBox');
-  const asuntoVarSelect = document.getElementById('asuntoVarSelect');
-  if (asuntoPreview) asuntoPreview.style.display = 'none';
-  if (asuntoVarBox) asuntoVarBox.style.display = 'none';
-  if (asuntoVarSelect) asuntoVarSelect.innerHTML = '';
 }
 
 function syncEntidadDestino() {
@@ -953,15 +911,6 @@ async function loadPersonas(entidadId, selected = '') {
   syncPersonaDestinoManual();
 }
 
-async function loadAsuntos(entidadId, tipo, selected = '') {
-  if (!entidadId) {
-    fillSelect(asuntoSel, [], '', 'Selecciona el asunto');
-    return;
-  }
-  const data = await fetchJSON('?ajax=asuntos&entidad_id=' + encodeURIComponent(entidadId) + '&tipo=' + encodeURIComponent(tipo || 'SOLICITAR'));
-  fillSelect(asuntoSel, data.items || [], selected, 'Selecciona el asunto');
-}
-
 async function loadGradoCargo(selected = '') {
   const select = document.getElementById('grado_cargo_id');
   const current = selected || select.value;
@@ -970,57 +919,12 @@ async function loadGradoCargo(selected = '') {
 }
 
 async function refreshAsuntoPreview() {
-  const box = document.getElementById('asuntoPreview');
-  const n = document.getElementById('asuntoNombre');
-  const detail = document.getElementById('asuntoDetalle');
-  const varBox = document.getElementById('asuntoVarBox');
-  const varSel = document.getElementById('asuntoVarSelect');
-  if (!asuntoSel.value) {
-    box.style.display = 'none';
-    return;
-  }
-  const info = await fetchJSON('?ajax=asunto_info&id=' + encodeURIComponent(asuntoSel.value));
-  if (!info.item) {
-    box.style.display = 'none';
-    return;
-  }
-  if (tipoSel && info.item.tipo && tipoSel.value !== info.item.tipo) {
-    tipoSel.value = info.item.tipo;
-  }
-  n.textContent = info.item.nombre || '';
-  detail.textContent = (info.item.detalle || '').trim() || '—';
-  box.style.display = 'block';
-  if (!motivoTxt.value.trim()) motivoTxt.value = info.item.detalle || '';
-
-  const variantes = await fetchJSON('?ajax=asunto_variantes&id=' + encodeURIComponent(asuntoSel.value));
-  if (variantes.items && variantes.items.length > 1) {
-    varSel.innerHTML = '';
-    variantes.items.forEach((item, index) => {
-      const text = (item.detalle || '').trim();
-      const label = 'Plantilla ' + (index + 1) + (text ? ' - ' + (text.length > 60 ? text.slice(0, 60) + '…' : text) : '');
-      const option = new Option(label, item.id);
-      if (String(item.id) === String(asuntoSel.value)) option.selected = true;
-      varSel.add(option);
-    });
-    varBox.style.display = 'flex';
-    varSel.onchange = async () => {
-      const info2 = await fetchJSON('?ajax=asunto_info&id=' + encodeURIComponent(varSel.value));
-      if (info2.item) {
-        detail.textContent = (info2.item.detalle || '').trim() || '—';
-        if (!motivoTxt.value.trim()) motivoTxt.value = info2.item.detalle || '';
-      }
-      asuntoSel.value = varSel.value;
-      toggleBoxesPorAsunto();
-    };
-  } else {
-    varBox.style.display = 'none';
-    varSel.innerHTML = '';
-  }
+  // El asunto editable es la única vista previa necesaria.
 }
 
 function asuntoTexto() {
-  const option = asuntoSel.options[asuntoSel.selectedIndex];
-  return option ? option.text.toLowerCase() : '';
+  const selected = plantillasCatalogo.find((item) => String(item.id) === String(asuntoSel.value));
+  return (String(plantillaInput.value || '') + ' ' + String(selected ? selected.detalle : '')).toLowerCase();
 }
 function asuntoEsPeritaje() {
   return asuntoTexto().includes('peritaje de constatación de daños') || asuntoTexto().includes('peritaje de constatacion de danos');
@@ -1035,7 +939,7 @@ function asuntoEsNecropsia() {
 }
 function asuntoEsCamaraVideo() {
   const text = normalizeText(asuntoTexto());
-  return text.includes('camara') && text.includes('video');
+  return text.includes('camara') && (text.includes('video') || text.includes('vigilancia'));
 }
 function asuntoEsSunarpHistorial() {
   const text = normalizeText(asuntoTexto());
@@ -1114,11 +1018,9 @@ async function toggleBoxesPorAsunto() {
   if (camaraRangoBox) {
     const isCamara = asuntoEsCamaraVideo();
     camaraRangoBox.style.display = isCamara ? 'block' : 'none';
-    if (isCamara) {
-      hydrateCamaraRangeFromMotivo();
-      syncCamaraRangeIntoMotivo();
-    } else if (motivoTxt) {
-      motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
+    if (!isCamara) {
+      if (camaraRangoDesdeInp) camaraRangoDesdeInp.value = '';
+      if (camaraRangoHastaInp) camaraRangoHastaInp.value = '';
     }
   }
   if (diligenciasBox && diligenciasInput) {
@@ -1148,8 +1050,6 @@ async function handleEntidadSelectionChange() {
   }
   await loadSubentidades(entidadId);
   await loadPersonas(entidadId);
-  await loadAsuntos(entidadId, tipoSel.value || 'SOLICITAR');
-  await refreshAsuntoPreview();
   await toggleBoxesPorAsunto();
 }
 function syncListadoHref() {
@@ -1172,7 +1072,6 @@ function closeModal() {
   const tipo = tipoSel.value || 'SOLICITAR';
   if (lastModal === 'subentidad' && entidadId) loadSubentidades(entidadId, subSel.value);
   else if (lastModal === 'persona' && entidadId) loadPersonas(entidadId, personaSel.value);
-  else if (lastModal === 'asunto' && entidadId) loadAsuntos(entidadId, tipo, asuntoSel.value).then(refreshAsuntoPreview).then(toggleBoxesPorAsunto);
   else if (lastModal === 'cargo') loadGradoCargo(document.getElementById('grado_cargo_id').value);
   else if (lastModal === 'entidad' || lastModal === 'ano') location.reload();
   lastModal = null;
@@ -1183,7 +1082,6 @@ function openCreate(kind) {
   if (kind === 'entidad') return openModal('Nueva entidad', 'oficio_entidad_nuevo.php', kind);
   if (kind === 'subentidad') { if (!entidadId) return alert('Selecciona primero una entidad.'); return openModal('Nueva subentidad', 'oficio_subentidad_nuevo.php?entidad_id=' + encodeURIComponent(entidadId), kind); }
   if (kind === 'persona') { if (!entidadId) return alert('Selecciona primero una entidad.'); return openModal('Nueva persona', 'oficio_persona_entidad_nuevo.php?entidad_id=' + encodeURIComponent(entidadId), kind); }
-  if (kind === 'asunto') { if (!entidadId) return alert('Selecciona primero una entidad.'); return openModal('Nuevo asunto', 'oficio_asunto_nuevo.php?entidad_id=' + encodeURIComponent(entidadId) + '&tipo=' + encodeURIComponent(tipo), kind); }
   if (kind === 'ano') return openModal('Nuevo nombre oficial del año', 'oficio_oficial_ano_nuevo.php', kind);
   if (kind === 'cargo') return openModal('Nuevo grado/cargo', 'oficio_cargo_nuevo.php', kind);
 }
@@ -1228,16 +1126,39 @@ if (entidadCategoriaSel) {
     if (entidadTextInp) entidadTextInp.focus();
   });
 }
-tipoSel.addEventListener('change', async () => {
-  await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR', asuntoSel.value || '');
-  await refreshAsuntoPreview();
-  await toggleBoxesPorAsunto();
-});
-if (plantillaSel) {
-  plantillaSel.addEventListener('change', () => {
-    applyPlantillaPreset(plantillaSel.value).catch(console.error);
-  });
+function syncPlantillaSelection(loadPreset = false) {
+  const typed = normalizeText(plantillaInput.value.trim());
+  const match = plantillasCatalogo.find((item) => item.tipo === tipoSel.value && normalizeText(item.nombre) === typed);
+  const previousId = asuntoSel.value;
+  const currentId = Number(previousId);
+  asuntoSel.value = match ? (match.ids.includes(currentId) ? String(currentId) : String(match.id)) : '';
+  actualizarOpcionesAsunto(match);
+  if (!match) {
+    plantillaRequestSerial++;
+    if (previousId) {
+      if (motivoTxt) motivoTxt.value = '';
+      if (referenciaInp) referenciaInp.value = '';
+      const diligenciasInput = document.getElementById('diligencias_solicitadas');
+      if (diligenciasInput) diligenciasInput.value = '';
+      if (camaraRangoDesdeInp) camaraRangoDesdeInp.value = '';
+      if (camaraRangoHastaInp) camaraRangoHastaInp.value = '';
+    }
+    lastPresetAsuntoId = '';
+    if (loadPreset && typed && motivoTxt && !motivoTxt.value.trim()) motivoTxt.value = plantillaInput.value.trim();
+  }
+  if (loadPreset && match && lastPresetAsuntoId !== asuntoSel.value) {
+    lastPresetAsuntoId = asuntoSel.value;
+    applyPlantillaPreset(asuntoSel.value).catch(console.error);
+  } else {
+    if (plantillaHint && !match) plantillaHint.textContent = typed
+      ? 'Plantilla nueva: se guardará al registrar el oficio.'
+      : 'Busca por nombre o contenido. Si no existe, el texto escrito se guardará como una plantilla nueva.';
+    refreshAsuntoPreview().then(toggleBoxesPorAsunto).catch(console.error);
+  }
 }
+tipoSel.addEventListener('change', () => syncPlantillaSelection(true));
+plantillaInput.addEventListener('input', () => syncPlantillaSelection(false));
+plantillaInput.addEventListener('change', () => syncPlantillaSelection(true));
 if (btnAgregarDiligencia && tipoDiligenciaSelector) {
   btnAgregarDiligencia.addEventListener('click', () => {
     addDiligenciaSolicitada(tipoDiligenciaSelector.value);
@@ -1251,10 +1172,6 @@ if (camaraRangoDesdeInp) {
   camaraRangoDesdeInp.addEventListener('input', syncCamaraRangeIntoMotivo);
   camaraRangoHastaInp.addEventListener('input', syncCamaraRangeIntoMotivo);
 }
-asuntoSel.addEventListener('change', async () => {
-  await refreshAsuntoPreview();
-  await toggleBoxesPorAsunto();
-});
 document.getElementById('frmOficio').addEventListener('submit', (event) => {
   syncEntidadDestino();
   if (!entidadSel.value) {
@@ -1267,8 +1184,6 @@ document.getElementById('frmOficio').addEventListener('submit', (event) => {
     return;
   }
   syncPersonaDestinoManual();
-  if (asuntoEsCamaraVideo()) syncCamaraRangeIntoMotivo();
-  else if (motivoTxt) motivoTxt.value = stripCamaraRangeLine(motivoTxt.value);
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1279,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   hydrateCamaraRangeFromMotivo();
   renderEntidadSuggestions(entidadTextInp ? entidadTextInp.value : '');
   closeEntidadSuggestions();
-  await loadAsuntos(entidadSel.value || '', tipoSel.value || 'SOLICITAR', asuntoSel.value || '');
+  syncPlantillaSelection(false);
   if (!numInp.value) await recalcularNumero();
   await refreshAsuntoPreview().catch(() => {});
   await toggleBoxesPorAsunto();
@@ -1292,6 +1207,6 @@ document.addEventListener('click', (event) => {
   closeEntidadSuggestions();
 });
  </script>
-<script src="assets/js/documento_recibido_categoria.js"></script>
+<script src="assets/js/documento_recibido_categoria.js?v=<?= (int) filemtime(__DIR__ . '/assets/js/documento_recibido_categoria.js') ?>"></script>
 </body>
 </html>

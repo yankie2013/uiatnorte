@@ -9,6 +9,7 @@
     } catch (_) {
       options = [];
     }
+    var filterSelect = document.querySelector(root.getAttribute('data-filter-select') || '[data-no-such-filter]');
 
     var list = document.createElement('ul');
     list.className = 'category-options';
@@ -25,6 +26,14 @@
       return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
     }
 
+    function optionLabel(option) {
+      return typeof option === 'string' ? option : String(option.label || '');
+    }
+
+    function optionSearch(option) {
+      return typeof option === 'string' ? option : optionLabel(option) + ' ' + String(option.search || '');
+    }
+
     function closeList() {
       list.hidden = true;
       activeIndex = -1;
@@ -33,7 +42,7 @@
     }
 
     function choose(value) {
-      input.value = value;
+      input.value = optionLabel(value);
       input.dispatchEvent(new Event('change', { bubbles: true }));
       closeList();
       input.focus();
@@ -42,7 +51,8 @@
     function renderList() {
       var query = normalized(input.value.trim());
       visibleOptions = options.filter(function (option) {
-        return normalized(option).includes(query);
+        return (!filterSelect || typeof option === 'string' || !option.tipo || option.tipo === filterSelect.value)
+          && normalized(optionSearch(option)).includes(query);
       });
       activeIndex = -1;
       list.innerHTML = '';
@@ -54,7 +64,7 @@
         button.className = 'category-option';
         button.id = list.id + '-option-' + index;
         button.setAttribute('role', 'option');
-        button.textContent = option;
+        button.textContent = optionLabel(option);
         button.addEventListener('mousedown', function (event) {
           event.preventDefault();
           choose(option);
@@ -87,6 +97,13 @@
     }
 
     input.addEventListener('focus', renderList);
+    root.addEventListener('combobox:set-options', function (event) {
+      options = Array.isArray(event.detail) ? event.detail : [];
+      if (!list.hidden) renderList();
+    });
+    if (filterSelect) filterSelect.addEventListener('change', function () {
+      if (!list.hidden) renderList();
+    });
     input.addEventListener('click', renderList);
     input.addEventListener('input', renderList);
     input.addEventListener('keydown', function (event) {

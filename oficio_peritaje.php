@@ -40,6 +40,8 @@ require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
 
+use App\Support\OficioContenido;
+
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
 
@@ -449,7 +451,11 @@ if ($accidente_distrito==='' && !empty($acc['comisaria_id']) && table_exists($pd
 
 /* Textos */
 $carta_lugar     = 'Santa Rosa';
-$asunto_visible  = val($oficio,'motivo','') ?: 'Certificado de Constatación de Daños y sistemas, por motivo que se indica. - SOLICITA';
+$asunto_visible = OficioContenido::componer([
+  'motivo' => val($oficio,'motivo','') ?: 'Peritaje técnico de constatación de daños y sistemas en vehículo, por motivo que se indica.',
+  'asunto_nombre' => 'Peritaje de Constatación de daños',
+  'veh_placa' => val($vehiculo,'placa',''),
+]);
 $acc_fecha_sigla = fecha_abreviada_es(val($acc,'fecha_accidente',''));
 $acc_lugar       = trim(val($acc,'lugar','').(val($acc,'referencia','') ? ' - '.val($acc,'referencia','') : ''));
 $accidente_resumen = "Por lo que se agradece a Ud., remitir el resultado estipulado según normas vigentes para efectos de proseguir con las diligencias respectivas relacionadas al esclarecimiento de un Accidente de Tránsito, ocurrido el día {$acc_fecha_sigla} a horas {$accidente_hora} aprox., en {$acc_lugar}.";
@@ -475,7 +481,7 @@ $vars = [
   'oficio_numero'     => clean_for_phpword(val($oficio,'numero','')),
   'oficio_anio'       => clean_for_phpword(val($oficio,'anio','')),
   'oficio_asunto'     => clean_for_phpword($asunto_visible),
-  'oficio_motivo'     => clean_for_phpword(val($oficio,'motivo','')),
+  'oficio_motivo'     => clean_for_phpword($asunto_visible),
   'oficio_referencia' => clean_for_phpword(val($oficio,'referencia_texto','')),
 
   'destino_persona'     => clean_for_phpword($dest_persona),
