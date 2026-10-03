@@ -586,7 +586,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
               ?>
               <tr<?= (int)($row['accid'] ?? 0) > 0 ? ' data-case-id="' . (int)$row['accid'] . '" tabindex="0" aria-label="Ver expediente del oficio ' . h($row['numero']) . '"' : '' ?>>
                 <td data-label="N&uacute;mero">
-                  <div class="numero-main"><?= h($row['numero']) ?></div>
+                  <div class="numero-main"><?= h(sprintf('%03d', (int)$row['numero'])) ?></div>
                 </td>
                 <td data-label="Fecha">
                   <div class="cell-title"><?= h(format_display_date((string) ($row['fecha_emision'] ?? ''))) ?></div>
