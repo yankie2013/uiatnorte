@@ -37,7 +37,7 @@ $s=$pdo->prepare("SELECT iv.vehiculo_id,iv.orden_participacion,v.placa,mv.nombre
  FROM $vehiculosTabla iv JOIN vehiculos v ON v.id=iv.vehiculo_id
  LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo modv ON modv.id=v.modelo_id WHERE iv.accidente_id=? ORDER BY iv.orden_participacion");$s->execute([$id]);$vehicles=$s->fetchAll(PDO::FETCH_ASSOC);
 $icon=static function(string $name): string {
-    $icons=['place'=>'📍','date'=>'📅','station'=>'🏢','people'=>'👥','car'=>'🚘','court'=>'⚖️','badge'=>'👤','folder'=>'📁','file'=>'📄'];
+    $icons=['place'=>'📍','date'=>'📅','station'=>'🏢','people'=>'👥','car'=>'🚘','court'=>'⚖️','badge'=>'👤','detective'=>'🕵️','folder'=>'📁','file'=>'📄'];
     return '<span class="case-emoji" aria-hidden="true">'.($icons[$name]??'📄').'</span>';
 };
 $vehicleIcon=static function(string $type): string {
@@ -61,12 +61,17 @@ foreach ($people as $person) {
         $unlinkedPeople[]=$person;
     }
 }
-$renderPerson=static function(array $person) use ($h): void {
+$renderPerson=static function(array $person, ?array $vehicle=null) use ($h, $vehicleIcon): void {
     $role=mb_strtolower($person['rol']);
     $injury=mb_strtolower($person['lesion']);
     $class=str_contains($injury,'fallec')?'is-deceased':(preg_match('/herid|lesion/iu',$injury)?'is-injured':'');
-    $symbol=str_contains($role,'peat')?'🚶':(str_contains($role,'conduc')?'🧑‍✈️':'👤');
-    echo '<div class="case-card-person"><span class="case-person-icon" aria-hidden="true">'.$symbol.'</span><div><strong class="'.$class.'">'.$h(trim($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno'])).'</strong><small>'.$h($person['rol'].($person['lesion']?' · '.$person['lesion']:'')).'</small></div></div>';
+    $symbol=str_contains($role,'peat')?'🚶':($vehicle!==null?$vehicleIcon((string)($vehicle['tipo']??'')):'👤');
+    $details=[$person['rol']];
+    if ($vehicle!==null) {
+        $details=array_merge($details,[$vehicle['orden_participacion']??'', $vehicle['tipo']??'', trim(($vehicle['marca']??'').' '.($vehicle['modelo']??'')), $vehicle['placa']??'']);
+    }
+    $details=implode(' · ',array_filter($details,static fn($value): bool => trim((string)$value)!==''));
+    echo '<div class="case-card-person"><span class="case-person-icon" aria-hidden="true">'.$symbol.'</span><div><strong class="'.$class.'">'.$h(trim($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno'])).'</strong><small>'.$h($details).'</small></div></div>';
 };
 $districtColors=['ancón'=>326,'ancon'=>326,'carabayllo'=>266,'comas'=>220,'independencia'=>190,'los olivos'=>158,'puente piedra'=>42,'san martín de porres'=>18,'san martin de porres'=>18,'santa rosa'=>350,'santa rosa de quives'=>286];
 $cardHue=$districtColors[mb_strtolower(trim((string)($a['distrito']??'')), 'UTF-8')]??220;
@@ -101,13 +106,11 @@ $state=trim((string)$a['estado'])?:'Pendiente';
      $vehiclePeople=$peopleByVehicle[(int)$v['vehiculo_id']]??[];
      usort($vehiclePeople,static fn(array $left,array $right): int => (int)!str_contains(mb_strtolower($left['rol']),'conduc') <=> (int)!str_contains(mb_strtolower($right['rol']),'conduc'));
  ?>
- <div class="case-card-unit">
-   <div class="case-card-person case-card-vehicle"><span class="case-person-icon" aria-hidden="true"><?= $vehicleIcon((string)($v['tipo']??'')) ?></span><div><strong><?= $h(trim(($v['orden_participacion']?:'Unidad sin número').' · '.($v['marca']?:'Vehículo').' '.($v['modelo']??''))) ?></strong><small><?= $h(implode(' · ',array_filter([$v['tipo']??'', $v['placa']?:'Sin placa', $v['color']??'']))) ?></small></div></div>
-   <div class="case-card-unit-people">
-     <?php foreach($vehiclePeople as $person) $renderPerson($person); ?>
-     <?php if(!$vehiclePeople): ?><p class="case-card-empty">Sin conductor registrado</p><?php endif ?>
-   </div>
- </div>
+ <?php if($vehiclePeople): ?>
+   <?php foreach($vehiclePeople as $person) $renderPerson($person,$v); ?>
+ <?php else: ?>
+   <div class="case-card-person case-card-vehicle"><span class="case-person-icon" aria-hidden="true"><?= $vehicleIcon((string)($v['tipo']??'')) ?></span><div><strong>Sin conductor registrado</strong><small><?= $h(implode(' · ',array_filter([$v['orden_participacion']??'', $v['tipo']??'', trim(($v['marca']??'').' '.($v['modelo']??'')), $v['placa']?:'Sin placa']))) ?></small></div></div>
+ <?php endif ?>
  <?php endforeach ?>
  <?php foreach($unlinkedPeople as $person) $renderPerson($person); ?>
  </section>
@@ -115,8 +118,8 @@ $state=trim((string)$a['estado'])?:'Pendiente';
   <div class="case-card-person"><span class="case-person-icon"><?= $icon('court') ?></span><div><span class="case-card-label">FISCALÍA</span><strong><?= $h($a['fiscalia']?:'Sin registrar') ?></strong></div></div>
   <div class="case-card-person"><span class="case-person-icon"><?= $icon('badge') ?></span><div><span class="case-card-label">FISCAL A CARGO</span><strong><?= $h($a['fiscal']?:'Sin registrar') ?></strong></div></div>
  </section>
- <section class="case-card-section case-card-owner"><h3><?= $icon('badge') ?> ENCARGADO DEL EXPEDIENTE</h3>
-  <div class="case-card-person"><span class="case-person-icon"><?= $icon('badge') ?></span><div><strong><?= $h(trim(($a['responsable_grado']??'').' '.($a['responsable']??''))?:'Pendiente de asignación') ?></strong><small><?= in_array($a['responsable_rol'],['secretaria','administracion'],true) ? 'Archivo · '. $h(\App\Support\Access::ROLES[$a['responsable_rol']]) : 'JEFE EMI responsable' ?></small></div></div>
+ <section class="case-card-section case-card-owner"><h3><?= $icon('detective') ?> ENCARGADO DEL EXPEDIENTE</h3>
+  <div class="case-card-person"><span class="case-person-icon"><?= $icon('detective') ?></span><div><strong><?= $h(trim(($a['responsable_grado']??'').' '.($a['responsable']??''))?:'Pendiente de asignación') ?></strong><small><?= in_array($a['responsable_rol'],['secretaria','administracion'],true) ? 'Archivo · '. $h(\App\Support\Access::ROLES[$a['responsable_rol']]) : 'JEFE EMI responsable' ?></small></div></div>
  </section>
 
 </article>
