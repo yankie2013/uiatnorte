@@ -21,4 +21,9 @@ if ($repository->availableYears() !== [2026, 2025]) {
     throw new RuntimeException('El filtro no ofrece los años históricos.');
 }
 
+$pdo->exec('INSERT INTO oficios (anio, numero) VALUES (2026, 20)');
+if ($repository->nextNumero(2026) !== 944 || !$repository->numeroExists(2026, 20) || $repository->numeroExists(2026, 21)) {
+    throw new RuntimeException('Registrar un número anterior libre alteró el correlativo anual.');
+}
+
 echo "PASS: numeración independiente por año e historial disponible.\n";

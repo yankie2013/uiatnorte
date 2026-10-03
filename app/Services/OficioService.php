@@ -110,7 +110,7 @@ final class OficioService
         return [
             'accidente_id' => $row['accidente_id'] ?? ($preAccidenteId ?: ''),
             'anio_oficio' => $row['anio'] ?? date('Y'),
-            'numero_oficio' => $row['numero'] ?? '',
+            'numero_oficio' => $row['numero'] ?? $this->repository->nextNumero((int)($row['anio'] ?? date('Y'))),
             'fecha_emision' => $row['fecha_emision'] ?? date('Y-m-d'),
             'oficial_ano_id' => $row['oficial_ano_id'] ?? '',
             'entidad_id' => $row['entidad_id_destino'] ?? '',

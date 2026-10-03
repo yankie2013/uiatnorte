@@ -341,8 +341,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
       <div class="c3">
         <label for="numero_oficio">Número*</label>
         <div class="field-row">
-          <input type="number" name="numero_oficio" id="numero_oficio" value="<?= h($data['numero_oficio']) ?>" placeholder="Correlativo">
-          <button class="btn mini" type="button" onclick="recalcularNumero()">↻</button>
+          <input type="number" name="numero_oficio" id="numero_oficio" min="1" step="1" value="<?= h($data['numero_oficio']) ?>" placeholder="Correlativo">
+          <button class="btn mini" type="button" onclick="recalcularNumero().catch(console.error)" title="Sugerir siguiente número del año">↻</button>
         </div>
       </div>
       <div class="c3">
@@ -1035,8 +1035,9 @@ async function toggleBoxesPorAsunto() {
 async function recalcularNumero() {
   const year = parseInt(anioInp.value || '', 10);
   if (!year) return;
+  const previousNumber = numInp.value;
   const data = await fetchJSON('?ajax=nextnum&anio=' + encodeURIComponent(year));
-  numInp.value = data.next;
+  if (parseInt(anioInp.value, 10) === year && numInp.value === previousNumber) numInp.value = data.next;
 }
 
 async function handleEntidadSelectionChange() {
@@ -1088,9 +1089,10 @@ function openCreate(kind) {
 window.closeModal = closeModal;
 window.openCreate = openCreate;
 
+anioInp.addEventListener('change', () => recalcularNumero().catch(console.error));
 fechaInp.addEventListener('change', () => {
   const year = (fechaInp.value || '').slice(0, 4);
-  if (year) {
+  if (year && anioInp.value !== year) {
     anioInp.value = year;
     recalcularNumero().catch(console.error);
   }
