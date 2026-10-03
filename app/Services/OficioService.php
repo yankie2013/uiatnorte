@@ -50,6 +50,7 @@ final class OficioService
     {
         return [
             'rows' => $this->repository->search($filters),
+            'anios' => $this->repository->availableYears(),
             'entidades' => $this->repository->entidades(),
             'estados' => self::ESTADOS,
             'tipos' => self::TIPOS,

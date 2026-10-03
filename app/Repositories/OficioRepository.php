@@ -428,16 +428,15 @@ final class OficioRepository
 
     public function nextNumero(int $anio): int
     {
-        $oficiosTable = $this->activeTable('oficios');
-        $st = $this->pdo->prepare("SELECT COALESCE(MAX(numero),0)+1 FROM {$oficiosTable} WHERE anio = ?");
+        // El correlativo considera todos los oficios existentes, aunque no figuren en la vista activa.
+        $st = $this->pdo->prepare('SELECT COALESCE(MAX(numero),0)+1 FROM oficios WHERE anio = ?');
         $st->execute([$anio]);
         return max(1, (int) $st->fetchColumn());
     }
 
     public function numeroExists(int $anio, int $numero, ?int $excludeId = null): bool
     {
-        $oficiosTable = $this->activeTable('oficios');
-        $sql = "SELECT COUNT(*) FROM {$oficiosTable} WHERE anio = ? AND numero = ?";
+        $sql = 'SELECT COUNT(*) FROM oficios WHERE anio = ? AND numero = ?';
         $params = [$anio, $numero];
         if ($excludeId !== null) {
             $sql .= ' AND id <> ?';
@@ -652,6 +651,11 @@ final class OficioRepository
         $st = $this->pdo->prepare($sql);
         $st->execute([$involucradoPersonaId, $accidenteId]);
         return (int) $st->fetchColumn() > 0;
+    }
+
+    public function availableYears(): array
+    {
+        return array_map('intval', $this->pdo->query('SELECT DISTINCT anio FROM oficios ORDER BY anio DESC')->fetchAll(PDO::FETCH_COLUMN));
     }
 
     public function search(array $filters): array

@@ -31,7 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'estado'
 }
 
 $q = trim((string) ($_GET['q'] ?? ''));
-$anio = trim((string) ($_GET['anio'] ?? ''));
+$anio = trim((string) ($_GET['anio'] ?? date('Y')));
+if ($anio !== 'todos' && !preg_match('/^\d{4}$/D', $anio)) $anio = date('Y');
 $entidadId = trim((string) ($_GET['entidad_id'] ?? ''));
 $sidpol = trim((string) ($_GET['sidpol'] ?? ''));
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
@@ -45,7 +46,7 @@ $msg = trim((string) ($_GET['msg'] ?? ''));
 
 $filters = [
     'q' => $q,
-    'anio' => $anio,
+    'anio' => $anio === 'todos' ? '' : $anio,
     'entidad_id' => $entidadId,
     'sidpol' => $sidpol,
     'accidente_id' => $accidenteId,
@@ -55,6 +56,8 @@ $filters = [
 ];
 $ctx = $service->listado($filters);
 $rows = $ctx['rows'];
+$aniosDisponibles = array_values(array_unique(array_merge([(int)date('Y')], $ctx['anios'])));
+rsort($aniosDisponibles, SORT_NUMERIC);
 $returnTo = $_SERVER['REQUEST_URI'] ?? build_url([]);
 
 function build_url(array $overrides): string
@@ -138,7 +141,7 @@ $activeFilters = [];
 if ($q !== '') {
     $activeFilters[] = ['label' => 'Texto', 'value' => $q, 'clear' => 'q'];
 }
-if ($anio !== '') {
+if ($anio !== 'todos') {
     $activeFilters[] = ['label' => 'A&ntilde;o', 'value' => $anio, 'clear' => 'anio'];
 }
 if ($entidadSeleccionada !== '') {
@@ -176,6 +179,7 @@ include __DIR__ . '/sidebar.php';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Oficios | Listado</title>
 <link rel="stylesheet" href="style_mushu.css">
+<link rel="stylesheet" href="assets/css/expediente_card.css">
 <style>
 :root{
   --page:#f4f7fb;
@@ -314,6 +318,8 @@ thead th{
 tbody td{padding:11px;border-bottom:1px solid var(--border);vertical-align:top;font-size:.78rem;line-height:1.35}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:rgba(148,163,184,.06)}
+tbody tr[data-case-id]{cursor:pointer}
+tbody tr[data-case-id]:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
 tbody tr.row-updated td{background:rgba(34,197,94,.10)}
 .sidpol-main{display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-weight:900;font-size:.78rem}
 .sidpol-sub,.muted{margin-top:4px;color:var(--muted);font-size:.72rem}
@@ -456,7 +462,12 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
             </div>
             <div class="field">
               <label for="anio">A&ntilde;o</label>
-              <input id="anio" type="number" name="anio" value="<?= h($anio) ?>" placeholder="2026">
+              <select id="anio" name="anio">
+                <option value="todos" <?= $anio === 'todos' ? 'selected' : '' ?>>Todos los años</option>
+                <?php foreach ($aniosDisponibles as $anioDisponible): ?>
+                  <option value="<?= h($anioDisponible) ?>" <?= $anio === (string)$anioDisponible ? 'selected' : '' ?>><?= h($anioDisponible) ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="field">
               <label for="entidad_id">Entidad</label>
@@ -509,7 +520,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
         <?php if ($activeFilters): ?>
           <div class="active-filters">
             <?php foreach ($activeFilters as $filter): ?>
-              <a class="filter-chip" href="<?= h(build_url([$filter['clear'] => null])) ?>">
+              <a class="filter-chip" href="<?= h(build_url([$filter['clear'] => $filter['clear'] === 'anio' ? 'todos' : null])) ?>">
                 <span><?= $filter['label'] ?></span>
                 <strong><?= h($filter['value']) ?></strong>
               </a>
@@ -573,9 +584,9 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 $isInformeMedico = str_contains($txt, 'informe') && str_contains($txt, 'medico');
                 $contenido = OficioContenido::componer($row);
               ?>
-              <tr>
+              <tr<?= (int)($row['accid'] ?? 0) > 0 ? ' data-case-id="' . (int)$row['accid'] . '" tabindex="0" aria-label="Ver expediente del oficio ' . h($row['numero']) . '"' : '' ?>>
                 <td data-label="N&uacute;mero">
-                  <div class="numero-main"><?= h($row['numero']) ?>/<?= h($row['anio']) ?></div>
+                  <div class="numero-main"><?= h($row['numero']) ?></div>
                 </td>
                 <td data-label="Fecha">
                   <div class="cell-title"><?= h(format_display_date((string) ($row['fecha_emision'] ?? ''))) ?></div>
@@ -628,7 +639,66 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
     </div>
   </div>
 </div>
+<div class="case-modal-backdrop" id="office-case-modal" hidden aria-hidden="true">
+  <div class="case-modal-dialog" role="dialog" aria-modal="true" aria-label="Ficha del expediente" tabindex="-1">
+    <div class="case-modal-loading" role="status">Cargando expediente…</div>
+  </div>
+</div>
 <script>
+(() => {
+  const modal = document.getElementById('office-case-modal');
+  const dialog = modal?.querySelector('.case-modal-dialog');
+  if (!modal || !dialog) return;
+  let previousFocus = null;
+  let requestController = null;
+  const close = () => {
+    requestController?.abort();
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    previousFocus?.focus();
+  };
+  const open = async (id) => {
+    requestController?.abort();
+    requestController = new AbortController();
+    previousFocus = document.activeElement;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    dialog.innerHTML = '<div class="case-modal-loading" role="status">Cargando expediente…</div>';
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    dialog.focus();
+    try {
+      const response = await fetch('gestion_expedientes.php?id=' + encodeURIComponent(id) + '&modal=1', {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}, signal: requestController.signal
+      });
+      if (!response.ok) throw new Error('No se pudo cargar el expediente.');
+      dialog.innerHTML = await response.text();
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      dialog.innerHTML = '<div class="case-modal-error">No se pudo cargar el expediente.</div>';
+    }
+  };
+  document.querySelectorAll('tbody tr[data-case-id]').forEach(row => {
+    row.addEventListener('click', event => {
+      if (event.target.closest('a, button, input, select, textarea, summary, details, form')) return;
+      open(row.dataset.caseId);
+    });
+    row.addEventListener('keydown', event => {
+      if (event.target !== row || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      open(row.dataset.caseId);
+    });
+  });
+  modal.addEventListener('click', event => {
+    if (event.target === modal || event.target.closest('[data-case-modal-close]')) close();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !modal.hidden) close();
+  });
+})();
+
 function syncStateClass(select) {
   select.dataset.state = (select.value || '').toUpperCase();
 }
