@@ -117,6 +117,27 @@ php docs/scripts/migrar_persona_snapshots.php --database="$DB_NAME" --apply
 php docs/scripts/migrar_multiusuario.php --schema-only --apply
 ```
 
+### Pase a Archivo (referencias de informe y oficio)
+
+Después del `git pull`, instalar primero la recepción de Archivo y luego las
+referencias de remisión. La primera migración asegura que exista la columna
+`expediente_transferencias.tipo` y actualiza los disparadores; la segunda agrega
+`informe_remision` y `oficio_remision`. El código de `accidente_listar.php`
+consulta estas columnas; Git no modifica tablas MySQL.
+
+```bash
+php docs/scripts/migrar_recepcion_archivo.php
+php docs/scripts/migrar_referencias_archivo.php
+php docs/scripts/migrar_referencias_archivo.php --apply
+php docs/scripts/migrar_referencias_archivo.php
+```
+
+Ejecutar los comandos después del respaldo de MySQL. El segundo informa las
+referencias pendientes sin escribir; el tercero es repetible y también completa
+los números de informe históricos que tengan formato válido. El último debe
+indicar que no hay columnas pendientes. Si falta el esquema multiusuario,
+completar antes su instalación indicada arriba.
+
 Antes de añadir `--apply` a snapshots, comprobar el destino que muestra el comando
 anterior. La cuenta configurada en la aplicación necesita los permisos de migración
 mencionados; si falla por privilegios, corregir el acceso con el administrador de

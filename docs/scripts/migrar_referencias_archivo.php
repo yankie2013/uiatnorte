@@ -6,6 +6,10 @@ require dirname(__DIR__, 2).'/bootstrap/app.php';
 use App\Support\ArchiveReference;
 $p = \App\Database\Database::connection();
 $apply = in_array('--apply', $argv, true);
+$tipoCheck = $p->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='expediente_transferencias' AND column_name='tipo'");
+if (!$tipoCheck->fetchColumn()) {
+    throw new RuntimeException('Falta expediente_transferencias.tipo. Ejecute primero migrar_recepcion_archivo.php después de respaldar la base.');
+}
 foreach (['informe_remision', 'oficio_remision'] as $column) {
     $check = $p->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='expediente_transferencias' AND column_name=?");
     $check->execute([$column]);
