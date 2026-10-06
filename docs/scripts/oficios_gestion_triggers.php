@@ -2,7 +2,7 @@
 // Reutilizado por ambas migraciones; conserva la auditoría existente.
 if (PHP_SAPI !== 'cli' || !isset($p)) { http_response_code(404); exit; }
 $actor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1)";
-$editor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND (id=OLD.creado_por OR rol='jefe_emi'))";
+$editor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND (id=OLD.creado_por OR id=(CASE WHEN OLD.gestion=1 THEN OLD.encargado_id ELSE (SELECT responsable_id FROM accidentes WHERE id=OLD.accidente_id AND eliminado_en IS NULL) END)))";
 $valid = " IF NEW.gestion=1 THEN
 IF NEW.comisaria_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM comisarias WHERE id=NEW.comisaria_id) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Comisaría inválida'; END IF;
 IF NEW.encargado_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM usuarios u JOIN usuarios actor ON actor.id=@actor_id WHERE u.id=NEW.encargado_id AND u.activo=1 AND u.rol='jefe_emi' AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,''))) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Encargado fuera de la unidad'; END IF;
@@ -21,7 +21,7 @@ ELSE SET NEW.responsable_documento=(SELECT $profile FROM accidentes a JOIN usuar
 END IF; END");
 $p->exec('DROP TRIGGER IF EXISTS rbac_oficios_update');
 $p->exec("CREATE TRIGGER rbac_oficios_update BEFORE UPDATE ON oficios FOR EACH ROW BEGIN IF COALESCE(@rbac_migration,0)<>1 THEN
-IF NOT ($editor) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Solo el registrante o JEFE EMI puede editar'; END IF;
+IF NOT ($editor) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Solo el registrante o encargado asignado puede editar'; END IF;
 IF NOT (NEW.creado_por <=> OLD.creado_por) OR NEW.gestion<>OLD.gestion THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Autoría y origen inmutables'; END IF;
 IF NOT (NEW.responsable_documento <=> OLD.responsable_documento) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='La identidad histórica del documento se conserva'; END IF;
 $valid

@@ -343,6 +343,7 @@ $estadoOpciones = [
   'Pendiente' => 'PENDIENTE',
   'Resuelto' => 'RESUELTO',
   'Con diligencias' => 'CON DILIGENCIAS',
+  'Archivados' => 'ARCHIVADOS',
 ];
 $estadoFiltro = trim($_GET['estado'] ?? ($isArchivo ? 'todos' : 'Pendiente'));
 if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
@@ -452,6 +453,8 @@ $clearFiltersUrl = 'accidente_listar.php' . ($clearFilterParams !== [] ? ('?' . 
 // âžœ AÃ±adimos a.estado, a.folder y a.priority
 $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.lugar,a.fecha_accidente,a.estado,a.folder,a.priority,a.latitud,a.longitud,c.nombre AS comisaria, ud.nombre AS distrito,
                archive_transfer.informe_remision,archive_transfer.oficio_remision,
+               archive_transfer.resuelto_en AS archivo_aceptado_en,
+               archive_receiver.nombre AS archivo_aceptado_por,archive_receiver.grado AS archivo_aceptado_grado,
                fa.nombre AS fiscalia, TRIM(CONCAT_WS(' ', fi.nombres, fi.apellido_paterno, fi.apellido_materno)) AS fiscal,
                COALESCE(dpc.diligencias_pendientes, 0) AS diligencias_pendientes
         FROM {$accidentTable} a
@@ -467,6 +470,7 @@ $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.l
           WHERE archive_match.accidente_id=a.id
             AND archive_match.tipo='archivo' AND archive_match.estado='aceptada'
         )
+        LEFT JOIN usuarios archive_receiver ON archive_receiver.id=archive_transfer.destino_id
         LEFT JOIN (
           SELECT accidente_id, COUNT(*) AS diligencias_pendientes
             FROM {$diligenceTable}
@@ -513,7 +517,9 @@ if($comisaria_id!==''){
   $sql .= " AND a.comisaria_id=?";
   $params[]=$comisaria_id;
 }
-if($estadoFiltro !== 'todos'){
+if($estadoFiltro === 'Archivados'){
+  $sql .= " AND archive_transfer.id IS NOT NULL";
+} elseif($estadoFiltro !== 'todos'){
   $sql .= " AND COALESCE(NULLIF(TRIM(a.estado), ''), 'Pendiente') = ?";
   $params[] = $estadoFiltro;
 }
@@ -1800,10 +1806,12 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
                   <span class="acc-meta-value"><?=h($r['comisaria'] ?? '-')?></span>
                 </div>
               </div>
-              <?php if ($isArchivo): ?>
+              <?php if ($isArchivo || !empty($r['archivo_aceptado_en'])): ?>
                 <div class="acc-archive-references" aria-label="Documentos de remisión a Archivo">
                   <div><small>Informe N°</small><strong><?= h($r['informe_remision'] ?: 'No registrado') ?></strong></div>
                   <div><small>Oficio N°</small><strong><?= h($r['oficio_remision'] ?: 'No registrado') ?></strong></div>
+                  <div><small>Archivo aceptado por</small><strong><?= h(trim(($r['archivo_aceptado_grado'] ?? '').' '.($r['archivo_aceptado_por'] ?? '')) ?: 'Sin registrar') ?></strong></div>
+                  <div><small>Fecha de aceptación</small><strong><?= h(fecha_lista_corta($r['archivo_aceptado_en'] ?? '')) ?></strong></div>
                 </div>
               <?php endif; ?>
             </div>

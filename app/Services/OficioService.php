@@ -31,7 +31,7 @@ final class OficioService
     public function canEdit(array $row): bool
     {
         $actor = Auth::user();
-        return (int)($actor['id'] ?? 0) > 0 && ((int)($row['creado_por'] ?? 0) === (int)$actor['id'] || ($actor['rol'] ?? '') === 'jefe_emi');
+        return (int)($actor['id'] ?? 0) > 0 && ((int)($row['creado_por'] ?? 0) === (int)$actor['id'] || (int)($row['editor_encargado_id'] ?? $row['encargado_id'] ?? 0) === (int)$actor['id']);
     }
 
     public function formContext(?int $preselectedAccidenteId = null): array
@@ -99,7 +99,7 @@ final class OficioService
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
         $existing = $this->repository->find($id);
-        if (!$this->canEdit($existing)) throw new InvalidArgumentException('Solo quien registró el oficio o un JEFE EMI puede editarlo.');
+        if (!$this->canEdit($existing)) throw new InvalidArgumentException('Solo quien registró el oficio o su encargado asignado puede editarlo.');
         $input['gestion'] = $existing['gestion'] ?? 0;
         $input['comisaria_id'] ??= $existing['comisaria_id'] ?? '';
         $input['encargado_id'] ??= $existing['encargado_id'] ?? '';
@@ -112,6 +112,7 @@ final class OficioService
         if ($this->repository->find($id) === null) {
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
+        if (!\App\Support\Access::admin()) throw new InvalidArgumentException('Solo el administrador puede eliminar oficios.');
         $this->repository->delete($id);
     }
 
@@ -124,6 +125,7 @@ final class OficioService
         if ($this->repository->find($id) === null) {
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
+        if (!$this->canEdit($this->repository->find($id))) throw new InvalidArgumentException('No tienes permiso para modificar este oficio.');
         $this->repository->updateEstado($id, $estado);
     }
 

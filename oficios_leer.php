@@ -67,7 +67,7 @@ body{background:var(--page);color:var(--text)}body.is-embed{margin:0}.wrap{max-w
     <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $detail['accidente_id']) ?>">Datos generales SIDPOL</a>
   <?php endif; ?>
   <?php if ($service->canEdit($detail)): ?><a class="btn primary" href="oficios_editar.php?origin=<?= urlencode($oficioOrigin) ?>&id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar</a><?php endif; ?>
-  <a class="btn danger" href="oficios_eliminar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a>
+  <?php if (\App\Support\Access::admin()): ?><a class="btn danger" href="oficios_eliminar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a><?php endif; ?>
 </div>
 
   <h1>Oficio N° <?= h($detail['numero']) ?>/<?= h($detail['anio']) ?> <span class="badge"><?= h($detail['estado']) ?></span></h1>

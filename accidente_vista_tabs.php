@@ -1200,7 +1200,7 @@ function render_field_cards(array $record, array $fields): string
             continue;
         }
         $class = is_array($field) ? (string) ($field['class'] ?? '') : '';
-        $emptyClass = is_empty_display_value($record[$key] ?? null) ? ' is-empty-field' : '';
+        $emptyClass = '';
         $html .= '<div class="field-card ' . h(trim($class . $emptyClass)) . '">';
         $html .= '<div class="field-label">' . h(human_label($key)) . '</div>';
         $html .= '<div class="field-value">' . field_html($key, $record[$key] ?? null) . '</div>';
@@ -6228,13 +6228,6 @@ $resumenInterventionRows = [
   .manifestation-story-text{margin:0;color:#e11d1d;font-size:10pt;line-height:1.45;font-weight:600;flex:1}
   .field-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
   .field-card{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:5px 9px}
-  .field-card.is-empty-field,
-  .data-card.is-empty-field,
-  .line-card.is-empty-field{
-    border-color:#ff3b64 !important;
-    box-shadow:0 0 0 1px rgba(255,59,100,.58), 0 0 11px rgba(255,59,100,.45);
-    background:linear-gradient(180deg,rgba(255,59,100,.07),rgba(255,255,255,.96));
-  }
   .field-card.span-2{grid-column:span 2}
   .field-card.span-4{grid-column:span 4}
   .field-label{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#8b6a12;margin-bottom:2px}
@@ -10183,7 +10176,7 @@ $resumenInterventionRows = [
                           <a class="btn-shell btn-documento-recibido js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&referencia_oficio_id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=documentos')) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">Documento recibido</a>
                           <a class="btn-shell js-inline-open" href="oficios_leer.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Ver oficio">Ver</a>
                           <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Editar oficio">Editar</a>
-                          <a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio">Eliminar</a>
+                          <?php if (\App\Support\Access::admin()): ?><a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio">Eliminar</a><?php endif; ?>
                         </div>
                       </article>
                     <?php endforeach; ?>

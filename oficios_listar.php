@@ -331,7 +331,15 @@ thead th{
 }
 tbody td{padding:11px;border-bottom:1px solid var(--border);vertical-align:top;font-size:.78rem;line-height:1.35}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:rgba(148,163,184,.06)}
+tbody tr:nth-child(odd) td{background:#ffffff}
+tbody tr:nth-child(even) td{background:#e8eee4}
+tbody tr:hover td{background:#d9e7d4}
+tbody td+td{border-left:1px solid #d6dfd1}
+thead th{background:#e0ead9;color:#31583d;border-bottom:2px solid #7f9d72}
+html[data-theme-resolved="dark"] tbody tr:nth-child(odd) td{background:#17251f}
+html[data-theme-resolved="dark"] tbody tr:nth-child(even) td{background:#22352a}
+html[data-theme-resolved="dark"] tbody tr:hover td{background:#304b39}
+html[data-theme-resolved="dark"] thead th{background:#263c2d;color:#c7dfbc}
 tbody tr[data-case-id]{cursor:pointer}
 tbody tr[data-case-id]:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
 tbody tr.row-updated td{background:rgba(34,197,94,.10)}
@@ -351,11 +359,12 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
 .tools{gap:5px}
 .action-links{margin-top:6px;gap:5px;align-items:center;flex-wrap:nowrap}
 .action-links form{margin:0}
-.office-menu{position:relative}
-.office-menu summary{list-style:none;cursor:pointer;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--card-soft);font-weight:800;white-space:nowrap}
-.office-menu summary::-webkit-details-marker{display:none}
-.office-menu[open] .office-menu-body{position:absolute;right:calc(100% + 6px);top:0;z-index:5;width:250px;max-width:calc(100vw - 40px);padding:11px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
-.office-menu .tools,.office-menu .action-links{display:flex;flex-wrap:wrap;margin-top:8px}
+.office-icon-actions{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.office-icon-button{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #b9cdb3;border-radius:8px;background:var(--card);color:#31583d;text-decoration:none;transition:background .15s,border-color .15s}
+.office-icon-button:hover{background:#d9e7d4;border-color:#7f9d72}
+.office-icon-button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.office-icon-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:#4d6b50}
 .office-content{line-height:1.42;overflow-wrap:anywhere}
 .state{
   width:100%;
@@ -532,7 +541,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
               <th>Contenido</th>
               <th>Entidad de destino</th>
               <th><?= $accidenteId > 0 ? 'Registrado por' : 'Encargado' ?></th>
-              <th>Acciones</th>
+              <th aria-label="Opciones del oficio"></th>
             </tr>
           </thead>
           <tbody>
@@ -542,6 +551,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                   <div class="empty">
                     <strong>No hay resultados para los filtros aplicados.</strong>
                     <div class="small" style="margin-top:8px;">Prueba limpiando filtros o usando una b&uacute;squeda m&aacute;s amplia.</div>
+                    <?php if (\App\Support\Access::admin()): ?><a class="office-icon-button" href="oficios_eliminar.php?id=<?= (int)$row['id'] ?>&return_to=<?= urlencode($returnTo) ?>" title="Eliminar oficio" aria-label="Eliminar oficio <?= h($row['numero']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></a><?php endif; ?>
                   </div>
                 </td>
               </tr>
@@ -574,47 +584,13 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 <td data-label="Entidad de destino"><?= h($row['entidad'] ?: ($row['persona_destino_manual'] ?: '-')) ?></td>
                 <td data-label="<?= $accidenteId > 0 ? 'Registrado por' : 'Encargado' ?>"><?= h($accidenteId > 0 ? registrante_breve($row) : (($row['encargado_nombre'] ?? '') ?: 'Sin encargado')) ?></td>
                 <td data-label="Acciones">
-                  <details class="office-menu">
-                    <summary>Acciones ▾</summary>
-                    <div class="office-menu-body">
-                    <?php if ($accidenteId <= 0): ?>
-                    <div class="action-links">
-                      <a class="btn sm" data-oficio-modal="Ver oficio" href="oficios_leer.php?origin=gestion&id=<?= (int)$row['id'] ?>">Ver</a>
-                      <?php if ($service->canEdit($row)): ?><a class="btn sm" data-oficio-modal="Editar oficio" href="oficios_editar.php?origin=gestion&id=<?= (int)$row['id'] ?>">Editar</a><?php endif; ?>
-                      <?php $downloadUrl = $service->downloadUrlForOficio((int)$row['id'], $row); if ($downloadUrl !== ''): ?><a class="btn sm" href="<?= h($downloadUrl) ?>">Descargar</a><?php endif; ?>
-                    </div>
-                    <?php else: ?>
-                    <div class="small">Estado</div>
-                    <select class="state js-state" data-id="<?= h($row['id']) ?>">
-                      <?php foreach ($ctx['estados'] as $item): ?>
-                        <option value="<?= h($item) ?>" <?= (string) ($row['estado'] ?? '') === $item ? 'selected' : '' ?>><?= h($item) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <div class="small" style="margin-top:7px;">SIDPOL <?= h($row['registro_sidpol'] ?: '-') ?> · Acc. <?= h($row['accid'] ?: '-') ?></div>
-                  <div class="tools">
-                    <?php if ($isCamaraVideo): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_camaras.php?oficio_id=<?= h($row['id']) ?>">&#128249; Camara</a><?php endif; ?>
-                    <?php if ($isRemitir): ?><a class="tool" target="_blank" rel="noopener" href="oficio_remitir_diligencia.php?oficio_id=<?= h($row['id']) ?><?= !empty($row['accid']) ? '&accidente_id=' . h($row['accid']) : '' ?>">Remitir</a><?php endif; ?>
-                    <?php if ($isDosaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_resultado_dosaje.php?oficio_id=<?= h($row['id']) ?>">Dosaje</a><?php endif; ?>
-                    <?php if ($isPeritaje): ?><a class="tool" target="_blank" rel="noopener" href="oficio_peritaje.php?oficio_id=<?= h($row['id']) ?>">Peritaje</a><?php endif; ?>
-                    <?php if ($isNecropsia): ?><a class="tool" target="_blank" rel="noopener" href="oficio_protocolo.php?oficio_id=<?= h($row['id']) ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . h($row['inv_per_id']) : '' ?>">Necropsia</a><?php endif; ?>
-                    <?php if ($isSunarpHistorial): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= h($row['id']) ?>">SUNARP</a><?php endif; ?>
-                    <?php if ($isInformacionCertificadoUper): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= h($row['id']) ?>">UPER</a><?php endif; ?>
-                    <?php if ($isInformacionDiligencias): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= h($row['id']) ?>">Diligencias</a><?php endif; ?>
-                    <?php if ($isInformeMedico): ?><a class="tool" target="_blank" rel="noopener" href="word_oficio_informe_medico.php?oficio_id=<?= h($row['id']) ?>">Informe medico</a><?php endif; ?>
-                    <a class="tool tool-documento-recibido" href="documento_recibido_nuevo.php?accidente_id=<?= h($row['accid']) ?>&referencia_oficio_id=<?= h($row['id']) ?>&return_to=<?= urlencode($returnTo) ?>">Documento recibido</a>
+                  <?php $officeOrigin = $accidenteId > 0 ? 'expediente' : 'gestion'; $downloadUrl = $service->downloadUrlForOficio((int)$row['id'], $row); ?>
+                  <div class="office-icon-actions">
+                    <a class="office-icon-button" data-oficio-modal="Ver oficio" href="oficios_leer.php?origin=<?= $officeOrigin ?>&id=<?= (int)$row['id'] ?>" title="Ver oficio" aria-label="Ver oficio <?= h($row['numero']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                    <?php if ($downloadUrl !== ''): ?><a class="office-icon-button" href="<?= h($downloadUrl) ?>" title="Descargar oficio" aria-label="Descargar oficio <?= h($row['numero']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></a><?php endif; ?>
+                    <?php if ($service->canEdit($row)): ?><a class="office-icon-button" data-oficio-modal="Editar oficio" href="oficios_editar.php?origin=<?= $officeOrigin ?>&id=<?= (int)$row['id'] ?>" title="Editar oficio" aria-label="Editar oficio <?= h($row['numero']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-3 3 5 5"/></svg></a><?php endif; ?>
+                    <?php if (\App\Support\Access::admin()): ?><a class="office-icon-button" href="oficios_eliminar.php?id=<?= (int)$row['id'] ?>&return_to=<?= urlencode($returnTo) ?>" title="Eliminar oficio" aria-label="Eliminar oficio <?= h($row['numero']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></a><?php endif; ?>
                   </div>
-                  <div class="action-links">
-                    <a class="btn sm" data-oficio-modal="Ver oficio" href="oficios_leer.php?origin=expediente&id=<?= h($row['id']) ?>">Ver</a>
-                    <?php if ($service->canEdit($row)): ?><a class="btn sm" data-oficio-modal="Editar oficio" href="oficios_editar.php?origin=expediente&id=<?= h($row['id']) ?>">Editar</a><?php endif; ?>
-                    <form action="oficios_eliminar.php" method="post" style="display:inline" onsubmit="return confirm('Eliminar el oficio?');">
-                      <input type="hidden" name="id" value="<?= h($row['id']) ?>">
-                      <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
-                      <button class="btn sm danger" type="submit">Eliminar</button>
-                    </form>
-                  </div>
-                    <?php endif; ?>
-                    </div>
-                  </details>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -640,6 +616,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
 #oficio-detail-modal h2{margin:0;font-size:1.15rem}
 #oficio-detail-frame{display:block;width:100%;height:calc(100% - 64px);border:0;background:var(--card)}
 </style>
+
 <script>
 (() => {
   const modal = document.getElementById('oficio-detail-modal');

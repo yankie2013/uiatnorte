@@ -153,7 +153,7 @@ $axisMax = $tick * 4;
           <?php if ($archiveData['events']): ?><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Expediente</th><th>Distrito</th><th></th></tr></thead><tbody><?php foreach ($archiveData['events'] as $event): ?><tr><td><?= ddatetime($event['at']) ?></td><td><span class="status <?= $event['kind'] === 'Archivado' ? 'process' : ($event['kind'] === 'Resuelto' ? 'resolved' : 'pending') ?>"><i></i><?= dh($event['kind']) ?></span></td><td><?= dh($event['sidpol'] ?: 'Expediente #' . $event['id']) ?></td><td><?= dh($event['district']) ?></td><td><a class="row-open" href="gestion_expedientes.php?id=<?= (int)$event['id'] ?>" aria-label="Consultar expediente <?= (int)$event['id'] ?>"><?= di('arrow') ?></a></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><div class="empty-state"><p>Sin actividad reciente.</p></div><?php endif; ?>
         </section>
         <?php else: ?>
-        <section class="kpi-grid" aria-label="Indicadores del período seleccionado">
+        <section class="kpi-grid <?= \App\Support\Access::role() === 'jefe_emi' ? 'emi-kpi-grid' : '' ?>" aria-label="Indicadores del período seleccionado">
         <?php $cards = [
             ['total','folder','Accidentes registrados',$total,'Expedientes en el período','todos'],
             ['pending','clock','Pendientes',$counts['Pendiente'],'Requieren seguimiento','Pendiente'],
@@ -162,6 +162,9 @@ $axisMax = $tick * 4;
         ]; foreach ($cards as [$kind,$icon,$label,$value,$description,$state]): ?>
             <a class="kpi <?= $kind ?>" href="<?= dh(dlink(['estado' => $state])) ?>"><div class="kpi-top"><span><?= dh($label) ?></span><span class="kpi-icon"><?= di($icon) ?></span></div><div class="kpi-value"><?= dn($value) ?><span class="kpi-ratio"><?= $kind === 'total' ? ($year ?? 'Histórico') : dp($value, $total) ?></span></div><div class="kpi-bottom"><span><?= dh($description) ?></span><?= di('arrow') ?></div></a>
         <?php endforeach; ?>
+        <?php if (\App\Support\Access::role() === 'jefe_emi'): ?>
+            <a class="kpi process" href="<?= dh(dlink(['estado' => 'Archivados'])) ?>"><div class="kpi-top"><span>Casos archivados</span><span class="kpi-icon"><?= di('book') ?></span></div><div class="kpi-value"><?= dn($data['archive']['accepted']) ?><span class="kpi-ratio"><?= dp($data['archive']['accepted'], $total) ?></span></div><div class="kpi-bottom"><span>Recepción de archivo aceptada</span><?= di('arrow') ?></div><div class="kpi-archive-pending"><strong><?= dn($data['archive']['pending']) ?></strong><span>Pendientes de aceptación en Archivo</span></div></a>
+        <?php endif; ?>
         </section>
         <div class="charts-grid">
             <section class="panel trend-panel" aria-labelledby="trend-title"><div class="panel-heading"><div><h2 id="trend-title">Evolución de accidentes</h2><p>Según fecha del accidente · <?= $year === null ? 'Por año' : 'Por mes de ' . $year ?></p></div><span class="small-tag"><?= $year ?? 'Histórico' ?></span></div>

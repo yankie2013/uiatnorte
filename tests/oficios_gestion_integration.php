@@ -66,9 +66,23 @@ try {
     $denied=false;
     try {$p->prepare('UPDATE oficios SET motivo=? WHERE id=?')->execute(['No autorizado',$id]);} catch(PDOException $e) {$denied=$e->getCode()==='45000';}
     expect($denied,'La base de datos rechaza la edición no autorizada.');
+    $otherChief = current(array_filter($actors, fn($u)=>$u['rol']==='jefe_emi' && (int)$u['id']!==(int)$chief['id']));
+    expect((bool)$otherChief, 'Se requiere otro JEFE EMI para verificar aislamiento.');
+    $_SESSION['user']=$otherChief;
+    $p->exec('SET @actor_id='.(int)$otherChief['id']);
+    expect(!$service->canEdit($repository->find($id)), 'JEFE EMI ajeno no puede editar.');
+    foreach (['update','changeEstado'] as $operation) {
+        $denied=false;
+        try { if ($operation==='update') $service->update($id,[]); else $service->changeEstado($id,'ENVIADO'); }
+        catch (InvalidArgumentException $e) { $denied=true; }
+        expect($denied, 'Servicio rechaza '.$operation.' del JEFE EMI ajeno.');
+    }
+    $denied=false;
+    try {$p->prepare('UPDATE oficios SET motivo=? WHERE id=?')->execute(['JEFE ajeno',$id]);} catch(PDOException $e) {$denied=$e->getCode()==='45000';}
+    expect($denied, 'SQL rechaza al JEFE EMI ajeno.');
     $_SESSION['user']=$chief;
     $p->exec('SET @actor_id='.(int)$chief['id']);
-    expect($service->canEdit($row),'JEFE EMI puede editar.');
+    expect($service->canEdit($row),'Encargado asignado puede editar.');
     $p->prepare('UPDATE oficios SET motivo=? WHERE id=?')->execute(['Edición JEFE EMI',$id]);
     $_SESSION['user']=$creator;
     $p->exec('SET @actor_id='.(int)$creator['id']);

@@ -1,0 +1,65 @@
+/* Shared screen layout; document exports and print layouts retain their dimensions. */
+@media screen {
+  *, *::before, *::after { box-sizing: border-box; }
+  img, video, canvas { max-width: 100%; }
+  .uiat-responsive-table { max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
+  .uiat-responsive-table:focus-visible { outline:2px solid var(--primary,#2456d6); outline-offset:2px; }
+}
+@media screen and (min-width:761px) and (max-width:1024px) {
+  :where(.wrap,.container,.gestion) { max-width:100%; padding-left:18px; padding-right:18px; }
+  :where(.filters-grid,.form-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  :where(.office-page-head,.page-heading,.page-head) { flex-wrap:wrap; }
+}
+@media screen and (max-width: 760px) {
+  body { min-width:0!important; }
+  :where(.wrap,.container,.content,.page,.main-content,main,.gestion) { min-width:0; max-width:100%; }
+  body > :where(.wrap,.container,.content,.main-content,main,.gestion) { width:auto!important; margin-left:0!important; margin-right:0!important; padding-left:12px!important; padding-right:12px!important; }
+  :where(.wrap,.container,.gestion) { margin-top:14px!important; }
+  :where(.card,.panel,.office-section,.section-block,.filter-box) { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+  :where(h1,h2,h3,p,label,.value,.field-value,.cell-title) { overflow-wrap:anywhere; }
+  h1 { font-size:clamp(22px,6vw,28px)!important; line-height:1.2!important; }
+  :where(.page-head,.page-heading,.office-page-head,.panel-head,.section-head) { flex-wrap:wrap; gap:12px; }
+  :where(form .grid,form .row,.form-grid,.filters-grid,.office-recipient-row,.field-row) { min-width:0; }
+  :where(form .grid,.form-grid,.filters-grid,.office-recipient-row) { grid-template-columns:minmax(0,1fr)!important; gap:12px!important; }
+  :where(form .grid,.form-grid,.filters-grid,.office-recipient-row) > * { grid-column:auto!important; min-width:0!important; max-width:100%; }
+  :where(form .row,form .field-row) { flex-wrap:wrap; }
+  :where(form .row,form .field-row) > * { min-width:0!important; max-width:100%; flex-basis:100%; }
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea) { max-width:100%!important; min-width:0!important; font-size:16px!important; }
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select) { min-height:44px; }
+  textarea { resize:vertical; }
+  :where(.toolbar,.actions,.stack-actions,.office-actions) { flex-direction:row!important; flex-wrap:wrap!important; gap:8px!important; }
+  :where(.toolbar,.actions,.stack-actions,.office-actions) > :where(a,button,.btn,form) { width:auto!important; max-width:100%; flex:1 1 auto; }
+  :where(.toolbar,.actions,.stack-actions,.office-actions) :where(a,button,.btn) { min-height:44px; white-space:normal; text-align:center; }
+  .office-page-head .toolbar { display:flex; width:100%; }
+  .office-page-head .toolbar > * { flex:1 1 100px; padding:9px 8px; font-size:12px; box-shadow:none; }
+  .office-section { padding:14px 12px!important; border-width:1px!important; box-shadow:none!important; }
+  .office-section::before { display:none; }
+  #frmOficio { padding:10px; box-shadow:0 4px 18px #10203a0a; }
+  #frmOficio::before { display:none; }
+  .section-head { margin-bottom:12px; }
+  .section-head h2,.section-head h3 { font-size:16px; }
+  :where(.table-wrap,.table-shell,.table-scroll,.table-responsive) { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .office-icon-button { width:44px; height:44px; flex:0 0 44px; }
+  .office-icon-actions { flex-wrap:wrap; }
+  :where(dialog,.modal,.modal-box,.modal-content,.case-modal-dialog) { max-width:calc(100vw - 16px)!important; max-height:calc(100dvh - 16px)!important; }
+  dialog { margin:auto; }
+  :where(.modal iframe,#oficio-detail-frame) { max-width:100%; }
+  .case-modal-backdrop { padding:8px; }
+  .case-modal-dialog { padding:10px; }
+  :where(.combo-suggestions,.creatable-combobox-menu) { min-width:0!important; max-width:calc(100vw - 40px)!important; white-space:normal; }
+  .uiat-user-topbar { min-height:76px!important; padding:6px 12px 6px 62px!important; }
+  .uiat-user-breadcrumb { min-height:24px!important; font-size:10px; }
+  .uiat-user-topbar-right { max-width:100%; }
+  .uiat-user-copy { max-width:clamp(90px,36vw,180px); }
+  body.uiat-has-accountbar.uiat-has-sidebar { padding-top:80px!important; }
+  .case-detail-card { width:100%; padding:12px; }
+  .gestion .responsible-editor[open] { min-width:0; max-width:100%; }
+  .gestion > .grid { grid-template-columns:minmax(0,1fr); }
+  .case-card-identifiers,.case-card-facts { flex-wrap:wrap; min-width:0; }
+}
+@media screen and (max-width: 380px) {
+  .uiat-user-copy { max-width:105px; }
+  .uiat-user-search { display:none; }
+  .office-page-head .toolbar > * { flex-basis:90px; font-size:11px; }
+  :where(.kpi-grid,.metrics,.quick-grid) { grid-template-columns:minmax(0,1fr)!important; }
+}

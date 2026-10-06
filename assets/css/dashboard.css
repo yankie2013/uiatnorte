@@ -93,6 +93,11 @@ h1>span { color: #b49b5e; }
 .kpi.resolved .kpi-icon,.kpi.resolved .kpi-ratio { background: #eaf4ed; color: #508763; }
 .kpi.process .kpi-icon,.kpi.process .kpi-ratio { background: #edf1f8; color: #7185a4; }
 .archive-kpi-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.emi-kpi-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.kpi-archive-pending { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e6ebe4; font-size: 11px; color: #758276; }
+.kpi-archive-pending strong { font-size: 18px; color: #243e34; font-variant-numeric: tabular-nums; }
+@media (max-width: 1200px) { .emi-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 700px) { .emi-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .archive-kpi-grid .kpi { min-height: 178px; display: flex; flex-direction: column; justify-content: space-between; }
 .archive-kpi-grid .kpi-value { margin-top: 10px; }
 .archive-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 20px; margin-top: 22px; align-items: start; }

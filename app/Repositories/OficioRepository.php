@@ -742,6 +742,7 @@ final class OficioRepository
             $select[] = "'' AS registrante_nombre";
             $select[] = "'' AS registrante_grado";
         }
+        $select[] = 'CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id';
         $select[] = "CASE WHEN o.gestion=1 THEN TRIM(CONCAT(COALESCE(enc.grado,''),' ',COALESCE(enc.nombre,''))) ELSE TRIM(CONCAT(COALESCE(jefe.grado,''),' ',COALESCE(jefe.nombre,''))) END AS encargado_nombre";
         $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
@@ -923,6 +924,7 @@ final class OficioRepository
 
     public function delete(int $id): void
     {
+        if (!\App\Support\Access::admin()) throw new \RuntimeException('Solo el administrador puede eliminar oficios.');
         $st = $this->pdo->prepare('DELETE FROM oficios WHERE id = ? LIMIT 1');
         $st->execute([$id]);
     }
@@ -930,7 +932,7 @@ final class OficioRepository
     public function find(int $id): ?array
     {
         $oficiosTable = $this->activeTable('oficios');
-        $st = $this->pdo->prepare("SELECT * FROM {$oficiosTable} WHERE id = ? LIMIT 1");
+        $st = $this->pdo->prepare("SELECT o.*, CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id FROM {$oficiosTable} o LEFT JOIN accidentes a ON a.id=o.accidente_id WHERE o.id = ? LIMIT 1");
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -944,6 +946,7 @@ final class OficioRepository
         $personTable = $this->activeTable('involucrados_personas');
         $select = [
             'o.*',
+            'CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id',
             'e.nombre AS entidad',
             'COALESCE(e.siglas,\'\') AS entidad_siglas',
             'se.nombre AS subentidad',

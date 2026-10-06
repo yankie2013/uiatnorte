@@ -27,7 +27,7 @@ if ($id <= 0 || $oficio === null) {
     exit;
 }
 
-if (!$service->canEdit($oficio)) { http_response_code(403); exit('Solo quien registró el oficio o un JEFE EMI puede editarlo.'); }
+if (!$service->canEdit($oficio)) { http_response_code(403); exit('Solo quien registró el oficio o su encargado asignado puede editarlo.'); }
 
 if (!empty($oficio['gestion'])) {
     define('UIAT_GESTION_EDIT_ID', $id);

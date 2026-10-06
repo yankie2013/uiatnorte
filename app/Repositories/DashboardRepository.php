@@ -51,7 +51,12 @@ final class DashboardRepository
                         COALESCE(NULLIF(c.nombre, ''), 'Sin comisaría') AS comisaria
                         FROM accidentes_activos a LEFT JOIN comisarias c ON c.id = a.comisaria_id $where
                         ORDER BY a.creado_en DESC, a.id DESC LIMIT 5");
+        $archive = $read("SELECT
+            COALESCE(SUM(EXISTS (SELECT 1 FROM expediente_transferencias t WHERE t.accidente_id=a.id AND t.tipo='archivo' AND t.estado='aceptada')),0) AS accepted,
+            COALESCE(SUM(EXISTS (SELECT 1 FROM expediente_transferencias t WHERE t.accidente_id=a.id AND t.tipo='archivo' AND t.estado='pendiente')),0) AS pending
+            FROM accidentes_activos a $where")[0];
         return ['counts' => $counts, 'total' => (int)$summary['total'], 'priority' => (int)$summary['priority'],
+                'archive' => array_map('intval', $archive),
                 'undated' => (int)$summary['undated'], 'first_date' => $summary['first_date'], 'last_date' => $summary['last_date'],
                 'timeline' => $timeline, 'districts' => $districts, 'recent' => $recent];
     }

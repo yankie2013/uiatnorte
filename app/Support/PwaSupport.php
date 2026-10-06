@@ -102,6 +102,13 @@ final class PwaSupport
         }
 
         $basePath = self::basePath();
+        if (!preg_match('~<meta\b[^>]*name\s*=\s*[\"\']viewport[\"\']~i', $buffer)) {
+            $buffer = preg_replace('~</head>~i', '<meta name="viewport" content="width=device-width, initial-scale=1"></head>', $buffer, 1);
+        }
+        $responsiveCss = self::assetUrl($basePath, 'assets/css/responsive.css?v=20261006');
+        $responsiveJs = self::assetUrl($basePath, 'assets/js/responsive.js?v=20261006');
+        $buffer = preg_replace('~</body>~i', '<link rel="stylesheet" href="'.$responsiveCss.'"><script src="'.$responsiveJs.'"></script></body>', $buffer, 1);
+
         $headMarkup = self::headMarkup($basePath);
         $bodyMarkup = self::bodyMarkup($basePath);
 
@@ -169,7 +176,7 @@ final class PwaSupport
         $icon192 = self::assetUrl($basePath, 'assets/pwa/icon-192.png?v=' . self::ICON_VERSION);
         $icon512 = self::assetUrl($basePath, 'assets/pwa/icon-512.png?v=' . self::ICON_VERSION);
         $appleIcon = self::assetUrl($basePath, 'assets/pwa/apple-touch-icon.png?v=' . self::ICON_VERSION);
-        $themeCss = self::assetUrl($basePath, 'assets/theme/theme.css?v=20260608-empty-fields');
+        $themeCss = self::assetUrl($basePath, 'assets/theme/theme.css?v=20261006-neutral-fields');
 
         return <<<HTML
 <meta name="theme-color" content="{$themeColor}">
@@ -364,7 +371,7 @@ HTML;
     private static function bodyMarkup(string $basePath): string
     {
         $registerScript = self::assetUrl($basePath, 'assets/pwa/pwa-register.js');
-        $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20260608-empty-fields');
+        $themeScript = self::assetUrl($basePath, 'assets/theme/theme.js?v=20261006-neutral-fields');
         $keepaliveScript = self::assetUrl($basePath, 'assets/session-keepalive.js?v=20260620-persistent-session');
         $keepaliveUrl = self::assetUrl($basePath, 'session_keepalive.php');
         $scope = self::assetUrl($basePath, '');
