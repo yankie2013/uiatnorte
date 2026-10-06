@@ -139,11 +139,13 @@ try{
     actor($p,$secretary);
     check(!in_array($newcase,$workspaceIds(),true),'archivo pendiente no entra al espacio de Secretaría');
     $service->change($newcase,'aceptar',0,'');
+    check((int)$p->query("SELECT responsable_id FROM accidentes WHERE id=$newcase")->fetchColumn()===$other,'Archivo conserva al JEFE EMI encargado');
     check(in_array($newcase,$workspaceIds(),true),'Secretaría ve el expediente archivado en su espacio');
     check(!Access::canEdit($newcase),'Secretaría recibe el archivo como consulta');
     check(Access::canViewWorkspaceCase($newcase) && !Access::canOpenInvestigationCase($newcase),'Secretaría consulta documentos sin abrir la vista editable');
     $id=$newcase;ob_start();require dirname(__DIR__).'/app/Views/expedientes/card.php';$archiveCard=ob_get_clean();
     check(str_contains($archiveCard,'042-2026-COMOPPOL-DIRNOS-PNP/DIRTTSV-DIVPIAT-UIAT-NORTE') && str_contains($archiveCard,'001-2026-COMOPPOL-DIRNOS-PNP/DIRTTSV-DIVPIAT-UIAT-NORTE'),'ficha de Secretaría muestra informe y oficio de remisión');
+    check(str_contains($archiveCard,'Archivo aceptado por') && str_contains($archiveCard,'Prueba secretaria'),'ficha identifica a quien acepta el archivo');
     actor($p,$administration);
     check(!in_array($newcase,$workspaceIds(),true),'Administración solo ve archivos recibidos por su usuario');
     actor($p,2);

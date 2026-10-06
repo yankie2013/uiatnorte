@@ -17,6 +17,23 @@ final class OficioService
     {
     }
 
+    public function gestionContext(): array { return $this->repository->gestionContext(); }
+
+    public function gestionAnnualData(?array $existing = null): array
+    {
+        $latest = $this->repository->oficialAnos()[0] ?? null;
+        return [
+            'anio_oficio' => $existing['anio'] ?? (int)date('Y'),
+            'oficial_ano_id' => $existing['oficial_ano_id'] ?? ($latest['id'] ?? ''),
+        ];
+    }
+
+    public function canEdit(array $row): bool
+    {
+        $actor = Auth::user();
+        return (int)($actor['id'] ?? 0) > 0 && ((int)($row['creado_por'] ?? 0) === (int)$actor['id'] || ($actor['rol'] ?? '') === 'jefe_emi');
+    }
+
     public function formContext(?int $preselectedAccidenteId = null): array
     {
         $oficialAnos = $this->repository->oficialAnos();
@@ -81,6 +98,11 @@ final class OficioService
         if ($this->repository->find($id) === null) {
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
+        $existing = $this->repository->find($id);
+        if (!$this->canEdit($existing)) throw new InvalidArgumentException('Solo quien registró el oficio o un JEFE EMI puede editarlo.');
+        $input['gestion'] = $existing['gestion'] ?? 0;
+        $input['comisaria_id'] ??= $existing['comisaria_id'] ?? '';
+        $input['encargado_id'] ??= $existing['encargado_id'] ?? '';
         $payload = $this->payload($input, $id);
         $this->repository->saveWithTemplate($payload, (string) ($payload['plantilla_nueva'] ?? ''), $id);
     }
@@ -108,12 +130,17 @@ final class OficioService
     public function defaultData(?array $row = null, ?int $preAccidenteId = null): array
     {
         return [
+            'gestion' => $row['gestion'] ?? 0,
+            'comisaria_id' => $row['comisaria_id'] ?? '',
+            'encargado_id' => $row['encargado_id'] ?? '',
             'accidente_id' => $row['accidente_id'] ?? ($preAccidenteId ?: ''),
             'anio_oficio' => $row['anio'] ?? date('Y'),
             'numero_oficio' => $row['numero'] ?? $this->repository->nextNumero((int)($row['anio'] ?? date('Y'))),
             'fecha_emision' => $row['fecha_emision'] ?? date('Y-m-d'),
             'oficial_ano_id' => $row['oficial_ano_id'] ?? '',
             'entidad_id' => $row['entidad_id_destino'] ?? '',
+            'entidad_nombre' => '',
+            'grado_cargo_nombre' => '',
             'subentidad_id' => $row['subentidad_destino_id'] ?? '',
             'grado_cargo_id' => $row['grado_cargo_id'] ?? '',
             'persona_id' => $row['persona_destino_id'] ?? '',
@@ -279,6 +306,7 @@ final class OficioService
             'persona_id' => ($source['persona_destino_id'] ?? null) !== null ? (int) $source['persona_destino_id'] : '',
             'persona_destino_manual' => (string) ($source['persona_destino_manual'] ?? ''),
             'grado_cargo_id' => ($source['grado_cargo_id'] ?? null) !== null ? (int) $source['grado_cargo_id'] : '',
+            'grado_cargo_nombre' => $this->gradoCargoLabel($this->repository->gradoCargo(), !empty($source['grado_cargo_id']) ? (int)$source['grado_cargo_id'] : null),
             'asunto_id' => (int) ($asuntoInfo['id'] ?? $asuntoId),
             'tipo' => (string) ($asuntoInfo['tipo'] ?? 'SOLICITAR'),
             'motivo' => trim((string) ($source['motivo'] ?? '')) !== '' ? trim((string) $source['motivo']) : trim((string) ($asuntoInfo['detalle'] ?? '')),
@@ -289,9 +317,9 @@ final class OficioService
         ];
     }
 
-    public function downloadUrlForOficio(int $oficioId): string
+    public function downloadUrlForOficio(int $oficioId, ?array $row = null): string
     {
-        $row = $this->repository->detail($oficioId);
+        $row ??= $this->repository->detail($oficioId);
         if ($row === null) {
             return '';
         }
@@ -305,8 +333,8 @@ final class OficioService
         }
 
         $url = str_replace('{id}', (string) $oficioId, (string) $meta['url']);
-        if (($meta['key'] ?? '') === 'necropsia' && !empty($row['involucrado_persona_id'])) {
-            $url .= '&inv_id=' . urlencode((string) $row['involucrado_persona_id']);
+        if (($meta['key'] ?? '') === 'necropsia' && !empty($row['involucrado_persona_id'] ?? $row['inv_per_id'] ?? null)) {
+            $url .= '&inv_id=' . urlencode((string) ($row['involucrado_persona_id'] ?? $row['inv_per_id']));
         }
         if (($meta['key'] ?? '') === 'remitir' && !empty($row['accidente_id'])) {
             $url .= '&accidente_id=' . urlencode((string) $row['accidente_id']);
@@ -546,8 +574,8 @@ final class OficioService
             }
 
             $nombre = trim((string) ($grado['nombre'] ?? ''));
-            $tipo = trim((string) ($grado['tipo'] ?? ''));
-            return $tipo !== '' ? ($nombre . ' [' . $tipo . ']') : $nombre;
+            $abrev = trim((string)($grado['abrev'] ?? ''));
+            return $nombre . ($abrev !== '' ? ' - ' . $abrev : '');
         }
 
         return '';
@@ -603,9 +631,35 @@ final class OficioService
         $numeroIn = trim((string) ($input['numero_oficio'] ?? ''));
         $accidenteId = (int) ($input['accidente_id'] ?? 0);
         $entidadId = (int) ($input['entidad_id'] ?? 0);
+        $entidadNombre = trim((string)($input['entidad_nombre'] ?? ''));
+        $cargoNombre = trim((string)($input['grado_cargo_nombre'] ?? ''));
+        if ($entidadNombre !== '') {
+            $entidadId = 0;
+            foreach ($this->repository->entidades() as $item) {
+                $label = $item['nombre'] . ($item['siglas'] !== '' ? ' (' . $item['siglas'] . ')' : '');
+                if (in_array($this->normalizeMatchText($entidadNombre), array_map([$this,'normalizeMatchText'], [$item['nombre'], $item['siglas'], $label]), true)) {
+                    $entidadId = (int)$item['id'];
+                    break;
+                }
+            }
+        }
+
         $subentidadId = ($input['subentidad_id'] ?? '') !== '' ? (int) $input['subentidad_id'] : null;
         $personaId = ($input['persona_id'] ?? '') !== '' ? (int) $input['persona_id'] : null;
         $gradoCargoId = ($input['grado_cargo_id'] ?? '') !== '' ? (int) $input['grado_cargo_id'] : null;
+        if (array_key_exists('grado_cargo_nombre', $input)) {
+            $gradoCargoId = null;
+            foreach ($this->repository->gradoCargo() as $item) {
+                $label = $item['nombre'] . ($item['abrev'] !== '' ? ' - ' . $item['abrev'] : '');
+                if ($cargoNombre !== '' && in_array($this->normalizeMatchText($cargoNombre), array_map([$this,'normalizeMatchText'], [$item['nombre'], $item['abrev'], $label, $label . ' [' . $item['tipo'] . ']']), true)) {
+                    $gradoCargoId = (int)$item['id'];
+                    break;
+                }
+            }
+        }
+        if (($entidadId <= 0 && mb_strlen($entidadNombre) > 200) || ($gradoCargoId === null && mb_strlen($cargoNombre) > 120)) {
+            throw new InvalidArgumentException('La entidad admite 200 caracteres y el grado/cargo 120.');
+        }
         $tipo = strtoupper(trim((string) ($input['tipo'] ?? 'SOLICITAR')));
         $asuntoId = (int) ($input['asunto_id'] ?? 0);
         $plantillaNombre = trim((string) ($input['plantilla_nombre'] ?? ''));
@@ -622,11 +676,20 @@ final class OficioService
         if ($fecha === '') {
             throw new InvalidArgumentException('La fecha de emisión es obligatoria.');
         }
-        if ($accidenteId <= 0) {
+        $gestion = !empty($input['gestion']);
+        if ($gestion) {
+            $automatic = $this->gestionAnnualData($excludeId !== null ? $this->repository->find($excludeId) : null);
+            $anio = (int)$automatic['anio_oficio'];
+            $oficialAnoId = (int)$automatic['oficial_ano_id'];
+        }
+        $comisariaId = (int)($input['comisaria_id'] ?? 0);
+        $encargadoId = !empty($input['encargado_id']) ? (int)$input['encargado_id'] : null;
+        if ($gestion) $this->repository->validateGestion($comisariaId, $encargadoId, $accidenteId);
+        elseif (!$this->repository->accidenteExists($accidenteId)) {
             throw new InvalidArgumentException('Debes seleccionar el accidente asociado.');
         }
-        if ($entidadId <= 0) {
-            throw new InvalidArgumentException('Selecciona la entidad destino.');
+        if ($entidadId <= 0 && $entidadNombre === '') {
+            throw new InvalidArgumentException('Escribe o selecciona la entidad destino.');
         }
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new InvalidArgumentException('Tipo de asunto inválido.');
@@ -720,7 +783,10 @@ final class OficioService
         }
 
         return [
-            'accidente_id' => $accidenteId,
+            'gestion' => $gestion ? 1 : 0,
+            'comisaria_id' => $gestion && $comisariaId > 0 ? $comisariaId : null,
+            'encargado_id' => $gestion ? $encargadoId : null,
+            'accidente_id' => $accidenteId > 0 ? $accidenteId : null,
             'involucrado_vehiculo_id' => $vehiculoId,
             'numero' => $numero,
             'anio' => $anio,
@@ -731,6 +797,8 @@ final class OficioService
             'persona_destino_manual' => ($personaId === null && $personaDestinoManual !== '') ? $personaDestinoManual : null,
             'grado_cargo_id' => $gradoCargoId,
             'asunto_id' => $asuntoId,
+            'entidad_nombre_nueva' => $entidadId > 0 ? '' : $entidadNombre,
+            'grado_cargo_nombre_nuevo' => $gradoCargoId !== null ? '' : $cargoNombre,
             'plantilla_nueva' => $plantillaNueva,
             'tipo' => $tipo,
             'categoria' => $categoria !== '' ? $categoria : null,
@@ -790,7 +858,7 @@ final class OficioService
     private function asuntoRules(string $nombre, string $detalle): array
     {
         $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
-        $isPeritaje = str_contains($text, 'peritaje') && str_contains($text, 'constat');
+        $isPeritaje = str_contains($text, 'peritaje') && (str_contains($text, 'constat') || str_contains($text, 'dano'));
         $isSunarpHistorial = str_contains($text, 'sunarp') || (str_contains($text, 'historial') && str_contains($text, 'transferenc'));
         $isInformacionCertificado = str_contains($text, 'informacion') && str_contains($text, 'certificado');
         $isNecropsia = str_contains($text, 'necropsia') || str_contains($text, 'autopsia');
@@ -823,7 +891,7 @@ final class OficioService
         if (str_contains($text, 'dosaje') && (str_contains($text, 'resultado') || str_contains($text, 'etil'))) {
             return ['key' => 'dosaje', 'label' => 'Dosaje', 'url' => 'oficio_resultado_dosaje.php?oficio_id={id}'];
         }
-        if (str_contains($text, 'peritaje') && str_contains($text, 'constat')) {
+        if (str_contains($text, 'peritaje') && (str_contains($text, 'constat') || str_contains($text, 'dano'))) {
             return ['key' => 'peritaje', 'label' => 'Peritaje', 'url' => 'oficio_peritaje.php?oficio_id={id}'];
         }
         if (str_contains($text, 'necropsia') || str_contains($text, 'autopsia')) {

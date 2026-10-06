@@ -29,7 +29,6 @@ $sidebarGroups = [
         ['grid', 'Resumen general', 'index.php', $sidebarPath === 'index.php'],
         ['folder', 'Accidentes', 'accidente_listar.php', in_array($sidebarPath, ['guardia_historial.php','accidente_listar.php','accidente_nuevo.php','accidente_editar.php','accidente_creado.php'], true)],
         ['map', 'Mapa de accidentes', 'accidente_mapa.php', $sidebarPath === 'accidente_mapa.php'],
-        ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],
         ['calendar', \App\Support\CalendarAccess::ownsConnectedCalendar() ? 'Google Calendar' : 'Agenda de citaciones', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],
     ],
 ];
@@ -40,9 +39,9 @@ if ($sidebarAccidentId > 0) {
     ];
 }
 $sidebarGroups['GESTIÓN'] = [
+    ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],
     ['folder', 'Buscador general', 'gestion_expedientes.php', $sidebarPath === 'gestion_expedientes.php'],
     ['folder', 'En espera de recepción', 'expedientes_recepcion.php', $sidebarPath === 'expedientes_recepcion.php'],
-    ['file', 'Comunicaciones de guardia', 'guardia.php', $sidebarPath === 'guardia.php'],
 ];
 if (\App\Support\Access::admin()) {
     array_unshift($sidebarGroups['GESTIÓN'], ['folder', 'Listado general', 'listado_general.php', $sidebarPath === 'listado_general.php']);

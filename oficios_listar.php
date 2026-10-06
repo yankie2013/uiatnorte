@@ -17,6 +17,13 @@ if (!function_exists('h')) {
 }
 
 $service = new OficioService(new OficioRepository($pdo));
+$pendingDownloadUrl = '';
+$downloadToken = (string)($_GET['download_saved'] ?? '');
+if ($downloadToken !== '' && isset($_SESSION['oficio_pending_downloads'][$downloadToken])) {
+    $pendingDownloadUrl = (string)$_SESSION['oficio_pending_downloads'][$downloadToken];
+    unset($_SESSION['oficio_pending_downloads'][$downloadToken]);
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'estado') {
     header('Content-Type: application/json; charset=utf-8');
@@ -34,9 +41,10 @@ $q = trim((string) ($_GET['q'] ?? ''));
 $anio = trim((string) ($_GET['anio'] ?? date('Y')));
 if ($anio !== 'todos' && !preg_match('/^\d{4}$/D', $anio)) $anio = date('Y');
 $entidadId = trim((string) ($_GET['entidad_id'] ?? ''));
-$sidpol = trim((string) ($_GET['sidpol'] ?? ''));
+$encargadoId = max(0, (int) ($_GET['encargado_id'] ?? 0));
+$sidpol = '';
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
-$estado = trim((string) ($_GET['estado'] ?? ''));
+$estado = '';
 $categoria = trim((string) ($_GET['categoria'] ?? ''));
 $tipo = strtoupper(trim((string) ($_GET['tipo'] ?? '')));
 if (!in_array($tipo, ['SOLICITAR', 'REMITIR'], true)) {
@@ -48,6 +56,7 @@ $filters = [
     'q' => $q,
     'anio' => $anio === 'todos' ? '' : $anio,
     'entidad_id' => $entidadId,
+    'encargado_id' => $encargadoId,
     'sidpol' => $sidpol,
     'accidente_id' => $accidenteId,
     'estado' => $estado,
@@ -56,6 +65,7 @@ $filters = [
 ];
 $ctx = $service->listado($filters);
 $rows = $ctx['rows'];
+$encargados = $service->gestionContext()['encargados'];
 $aniosDisponibles = array_values(array_unique(array_merge([(int)date('Y')], $ctx['anios'])));
 rsort($aniosDisponibles, SORT_NUMERIC);
 $returnTo = $_SERVER['REQUEST_URI'] ?? build_url([]);
@@ -138,6 +148,9 @@ foreach ($ctx['entidades'] as $entidad) {
 }
 
 $activeFilters = [];
+if ($encargadoId > 0) {
+    $activeFilters[] = ['label' => 'JEFE EMI encargado', 'value' => $encargadoId, 'clear' => 'encargado_id'];
+}
 if ($q !== '') {
     $activeFilters[] = ['label' => 'Texto', 'value' => $q, 'clear' => 'q'];
 }
@@ -164,6 +177,7 @@ $clearFiltersUrl = build_url([
     'q' => null,
     'anio' => null,
     'entidad_id' => null,
+    'encargado_id' => null,
     'sidpol' => null,
     'estado' => null,
     'categoria' => null,
@@ -401,9 +415,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
   <div class="page-head">
     <div class="page-copy">
       <h1>Oficios</h1>
-      <p>Listado operativo del m&oacute;dulo con filtros, seguimiento de estado y accesos r&aacute;pidos.</p>
       <div class="head-chips">
-        <div class="pill"><span>Registros</span><strong><?= count($rows) ?></strong></div>
         <?php if ($accidenteId > 0): ?><div class="pill"><span>Accidente</span><strong>#<?= h($accidenteId) ?></strong></div><?php endif; ?>
         <?php if ($sidpol !== ''): ?><div class="pill"><span>SIDPOL</span><strong><?= h($sidpol) ?></strong></div><?php endif; ?>
         <?php if ($estado !== ''): ?><div class="pill"><span>Estado</span><strong><?= h($estado) ?></strong></div><?php endif; ?>
@@ -421,44 +433,21 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
     <div class="panel-head">
       <?php if ($msg === 'eliminado'): ?><div class="ok">Oficio eliminado correctamente.</div><?php endif; ?>
 
-      <div class="stats-grid">
-        <div class="stat primary">
-          <span class="label">Total visible</span>
-          <span class="value"><?= count($rows) ?></span>
-          <span class="meta">Registros seg&uacute;n filtros actuales</span>
-        </div>
-        <div class="stat">
-          <span class="label">Borradores</span>
-          <span class="value"><?= (int) ($estadoStats['BORRADOR'] ?? 0) ?></span>
-          <span class="meta">Pendientes de cierre o env&iacute;o</span>
-        </div>
-        <div class="stat">
-          <span class="label">Enviados</span>
-          <span class="value"><?= (int) ($estadoStats['ENVIADO'] ?? 0) ?></span>
-          <span class="meta">Documentos ya despachados</span>
-        </div>
-        <div class="stat">
-          <span class="label">Archivados</span>
-          <span class="value"><?= (int) ($estadoStats['ARCHIVADO'] ?? 0) ?></span>
-          <span class="meta">Historial consolidado</span>
-        </div>
-      </div>
-
       <div class="filter-box">
         <div class="filter-title">
           <div>
             <strong>Filtros de b&uacute;squeda</strong>
-            <div class="small">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad, SIDPOL y estado.</div>
+            <div class="small">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad y JEFE EMI encargado.</div>
           </div>
           <?php if ($activeFilters): ?><div class="small"><?= count($activeFilters) ?> filtro(s) activo(s)</div><?php endif; ?>
         </div>
 
-        <form method="get">
+        <form method="get" id="oficio-filters">
           <?php if ($accidenteId > 0): ?><input type="hidden" name="accidente_id" value="<?= h($accidenteId) ?>"><?php endif; ?>
           <div class="filters-grid">
             <div class="field">
               <label for="q">B&uacute;squeda general</label>
-              <input id="q" type="text" name="q" value="<?= h($q) ?>" placeholder="N&uacute;mero, SIDPOL, asunto, referencia o placa">
+              <input id="q" type="text" name="q" value="<?= h($q) ?>" placeholder="N&uacute;mero, asunto, referencia o placa">
             </div>
             <div class="field">
               <label for="anio">A&ntilde;o</label>
@@ -478,9 +467,15 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 <?php endforeach; ?>
               </select>
             </div>
+
             <div class="field">
-              <label for="sidpol">SIDPOL</label>
-              <input id="sidpol" type="text" name="sidpol" value="<?= h($sidpol) ?>" placeholder="Ej. 32813425">
+              <label for="encargado_id">JEFE EMI encargado</label>
+              <select id="encargado_id" name="encargado_id">
+                <option value="">Todos</option>
+                <?php foreach ($encargados as $encargado): ?>
+                  <option value="<?= (int)$encargado['id'] ?>" <?= $encargadoId === (int)$encargado['id'] ? 'selected' : '' ?>><?= h(trim(($encargado['grado'] ?? '').' '.$encargado['nombre'])) ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="field">
               <label for="categoria">Categoría</label>
@@ -500,15 +495,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="field">
-              <label for="estado">Estado</label>
-              <select id="estado" name="estado">
-                <option value="">Todos</option>
-                <?php foreach ($ctx['estados'] as $item): ?>
-                  <option value="<?= h($item) ?>" <?= $estado === $item ? 'selected' : '' ?>><?= h($item) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
+
           </div>
 
           <div class="filters-actions">
@@ -517,17 +504,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
           </div>
         </form>
 
-        <?php if ($activeFilters): ?>
-          <div class="active-filters">
-            <?php foreach ($activeFilters as $filter): ?>
-              <a class="filter-chip" href="<?= h(build_url([$filter['clear'] => $filter['clear'] === 'anio' ? 'todos' : null])) ?>">
-                <span><?= $filter['label'] ?></span>
-                <strong><?= h($filter['value']) ?></strong>
-              </a>
-            <?php endforeach; ?>
-            <a class="filter-chip" href="<?= h($clearFiltersUrl) ?>"><strong>Limpiar todo</strong></a>
-          </div>
-        <?php endif; ?>
+
       </div>
     </div>
 
@@ -554,7 +531,7 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
               <th>Categoría</th>
               <th>Contenido</th>
               <th>Entidad de destino</th>
-              <th>Registrado por</th>
+              <th><?= $accidenteId > 0 ? 'Registrado por' : 'Encargado' ?></th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -595,11 +572,18 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                 <td data-label="Categoría"><?= h($row['categoria'] ?: ($row['asunto_nombre'] ?: '-')) ?></td>
                 <td data-label="Contenido"><div class="office-content"><?= h($contenido !== '' ? $contenido : ($row['asunto_nombre'] ?: '-')) ?></div></td>
                 <td data-label="Entidad de destino"><?= h($row['entidad'] ?: ($row['persona_destino_manual'] ?: '-')) ?></td>
-                <td data-label="Registrado por"><?= h(registrante_breve($row)) ?></td>
+                <td data-label="<?= $accidenteId > 0 ? 'Registrado por' : 'Encargado' ?>"><?= h($accidenteId > 0 ? registrante_breve($row) : (($row['encargado_nombre'] ?? '') ?: 'Sin encargado')) ?></td>
                 <td data-label="Acciones">
                   <details class="office-menu">
                     <summary>Acciones ▾</summary>
                     <div class="office-menu-body">
+                    <?php if ($accidenteId <= 0): ?>
+                    <div class="action-links">
+                      <a class="btn sm" data-oficio-modal="Ver oficio" href="oficios_leer.php?origin=gestion&id=<?= (int)$row['id'] ?>">Ver</a>
+                      <?php if ($service->canEdit($row)): ?><a class="btn sm" data-oficio-modal="Editar oficio" href="oficios_editar.php?origin=gestion&id=<?= (int)$row['id'] ?>">Editar</a><?php endif; ?>
+                      <?php $downloadUrl = $service->downloadUrlForOficio((int)$row['id'], $row); if ($downloadUrl !== ''): ?><a class="btn sm" href="<?= h($downloadUrl) ?>">Descargar</a><?php endif; ?>
+                    </div>
+                    <?php else: ?>
                     <div class="small">Estado</div>
                     <select class="state js-state" data-id="<?= h($row['id']) ?>">
                       <?php foreach ($ctx['estados'] as $item): ?>
@@ -620,14 +604,15 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
                     <a class="tool tool-documento-recibido" href="documento_recibido_nuevo.php?accidente_id=<?= h($row['accid']) ?>&referencia_oficio_id=<?= h($row['id']) ?>&return_to=<?= urlencode($returnTo) ?>">Documento recibido</a>
                   </div>
                   <div class="action-links">
-                    <a class="btn sm" href="oficios_leer.php?id=<?= h($row['id']) ?>">Ver</a>
-                    <a class="btn sm" href="oficios_editar.php?id=<?= h($row['id']) ?>">Editar</a>
+                    <a class="btn sm" data-oficio-modal="Ver oficio" href="oficios_leer.php?origin=expediente&id=<?= h($row['id']) ?>">Ver</a>
+                    <?php if ($service->canEdit($row)): ?><a class="btn sm" data-oficio-modal="Editar oficio" href="oficios_editar.php?origin=expediente&id=<?= h($row['id']) ?>">Editar</a><?php endif; ?>
                     <form action="oficios_eliminar.php" method="post" style="display:inline" onsubmit="return confirm('Eliminar el oficio?');">
                       <input type="hidden" name="id" value="<?= h($row['id']) ?>">
                       <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
                       <button class="btn sm danger" type="submit">Eliminar</button>
                     </form>
                   </div>
+                    <?php endif; ?>
                     </div>
                   </details>
                 </td>
@@ -644,6 +629,45 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
     <div class="case-modal-loading" role="status">Cargando expediente…</div>
   </div>
 </div>
+<dialog id="oficio-detail-modal" aria-labelledby="oficio-detail-title">
+  <header><h2 id="oficio-detail-title">Oficio</h2><button class="btn" type="button" id="oficio-detail-close" aria-label="Cerrar oficio">×</button></header>
+  <iframe title="Detalle del oficio" id="oficio-detail-frame"></iframe>
+</dialog>
+<style>
+#oficio-detail-modal{width:min(1120px,calc(100vw - 32px));height:88vh;max-height:calc(100vh - 32px);padding:0;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--text);box-shadow:0 24px 80px #0f172a55}
+#oficio-detail-modal::backdrop{background:#0f172a88;backdrop-filter:blur(3px)}
+#oficio-detail-modal header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
+#oficio-detail-modal h2{margin:0;font-size:1.15rem}
+#oficio-detail-frame{display:block;width:100%;height:calc(100% - 64px);border:0;background:var(--card)}
+</style>
+<script>
+(() => {
+  const modal = document.getElementById('oficio-detail-modal');
+  const frame = document.getElementById('oficio-detail-frame');
+  let opener;
+  document.addEventListener('click', event => {
+    const link = event.target.closest('[data-oficio-modal]');
+    if (!link) return;
+    event.preventDefault();
+    opener = link;
+    const url = new URL(link.href, location.href);
+    url.searchParams.set('embed','1');
+    document.getElementById('oficio-detail-title').textContent = link.dataset.oficioModal;
+    frame.src = url.href;
+    link.closest('details')?.removeAttribute('open');
+    modal.showModal();
+  });
+  document.getElementById('oficio-detail-close').addEventListener('click', () => modal.close());
+  modal.addEventListener('click', event => {
+    const box = modal.getBoundingClientRect();
+    if (event.target === modal && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) modal.close();
+  });
+  modal.addEventListener('close', () => { frame.src='about:blank'; opener?.focus(); });
+  window.addEventListener('message', event => {
+    if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === 'oficio.close') modal.close();
+  });
+})();
+</script>
 <script>
 (() => {
   const modal = document.getElementById('office-case-modal');
@@ -680,16 +704,16 @@ tbody tr.row-updated td{background:rgba(34,197,94,.10)}
       dialog.innerHTML = '<div class="case-modal-error">No se pudo cargar el expediente.</div>';
     }
   };
-  document.querySelectorAll('tbody tr[data-case-id]').forEach(row => {
-    row.addEventListener('click', event => {
-      if (event.target.closest('a, button, input, select, textarea, summary, details, form')) return;
-      open(row.dataset.caseId);
-    });
-    row.addEventListener('keydown', event => {
-      if (event.target !== row || !['Enter', ' '].includes(event.key)) return;
-      event.preventDefault();
-      open(row.dataset.caseId);
-    });
+  document.addEventListener('click', event => {
+    const row = event.target.closest('tbody tr[data-case-id]');
+    if (!row || event.target.closest('a, button, input, select, textarea, summary, details, form')) return;
+    open(row.dataset.caseId);
+  });
+  document.addEventListener('keydown', event => {
+    const row = event.target.closest('tbody tr[data-case-id]');
+    if (!row || event.target !== row || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    open(row.dataset.caseId);
   });
   modal.addEventListener('click', event => {
     if (event.target === modal || event.target.closest('[data-case-modal-close]')) close();
@@ -703,7 +727,10 @@ function syncStateClass(select) {
   select.dataset.state = (select.value || '').toUpperCase();
 }
 
+function bindOficioStates() {
 document.querySelectorAll('.js-state').forEach(function(select){
+  if (select.dataset.bound) return;
+  select.dataset.bound = '1';
   syncStateClass(select);
   select.addEventListener('change', async function(){
     const previous = this.dataset.prev || this.value;
@@ -735,6 +762,65 @@ document.querySelectorAll('.js-state').forEach(function(select){
   });
   select.dataset.prev = select.value;
 });
+}
+bindOficioStates();
+document.addEventListener('oficios:filtered', bindOficioStates);
 </script>
+<script>
+(() => {
+  const form = document.getElementById('oficio-filters');
+  const search = form.querySelector('[name="q"]');
+  let timer, controller, revision = 0;
+  const status = document.createElement('div');
+  status.className = 'small';
+  status.setAttribute('role', 'status');
+  form.append(status);
+  const invalidate = () => {
+    clearTimeout(timer);
+    controller?.abort();
+    revision++;
+  };
+  const update = async () => {
+    invalidate();
+    const current = revision;
+    controller = new AbortController();
+    const url = new URL(form.action || location.href);
+    url.search = new URLSearchParams(new FormData(form)).toString();
+    status.textContent = 'Filtrando…';
+    try {
+      const response = await fetch(url, {signal: controller.signal});
+      if (!response.ok) throw new Error();
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const table = doc.querySelector('.table-area');
+      if (!table) throw new Error();
+      if (current !== revision) return;
+      document.querySelector('.table-area').replaceWith(table);
+      const title = document.querySelector('.filter-title');
+      title.querySelector(':scope > .small')?.remove();
+      const count = doc.querySelector('.filter-title > .small');
+      if (count) title.append(count);
+      history.replaceState(null, '', url);
+      status.textContent = '';
+      document.dispatchEvent(new Event('oficios:filtered'));
+    } catch (error) {
+      if (error.name !== 'AbortError' && current === revision) status.textContent = 'No se pudo filtrar. Intenta nuevamente.';
+    }
+  };
+  form.addEventListener('submit', event => { event.preventDefault(); update(); });
+  form.querySelectorAll('select').forEach(select => select.addEventListener('change', update));
+  search.addEventListener('input', event => {
+    invalidate();
+    if (!event.isComposing) timer = setTimeout(update, 250);
+  });
+  search.addEventListener('compositionend', () => { invalidate(); timer = setTimeout(update, 250); });
+  form.querySelector('.filters-actions a').addEventListener('click', event => {
+    event.preventDefault();
+    search.value = '';
+    form.querySelectorAll('select').forEach(select => { select.value = select.name === 'anio' ? 'todos' : ''; });
+    update();
+  });
+})();
+</script>
+<?php if ($pendingDownloadUrl !== ''): ?><iframe src="<?= h($pendingDownloadUrl) ?>" title="Descarga del oficio guardado" hidden></iframe><?php endif; ?>
 </body>
 </html>

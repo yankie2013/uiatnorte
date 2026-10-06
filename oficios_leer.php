@@ -19,6 +19,8 @@ $service = new OficioService(new OficioRepository($pdo));
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $embed = (int) ($_GET['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? ''));
+$oficioOrigin = (string)($_GET['origin'] ?? ($embed ? 'expediente' : 'gestion'));
+$returnGeneralList = $oficioOrigin === 'gestion';
 $detail = $id > 0 ? $service->detalle($id) : null;
 if ($id <= 0 || $detail === null) {
     header('Location: oficios_listar.php');
@@ -31,7 +33,7 @@ if ($persona === '') {
 }
 $personaFallecida = trim((string) (($detail['fall_nombres'] ?? '') . ' ' . ($detail['fall_ap'] ?? '') . ' ' . ($detail['fall_am'] ?? '')));
 $vehiculoVinculado = trim((string) (($detail['veh_ut'] ?? '') !== '' ? ($detail['veh_ut'] . ' - ') : '') . ($detail['veh_placa'] ?? ''));
-$listarHref = 'oficios_listar.php' . (!empty($detail['accidente_id']) ? ('?accidente_id=' . urlencode((string) $detail['accidente_id'])) : '');
+$listarHref = 'oficios_listar.php' . (!$returnGeneralList && !empty($detail['accidente_id']) ? ('?accidente_id=' . urlencode((string) $detail['accidente_id'])) : '');
 if ($returnTo === '') {
     $returnTo = $listarHref;
 }
@@ -64,7 +66,7 @@ body{background:var(--page);color:var(--text)}body.is-embed{margin:0}.wrap{max-w
   <?php if (!$embed && !empty($detail['accidente_id'])): ?>
     <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $detail['accidente_id']) ?>">Datos generales SIDPOL</a>
   <?php endif; ?>
-  <a class="btn primary" href="oficios_editar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar</a>
+  <?php if ($service->canEdit($detail)): ?><a class="btn primary" href="oficios_editar.php?origin=<?= urlencode($oficioOrigin) ?>&id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar</a><?php endif; ?>
   <a class="btn danger" href="oficios_eliminar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a>
 </div>
 

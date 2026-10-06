@@ -52,7 +52,9 @@ final class ExpedienteAccessService
                     $expectedOrigin=$owner ?: (int)$row['creado_por'];
                     if(!$transfer || !$expectedRole || (int)$transfer['origen_id']!==$expectedOrigin)throw new RuntimeException('No existe una transferencia vigente dirigida a usted.');
                     if($transfer['tipo']==='archivo' && !in_array($row['estado'],['Resuelto','Desestimado'],true))throw new RuntimeException('La investigación ya no está concluida.');
+                    if ($transfer['tipo'] !== 'archivo') {
                     $this->pdo->prepare('UPDATE accidentes SET responsable_id=?,asignado_en=NOW() WHERE id=?')->execute([$actor,$case]);
+                    }
                     $this->pdo->prepare('UPDATE expediente_colaboradores SET revocado_en=NOW() WHERE accidente_id=? AND revocado_en IS NULL')->execute([$case]);
                     $this->pdo->prepare("UPDATE expediente_transferencias SET estado='aceptada',resuelto_en=NOW() WHERE id=?")->execute([$transfer['id']]);break;
                 case 'cancelar_transferencia':

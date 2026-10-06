@@ -106,7 +106,7 @@ SELECT
   fi.cargo            AS fiscal_cargo
 FROM oficios_activos o
 LEFT JOIN accidentes_activos a ON a.id = o.accidente_id
-LEFT JOIN comisarias c ON c.id = a.comisaria_id
+LEFT JOIN comisarias c ON c.id = COALESCE(o.comisaria_id,a.comisaria_id)
 LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino
 LEFT JOIN oficio_asunto s ON s.id = o.asunto_id
 LEFT JOIN grado_cargo gc ON gc.id = o.grado_cargo_id

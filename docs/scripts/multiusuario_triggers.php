@@ -122,3 +122,8 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
         $p->exec("CREATE TRIGGER `$audit` AFTER $event ON `$table` FOR EACH ROW BEGIN IF COALESCE(@rbac_migration,0)<>1 THEN INSERT INTO auditoria(usuario_id,tabla,registro_id,accidente_id,accion,antes,despues) VALUES(@actor_id,".$p->quote($table).",$id,$case,'$event',$before,$after); END IF; END");
     }
 }
+
+// Mantener los permisos específicos de Oficios tras regenerar la protección general.
+if (in_array('gestion', $p->query('SHOW COLUMNS FROM oficios')->fetchAll(PDO::FETCH_COLUMN), true)) {
+    require __DIR__ . '/oficios_gestion_triggers.php';
+}

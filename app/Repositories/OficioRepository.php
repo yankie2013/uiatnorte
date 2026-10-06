@@ -39,6 +39,43 @@ final class OficioRepository
         return in_array($column, $this->tableColumns($table), true);
     }
 
+    public function gestionContext(): array
+    {
+        $st = $this->pdo->prepare("SELECT u.id, u.nombre, u.grado FROM usuarios u JOIN usuarios actor ON actor.id=? WHERE u.activo=1 AND u.rol='jefe_emi' AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,'')) ORDER BY u.nombre");
+        $st->execute([(int) (\App\Support\Auth::user()['id'] ?? 0)]);
+        return [
+            'comisarias' => $this->pdo->query('SELECT id,nombre FROM comisarias ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC),
+            'encargados' => $st->fetchAll(PDO::FETCH_ASSOC),
+            'expedientes' => $this->pdo->query("SELECT a.id,a.comisaria_id,a.responsable_id,a.fecha_accidente,a.lugar,
+                COALESCE((SELECT GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ')
+                    FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
+                    WHERE am.accidente_id=a.id),'Sin tipo registrado') AS tipo_accidente,
+                CONCAT('Fecha: ',COALESCE(DATE_FORMAT(a.fecha_accidente,'%d/%m/%Y %H:%i'),'Sin fecha'),
+                    ' · Lugar: ',COALESCE(a.lugar,'Sin lugar'),
+                    ' · Tipo: ',COALESCE((SELECT GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ')
+                        FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
+                        WHERE am.accidente_id=a.id),'Sin tipo registrado')) AS label
+                FROM accidentes_activos a ORDER BY a.id DESC")->fetchAll(PDO::FETCH_ASSOC),
+        ];
+    }
+
+    public function validateGestion(int $comisariaId, ?int $encargadoId, int $accidenteId): void
+    {
+        $ctx = $this->gestionContext();
+        if ($comisariaId !== 0 && !in_array($comisariaId, array_map('intval', array_column($ctx['comisarias'], 'id')), true)) {
+            throw new \InvalidArgumentException('Selecciona una comisaría válida.');
+        }
+        if ($encargadoId !== null && !in_array($encargadoId, array_map('intval', array_column($ctx['encargados'], 'id')), true)) {
+            throw new \InvalidArgumentException('El encargado debe ser JEFE EMI activo de tu misma unidad.');
+        }
+        if ($accidenteId > 0) {
+            foreach ($ctx['expedientes'] as $case) {
+                if ((int)$case['id'] === $accidenteId && $encargadoId !== null && $comisariaId > 0 && (int)$case['responsable_id'] === $encargadoId && (int)$case['comisaria_id'] === $comisariaId) return;
+            }
+            throw new \InvalidArgumentException('El expediente debe coincidir con la comisaría y el encargado seleccionados.');
+        }
+    }
+
     public function entidades(): array
     {
         return $this->pdo->query("SELECT id, nombre, COALESCE(siglas,'') AS siglas, COALESCE(categoria,'') AS categoria FROM oficio_entidad ORDER BY categoria, nombre")->fetchAll(PDO::FETCH_ASSOC);
@@ -217,10 +254,34 @@ final class OficioRepository
         return $this->asuntoCatalogKey($first) === $this->asuntoCatalogKey($second);
     }
 
+    /** Called inside the oficio transaction so failed saves do not leave catalog entries. */
+    public function resolveRecipientValues(array $payload): array
+    {
+        foreach ([['entidad_nombre_nueva','oficio_entidad','entidad_id_destino'], ['grado_cargo_nombre_nuevo','grado_cargo','grado_cargo_id']] as [$key,$table,$field]) {
+            $name = trim((string)($payload[$key] ?? ''));
+            if ($name === '') continue;
+            $sql = "SELECT id FROM `$table` WHERE TRIM(nombre)=?";
+            if ($table === 'grado_cargo') $sql .= ' AND COALESCE(activo,1)=1';
+            $st = $this->pdo->prepare($sql . ' ORDER BY id LIMIT 1');
+            $st->execute([$name]);
+            $id = $st->fetchColumn();
+            if ($id === false) {
+                $st = $this->pdo->prepare($table === 'oficio_entidad'
+                    ? "INSERT INTO oficio_entidad (nombre,tipo) VALUES (?,'OTRA')"
+                    : "INSERT INTO grado_cargo (nombre,tipo,activo) VALUES (?,'CARGO',1)");
+                $st->execute([$name]);
+                $id = $this->pdo->lastInsertId();
+            }
+            $payload[$field] = (int)$id;
+        }
+        return $payload;
+    }
+
     public function saveWithTemplate(array $payload, string $newTemplate = '', ?int $id = null): int
     {
         $this->pdo->beginTransaction();
         try {
+            $payload = $this->resolveRecipientValues($payload);
             if ($newTemplate !== '') {
                 $existing = $this->findAsuntoByExactName((string) $payload['tipo'], $newTemplate);
                 if ($existing !== null) {
@@ -326,7 +387,7 @@ final class OficioRepository
             return null;
         }
 
-        $key = $this->asuntoCatalogKey((string) ($base['nombre'] ?? ''));
+        $key = $this->presetFamilyKey((string) ($base['nombre'] ?? ''));
         $diligenciasSelect = $this->columnExists('oficios', 'diligencias_solicitadas')
             ? "COALESCE(o.diligencias_solicitadas,'') AS diligencias_solicitadas"
             : "'' AS diligencias_solicitadas";
@@ -353,11 +414,11 @@ final class OficioRepository
                 LEFT JOIN oficio_asunto oa ON oa.id = o.asunto_id
                 WHERE o.asunto_id IS NOT NULL
                 ORDER BY o.id DESC
-                LIMIT 300";
+";
         $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         foreach ($rows as $row) {
-            if ($this->asuntoCatalogKey((string) ($row['asunto_nombre'] ?? '')) === $key) {
+            if ($this->presetFamilyKey((string) ($row['asunto_nombre'] ?? '')) === $key && (string)$row['asunto_tipo'] === (string)$base['tipo']) {
                 return $row;
             }
         }
@@ -664,7 +725,7 @@ final class OficioRepository
         $accidentTable = $this->activeTable('accidentes');
         $vehicleTable = $this->activeTable('involucrados_vehiculos');
         $select = [
-            'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
+            'o.creado_por', 'o.gestion', 'o.encargado_id', 'o.comisaria_id', 'o.responsable_documento', 'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
             "COALESCE(o.motivo,'') AS motivo",
             'COALESCE(NULLIF(e.siglas, \'\'), e.nombre) AS entidad',
             'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
@@ -681,11 +742,14 @@ final class OficioRepository
             $select[] = "'' AS registrante_nombre";
             $select[] = "'' AS registrante_grado";
         }
+        $select[] = "CASE WHEN o.gestion=1 THEN TRIM(CONCAT(COALESCE(enc.grado,''),' ',COALESCE(enc.nombre,''))) ELSE TRIM(CONCAT(COALESCE(jefe.grado,''),' ',COALESCE(jefe.nombre,''))) END AS encargado_nombre";
         $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             "LEFT JOIN {$accidentTable} a ON a.id = o.accidente_id",
-            'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id'
+            'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id',
+            'LEFT JOIN usuarios enc ON enc.id = o.encargado_id',
+            'LEFT JOIN usuarios jefe ON jefe.id = a.responsable_id'
         ];
         if ($this->columnExists('oficios', 'creado_por')) {
             $joins[] = 'LEFT JOIN usuarios u ON u.id = o.creado_por';
@@ -718,6 +782,10 @@ final class OficioRepository
         if (!empty($filters['anio'])) {
             $sql .= ' AND o.anio = ?';
             $params[] = (int) $filters['anio'];
+        }
+        if (!empty($filters['encargado_id'])) {
+            $sql .= ' AND (CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END) = ?';
+            $params[] = (int) $filters['encargado_id'];
         }
         if (!empty($filters['entidad_id'])) {
             $sql .= ' AND o.entidad_id_destino = ?';
@@ -793,6 +861,10 @@ final class OficioRepository
             $columns[] = 'creado_por';
             $values[] = $payload['creado_por'] ?? null;
         }
+        foreach (['gestion','comisaria_id','encargado_id'] as $field) {
+            $columns[] = $field;
+            $values[] = $payload[$field] ?? ($field === 'gestion' ? 0 : null);
+        }
         $placeholders = implode(',', array_fill(0, count($columns), '?'));
         $sql = 'INSERT INTO oficios (' . implode(',', $columns) . ') VALUES (' . $placeholders . ')';
         $st = $this->pdo->prepare($sql);
@@ -838,6 +910,10 @@ final class OficioRepository
         if ($this->columnExists('oficios', 'categoria')) {
             $sets[] = 'categoria = ?';
             $values[] = $payload['categoria'] ?? null;
+        }
+        foreach (['comisaria_id','encargado_id'] as $field) {
+            $sets[] = $field . ' = ?';
+            $values[] = $payload[$field] ?? null;
         }
         $values[] = $id;
         $sql = 'UPDATE oficios SET ' . implode(', ', $sets) . ' WHERE id = ? LIMIT 1';
@@ -925,6 +1001,14 @@ final class OficioRepository
         $st = $this->pdo->prepare('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
         $st->execute([$table]);
         return $this->columnCache[$table] = $st->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+    }
+
+    private function presetFamilyKey(string $name): string
+    {
+        $text = $this->normalizeCatalogText($name);
+        if (str_contains($text,'necropsia') || str_contains($text,'autopsia')) return 'protocolo-necropsia';
+        if (str_contains($text,'peritaje') && (str_contains($text,'constat') || str_contains($text,'dano'))) return 'peritaje-danos';
+        return $this->asuntoCatalogKey($name);
     }
 
     private function asuntoCatalogKey(string $name): string

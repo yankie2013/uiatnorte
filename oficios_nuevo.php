@@ -1,7 +1,7 @@
 <?php
-require __DIR__ . '/auth.php';
+require_once __DIR__ . '/auth.php';
 require_login();
-require __DIR__ . '/db.php';
+require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/app/Support/CaseSummaryWidget.php';
 
 use App\Repositories\OficioRepository;
@@ -28,6 +28,15 @@ $preselectedAccidenteId = $accidenteIdGet > 0 ? $accidenteIdGet : ($sidpolGet !=
 if ($returnTo === '' && $preselectedAccidenteId > 0) {
     $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $preselectedAccidenteId . '&tab=documentos';
 }
+
+$editingId = defined('UIAT_GESTION_EDIT_ID') ? (int)UIAT_GESTION_EDIT_ID : 0;
+$editingOficio = $editingId > 0 ? $service->oficio($editingId) : null;
+$gestion = $editingId > 0 || (!$embed && $preselectedAccidenteId <= 0);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') $gestion = $editingId > 0 || !empty($_POST['gestion']);
+$oficioOrigin = (string)($_GET['origin'] ?? $_POST['origin'] ?? ($gestion ? 'gestion' : 'expediente'));
+$returnGeneralList = $oficioOrigin === 'gestion';
+$gestionCtx = $gestion ? $service->gestionContext() : [];
+if ($gestion) $returnLabel = 'Volver a Oficios';
 
 if (isset($_GET['ajax'])) {
     $ajax = trim((string) $_GET['ajax']);
@@ -83,19 +92,25 @@ if (isset($_GET['ajax'])) {
 }
 
 $ctx = $service->formContext($preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
-$data = $service->defaultData(null, $preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
+$data = $service->defaultData($editingOficio, $preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
+if ($gestion) $data = array_replace($data, $service->gestionAnnualData($editingOficio));
 $error = '';
 $success = '';
 $asignado = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
+        'gestion' => $gestion ? 1 : 0,
+        'comisaria_id' => $_POST['comisaria_id'] ?? '',
+        'encargado_id' => $_POST['encargado_id'] ?? '',
         'accidente_id' => $_POST['accidente_id'] ?? '',
         'anio_oficio' => $_POST['anio_oficio'] ?? '',
         'numero_oficio' => $_POST['numero_oficio'] ?? '',
         'fecha_emision' => $_POST['fecha_emision'] ?? '',
         'oficial_ano_id' => $_POST['oficial_ano_id'] ?? '',
         'entidad_id' => $_POST['entidad_id'] ?? '',
+        'entidad_nombre' => $_POST['entidad_nombre'] ?? '',
+        'grado_cargo_nombre' => $_POST['grado_cargo_nombre'] ?? '',
         'subentidad_id' => $_POST['subentidad_id'] ?? '',
         'grado_cargo_id' => $_POST['grado_cargo_id'] ?? '',
         'persona_id' => $_POST['persona_id'] ?? '',
@@ -115,37 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'estado' => 'BORRADOR',
     ];
 
+    if ($gestion) $data = array_replace($data, $service->gestionAnnualData($editingOficio));
     try {
-        $asignado = $service->create($data);
-        $downloadAfterSave = !$embed && (string) ($_POST['save_action'] ?? '') === 'download';
-        if ($downloadAfterSave) {
-            $downloadUrl = $service->downloadUrlForOficio((int) $asignado['id']);
-            if ($downloadUrl !== '') {
-                header('Location: ' . $downloadUrl);
-                exit;
-            }
-            $success = 'Oficio guardado, pero este asunto no tiene una descarga Word configurada.';
-        }
-        if ($embed) {
-            echo '<!doctype html><meta charset="utf-8"><script>try{ window.parent.postMessage({type:"oficio.saved"}, "*"); }catch(_){ }</script><body style="font:13px Inter,sans-serif;padding:16px">Guardado...</body>';
-            exit;
-        }
-        if ($downloadAfterSave) {
-            $data = $service->defaultData($service->oficio((int) $asignado['id']), $preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
-            $data['anio_oficio'] = $asignado['anio'] ?? $data['anio_oficio'];
-            $data['numero_oficio'] = $asignado['numero'] ?? $data['numero_oficio'];
+        if ($editingId > 0) {
+            $service->update($editingId, $data);
+            $asignado = ['id'=>$editingId, 'numero'=>$data['numero_oficio'], 'anio'=>$data['anio_oficio']];
         } else {
-            if ($returnTo !== '') {
-                header('Location: ' . $returnTo);
-            } else {
-                $accidenteIdGuardado = (int) ($data['accidente_id'] ?? 0);
-                header('Location: accidente_vista_tabs.php?' . http_build_query([
-                    'accidente_id' => $accidenteIdGuardado,
-                    'tab' => 'documentos',
-                ]));
-            }
-            exit;
+            $asignado = $service->create($data);
         }
+        \App\Support\OficioSaveResponse::redirect($service, (int)$asignado['id'], (int)$data['accidente_id'], $returnGeneralList, $embed, (string)($_POST['save_action'] ?? 'save'));
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }
@@ -186,6 +179,7 @@ $showInformeMedicoInicial = str_contains($asuntoActualMatch, 'informe') && str_c
 $personasInformeMedicoActuales = !empty($data['accidente_id']) ? $service->personasInformeMedicoAccidente((int) $data['accidente_id']) : [];
 $personasCasoActuales = $showInformeMedicoInicial ? $personasInformeMedicoActuales : $fallecidosActuales;
 $listarHref = 'oficios_listar.php' . (!empty($data['accidente_id']) ? ('?accidente_id=' . urlencode((string) $data['accidente_id'])) : ($sidpolGet !== '' ? ('?sidpol=' . urlencode($sidpolGet)) : ''));
+if ($gestion) $listarHref = 'oficios_listar.php';
 $entidadesAutocomplete = [];
 $categoriasEntidad = [];
 $entidadDestinoTexto = '';
@@ -311,8 +305,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <?php if (!$embed): ?>
   <div class="office-page-head">
     <div class="office-title">
-      <h1>Nuevo Oficio</h1>
-      <p>Registro de oficio vinculado al accidente y su destinatario.</p>
+      <h1><?= $editingId > 0 ? 'Editar Oficio' : 'Nuevo Oficio' ?></h1>
+      <p><?= $gestion ? 'Registro de oficio de Gestión por comisaría y destinatario.' : 'Registro de oficio vinculado al accidente y su destinatario.' ?></p>
       <?= case_summary_widget_render($caseSummaryContext, 'oficio-nuevo') ?>
     </div>
     <div class="toolbar">
@@ -327,17 +321,43 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>"><?= h($returnLabel) ?></a><?php endif; ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmOficio">
+    <input type="hidden" name="origin" value="<?= h($oficioOrigin) ?>">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+    <?php if ($gestion): ?>
+    <input type="hidden" name="gestion" value="1">
+    <section class="office-section">
+      <div class="section-head"><h2>Comisaría y encargado</h2></div>
+      <div class="grid">
+        <div class="c6"><label for="comisaria_id">Comisaría (opcional)</label><select name="comisaria_id" id="comisaria_id">
+          <option value="">Sin comisaría</option>
+          <?php foreach ($gestionCtx['comisarias'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['comisaria_id']===(string)$item['id']?'selected':'' ?>><?= h($item['nombre']) ?></option><?php endforeach; ?>
+        </select></div>
+        <div class="c6"><label for="encargado_id">Encargado (opcional)</label><select name="encargado_id" id="encargado_id">
+          <option value="">Sin encargado</option>
+          <?php foreach ($gestionCtx['encargados'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['encargado_id']===(string)$item['id']?'selected':'' ?>><?= h(trim($item['grado'].' '.$item['nombre'])) ?></option><?php endforeach; ?>
+        </select><div class="combo-hint">JEFE EMI de tu misma unidad.</div></div>
+        <div class="c12"><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
+          <option value="">Sin expediente</option>
+          <?php foreach ($gestionCtx['expedientes'] as $item): ?><option value="<?= (int)$item['id'] ?>" data-encargado="<?= (int)$item['responsable_id'] ?>" data-comisaria="<?= (int)$item['comisaria_id'] ?>" <?= (string)$data['accidente_id']===(string)$item['id']?'selected':'' ?>><?= h($item['label']) ?></option><?php endforeach; ?>
+        </select><div class="combo-hint">Selecciona comisaría y encargado para ver los expedientes que coincidan con ambos. Cada opción muestra fecha, lugar y tipo de accidente.</div></div>
+      </div>
+    </section>
+    <?php endif; ?>
     <section class="office-section accordion-section is-expanded" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="true"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
     <div class="office-accordion-body grid">
-      <input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>">
+      <?php if (!$gestion): ?><input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>"><?php endif; ?>
 
+      <?php if ($gestion): ?>
+      <input type="hidden" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>">
+      <input type="hidden" name="oficial_ano_id" id="oficial_ano_id" value="<?= h($data['oficial_ano_id']) ?>">
+      <?php else: ?>
       <div class="c2">
         <label for="anio_oficio">Año*</label>
         <input type="number" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>" required>
       </div>
+      <?php endif; ?>
       <div class="c3">
         <label for="numero_oficio">Número*</label>
         <div class="field-row">
@@ -349,6 +369,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <label for="fecha_emision">Fecha de emisión*</label>
         <input type="date" name="fecha_emision" id="fecha_emision" value="<?= h($data['fecha_emision']) ?>" required>
       </div>
+      <?php if (!$gestion): ?>
       <div class="c4">
         <label for="oficial_ano_id">Nombre oficial del año*</label>
         <div class="field-row">
@@ -362,6 +383,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <button class="btn mini" type="button" onclick="openCreate('ano')">+</button>
         </div>
       </div>
+
+      <?php endif; ?>
 
       <div class="c4">
         <label for="tipo">Tipo de asunto*</label>
@@ -383,78 +406,22 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     </div>
     </section>
 
+    <?php if ($gestion) ob_start(); ?>
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad, cargo y persona</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
       <div class="office-accordion-body grid">
-      <input type="hidden" name="subentidad_id" value="">
-
-      <div class="c4">
-        <label for="entidad_categoria">Categoría de entidad</label>
-        <select id="entidad_categoria">
-          <option value="">Todas las categorías</option>
-          <?php foreach ($categoriasEntidad as $codigoCategoria => $nombreCategoria): ?>
-            <option value="<?= h($codigoCategoria) ?>"><?= h($nombreCategoria) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div class="combo-hint">Filtra las entidades disponibles antes de buscar el destinatario.</div>
-      </div>
-
-      <div class="c8">
-        <label>Entidad destino*</label>
-        <div class="field-row">
-          <div class="combo-wrap combo-menu">
-            <input type="hidden" name="entidad_id" id="entidad_id" value="<?= h((string) $data['entidad_id']) ?>">
-            <input type="text" id="entidad_id_text" value="<?= h($entidadDestinoTexto) ?>" placeholder="Escribe para buscar la entidad" autocomplete="off" required>
-            <div id="entidad_id_options" class="combo-suggestions" role="listbox" aria-label="Sugerencias de entidad"></div>
-            <div class="combo-hint">Escribe el nombre o las siglas y selecciona una entidad de la lista.</div>
-          </div>
-          <button class="btn mini" type="button" onclick="openCreate('entidad')">+</button>
-        </div>
-      </div>
-
-      <div class="office-recipient-row">
-        <div>
-          <label>Grado y cargo</label>
-          <div class="field-row">
-            <select name="grado_cargo_id" id="grado_cargo_id">
-              <option value="">(Opcional)</option>
-              <?php foreach ($ctx['grado_cargo'] as $cargo): ?>
-                <?php $label = $cargo['nombre'] . ($cargo['abrev'] !== '' ? ' - ' . $cargo['abrev'] : '') . ' [' . $cargo['tipo'] . ']'; ?>
-                <option value="<?= h($cargo['id']) ?>" <?= (string) $data['grado_cargo_id'] === (string) $cargo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
-              <?php endforeach; ?>
-            </select>
-            <button class="btn mini" type="button" onclick="openCreate('cargo')">+</button>
-          </div>
-        </div>
-
-        <div>
-          <label>Persona destino</label>
-          <div class="field-row">
-            <div class="combo-wrap">
-              <input type="hidden" name="persona_id" id="persona_id" value="<?= h((string) $data['persona_id']) ?>">
-              <input type="hidden" name="persona_destino_manual" id="persona_destino_manual" value="<?= h((string) ($data['persona_destino_manual'] ?? '')) ?>">
-              <input type="text" id="persona_id_text" list="persona_id_options" value="<?= h($personaDestinoTexto) ?>" placeholder="Selecciona o escribe manualmente">
-              <datalist id="persona_id_options">
-                <?php foreach ($personasActuales as $persona): ?>
-                  <option value="<?= h(trim((string) $persona['nombre'])) ?>" data-id="<?= h((string) $persona['id']) ?>"></option>
-                <?php endforeach; ?>
-              </datalist>
-              <div class="combo-hint">Puedes elegir una persona registrada o escribirla manualmente. Si escribes aqui, solo se guardara en este oficio.</div>
-            </div>
-            <button class="btn mini" type="button" onclick="openCreate('persona')">+</button>
-          </div>
-        </div>
-      </div>
+      <?php include __DIR__ . '/app/Views/oficio_destinatario.php'; ?>
 
       </div>
     </section>
 
+    <?php if ($gestion) $gestionRecipientSection = ob_get_clean(); ?>
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
       <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
       <div class="office-accordion-body grid">
       <input type="hidden" name="asunto_id" id="asunto_id" value="<?= h($data['asunto_id']) ?>">
       <div class="c12">
-        <label for="asunto_texto">Asunto*</label>
+        <label for="asunto_texto"><?= $gestion ? 'Contenido*' : 'Asunto*' ?></label>
         <div class="category-combobox" id="asuntoCombobox" data-creatable-combobox data-options="[]">
           <input type="text" name="asunto_texto" id="asunto_texto" value="<?= h($asuntoTextoActual) ?>" maxlength="500" required autocomplete="off" placeholder="Escribe o selecciona un asunto" role="combobox" aria-autocomplete="list" aria-expanded="false">
         </div>
@@ -514,6 +481,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
       </div>
     </section>
+
+    <?php if ($gestion) echo $gestionRecipientSection; ?>
 
     <section class="office-section" id="caseLinksSection" <?= ($showVehiculoInicial || $showFallecidoInicial || $showInformeMedicoInicial) ? '' : 'hidden' ?>>
       <div class="section-head"><i class="section-mark"></i><h2>Vinculos del caso</h2><span>Opcional</span></div>
@@ -702,6 +671,7 @@ function actualizarOpcionesAsunto(item) {
 }
 
 async function fetchJSON(url) {
+  if (<?= (int)$editingId ?> > 0) url += '&id=<?= (int)$editingId ?>';
   const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
   const data = await response.json();
   if (!response.ok || data.ok === false) {
@@ -758,7 +728,7 @@ function renderEntidadSuggestions(filterValue = '') {
   if (entidadSuggestions.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'combo-empty';
-    empty.textContent = 'No hay coincidencias.';
+    empty.textContent = 'Valor nuevo: se guardará junto con el oficio para reutilizarlo.';
     entidadOptionsBox.appendChild(empty);
     openEntidadSuggestions();
     return;
@@ -801,12 +771,34 @@ async function applyPlantillaPreset(asuntoId) {
     if (asuntoSel) asuntoSel.value = String(asuntoId);
     const catalogItem = plantillasCatalogo.find((template) => template.ids.includes(Number(asuntoId)));
     actualizarOpcionesAsunto(catalogItem);
-    if (motivoTxt) motivoTxt.value = defaultAsuntoTexto(catalogItem);
+    const templateName = normalizeText(catalogItem ? catalogItem.nombre : plantillaInput.value);
+    const reuseLatest = item.source === 'latest' && (templateName.includes('necropsia') || templateName.includes('autopsia')
+      || (templateName.includes('peritaje') && (templateName.includes('constat') || templateName.includes('dano'))));
+    if (motivoTxt) motivoTxt.value = reuseLatest ? stripCamaraRangeLine(item.motivo || '') : defaultAsuntoTexto(catalogItem);
+    if (reuseLatest) {
+      entidadSel.value = String(item.entidad_id || '');
+      setEntidadTextById(item.entidad_id);
+      closeEntidadSuggestions();
+      lastEntidadLoaded = String(entidadSel.value);
+      if (subSel) subSel.value = String(item.subentidad_id || '');
+      document.getElementById('grado_cargo_id').value = String(item.grado_cargo_id || '');
+      document.getElementById('grado_cargo_text').value = item.grado_cargo_nombre || '';
+      await loadPersonas(item.entidad_id, item.persona_id || '');
+      if (requestSerial !== plantillaRequestSerial || String(asuntoSel.value) !== String(asuntoId)) return;
+      if (personaSel) personaSel.value = String(item.persona_id || '');
+      if (personaManualInp) personaManualInp.value = item.persona_destino_manual || '';
+      if (personaTextInp) {
+        const recipient = personaItemsCache.find(person => String(person.id) === String(item.persona_id));
+        personaTextInp.value = recipient ? recipient.nombre : (item.persona_destino_manual || '');
+      }
+      if (plantillaHint) plantillaHint.textContent = 'Se cargaron los datos del último oficio de esta plantilla. Puedes modificarlos antes de guardar.';
+    }
+
     if (camaraRangoDesdeInp) camaraRangoDesdeInp.value = '';
     if (camaraRangoHastaInp) camaraRangoHastaInp.value = '';
-    if (referenciaInp) referenciaInp.value = '';
+    if (referenciaInp) referenciaInp.value = reuseLatest ? (item.referencia_texto || '') : '';
     const diligenciasInput = document.getElementById('diligencias_solicitadas');
-    if (diligenciasInput) diligenciasInput.value = '';
+    if (diligenciasInput) diligenciasInput.value = reuseLatest ? (item.diligencias_solicitadas || '') : '';
 
     await refreshAsuntoPreview();
     await toggleBoxesPorAsunto();
@@ -927,7 +919,8 @@ function asuntoTexto() {
   return (String(plantillaInput.value || '') + ' ' + String(selected ? selected.detalle : '')).toLowerCase();
 }
 function asuntoEsPeritaje() {
-  return asuntoTexto().includes('peritaje de constatación de daños') || asuntoTexto().includes('peritaje de constatacion de danos');
+  const text = normalizeText(asuntoTexto());
+  return text.includes('peritaje') && (text.includes('constat') || text.includes('dano'));
 }
 function asuntoEsNecropsia() {
   const text = asuntoTexto();
@@ -1055,6 +1048,7 @@ async function handleEntidadSelectionChange() {
 }
 function syncListadoHref() {
   if (!linkListado) return;
+  if (<?= $gestion ? 'true' : 'false' ?>) { linkListado.href = 'oficios_listar.php'; return; }
   const base = 'oficios_listar.php';
   if (accSel.value) linkListado.href = base + '?accidente_id=' + encodeURIComponent(accSel.value);
   else if (<?= json_encode($sidpolGet) ?>) linkListado.href = base + '?sidpol=' + encodeURIComponent(<?= json_encode($sidpolGet) ?>);
@@ -1091,12 +1085,34 @@ window.openCreate = openCreate;
 
 anioInp.addEventListener('change', () => recalcularNumero().catch(console.error));
 fechaInp.addEventListener('change', () => {
+  if (<?= $gestion ? 'true' : 'false' ?>) return;
   const year = (fechaInp.value || '').slice(0, 4);
   if (year && anioInp.value !== year) {
     anioInp.value = year;
     recalcularNumero().catch(console.error);
   }
 });
+const comisariaSel = document.getElementById('comisaria_id');
+const encargadoSel = document.getElementById('encargado_id');
+if (encargadoSel) {
+  const caseOptions = Array.from(accSel.options).filter(option => option.value).map(option => option.cloneNode(true));
+  const filterCases = () => {
+    const selected = accSel.value;
+    const matches = comisariaSel.value && encargadoSel.value
+      ? caseOptions.filter(option => option.dataset.encargado === encargadoSel.value && option.dataset.comisaria === comisariaSel.value)
+      : [];
+    accSel.replaceChildren(new Option('Sin expediente', ''), ...matches.map(option => option.cloneNode(true)));
+    accSel.value = matches.some(option => option.value === selected) ? selected : '';
+  };
+  filterCases();
+  const updateCaseFilters = () => {
+    filterCases();
+    syncListadoHref();
+    toggleBoxesPorAsunto().catch(console.error);
+  };
+  encargadoSel.addEventListener('change', updateCaseFilters);
+  comisariaSel.addEventListener('change', updateCaseFilters);
+}
 accSel.addEventListener('change', () => { syncListadoHref(); toggleBoxesPorAsunto().catch(console.error); });
 if (entidadTextInp) {
   const syncEntidadAndReload = async () => {
@@ -1176,10 +1192,10 @@ if (camaraRangoDesdeInp) {
 }
 document.getElementById('frmOficio').addEventListener('submit', (event) => {
   syncEntidadDestino();
-  if (!entidadSel.value) {
+  if (!entidadTextInp.value.trim()) {
     openAccordionSection(entidadTextInp ? entidadTextInp.closest('[data-accordion-section]') : null);
     if (entidadTextInp) {
-      entidadTextInp.setCustomValidity('Selecciona una entidad de la lista.');
+      entidadTextInp.setCustomValidity('Escribe o selecciona una entidad.');
       entidadTextInp.reportValidity();
     }
     event.preventDefault();
@@ -1210,5 +1226,6 @@ document.addEventListener('click', (event) => {
 });
  </script>
 <script src="assets/js/documento_recibido_categoria.js?v=<?= (int) filemtime(__DIR__ . '/assets/js/documento_recibido_categoria.js') ?>"></script>
+<?php include __DIR__ . '/app/Views/oficio_confirmacion.php'; ?>
 </body>
 </html>

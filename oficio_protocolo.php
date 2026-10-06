@@ -93,7 +93,7 @@ FROM oficios_activos o
 LEFT JOIN oficio_entidad  e  ON e.id=o.entidad_id_destino
 LEFT JOIN oficio_asunto   s  ON s.id=o.asunto_id
 LEFT JOIN accidentes_activos      a  ON a.id=o.accidente_id
-LEFT JOIN comisarias      c  ON c.id=a.comisaria_id
+LEFT JOIN comisarias      c  ON c.id=COALESCE(o.comisaria_id,a.comisaria_id)
 LEFT JOIN fiscalia        f  ON f.id=a.fiscalia_id
 LEFT JOIN grado_cargo     gc ON gc.id=o.grado_cargo_id
 LEFT JOIN oficio_subentidad se      ON se.id = o.subentidad_destino_id

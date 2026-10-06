@@ -43,7 +43,7 @@ $s=$pdo->prepare("SELECT t.*,a.registro_sidpol,a.lugar,u.nombre origen,u.grado o
  LEFT JOIN usuarios u ON u.id=t.origen_id JOIN usuarios d ON d.id=t.destino_id
  WHERE t.estado='pendiente' AND $where ORDER BY t.creado_en,t.id");
 $s->execute(Access::admin()?[]:[Access::id()]);$rows=$s->fetchAll();
-echo '<section><p>'.($archiveRole?'Solo aparecen expedientes enviados para archivo. La responsabilidad pasa a usted al aceptar la recepción.':'La responsabilidad cambia cuando el JEFE EMI destinatario acepta la transferencia.').'</p>';
+echo '<section><p>'.($archiveRole?'Solo aparecen expedientes enviados para archivo. Al aceptar se registra quién recibió el archivo; el JEFE EMI conserva la responsabilidad de la investigación.':'La responsabilidad cambia cuando el JEFE EMI destinatario acepta la transferencia.').'</p>';
 if(!$rows)echo '<p>No hay expedientes pendientes de recepción.</p>';
 if ($rows && in_array(Access::role(), ['jefe_emi','secretaria','administracion'], true)) {
     echo '<form method="post" id="recepcion-lote">';

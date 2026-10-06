@@ -11,12 +11,9 @@ if(!$a || ($a['eliminado_en'] && !\App\Support\Access::admin())){
     return;
 }
 $h=static fn($v)=>\App\Support\WorkspacePage::escape($v);
-$archiveTransfer=null;
-if (in_array(\App\Support\Access::role(), ['secretaria','administracion'], true) && (int)($a['responsable_id']??0)===\App\Support\Access::id()) {
-    $archiveQuery=$pdo->prepare("SELECT informe_remision,oficio_remision FROM expediente_transferencias WHERE accidente_id=? AND destino_id=? AND tipo='archivo' AND estado='aceptada' ORDER BY id DESC LIMIT 1");
-    $archiveQuery->execute([$id,\App\Support\Access::id()]);
-    $archiveTransfer=$archiveQuery->fetch(PDO::FETCH_ASSOC)?:null;
-}
+$archiveQuery=$pdo->prepare("SELECT t.*,u.nombre aceptado_por,u.grado aceptado_grado FROM expediente_transferencias t JOIN usuarios u ON u.id=t.destino_id WHERE t.accidente_id=? AND t.tipo='archivo' AND t.estado='aceptada' ORDER BY t.id DESC LIMIT 1");
+$archiveQuery->execute([$id]);
+$archiveTransfer=$archiveQuery->fetch(PDO::FETCH_ASSOC)?:null;
 $guardiaConsulta=\App\Support\Access::role()==='guardia';
 // La tarjeta de consulta ya comprobó que el accidente está activo. Para guardia
 // se usan las tablas base porque las vistas importadas pueden conservar un DEFINER ajeno.
@@ -122,4 +119,7 @@ $state=trim((string)$a['estado'])?:'Pendiente';
   <div class="case-card-person"><span class="case-person-icon"><?= $icon('detective') ?></span><div><strong><?= $h(trim(($a['responsable_grado']??'').' '.($a['responsable']??''))?:'Pendiente de asignación') ?></strong><small><?= in_array($a['responsable_rol'],['secretaria','administracion'],true) ? 'Archivo · '. $h(\App\Support\Access::ROLES[$a['responsable_rol']]) : 'JEFE EMI responsable' ?></small></div></div>
  </section>
 
+ <?php if ($archiveTransfer): ?>
+ <section class="case-card-section"><h3>Archivo aceptado por</h3><strong><?= $h(trim(($archiveTransfer['aceptado_grado'] ?? '').' '.$archiveTransfer['aceptado_por'])) ?></strong></section>
+ <?php endif; ?>
 </article>

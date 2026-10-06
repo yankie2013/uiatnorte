@@ -30,7 +30,7 @@ final class Access
             'jefe_emi' => "$alias.responsable_id = $id",
             'adjunto' => "EXISTS (SELECT 1 FROM expediente_colaboradores workspace_ec WHERE workspace_ec.accidente_id = $alias.id AND workspace_ec.usuario_id = $id AND workspace_ec.revocado_en IS NULL)",
             'guardia' => "EXISTS (SELECT 1 FROM comunicaciones_guardia workspace_cg WHERE workspace_cg.accidente_id = $alias.id AND workspace_cg.creado_por = $id AND workspace_cg.eliminado_en IS NULL)",
-            'secretaria', 'administracion' => "EXISTS (SELECT 1 FROM expediente_transferencias workspace_archive WHERE workspace_archive.accidente_id = $alias.id AND workspace_archive.destino_id = $id AND workspace_archive.tipo = 'archivo' AND workspace_archive.estado = 'aceptada' AND $alias.responsable_id = $id)",
+            'secretaria', 'administracion' => "EXISTS (SELECT 1 FROM expediente_transferencias workspace_archive WHERE workspace_archive.accidente_id = $alias.id AND workspace_archive.destino_id = $id AND workspace_archive.tipo = 'archivo' AND workspace_archive.estado = 'aceptada')",
             default => '1=0',
         };
     }
@@ -83,6 +83,7 @@ final class Access
     }
     public static function documentProfile(array $document): array {
         $snapshot = json_decode((string)($document['responsable_documento'] ?? ''), true);
+        if (!empty($document['gestion']) && !is_array($snapshot)) return ['nombre'=>'','grado'=>'','cip'=>'','cargo'=>'','unidad'=>'','telefono'=>'','email'=>''];
         return is_array($snapshot) ? $snapshot : self::profile((int)($document['accidente_id'] ?? 0));
     }
     public static function greeting(int $case = 0): string {
@@ -121,7 +122,7 @@ final class Access
         $catalogAjaxCreate = $script === 'involucrados_vehiculos_nuevo.php'
             && preg_match('/^crear_(categoria|tipo|carroceria|marca|modelo)$/', (string) ($_GET['ajax'] ?? '')) === 1;
         if($post && !$newPage && !in_array($script,['buscar_dni.php','buscar_placa.php','buscar_personas_nombre.php','documento_recibido_analizar_ia.php'],true)) {
-            if(in_array(self::role(),['secretaria','administracion','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate && !$guardiaCreation && $script!=='expedientes_recepcion.php') {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
+            if(in_array(self::role(),['secretaria','administracion','viewer','editor','guardia'],true) && !$catalogCreationPage && !$catalogAjaxCreate && !$guardiaCreation && $script!=='expedientes_recepcion.php' && !in_array($script, ['oficios_nuevo.php','oficios_editar.php'], true)) {http_response_code(403);exit('Este perfil tiene acceso de consulta. Guardia registra y corrige desde Comunicaciones.');}
         }
     }
 }

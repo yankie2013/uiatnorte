@@ -67,11 +67,11 @@ final class ResponsibleTemplateProcessor extends TemplateProcessor
     }
     private static function contextProfile(): ?array {
         if (is_array($GLOBALS['data']['responsable_documento'] ?? null)) return $GLOBALS['data']['responsable_documento'];
-        foreach(['oficio','row','acta','manifestacion','registro'] as $key) {
+        foreach(['oficio','of','row','acta','manifestacion','registro'] as $key) {
             $row=$GLOBALS[$key]??null;
-            if(is_array($row) && !empty($row['responsable_documento']))return Access::documentProfile($row);
+            if(is_array($row) && (!empty($row['gestion']) || !empty($row['responsable_documento'])))return Access::documentProfile($row);
         }
-        foreach(['oficio','row','acta','manifestacion','registro'] as $key) {
+        foreach(['oficio','of','row','acta','manifestacion','registro'] as $key) {
             $row=$GLOBALS[$key]??null;
             if(is_array($row) && !empty($row['accidente_id']))return Access::profile((int)$row['accidente_id']);
         }

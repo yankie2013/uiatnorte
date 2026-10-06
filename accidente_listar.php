@@ -464,7 +464,7 @@ $sql = "SELECT a.id,a.registro_sidpol,a.tipo_registro,a.nro_informe_policial,a.l
         LEFT JOIN fiscales fi ON fi.id = a.fiscal_id
         LEFT JOIN expediente_transferencias archive_transfer ON archive_transfer.id = (
           SELECT MAX(archive_match.id) FROM expediente_transferencias archive_match
-          WHERE archive_match.accidente_id=a.id AND archive_match.destino_id=a.responsable_id
+          WHERE archive_match.accidente_id=a.id
             AND archive_match.tipo='archivo' AND archive_match.estado='aceptada'
         )
         LEFT JOIN (

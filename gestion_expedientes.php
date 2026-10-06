@@ -43,6 +43,7 @@ if($q==='' && $oficio===''){Page::notice('Ingresa un dato o un número de oficio
 $where=$filter==='eliminados' && Access::admin()?'a.eliminado_en IS NOT NULL':'a.eliminado_en IS NULL';$params=[];
 if($filter==='mios'){
  if(Access::role()==='guardia'){$where.=' AND EXISTS(SELECT 1 FROM comunicaciones_guardia cg WHERE cg.accidente_id=a.id AND cg.creado_por=? AND cg.eliminado_en IS NULL)';}
+ elseif($archiveRole){$where.=" AND EXISTS(SELECT 1 FROM expediente_transferencias t WHERE t.accidente_id=a.id AND t.destino_id=? AND t.tipo='archivo' AND t.estado='aceptada')";}
  else{$where.=' AND a.responsable_id=?';}
  $params[]=Access::id();
 }
