@@ -3769,6 +3769,12 @@ if (!$accidente) {
 $accidente_id = (int) $accidente['id'];
 \App\Support\Access::requireInvestigationCase($accidente_id);
 $_SESSION['accidente_ultimo_abierto'] = $accidente_id;
+$recentOpenedIds = array_values(array_filter(
+    array_map('intval', (array)($_SESSION['accidentes_ultimos_abiertos'] ?? [])),
+    static fn($id) => $id > 0 && $id !== $accidente_id
+));
+array_unshift($recentOpenedIds, $accidente_id);
+$_SESSION['accidentes_ultimos_abiertos'] = array_slice($recentOpenedIds, 0, 200);
 $requestedListUrl = is_string($_GET['lista'] ?? null) ? \App\Support\AccidentNavigation::listUrl($_GET['lista']) : null;
 $lastListFilters = $_SESSION['accidente_listar_ultimo_filtro'] ?? null;
 if ($requestedListUrl === 'accidente_listar.php' && is_array($lastListFilters)) {

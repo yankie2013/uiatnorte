@@ -351,6 +351,8 @@ if (!array_key_exists($estadoFiltro, $estadoOpciones)) {
 }
 $ordenOpciones = [
   'registro_desc' => 'RECIÉN REGISTRADO',
+  'abiertos_desc' => 'ÚLTIMOS ABIERTOS',
+  'registrados_desc' => 'ÚLTIMOS REGISTRADOS',
   'folder_asc' => 'FOLDER: MENOR A MAYOR',
   'fecha_desc' => 'FECHA ACCIDENTE: RECIENTE A ANTIGUA',
   'fecha_asc' => 'FECHA ACCIDENTE: ANTIGUA A RECIENTE',
@@ -527,6 +529,17 @@ if($favoritos === '1'){
   $sql .= " AND COALESCE(a.priority, 0) = 1";
 }
 
+$recentOpenedIds = array_values(array_unique(array_filter(array_map('intval',
+  (array)($_SESSION['accidentes_ultimos_abiertos'] ?? [$ultimoAccidenteAbiertoId])
+), static fn($id) => $id > 0)));
+if ($orden === 'abiertos_desc') {
+  if ($recentOpenedIds === []) {
+    $sql .= " AND 1 = 0";
+  } else {
+    $sql .= " AND a.id IN (" . implode(',', $recentOpenedIds) . ")";
+  }
+}
+
 /* PERSONA: nombres o apellidos */
 if($persona!==''){
   $sql .= " AND EXISTS (
@@ -586,7 +599,13 @@ $lastOpenedOrder = ($estadoFiltro !== 'todos' && !$hasIncomingFilters && !$resto
 $folderOrder = $estadoFiltro === 'todos' && $orden !== 'folder_asc'
   ? $manualFolderOrder . ', '
   : '';
-$sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
+if ($orden === 'abiertos_desc') {
+  $sql .= " ORDER BY " . ($recentOpenedIds !== [] ? "FIELD(a.id, " . implode(',', $recentOpenedIds) . ")" : 'a.id DESC') . " LIMIT 200";
+} elseif ($orden === 'registrados_desc') {
+  $sql .= " ORDER BY a.id DESC LIMIT 200";
+} else {
+  $sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
+}
 $rows = [];
 if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
   $st=$pdo->prepare($sql);
@@ -1528,7 +1547,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   <div class="card filter-card filter-glass">
     <div class="filter-glass-head">
       <h2 class="filter-glass-title"><span class="filter-glass-icon" aria-hidden="true">⌕</span><span>Buscar accidentes</span></h2>
-      <span class="filter-mode-chip"><?php if ($favoritos === '1'): ?>Favoritos<?php elseif ($verTodos === '1'): ?>Todos los accidentes<?php else: ?>Comisaría seleccionada<?php endif; ?></span>
+      <span class="filter-mode-chip"><?php if ($favoritos === '1'): ?>Favoritos<?php elseif ($orden === 'abiertos_desc'): ?>Últimos abiertos<?php elseif ($orden === 'registrados_desc'): ?>Últimos registrados<?php elseif ($verTodos === '1'): ?>Todos los accidentes<?php else: ?>Comisaría seleccionada<?php endif; ?></span>
     </div>
     <form method="get" class="filters" id="filterForm">
       <div class="filter-primary">
@@ -1633,6 +1652,16 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             <span class="district-name">★ Favoritos</span>
           </a>
         </div>
+        <div class="district-group district-special" style="--district-hue:205">
+          <a class="district-btn" href="accidente_listar.php?ver_todos=1&amp;estado=todos">
+            <span class="district-name">Ver todos</span>
+          </a>
+        </div>
+        <div class="district-group district-special" style="--district-hue:170">
+          <a class="district-btn" href="accidente_listar.php?ver_todos=1&amp;estado=todos&amp;orden=abiertos_desc">
+            <span class="district-name">Últimos abiertos</span>
+          </a>
+        </div>
         <?php $districtPosition = 0; ?>
         <?php foreach ($comisariasPorDistrito as $districtName => $districtComisarias): ?>
           <?php
@@ -1661,9 +1690,9 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             ><span class="district-name"><?=h($districtName)?></span></a>
           </div>
         <?php endforeach; ?>
-        <div class="district-group district-special" style="--district-hue:205">
-          <a class="district-btn" href="accidente_listar.php?ver_todos=1&amp;estado=todos">
-            <span class="district-name">Ver todos</span>
+        <div class="district-group district-special" style="--district-hue:28">
+          <a class="district-btn" href="accidente_listar.php?ver_todos=1&amp;estado=todos&amp;orden=registrados_desc">
+            <span class="district-name">Últimos registrados</span>
           </a>
         </div>
       </div>
