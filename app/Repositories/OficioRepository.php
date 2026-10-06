@@ -39,6 +39,19 @@ final class OficioRepository
         return in_array($column, $this->tableColumns($table), true);
     }
 
+    private function oficioField(string $column, string $fallback = 'NULL'): string
+    {
+        $table = trim($this->activeTable('oficios'), '`');
+        return $this->columnExists($table, $column) ? 'o.' . $column : $fallback;
+    }
+
+    private function encargadoExpression(): string
+    {
+        $gestion = $this->oficioField('gestion', '0');
+        $encargado = $this->oficioField('encargado_id');
+        return "CASE WHEN $gestion=1 THEN $encargado ELSE a.responsable_id END";
+    }
+
     public function gestionContext(): array
     {
         $st = $this->pdo->prepare("SELECT u.id, u.nombre, u.grado FROM usuarios u JOIN usuarios actor ON actor.id=? WHERE u.activo=1 AND u.rol='jefe_emi' AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,'')) ORDER BY u.nombre");
@@ -61,6 +74,9 @@ final class OficioRepository
 
     public function validateGestion(int $comisariaId, ?int $encargadoId, int $accidenteId): void
     {
+        foreach (['gestion','comisaria_id','encargado_id'] as $column) {
+            if (!$this->columnExists('oficios', $column)) throw new \InvalidArgumentException('Falta actualizar la base de datos de oficios: ejecutar docs/scripts/migrar_oficios_gestion.php.');
+        }
         $ctx = $this->gestionContext();
         if ($comisariaId !== 0 && !in_array($comisariaId, array_map('intval', array_column($ctx['comisarias'], 'id')), true)) {
             throw new \InvalidArgumentException('Selecciona una comisaría válida.');
@@ -725,7 +741,7 @@ final class OficioRepository
         $accidentTable = $this->activeTable('accidentes');
         $vehicleTable = $this->activeTable('involucrados_vehiculos');
         $select = [
-            'o.creado_por', 'o.gestion', 'o.encargado_id', 'o.comisaria_id', 'o.responsable_documento', 'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
+            $this->oficioField('creado_por') . ' AS creado_por', $this->oficioField('gestion', '0') . ' AS gestion', $this->oficioField('encargado_id') . ' AS encargado_id', $this->oficioField('comisaria_id') . ' AS comisaria_id', $this->oficioField('responsable_documento') . ' AS responsable_documento', 'o.id', 'o.numero', 'o.anio', 'o.fecha_emision', 'o.estado', 'o.accidente_id',
             "COALESCE(o.motivo,'') AS motivo",
             'COALESCE(NULLIF(e.siglas, \'\'), e.nombre) AS entidad',
             'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
@@ -742,14 +758,15 @@ final class OficioRepository
             $select[] = "'' AS registrante_nombre";
             $select[] = "'' AS registrante_grado";
         }
-        $select[] = 'CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id';
-        $select[] = "CASE WHEN o.gestion=1 THEN TRIM(CONCAT(COALESCE(enc.grado,''),' ',COALESCE(enc.nombre,''))) ELSE TRIM(CONCAT(COALESCE(jefe.grado,''),' ',COALESCE(jefe.nombre,''))) END AS encargado_nombre";
+        $select[] = $this->encargadoExpression() . ' AS editor_encargado_id';
+        $gestionExpression = $this->oficioField('gestion', '0');
+        $select[] = "CASE WHEN $gestionExpression=1 THEN TRIM(CONCAT(COALESCE(enc.grado,''),' ',COALESCE(enc.nombre,''))) ELSE TRIM(CONCAT(COALESCE(jefe.grado,''),' ',COALESCE(jefe.nombre,''))) END AS encargado_nombre";
         $select[] = $this->columnExists('oficios', 'categoria') ? "COALESCE(o.categoria,'') AS categoria" : "'' AS categoria";
         $joins = [
             'LEFT JOIN oficio_entidad e ON e.id = o.entidad_id_destino',
             "LEFT JOIN {$accidentTable} a ON a.id = o.accidente_id",
             'LEFT JOIN oficio_asunto s ON s.id = o.asunto_id',
-            'LEFT JOIN usuarios enc ON enc.id = o.encargado_id',
+            'LEFT JOIN usuarios enc ON enc.id = ' . $this->oficioField('encargado_id'),
             'LEFT JOIN usuarios jefe ON jefe.id = a.responsable_id'
         ];
         if ($this->columnExists('oficios', 'creado_por')) {
@@ -785,7 +802,7 @@ final class OficioRepository
             $params[] = (int) $filters['anio'];
         }
         if (!empty($filters['encargado_id'])) {
-            $sql .= ' AND (CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END) = ?';
+            $sql .= ' AND (' . $this->encargadoExpression() . ') = ?';
             $params[] = (int) $filters['encargado_id'];
         }
         if (!empty($filters['entidad_id'])) {
@@ -932,7 +949,8 @@ final class OficioRepository
     public function find(int $id): ?array
     {
         $oficiosTable = $this->activeTable('oficios');
-        $st = $this->pdo->prepare("SELECT o.*, CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id FROM {$oficiosTable} o LEFT JOIN accidentes a ON a.id=o.accidente_id WHERE o.id = ? LIMIT 1");
+        $editorExpression = $this->encargadoExpression();
+        $st = $this->pdo->prepare("SELECT o.*, $editorExpression AS editor_encargado_id FROM {$oficiosTable} o LEFT JOIN accidentes a ON a.id=o.accidente_id WHERE o.id = ? LIMIT 1");
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -946,7 +964,7 @@ final class OficioRepository
         $personTable = $this->activeTable('involucrados_personas');
         $select = [
             'o.*',
-            'CASE WHEN o.gestion=1 THEN o.encargado_id ELSE a.responsable_id END AS editor_encargado_id',
+            $this->encargadoExpression() . ' AS editor_encargado_id',
             'e.nombre AS entidad',
             'COALESCE(e.siglas,\'\') AS entidad_siglas',
             'se.nombre AS subentidad',
