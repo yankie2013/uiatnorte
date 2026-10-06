@@ -109,7 +109,7 @@ final class Access
         $deleting=preg_match('/eliminar|delete|_delete|\bdel\b|\bborrar\b/i',$script.' '.$action);
         if($deleting && !self::admin()) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
         // Se bloquean también las rutas de diagnóstico que realizan escrituras sin un formulario.
-        if(preg_match('/^(tmp_|test_|.*_diag\.php|.*_debug\.php)/',$script) && !self::admin()) {http_response_code(403);exit('Acceso exclusivo del administrador.');}
+        if(preg_match('/^(tmp_|test_|.*_diag\.php|.*_debug\.php)/',$script) && !self::admin()) {header('Location: index.php', true, 303);exit;}
         $post=($_SERVER['REQUEST_METHOD']??'GET')==='POST';
         if($post) {
             try {self::checkCsrf();} catch(\Throwable $e){http_response_code(419);exit($e->getMessage());}

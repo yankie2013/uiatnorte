@@ -8,8 +8,8 @@ use App\Support\WorkspacePage as Page;
 use App\Services\ExpedienteAccessService;
 
 if (!Access::admin()) {
-    http_response_code(403);
-    exit('Acceso exclusivo del administrador.');
+    header('Location: index.php', true, 303);
+    exit;
 }
 $id = max(0, (int)($_GET['id'] ?? 0));
 $error = '';

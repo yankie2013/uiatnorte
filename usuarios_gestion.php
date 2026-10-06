@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/auth.php';require_login();require __DIR__.'/db.php';
 use App\Support\Access;use App\Support\WorkspacePage as Page;
-if(!Access::admin()){http_response_code(403);exit('Acceso exclusivo del administrador.');}
+if(!Access::admin()){header('Location: index.php', true, 303);exit;}
 $error='';$id=(int)($_GET['id']??$_POST['id']??0);
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{

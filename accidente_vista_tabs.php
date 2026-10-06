@@ -3774,7 +3774,7 @@ $recentOpenedIds = array_values(array_filter(
     static fn($id) => $id > 0 && $id !== $accidente_id
 ));
 array_unshift($recentOpenedIds, $accidente_id);
-$_SESSION['accidentes_ultimos_abiertos'] = array_slice($recentOpenedIds, 0, 200);
+$_SESSION['accidentes_ultimos_abiertos'] = array_slice($recentOpenedIds, 0, 6);
 $requestedListUrl = is_string($_GET['lista'] ?? null) ? \App\Support\AccidentNavigation::listUrl($_GET['lista']) : null;
 $lastListFilters = $_SESSION['accidente_listar_ultimo_filtro'] ?? null;
 if ($requestedListUrl === 'accidente_listar.php' && is_array($lastListFilters)) {

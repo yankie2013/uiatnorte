@@ -532,6 +532,7 @@ if($favoritos === '1'){
 $recentOpenedIds = array_values(array_unique(array_filter(array_map('intval',
   (array)($_SESSION['accidentes_ultimos_abiertos'] ?? [$ultimoAccidenteAbiertoId])
 ), static fn($id) => $id > 0)));
+$recentOpenedIds = array_slice($recentOpenedIds, 0, 6);
 if ($orden === 'abiertos_desc') {
   if ($recentOpenedIds === []) {
     $sql .= " AND 1 = 0";
@@ -600,7 +601,7 @@ $folderOrder = $estadoFiltro === 'todos' && $orden !== 'folder_asc'
   ? $manualFolderOrder . ', '
   : '';
 if ($orden === 'abiertos_desc') {
-  $sql .= " ORDER BY " . ($recentOpenedIds !== [] ? "FIELD(a.id, " . implode(',', $recentOpenedIds) . ")" : 'a.id DESC') . " LIMIT 200";
+  $sql .= " ORDER BY " . ($recentOpenedIds !== [] ? "FIELD(a.id, " . implode(',', $recentOpenedIds) . ")" : 'a.id DESC') . " LIMIT 6";
 } elseif ($orden === 'registrados_desc') {
   $sql .= " ORDER BY a.id DESC LIMIT 200";
 } else {
