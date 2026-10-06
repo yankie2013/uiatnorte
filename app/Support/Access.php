@@ -105,6 +105,15 @@ final class Access
             http_response_code(403);
             exit('Este directorio está reservado al administrador.');
         }
+        if (preg_match('/^word_oficio.*\.php$/D', $script) && (int)($_GET['oficio_id'] ?? 0) > 0) {
+            $check = Database::connection()->prepare('SELECT accidente_id FROM oficios WHERE id = ?');
+            $check->execute([(int)$_GET['oficio_id']]);
+            $office = $check->fetch(PDO::FETCH_ASSOC);
+            if ($office && empty($office['accidente_id'])) {
+                http_response_code(403);
+                exit('La descarga de Word requiere un caso relacionado con sus datos completos.');
+            }
+        }
         $action=implode(' ',array_filter([$_POST['action']??'',$_POST['accion']??'',$_POST['do']??'',$_GET['action']??'',$_GET['accion']??''], 'is_scalar'));
         $deleting=preg_match('/eliminar|delete|_delete|\bdel\b|\bborrar\b/i',$script.' '.$action);
         if($deleting && !self::admin()) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}

@@ -32,7 +32,7 @@ if (isset($_GET['ajax'])) {
   if ($a==='dist'){
     $dep=substr($_GET['dep']??'',0,2);
     $prov=substr($_GET['prov']??'',0,2);
-    json_out(['ok'=>true,'data'=>$accidenteRepo->distritos($dep,$prov)]);
+    json_out(['ok'=>true,'data'=>$accidenteService->distritosRegistro($dep,$prov)]);
   }
 
   // Comisarías por distrito (dep+prov+dist) usando comisaria_distrito
@@ -176,6 +176,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $comisaria_id = $_POST['comisaria_id']!=='' ? (int)$_POST['comisaria_id'] : null;
 
   $fecha_accidente = trim($_POST['fecha_accidente']??'');
+  if (isset($_POST['accidente_fecha']) || isset($_POST['accidente_hora'])) {
+    $diaAccidente = trim((string)($_POST['accidente_fecha'] ?? ''));
+    $horaAccidente = trim((string)($_POST['accidente_hora'] ?? ''));
+    $fecha_accidente = $diaAccidente !== '' && $horaAccidente !== '' ? $diaAccidente . 'T' . $horaAccidente : '';
+    $_POST['fecha_accidente'] = $fecha_accidente;
+  }
   $fecha_comunicacion = trim($_POST['fecha_comunicacion']??'');
   $fecha_intervencion = trim($_POST['fecha_intervencion']??'');
 
@@ -324,6 +330,20 @@ $upd->execute([$sidpol_gen, $newId]);
 $accidente_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $sidpol_url   = $_GET['sidpol'] ?? ''; // mostrado como solo-lectura
 
+$inicioRegistro = new DateTimeImmutable('now', new DateTimeZone('America/Lima'));
+$minutoRedondeado = (int)(round((int)$inicioRegistro->format('i') / 10) * 10);
+$comunicacionRedondeada = $inicioRegistro->setTime((int)$inicioRegistro->format('H'), 0)->modify('+' . $minutoRedondeado . ' minutes');
+$fechaAccidenteInicial = (string)($_POST['fecha_accidente'] ?? '');
+$diaAccidenteInicial = (string)($_POST['accidente_fecha'] ?? ($fechaAccidenteInicial !== '' ? substr($fechaAccidenteInicial, 0, 10) : $inicioRegistro->format('Y-m-d')));
+$horaAccidenteInicial = (string)($_POST['accidente_hora'] ?? ($fechaAccidenteInicial !== '' ? substr($fechaAccidenteInicial, 11, 5) : ''));
+$fechaComunicacionInicial = (string)($_POST['fecha_comunicacion'] ?? $comunicacionRedondeada->format('Y-m-d\TH:i'));
+$fechaIntervencionInicial = (string)($_POST['fecha_intervencion'] ?? $comunicacionRedondeada->modify('+1 hour')->format('Y-m-d\TH:i'));
+
+$departamentoInicial = (string)($_POST['cod_dep'] ?? '15');
+$provinciaInicial = (string)($_POST['cod_prov'] ?? '01');
+$provinciasIniciales = $accidenteRepo->provinciasByDepartamento($departamentoInicial);
+$distritosIniciales = $accidenteService->distritosRegistro($departamentoInicial, $provinciaInicial);
+
 // incluir el sidebar (archivo en la misma carpeta uiatnorte)
 include __DIR__ . '/sidebar.php';
 ?>
@@ -454,16 +474,18 @@ include __DIR__ . '/sidebar.php';
 
       <div class="col-4"><label>Departamento *</label>
         <select name="cod_dep" id="dep" required>
-          <option value="" disabled selected>-- Selecciona --</option>
-          <?php foreach($deps as $d):?><option value="<?=h($d['cod_dep'])?>"><?=h($d['nombre'])?></option><?php endforeach;?>
+          <option value="" disabled <?= $departamentoInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+          <?php foreach($deps as $d):?><option value="<?=h($d['cod_dep'])?>" <?= (string)$d['cod_dep'] === $departamentoInicial ? 'selected' : '' ?>><?=h($d['nombre'])?></option><?php endforeach;?>
         </select></div>
       <div class="col-4"><label>Provincia *</label>
         <select name="cod_prov" id="prov" required>
-          <option value="" disabled selected>-- Selecciona --</option>
+          <option value="" disabled <?= $provinciaInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+          <?php foreach($provinciasIniciales as $p): ?><option value="<?= h($p['cod_prov']) ?>" <?= (string)$p['cod_prov'] === $provinciaInicial ? 'selected' : '' ?>><?= h($p['nombre']) ?></option><?php endforeach; ?>
         </select></div>
       <div class="col-4"><label>Distrito *</label>
         <select name="cod_dist" id="dist" required>
           <option value="" disabled selected>-- Selecciona --</option>
+          <?php foreach($distritosIniciales as $d): ?><option value="<?= h($d['cod_dist']) ?>"><?= h($d['nombre']) ?></option><?php endforeach; ?>
         </select></div>
 
       <div class="col-3"><label>Comisaría *</label>
@@ -475,9 +497,15 @@ include __DIR__ . '/sidebar.php';
         </div>
       </div>
 
-      <div class="col-3"><label>Fecha y hora del accidente *</label><input type="datetime-local" name="fecha_accidente" required></div>
-      <div class="col-3"><label>Comunicación</label><input type="datetime-local" name="fecha_comunicacion"></div>
-      <div class="col-3"><label>Intervención</label><input type="datetime-local" name="fecha_intervencion"></div>
+      <div class="col-3"><label for="accidente_fecha">Fecha y hora del accidente *</label>
+        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;">
+          <input type="date" name="accidente_fecha" id="accidente_fecha" value="<?= h($diaAccidenteInicial) ?>" required aria-label="Fecha del accidente">
+          <input type="time" name="accidente_hora" id="accidente_hora" value="<?= h($horaAccidenteInicial) ?>" required aria-label="Hora del accidente">
+        </div>
+        <input type="hidden" name="fecha_accidente" value="<?= h($fechaAccidenteInicial) ?>">
+      </div>
+      <div class="col-3"><label>Comunicación</label><input type="datetime-local" name="fecha_comunicacion" value="<?= h($fechaComunicacionInicial) ?>"></div>
+      <div class="col-3"><label>Intervención</label><input type="datetime-local" name="fecha_intervencion" value="<?= h($fechaIntervencionInicial) ?>"></div>
 
       <div class="col-4"><label>Comunicante</label><input type="text" name="comunicante_nombre" maxlength="120" value="<?=h($comunicante_nombre ?? '')?>"></div>
       <div class="col-4"><label>Teléfono</label><input type="text" name="comunicante_telefono" maxlength="20" value="<?=h($comunicante_telefono ?? '')?>"></div>

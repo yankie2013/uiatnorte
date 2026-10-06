@@ -54,11 +54,33 @@ final class OficioRepository
 
     public function gestionContext(): array
     {
-        $st = $this->pdo->prepare("SELECT u.id, u.nombre, u.grado FROM usuarios u JOIN usuarios actor ON actor.id=? WHERE u.activo=1 AND u.rol='jefe_emi' AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,'')) ORDER BY u.nombre");
+        $st = $this->pdo->prepare("SELECT u.id, u.nombre, u.grado, u.rol FROM usuarios u JOIN usuarios actor ON actor.id=? WHERE u.activo=1 AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,'')) ORDER BY u.nombre");
         $st->execute([(int) (\App\Support\Auth::user()['id'] ?? 0)]);
+        $encargados = $st->fetchAll(PDO::FETCH_ASSOC);
+        $gradeOrder = static function (?string $grade): int {
+            $grade = strtr(mb_strtoupper(trim((string)$grade), 'UTF-8'), ['É'=>'E','Í'=>'I','Ó'=>'O','Á'=>'A','Ú'=>'U']);
+            $grade = preg_replace('/[^A-Z0-9]/', '', $grade) ?? '';
+            $grade = preg_replace('/PNP$/', '', $grade) ?? $grade;
+            return match ($grade) {
+                'SS', 'SUBOFICIALSUPERIOR' => 0,
+                'SB', 'SUBOFICIALBRIGADIER' => 1,
+                'ST1', 'SUBOFICIALTECNICODEPRIMERA' => 2,
+                'ST2', 'SUBOFICIALTECNICODESEGUNDA' => 3,
+                'ST3', 'SUBOFICIALTECNICODETERCERA' => 4,
+                'S1', 'SUBOFICIALDEPRIMERA' => 5,
+                'S2', 'SUBOFICIALDESEGUNDA' => 6,
+                'S3', 'SUBOFICIALDETERCERA' => 7,
+                default => 8,
+            };
+        };
+        usort($encargados, static fn(array $a, array $b): int =>
+            ($gradeOrder($a['grado']) <=> $gradeOrder($b['grado']))
+            ?: strnatcasecmp($a['nombre'], $b['nombre'])
+            ?: ((int)$a['id'] <=> (int)$b['id'])
+        );
         return [
             'comisarias' => $this->pdo->query('SELECT id,nombre FROM comisarias ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC),
-            'encargados' => $st->fetchAll(PDO::FETCH_ASSOC),
+            'encargados' => $encargados,
             'expedientes' => $this->pdo->query("SELECT a.id,a.comisaria_id,a.responsable_id,a.fecha_accidente,a.lugar,
                 COALESCE((SELECT GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ')
                     FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
@@ -82,7 +104,7 @@ final class OficioRepository
             throw new \InvalidArgumentException('Selecciona una comisaría válida.');
         }
         if ($encargadoId !== null && !in_array($encargadoId, array_map('intval', array_column($ctx['encargados'], 'id')), true)) {
-            throw new \InvalidArgumentException('El encargado debe ser JEFE EMI activo de tu misma unidad.');
+            throw new \InvalidArgumentException('El encargado debe ser un usuario activo de tu misma unidad.');
         }
         if ($accidenteId > 0) {
             foreach ($ctx['expedientes'] as $case) {

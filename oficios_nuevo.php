@@ -123,6 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'categoria' => $_POST['categoria'] ?? '',
         'motivo' => $_POST['motivo'] ?? '',
         'asunto_texto' => $_POST['asunto_texto'] ?? '',
+        'vehiculo_manual' => $_POST['vehiculo_manual'] ?? '',
+        'persona_manual' => $_POST['persona_manual'] ?? '',
+        'camara_fecha' => $_POST['camara_fecha'] ?? '',
         'camara_rango_desde' => $_POST['camara_rango_desde'] ?? '',
         'camara_rango_hasta' => $_POST['camara_rango_hasta'] ?? '',
         'diligencias_solicitadas' => $_POST['diligencias_solicitadas'] ?? '',
@@ -362,7 +365,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         </select></div>
         <div class="c6"><label for="encargado_id">Encargado (opcional)</label><select name="encargado_id" id="encargado_id">
           <option value="">Sin encargado</option>
-          <?php foreach ($gestionCtx['encargados'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['encargado_id']===(string)$item['id']?'selected':'' ?>><?= h(trim($item['grado'].' '.$item['nombre'])) ?></option><?php endforeach; ?>
+          <?php foreach ($gestionCtx['encargados'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['encargado_id']===(string)$item['id']?'selected':'' ?>><?= h(trim($item['grado'].' '.$item['nombre']) . ' — ' . (\App\Support\Access::ROLES[$item['rol']] ?? $item['rol'])) ?></option><?php endforeach; ?>
         </select><div class="combo-hint">JEFE EMI de tu misma unidad.</div></div>
         <div class="c12" data-related-case><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
           <option value="">Sin expediente</option>
@@ -455,23 +458,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <div class="combo-hint">Puedes cambiarlo. Al guardar, el nuevo texto quedará disponible para esta categoría / plantilla.</div>
       </div>
 
-      <div class="c12" id="camaraRangoBox" style="display:none;">
-        <div class="preview">
-          <h4>Camara de video vigilancia</h4>
-          <div class="field-row" style="margin-bottom:10px; flex-wrap:wrap;">
-            <div style="flex:1 1 220px;">
-              <label for="camara_rango_desde">Entre las</label>
-              <input type="time" name="camara_rango_desde" id="camara_rango_desde" value="<?= h($camaraDesdeInicial) ?>">
-            </div>
-            <div style="flex:1 1 220px;">
-              <label for="camara_rango_hasta">Hasta las</label>
-              <input type="time" name="camara_rango_hasta" id="camara_rango_hasta" value="<?= h($camaraHastaInicial) ?>">
-            </div>
-          </div>
-          <div class="muted">El rango elegido se incorporará al asunto del oficio y al documento Word.</div>
-          <div class="muted" style="margin-top:6px;">Marcadores disponibles en la plantilla Word: <strong>${oficio_rango_camaras}</strong>, <strong>${oficio_rango_desde}</strong> y <strong>${oficio_rango_hasta}</strong>.</div>
-        </div>
-      </div>
+
 
       <div class="c12" id="diligenciasSolicitadasBox" style="display:none;">
         <div class="preview">
@@ -514,8 +501,26 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <section class="office-section" id="caseLinksSection" <?= ($showVehiculoInicial || $showFallecidoInicial || $showInformeMedicoInicial) ? '' : 'hidden' ?>>
       <div class="section-head"><i class="section-mark"></i><h2>Vinculos del caso</h2><span>Opcional</span></div>
       <div class="grid">
+      <div class="c12" id="camaraRangoBox" style="display:none;">
+        <div class="preview">
+          <div id="camaraFechaBox" hidden><label for="camara_fecha">Día solicitado</label><input type="date" name="camara_fecha" id="camara_fecha" value="<?= h($data['camara_fecha'] ?? '') ?>" disabled></div><h4>Camara de video vigilancia</h4>
+          <div class="field-row" style="margin-bottom:10px; flex-wrap:wrap;">
+            <div style="flex:1 1 220px;">
+              <label for="camara_rango_desde">Entre las</label>
+              <input type="time" name="camara_rango_desde" id="camara_rango_desde" value="<?= h($camaraDesdeInicial) ?>">
+            </div>
+            <div style="flex:1 1 220px;">
+              <label for="camara_rango_hasta">Hasta las</label>
+              <input type="time" name="camara_rango_hasta" id="camara_rango_hasta" value="<?= h($camaraHastaInicial) ?>">
+            </div>
+          </div>
+          <div class="muted">El día y el rango solicitado se guardarán con el oficio.</div>
+
+        </div>
+      </div>
       <div class="c6" id="vehiculoBox" style="<?= $showVehiculoInicial ? 'display:block;' : 'display:none;' ?>">
-        <label>Vehículo involucrado</label>
+        <label id="vehiculoInvolucradoLabel">Vehículo involucrado</label>
+        <input type="text" name="vehiculo_manual" id="vehiculo_manual" maxlength="300" placeholder="Placa del vehículo" value="<?= h($data['vehiculo_manual'] ?? '') ?>" hidden disabled>
         <select name="involucrado_vehiculo_id" id="involucrado_vehiculo_id" <?= $showVehiculoInicial ? 'required' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($vehiculosActuales as $item): ?>
@@ -526,6 +531,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
       <div class="c6" id="fallecidoBox" style="<?= ($showFallecidoInicial || $showInformeMedicoInicial) ? 'display:block;' : 'display:none;' ?>">
         <label id="personaInvolucradaLabel"><?= $showInformeMedicoInicial ? 'Persona herida, lesionada o fallecida' : 'Persona fallecida' ?></label>
+        <input type="text" name="persona_manual" id="persona_manual" maxlength="300" placeholder="Nombre completo" value="<?= h($data['persona_manual'] ?? '') ?>" hidden disabled>
         <select name="involucrado_persona_id" id="involucrado_persona_id" <?= ($showFallecidoInicial || $showInformeMedicoInicial) ? 'required' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($personasCasoActuales as $item): ?>
@@ -1000,6 +1006,8 @@ async function loadPersonasInformeMedico(selected = '') {
   fillSelect(sel, data.items || [], selected, 'Selecciona');
 }
 async function toggleBoxesPorAsunto() {
+  const standalone = document.getElementById('case_mode')?.value === 'standalone';
+  document.getElementById('vehiculoInvolucradoLabel').textContent = standalone ? 'Placa del vehículo' : 'Vehículo involucrado';
   const vehBox = document.getElementById('vehiculoBox');
   const fallBox = document.getElementById('fallecidoBox');
   const caseLinksSection = document.getElementById('caseLinksSection');
@@ -1009,7 +1017,7 @@ async function toggleBoxesPorAsunto() {
   const vehSel = document.getElementById('involucrado_vehiculo_id');
   if (requiresVehicle) {
     vehBox.style.display = 'block';
-    if (vehSel) vehSel.required = true;
+    if (vehSel) vehSel.required = !standalone;
     await loadVehiculosAccidente(vehSel ? vehSel.value : '');
   } else {
     vehBox.style.display = 'none';
@@ -1022,12 +1030,12 @@ async function toggleBoxesPorAsunto() {
   const personaLabel = document.getElementById('personaInvolucradaLabel');
   if (asuntoEsInformeMedico()) {
     fallBox.style.display = 'block';
-    personaSel.required = true;
+    personaSel.required = !standalone;
     if (personaLabel) personaLabel.textContent = 'Persona herida, lesionada o fallecida';
     await loadPersonasInformeMedico(personaSel.value);
   } else if (asuntoEsNecropsia()) {
     fallBox.style.display = 'block';
-    personaSel.required = true;
+    personaSel.required = !standalone;
     if (personaLabel) personaLabel.textContent = 'Persona fallecida';
     await loadFallecidosAccidente(personaSel.value);
   } else {
@@ -1048,8 +1056,22 @@ async function toggleBoxesPorAsunto() {
     diligenciasBox.style.display = active ? 'block' : 'none';
     diligenciasInput.required = active;
   }
+  for (const [select, manual, active] of [
+    [vehSel, document.getElementById('vehiculo_manual'), requiresVehicle],
+    [personaSel, document.getElementById('persona_manual'), asuntoEsInformeMedico() || asuntoEsNecropsia()]
+  ]) {
+    select.hidden = standalone; select.disabled = standalone;
+    manual.hidden = !standalone; manual.disabled = !standalone || !active; manual.required = standalone && active;
+  }
+  document.querySelectorAll('[name="save_action"][value="download"], [data-review-save="download"]').forEach(button => {
+    button.disabled = standalone;
+    button.hidden = standalone;
+  });
+  const day = document.getElementById('camara_fecha');
+  document.getElementById('camaraFechaBox').hidden = !standalone;
+  day.disabled = !standalone || !asuntoEsCamaraVideo();
   if (caseLinksSection) {
-    caseLinksSection.hidden = vehBox.style.display === 'none' && fallBox.style.display === 'none';
+    caseLinksSection.hidden = !asuntoEsCamaraVideo() && vehBox.style.display === 'none' && fallBox.style.display === 'none';
   }
 }
 async function recalcularNumero() {
@@ -1276,6 +1298,7 @@ document.addEventListener('click', (event) => {
     document.getElementById('office-assignment-title').textContent = related ? 'Comisaría y encargado' : 'Encargado del oficio';
     document.getElementById('office-mode-choice')?.remove();
     form.hidden = false;
+    toggleBoxesPorAsunto().catch(console.error);
   };
   document.querySelectorAll('[data-case-mode]').forEach(button => button.addEventListener('click', () => { apply(button.dataset.caseMode); form.querySelector('select:not([disabled])')?.focus(); }));
   if (mode.value) apply(mode.value);

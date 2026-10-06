@@ -131,10 +131,21 @@ final class OficioService
 
     public function defaultData(?array $row = null, ?int $preAccidenteId = null): array
     {
-        return [
+        $manual = [];
+        $motivo = (string)($row['motivo'] ?? '');
+        foreach (['vehiculo_manual' => 'Placa indicada', 'persona_manual' => 'Persona indicada', 'camara_fecha' => 'Día solicitado'] as $field => $label) {
+            preg_match('/^' . preg_quote($label, '/') . ': (.*)$/mu', $motivo, $matches);
+            if ($field === 'vehiculo_manual' && empty($matches)) {
+                preg_match('/^Vehículo indicado: (.*)$/mu', $motivo, $matches);
+                $motivo = preg_replace('/^Vehículo indicado: .*\R?/mu', '', $motivo) ?? $motivo;
+            }
+            $manual[$field] = $matches[1] ?? '';
+            $motivo = preg_replace('/^' . preg_quote($label, '/') . ': .*\R?/mu', '', $motivo) ?? $motivo;
+        }
+        return $manual + [
             'gestion' => $row['gestion'] ?? 0,
             'comisaria_id' => $row['comisaria_id'] ?? '',
-            'encargado_id' => $row['encargado_id'] ?? '',
+            'encargado_id' => $row === null ? (Auth::user()['id'] ?? '') : ($row['encargado_id'] ?? ''),
             'accidente_id' => $row['accidente_id'] ?? ($preAccidenteId ?: ''),
             'anio_oficio' => $row['anio'] ?? date('Y'),
             'numero_oficio' => $row['numero'] ?? $this->repository->nextNumero((int)($row['anio'] ?? date('Y'))),
@@ -150,7 +161,7 @@ final class OficioService
             'tipo' => $this->asuntoTipo($row['asunto_id'] ?? null) ?: 'SOLICITAR',
             'asunto_id' => $row['asunto_id'] ?? '',
             'categoria' => $row['categoria'] ?? '',
-            'motivo' => $row['motivo'] ?? '',
+            'motivo' => trim($motivo),
             'diligencias_solicitadas' => $row['diligencias_solicitadas'] ?? '',
             'referencia_texto' => $row['referencia_texto'] ?? '',
             'involucrado_vehiculo_id' => $row['involucrado_vehiculo_id'] ?? '',
@@ -322,7 +333,7 @@ final class OficioService
     public function downloadUrlForOficio(int $oficioId, ?array $row = null): string
     {
         $row ??= $this->repository->detail($oficioId);
-        if ($row === null) {
+        if ($row === null || empty($row['accidente_id'])) {
             return '';
         }
         $meta = $this->downloadMetaForAsunto(
@@ -693,6 +704,8 @@ final class OficioService
         if ($gestion && ($input['case_mode'] ?? '') === 'related' && ($comisariaId <= 0 || !$encargadoId || $accidenteId <= 0)) {
             throw new InvalidArgumentException('Selecciona comisaría, encargado y expediente para relacionar el oficio con un caso.');
         }
+        $standalone = $gestion && $accidenteId <= 0;
+        if ($standalone) { $vehiculoId = null; $personaInvId = null; }
         if ($gestion) $this->repository->validateGestion($comisariaId, $encargadoId, $accidenteId);
         elseif (!$this->repository->accidenteExists($accidenteId)) {
             throw new InvalidArgumentException('Debes seleccionar el accidente asociado.');
@@ -733,7 +746,7 @@ final class OficioService
         } elseif ($categoria === '') {
             $categoria = mb_substr((string) ($asuntoInfo['nombre'] ?? ''), 0, 100, 'UTF-8');
         }
-        if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null) {
+        if ($this->asuntoRequiereVehiculo((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $vehiculoId === null && !$standalone) {
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
         $asuntoRules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
@@ -750,13 +763,31 @@ final class OficioService
                 }
             }
         }
-        if ($asuntoRules['requires_fallecido'] && $personaInvId === null) {
+        if ($asuntoRules['requires_fallecido'] && $personaInvId === null && !$standalone) {
             throw new InvalidArgumentException('Selecciona la persona fallecida para este asunto.');
+        }
+        if ($standalone) {
+            $manualFields = [
+                'vehiculo_manual' => ['Placa indicada', $this->asuntoRequiereVehiculo((string)$asuntoInfo['nombre'], (string)$asuntoInfo['detalle'])],
+                'persona_manual' => ['Persona indicada', $asuntoRules['requires_fallecido'] || $asuntoRules['requires_persona_medica']],
+                'camara_fecha' => ['Día solicitado', $asuntoRules['requires_camara_range']],
+            ];
+            foreach ($manualFields as $field => [$label, $active]) {
+                if (!$active) continue;
+                $value = trim((string)($input[$field] ?? ''));
+                if ($value === '' && $field !== 'camara_fecha') throw new InvalidArgumentException('Completa: ' . $label . '.');
+                if (mb_strlen($value) > 300 || preg_match('/[\r\n]/', $value)) throw new InvalidArgumentException('Dato manual inválido: ' . $label . '.');
+                if ($field === 'camara_fecha' && $value !== '') {
+                    $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+                    if (!$date || $date->format('Y-m-d') !== $value) throw new InvalidArgumentException('Indica un día válido para las cámaras.');
+                }
+                if ($value !== '') $motivo .= "\n{$label}: {$value}";
+            }
         }
         if (mb_strlen($categoria) > 100) {
             throw new InvalidArgumentException('La categoría admite hasta 100 caracteres.');
         }
-        if ($asuntoRules['requires_persona_medica'] && $personaInvId === null) {
+        if ($asuntoRules['requires_persona_medica'] && $personaInvId === null && !$standalone) {
             throw new InvalidArgumentException('Selecciona la persona herida, lesionada o fallecida para el informe medico.');
         }
         if ($this->asuntoEsInformacionDiligencias((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? '')) && $diligenciasSolicitadas === '') {

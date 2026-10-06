@@ -260,6 +260,11 @@ function toggleAll(kind, checked){
 
 /* VALIDACIÓN reforzada */
 function validarForm(){
+  const accidentDate = qs('#accidente_fecha'), accidentTime = qs('#accidente_hora');
+  if (accidentDate && accidentTime) {
+    qs('[name="fecha_accidente"]').value = accidentDate.value && accidentTime.value
+      ? accidentDate.value + 'T' + accidentTime.value : '';
+  }
   const dep = qs('#dep'), prov = qs('#prov'), dist = qs('#dist'), comi = qs('#comisaria');
 
   const lugar = qs('[name="lugar"]');

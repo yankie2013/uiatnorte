@@ -15,7 +15,10 @@ final class OficioSaveResponse
                 $_SESSION['oficio_pending_downloads'][$token] = $url;
                 $params['download_saved'] = $token;
             } else {
-                $params['msg'] = 'Oficio guardado. Esta plantilla no tiene una descarga configurada.';
+                $office = $service->oficio($id);
+                $params['msg'] = empty($office['accidente_id'])
+                    ? 'Oficio guardado. La descarga de Word requiere un caso relacionado con sus datos completos.'
+                    : 'Oficio guardado. Esta plantilla no tiene una descarga configurada.';
             }
         }
         return 'oficios_listar.php' . ($params ? '?' . http_build_query($params) : '');

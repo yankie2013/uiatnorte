@@ -34,9 +34,10 @@
     add('Entidad de destino', value('entidad_id_text'));
     add('Grado y cargo', value('grado_cargo_text'));
     add('Persona destino', value('persona_id_text'));
-    if (get('vehiculoBox')?.style.display !== 'none') add('Vehículo', value('involucrado_vehiculo_id'));
-    if (get('fallecidoBox')?.style.display !== 'none') add(get('personaInvolucradaLabel')?.textContent || 'Persona involucrada', value('involucrado_persona_id'));
+    if (get('vehiculoBox')?.style.display !== 'none') add(get('vehiculo_manual')?.disabled === false ? 'Placa del vehículo' : 'Vehículo', value('vehiculo_manual') || value('involucrado_vehiculo_id'));
+    if (get('fallecidoBox')?.style.display !== 'none') add(get('personaInvolucradaLabel')?.textContent || 'Persona involucrada', value('persona_manual') || value('involucrado_persona_id'));
     if (get('camaraRangoBox')?.style.display !== 'none' && value('camara_rango_desde')) add('Rango de cámaras', `${value('camara_rango_desde')} – ${value('camara_rango_hasta')}`);
+    add('Día de cámaras', value('camara_fecha'));
     add('Diligencias solicitadas', value('diligencias_solicitadas'));
     add('Referencia', value('referencia_texto'));
     add('Estado', value('estado'));

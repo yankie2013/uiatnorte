@@ -20,6 +20,23 @@ final class AccidenteService
     {
     }
 
+    private const DISTRITOS_LIMA_NORTE = ['02', '06', '10', '12', '17', '25', '35', '39'];
+
+    private function registraEnLimaNorte(): bool
+    {
+        $unit = mb_strtoupper(trim((string)(\App\Support\Auth::user()['unidad'] ?? '')), 'UTF-8');
+        return preg_replace('/\s+/u', ' ', $unit) === 'DEPIAT NORTE';
+    }
+
+    public function distritosRegistro(string $dep, string $prov): array
+    {
+        if ($this->registraEnLimaNorte() && ($dep !== '15' || $prov !== '01')) return [];
+        $districts = $this->repository->distritos($dep, $prov);
+        return $this->registraEnLimaNorte()
+            ? array_values(array_filter($districts, static fn(array $district): bool => in_array((string)$district['cod_dist'], self::DISTRITOS_LIMA_NORTE, true)))
+            : $districts;
+    }
+
     public function createComisaria(array $input): array
     {
         $nombre = trim((string) ($input['nombre'] ?? ''));
@@ -180,6 +197,10 @@ final class AccidenteService
             || !(ctype_digit($payload['cod_prov']) && strlen($payload['cod_prov']) === 2)
             || !(ctype_digit($payload['cod_dist']) && strlen($payload['cod_dist']) === 2)) {
             throw new InvalidArgumentException('Selecciona un Distrito válido.');
+        }
+
+        if ($this->registraEnLimaNorte() && ($payload['cod_dep'] !== '15' || $payload['cod_prov'] !== '01' || !in_array($payload['cod_dist'], self::DISTRITOS_LIMA_NORTE, true))) {
+            throw new InvalidArgumentException('Selecciona un distrito de la jurisdicción de DEPIAT NORTE.');
         }
 
         if (!$this->repository->distritoExists($payload['cod_dep'], $payload['cod_prov'], $payload['cod_dist'])) {

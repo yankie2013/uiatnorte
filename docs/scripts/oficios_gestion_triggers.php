@@ -5,7 +5,7 @@ $actor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1)";
 $editor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND (id=OLD.creado_por OR id=(CASE WHEN OLD.gestion=1 THEN OLD.encargado_id ELSE (SELECT responsable_id FROM accidentes WHERE id=OLD.accidente_id AND eliminado_en IS NULL) END)))";
 $valid = " IF NEW.gestion=1 THEN
 IF NEW.comisaria_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM comisarias WHERE id=NEW.comisaria_id) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Comisaría inválida'; END IF;
-IF NEW.encargado_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM usuarios u JOIN usuarios actor ON actor.id=@actor_id WHERE u.id=NEW.encargado_id AND u.activo=1 AND u.rol='jefe_emi' AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,''))) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Encargado fuera de la unidad'; END IF;
+IF NEW.encargado_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM usuarios u JOIN usuarios actor ON actor.id=@actor_id WHERE u.id=NEW.encargado_id AND u.activo=1 AND TRIM(COALESCE(u.unidad,''))=TRIM(COALESCE(actor.unidad,''))) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Encargado fuera de la unidad'; END IF;
 IF NEW.accidente_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM accidentes WHERE id=NEW.accidente_id AND NEW.encargado_id IS NOT NULL AND NEW.comisaria_id IS NOT NULL AND responsable_id=NEW.encargado_id AND comisaria_id=NEW.comisaria_id AND eliminado_en IS NULL) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Expediente fuera de los filtros seleccionados'; END IF;
 END IF;";
 $profile = "JSON_OBJECT('nombre',u.nombre,'grado',u.grado,'cip',u.cip,'cargo',u.cargo,'unidad',u.unidad,'telefono',u.telefono,'email',u.email)";

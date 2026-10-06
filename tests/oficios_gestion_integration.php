@@ -21,6 +21,14 @@ try {
     $p->exec('SET @actor_id='.(int)$creator['id']);
     $ctx=$service->gestionContext();
     expect(in_array((int)$chief['id'], array_map('intval',array_column($ctx['encargados'],'id')),true),'Jefe de misma unidad disponible.');
+    expect(in_array((int)$creator['id'], array_map('intval',array_column($ctx['encargados'],'id')),true),'Incluye al usuario de Secretaría de la misma unidad.');
+    expect((int)$service->defaultData()['encargado_id']===(int)$creator['id'],'El encargado predeterminado es el usuario actual.');
+    $sameUnitIds=$p->prepare("SELECT id FROM usuarios WHERE activo=1 AND TRIM(COALESCE(unidad,''))=TRIM(?) ORDER BY id");
+    $sameUnitIds->execute([$creator['unidad']]);
+    $expectedIds=array_map('intval',$sameUnitIds->fetchAll(PDO::FETCH_COLUMN));
+    $actualIds=array_map('intval',array_column($ctx['encargados'],'id'));sort($actualIds);
+    expect($actualIds===$expectedIds,'Lista todos los perfiles activos de la unidad.');
+    $repository->validateGestion(0,(int)$creator['id'],0);
     $case = current(array_filter($ctx['expedientes'],fn($c)=>(int)$c['responsable_id']===(int)$chief['id']));
     expect((bool)$case,'Se requiere expediente del JEFE EMI de prueba.');
     $form=$service->formContext();
@@ -33,6 +41,16 @@ try {
     ]);
     $payload=(new ReflectionMethod($service,'payload'))->invoke($service,$input,null);
     expect($payload['accidente_id']===null,'Gestión permite oficio sin expediente.');
+    $ownPayload=$payload;
+    $ownPayload['encargado_id']=(int)$creator['id'];
+    $ownPayload['creado_por']=(int)$creator['id'];
+    $p->exec('SAVEPOINT encargado_default_test');
+    $ownId=$repository->create($ownPayload);
+    $ownRow=$repository->find($ownId);
+    expect((int)$ownRow['encargado_id']===(int)$creator['id'],'La base de datos acepta al usuario actual sin exigir JEFE EMI.');
+    expect((int)$service->defaultData($ownRow)['encargado_id']===(int)$creator['id'],'Editar conserva el encargado asignado.');
+    $p->exec('ROLLBACK TO SAVEPOINT encargado_default_test');
+
     $standaloneInput=array_merge($input,['case_mode'=>'standalone','comisaria_id'=>$case['comisaria_id'],'encargado_id'=>$chief['id'],'accidente_id'=>$case['id']]);
     $standalonePayload=(new ReflectionMethod($service,'payload'))->invoke($service,$standaloneInput,null);
     expect($standalonePayload['accidente_id']===null && $standalonePayload['comisaria_id']===null,'Sin caso descarta vínculos enviados.');
@@ -46,6 +64,9 @@ try {
     expect((int)$payload['anio']===(int)date('Y'),'Año automático del registro, sin aceptar año enviado.');
     expect((int)$payload['oficial_ano_id']===(int)$repository->oficialAnos()[0]['id'],'Nombre oficial más reciente automático.');
     expect(str_contains($payload['motivo'],'14:00'),'Se conserva el rango de cámaras.');
+    $cameraPayload = (new ReflectionMethod($service,'payload'))->invoke($service,array_merge($standaloneInput,['camara_fecha'=>'2026-10-06']),null);
+    expect(str_contains($cameraPayload['motivo'],'Día solicitado: 2026-10-06'),'Guarda el día de cámaras sin caso.');
+
     expect($payload['comisaria_id']===null,'Comisaría opcional se guarda como NULL.');
     foreach ([[0,null],[0,(int)$chief['id']],[(int)$case['comisaria_id'],null]] as [$station,$manager]) {
         $invalid=false;
@@ -97,15 +118,34 @@ try {
     $_SESSION['user']=$creator;
     $p->exec('SET @actor_id='.(int)$creator['id']);
     $invalid=false;
+    $p->exec('SET @rbac_migration=1');
+    $p->prepare('UPDATE usuarios SET unidad=? WHERE id=?')->execute(['DEPIAT OTRA UNIDAD PRUEBA',(int)$other['id']]);
+    $p->exec('SET @rbac_migration=0');
     try {$repository->validateGestion((int)$case['comisaria_id'],(int)$other['id'],0);}catch(InvalidArgumentException $e){$invalid=true;}
-    expect($invalid,'Se rechaza un encargado sin rol JEFE EMI.');
+    expect($invalid,'Se rechaza un encargado de otra unidad.');
+    $p->exec('SET @rbac_migration=1');
+    $p->prepare('UPDATE usuarios SET unidad=? WHERE id=?')->execute([$other['unidad'],(int)$other['id']]);
+    $p->exec('SET @rbac_migration=0');
     $invalid=false;
     try {$repository->validateGestion(-1,null,0);}catch(InvalidArgumentException $e){$invalid=true;}
     expect($invalid,'Se rechaza comisaría inválida.');
     $input['plantilla_nombre']='Protocolo de necropsia'; $input['asunto_id']='';
     $invalid=false;
-    try {(new ReflectionMethod($service,'payload'))->invoke($service,$input,null);}catch(InvalidArgumentException $e){$invalid=str_contains($e->getMessage(),'fallecida');}
-    expect($invalid,'Necropsia exige seleccionar occiso.');
+    try {(new ReflectionMethod($service,'payload'))->invoke($service,$input,null);}catch(InvalidArgumentException $e){$invalid=str_contains($e->getMessage(),'Persona indicada');}
+    expect($invalid,'Sin caso exige el nombre de la persona.');
+    $manualInput = array_merge($input, ['numero_oficio'=>'','persona_manual'=>'Persona de prueba', 'case_mode'=>'standalone']);
+    $manualPayload = (new ReflectionMethod($service,'payload'))->invoke($service,$manualInput,null);
+    expect(str_contains($manualPayload['motivo'],'Persona indicada: Persona de prueba'),'Guarda el nombre manual.');
+    $manualPayload['numero'] = $service->nextNumero((int)date('Y'));
+    $manualId = $repository->create($manualPayload);
+    $manualRow = $repository->find($manualId);
+    expect($service->defaultData($manualRow)['persona_manual']==='Persona de prueba','Recupera el nombre para editar.');
+    expect($service->downloadUrlForOficio($manualId,$manualRow)==='','Sin caso no permite descargar Word.');
+    $vehicleInput = array_merge($input, ['numero_oficio'=>'','asunto_id'=>'','plantilla_nombre'=>'Peritaje de constatación de daños','vehiculo_manual'=>'ABC-123','case_mode'=>'standalone']);
+    $vehiclePayload = (new ReflectionMethod($service,'payload'))->invoke($service,$vehicleInput,null);
+    expect(str_contains($vehiclePayload['motivo'],'ABC-123'),'Guarda el vehículo manual.');
+    expect($vehiclePayload['involucrado_vehiculo_id']===null,'No inventa un vínculo de vehículo.');
+
     $recipientInput=$input;
     $recipientInput['plantilla_nombre']=$asunto['nombre'];
     $recipientInput['asunto_id']=$asunto['id'];
@@ -151,7 +191,7 @@ try {
     expect(!str_contains($generalDownload,'accidente_id='),'Descargar desde Gestión no añade filtro del expediente.');
     $destination=App\Support\OficioSaveResponse::destination($service,$recipientId,0,true,'download');
     parse_str((string)parse_url($destination,PHP_URL_QUERY),$query);
-    expect(str_starts_with($destination,'oficios_listar.php?') && isset($_SESSION['oficio_pending_downloads'][$query['download_saved']]),'Guardar y descargar regresa al listado con descarga pendiente.');
+    expect(str_starts_with($destination,'oficios_listar.php?') && !isset($query['download_saved']),'Sin caso no programa una descarga de Word.');
     $oficio=$repository->find($id);
     $GLOBALS['of']=$oficio;
     $template=new App\Support\ResponsibleTemplateProcessor(dirname(__DIR__).'/plantillas/oficio_camaras.docx');
