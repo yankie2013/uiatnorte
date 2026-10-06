@@ -434,7 +434,7 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
       <?php if ($accidenteId > 0): ?><a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $accidenteId) ?>">Datos generales SIDPOL</a><?php endif; ?>
       <?php if ($accidenteId > 0): ?><a class="btn soft" href="oficio_protocolo_express.php?accidente_id=<?= urlencode((string) $accidenteId) ?>&return_to=<?= urlencode($returnTo) ?>">Necropsia r&aacute;pida</a><?php endif; ?>
       <?php if ($accidenteId > 0): ?><a class="btn soft" href="oficio_peritaje_express.php?accidente_id=<?= urlencode((string) $accidenteId) ?>&return_to=<?= urlencode($returnTo) ?>">Peritaje r&aacute;pido</a><?php endif; ?>
-      <a class="btn primary" href="oficios_nuevo.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : ($sidpol !== '' ? ('?sidpol=' . urlencode($sidpol)) : '') ?>">+ Nuevo oficio</a>
+      <a class="btn primary" data-oficio-modal="Nuevo oficio" href="oficios_nuevo.php<?= $accidenteId > 0 ? ('?accidente_id=' . urlencode((string) $accidenteId)) : ($sidpol !== '' ? ('?sidpol=' . urlencode($sidpol)) : '') ?>">+ Nuevo oficio</a>
     </div>
   </div>
 
@@ -629,6 +629,7 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
     opener = link;
     const url = new URL(link.href, location.href);
     url.searchParams.set('embed','1');
+    if (link.dataset.oficioModal === 'Nuevo oficio' && !url.searchParams.has('accidente_id')) url.searchParams.set('origin','gestion');
     document.getElementById('oficio-detail-title').textContent = link.dataset.oficioModal;
     frame.src = url.href;
     link.closest('details')?.removeAttribute('open');

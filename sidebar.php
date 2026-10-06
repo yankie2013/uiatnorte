@@ -53,16 +53,20 @@ if (\App\Support\Access::admin()) {
 if ($sidebarAccidentId > 0) {
     $sidebarGroups['EXPEDIENTE ACTUAL'][] = ['people', 'Estado y colaboración', 'accidente_vista_tabs.php?tab=estado&accidente_id=' . $sidebarAccidentId, false];
 }
-$sidebarGroups['DIRECTORIO'] = [
-    ['people', 'Personas', 'persona_listar.php', str_starts_with($sidebarPath, 'persona_')],
-    ['car', 'Vehículos', 'vehiculo_listar.php', str_starts_with($sidebarPath, 'vehiculo_')],
-    ['building', 'Comisarías', 'comisarias_listar.php', str_starts_with($sidebarPath, 'comisarias_')],
-    ['book', 'Entidades', 'oficio_entidades_listar.php', str_starts_with($sidebarPath, 'oficio_entidad')],
-    ['link', 'Enlaces de interés', 'enlaces_interes_listar.php', str_starts_with($sidebarPath, 'enlace')],
-];
+$sidebarGroups['DIRECTORIO'] = [];
+if (\App\Support\Access::admin()) {
+    $sidebarGroups['DIRECTORIO'] = [
+        ['people', 'Personas', 'persona_listar.php', str_starts_with($sidebarPath, 'persona_')],
+        ['car', 'Vehículos', 'vehiculo_listar.php', str_starts_with($sidebarPath, 'vehiculo_')],
+        ['building', 'Comisarías', 'comisarias_listar.php', str_starts_with($sidebarPath, 'comisarias_')],
+        ['book', 'Entidades', 'oficio_entidades_listar.php', str_starts_with($sidebarPath, 'oficio_entidad')],
+    ];
+}
+$sidebarGroups['DIRECTORIO'][] = ['link', 'Enlaces de interés', 'enlaces_interes_listar.php', str_starts_with($sidebarPath, 'enlace')];
 if (\App\Support\Access::admin()) {
     $sidebarGroups['DIRECTORIO'][] = ['grid', 'Catálogos', 'catalogos.php', $sidebarPath === 'catalogos.php'];
 }
+
 ?>
 <?php if (empty($uiatSidebarCssPreloaded)): ?>
 <link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">

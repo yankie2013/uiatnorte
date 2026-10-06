@@ -31,7 +31,9 @@ if ($returnTo === '' && $preselectedAccidenteId > 0) {
 
 $editingId = defined('UIAT_GESTION_EDIT_ID') ? (int)UIAT_GESTION_EDIT_ID : 0;
 $editingOficio = $editingId > 0 ? $service->oficio($editingId) : null;
-$gestion = $editingId > 0 || (!$embed && $preselectedAccidenteId <= 0);
+$gestion = $editingId > 0 || ($preselectedAccidenteId <= 0 && (!$embed || ($_GET['origin'] ?? '') === 'gestion'));
+$caseMode = (string)($_POST['case_mode'] ?? ($editingOficio ? (!empty($editingOficio['accidente_id']) ? 'related' : 'standalone') : ''));
+$showCaseChoice = $gestion && $editingId === 0 && !in_array($caseMode, ['related','standalone'], true);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') $gestion = $editingId > 0 || !empty($_POST['gestion']);
 $oficioOrigin = (string)($_GET['origin'] ?? $_POST['origin'] ?? ($gestion ? 'gestion' : 'expediente'));
 $returnGeneralList = $oficioOrigin === 'gestion';
@@ -127,6 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'referencia_texto' => $_POST['referencia_texto'] ?? '',
         'involucrado_vehiculo_id' => $_POST['involucrado_vehiculo_id'] ?? '',
         'involucrado_persona_id' => $_POST['involucrado_persona_id'] ?? '',
+        'case_mode' => $_POST['case_mode'] ?? '',
         'estado' => 'BORRADOR',
     ];
 
@@ -298,6 +301,20 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 .modal header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
 .modal iframe{width:100%;height:calc(100% - 52px);border:0}
 @media (max-width:900px){.wrap{padding:10px}.office-page-head{display:grid}.toolbar{justify-content:flex-start}.card{padding:9px}.office-section{margin:9px 0;padding:17px 13px 15px}.c2,.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.office-recipient-row{grid-template-columns:1fr}.office-actions{position:static;flex-wrap:wrap;margin:9px -9px -9px}.combo-suggestions{max-width:calc(100vw - 48px)}}
+
+[hidden]{display:none!important}
+.office-mode-choice{max-width:820px;margin:24px auto;padding:24px 12px;text-align:center}
+.office-choice-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--muted)}
+.office-mode-choice h1{margin:14px 0 8px;font-size:28px;color:var(--text)}
+.office-mode-choice p{color:var(--muted);margin-bottom:26px}
+.office-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.office-choice{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:14px;position:relative;min-height:230px;padding:26px;border:1px solid var(--choice-border);border-radius:22px;background:var(--choice-bg);color:var(--choice-ink);box-shadow:0 10px 26px #173c300c;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.office-choice.related{--choice-bg:linear-gradient(145deg,#f0faf3,#dcefe2);--choice-border:#a8d7b8;--choice-ink:#205940}
+.office-choice.standalone{--choice-bg:linear-gradient(145deg,#fff7ed,#ffead2);--choice-border:#f2c18c;--choice-ink:#985014}
+.office-choice:hover{transform:translateY(-3px);box-shadow:0 14px 30px #173c3020}
+.office-choice:focus-visible{outline:3px solid var(--choice-ink);outline-offset:4px}
+.office-choice strong{font-size:21px}.office-choice>span:not(.office-choice-symbol){font-size:14px;line-height:1.5}.office-choice-symbol{font-size:26px}.office-choice b{align-self:flex-end;font-size:24px}
+@media(max-width:600px){.office-choice-grid{grid-template-columns:1fr}.office-mode-choice{margin:0 auto;padding:14px 4px}.office-choice{min-height:170px;padding:20px;gap:10px}}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -320,16 +337,26 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <?php if ($error !== ''): ?><div class="alert err"><?= h($error) ?></div><?php endif; ?>
   <?php if ($success !== ''): ?><div class="alert ok"><?= h($success) ?><?php if ($asignado): ?> - ID: <?= (int) $asignado['id'] ?>, N° <?= (int) $asignado['numero'] ?>/<?= (int) $asignado['anio'] ?><?php endif; ?><?php if (!$embed && $returnTo !== ''): ?> - <a class="btn" href="<?= h($returnTo) ?>"><?= h($returnLabel) ?></a><?php endif; ?></div><?php endif; ?>
 
-  <form method="post" class="card" id="frmOficio">
+  <?php if ($showCaseChoice): ?>
+  <section class="office-mode-choice" id="office-mode-choice" aria-labelledby="office-choice-title">
+    <span class="office-choice-eyebrow">NUEVO OFICIO DE GESTIÓN</span><h1 id="office-choice-title">¿Está relacionado con un caso?</h1><p>Elige cómo registrar el oficio.</p>
+    <div class="office-choice-grid">
+      <button type="button" class="office-choice related" data-case-mode="related"><span class="office-choice-symbol" aria-hidden="true">▣</span><strong>Con caso relacionado</strong><span>Selecciona comisaría, encargado y expediente.</span><b aria-hidden="true">→</b></button>
+      <button type="button" class="office-choice standalone" data-case-mode="standalone"><span class="office-choice-symbol" aria-hidden="true">✉</span><strong>Sin caso relacionado</strong><span>Registra el oficio y elige el encargado.</span><b aria-hidden="true">→</b></button>
+    </div>
+  </section>
+  <?php endif; ?>
+  <form method="post" class="card" id="frmOficio" <?= $showCaseChoice ? 'hidden' : '' ?>>
+    <?php if ($gestion): ?><input type="hidden" name="case_mode" id="case_mode" value="<?= h($caseMode) ?>"><?php endif; ?>
     <input type="hidden" name="origin" value="<?= h($oficioOrigin) ?>">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <?php if ($gestion): ?>
     <input type="hidden" name="gestion" value="1">
     <section class="office-section">
-      <div class="section-head"><h2>Comisaría y encargado</h2></div>
+      <div class="section-head"><h2 id="office-assignment-title">Comisaría y encargado</h2></div>
       <div class="grid">
-        <div class="c6"><label for="comisaria_id">Comisaría (opcional)</label><select name="comisaria_id" id="comisaria_id">
+        <div class="c6" data-related-case><label for="comisaria_id">Comisaría (opcional)</label><select name="comisaria_id" id="comisaria_id">
           <option value="">Sin comisaría</option>
           <?php foreach ($gestionCtx['comisarias'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['comisaria_id']===(string)$item['id']?'selected':'' ?>><?= h($item['nombre']) ?></option><?php endforeach; ?>
         </select></div>
@@ -337,7 +364,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <option value="">Sin encargado</option>
           <?php foreach ($gestionCtx['encargados'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['encargado_id']===(string)$item['id']?'selected':'' ?>><?= h(trim($item['grado'].' '.$item['nombre'])) ?></option><?php endforeach; ?>
         </select><div class="combo-hint">JEFE EMI de tu misma unidad.</div></div>
-        <div class="c12"><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
+        <div class="c12" data-related-case><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
           <option value="">Sin expediente</option>
           <?php foreach ($gestionCtx['expedientes'] as $item): ?><option value="<?= (int)$item['id'] ?>" data-encargado="<?= (int)$item['responsable_id'] ?>" data-comisaria="<?= (int)$item['comisaria_id'] ?>" <?= (string)$data['accidente_id']===(string)$item['id']?'selected':'' ?>><?= h($item['label']) ?></option><?php endforeach; ?>
         </select><div class="combo-hint">Selecciona comisaría y encargado para ver los expedientes que coincidan con ambos. Cada opción muestra fecha, lugar y tipo de accidente.</div></div>
@@ -1229,3 +1256,28 @@ document.addEventListener('click', (event) => {
 <?php include __DIR__ . '/app/Views/oficio_confirmacion.php'; ?>
 </body>
 </html>
+
+<script>
+(() => {
+  const mode = document.getElementById('case_mode');
+  if (!mode) return;
+  const form = document.getElementById('frmOficio');
+  const apply = value => {
+    const related = value === 'related';
+    mode.value = value;
+    document.getElementById('encargado_id').required = related;
+    document.querySelector('label[for="comisaria_id"]').textContent = related ? 'Comisaría *' : 'Comisaría';
+    document.querySelector('label[for="encargado_id"]').textContent = related ? 'Encargado *' : 'Encargado (opcional)';
+    document.querySelector('label[for="accidente_id"]').textContent = related ? 'Expediente del encargado *' : 'Expediente';
+    document.querySelectorAll('[data-related-case]').forEach(field => {
+      field.hidden = !related;
+      field.querySelectorAll('select').forEach(control => { control.disabled = !related; control.required = related; if (!related) control.value = ''; });
+    });
+    document.getElementById('office-assignment-title').textContent = related ? 'Comisaría y encargado' : 'Encargado del oficio';
+    document.getElementById('office-mode-choice')?.remove();
+    form.hidden = false;
+  };
+  document.querySelectorAll('[data-case-mode]').forEach(button => button.addEventListener('click', () => { apply(button.dataset.caseMode); form.querySelector('select:not([disabled])')?.focus(); }));
+  if (mode.value) apply(mode.value);
+})();
+</script>

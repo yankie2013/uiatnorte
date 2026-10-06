@@ -33,6 +33,16 @@ try {
     ]);
     $payload=(new ReflectionMethod($service,'payload'))->invoke($service,$input,null);
     expect($payload['accidente_id']===null,'Gestión permite oficio sin expediente.');
+    $standaloneInput=array_merge($input,['case_mode'=>'standalone','comisaria_id'=>$case['comisaria_id'],'encargado_id'=>$chief['id'],'accidente_id'=>$case['id']]);
+    $standalonePayload=(new ReflectionMethod($service,'payload'))->invoke($service,$standaloneInput,null);
+    expect($standalonePayload['accidente_id']===null && $standalonePayload['comisaria_id']===null,'Sin caso descarta vínculos enviados.');
+    expect((int)$standalonePayload['encargado_id']===(int)$chief['id'],'Sin caso conserva encargado.');
+    $relatedPayload=(new ReflectionMethod($service,'payload'))->invoke($service,array_merge($standaloneInput,['case_mode'=>'related']),null);
+    expect((int)$relatedPayload['accidente_id']===(int)$case['id'],'Con caso conserva expediente coincidente.');
+    $invalid=false;
+    try {(new ReflectionMethod($service,'payload'))->invoke($service,array_merge($input,['case_mode'=>'related']),null);} catch(InvalidArgumentException $e){$invalid=true;}
+    expect($invalid,'Con caso exige comisaría, encargado y expediente.');
+
     expect((int)$payload['anio']===(int)date('Y'),'Año automático del registro, sin aceptar año enviado.');
     expect((int)$payload['oficial_ano_id']===(int)$repository->oficialAnos()[0]['id'],'Nombre oficial más reciente automático.');
     expect(str_contains($payload['motivo'],'14:00'),'Se conserva el rango de cámaras.');

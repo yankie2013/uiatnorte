@@ -686,6 +686,13 @@ final class OficioService
         }
         $comisariaId = (int)($input['comisaria_id'] ?? 0);
         $encargadoId = !empty($input['encargado_id']) ? (int)$input['encargado_id'] : null;
+        if ($gestion && ($input['case_mode'] ?? '') === 'standalone') {
+            $comisariaId = 0;
+            $accidenteId = 0;
+        }
+        if ($gestion && ($input['case_mode'] ?? '') === 'related' && ($comisariaId <= 0 || !$encargadoId || $accidenteId <= 0)) {
+            throw new InvalidArgumentException('Selecciona comisaría, encargado y expediente para relacionar el oficio con un caso.');
+        }
         if ($gestion) $this->repository->validateGestion($comisariaId, $encargadoId, $accidenteId);
         elseif (!$this->repository->accidenteExists($accidenteId)) {
             throw new InvalidArgumentException('Debes seleccionar el accidente asociado.');

@@ -101,6 +101,10 @@ final class Access
             http_response_code(403);
             exit('La administración y edición de catálogos está reservada al administrador.');
         }
+        if (!self::admin() && in_array($script, ['persona_listar.php','vehiculo_listar.php','comisarias_listar.php','comisarias_nuevo.php','comisarias_editar.php','comisarias_eliminar.php','oficio_entidades_listar.php'], true)) {
+            http_response_code(403);
+            exit('Este directorio está reservado al administrador.');
+        }
         $action=implode(' ',array_filter([$_POST['action']??'',$_POST['accion']??'',$_POST['do']??'',$_GET['action']??'',$_GET['accion']??''], 'is_scalar'));
         $deleting=preg_match('/eliminar|delete|_delete|\bdel\b|\bborrar\b/i',$script.' '.$action);
         if($deleting && !self::admin()) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
