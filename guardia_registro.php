@@ -52,7 +52,11 @@ if($step==='datos'){
  echo '</ul><h3>Personas registradas</h3><ul>';
  foreach($people as $person)echo '<li>'.Page::escape($person['nombre']).'</li>';
  echo '</ul>';
- if($record['jefe_id'])echo '<div class="guardia-sumilla-download"><a class="button" href="word_sumilla_guardia.php?accidente_id='.$id.'">📄 Descargar sumilla Word ↓</a><p>Incluye los datos generales, participantes y documentos registrados.</p></div>';
+ if($record['jefe_id']){
+  $whatsapp=(new App\Services\GuardiaSumillaService($pdo))->whatsappText($id);
+  echo '<div class="guardia-sumilla-download"><a class="button" href="word_sumilla_guardia.php?accidente_id='.$id.'">📄 Descargar sumilla Word ↓</a> <button type="button" class="guardia-whatsapp-copy" id="guardia-whatsapp-copy">💬 Copiar para WhatsApp</button><p>Incluye los datos registrados. Copia el resumen y pégalo en WhatsApp.</p><p id="guardia-whatsapp-status" role="status" aria-live="polite"></p><textarea id="guardia-whatsapp-text" readonly hidden aria-label="Resumen para WhatsApp">'.Page::escape($whatsapp).'</textarea></div>';
+ }
+
  if($record['jefe_id']){
   $st=$pdo->prepare("SELECT t.id,u.nombre,u.grado FROM expediente_transferencias t JOIN usuarios u ON u.id=t.destino_id WHERE t.accidente_id=? AND t.origen_id=? AND t.destino_id=? AND t.tipo='investigacion' AND t.estado='pendiente' ORDER BY t.id DESC LIMIT 1");$st->execute([$id,Access::id(),$record['jefe_id']]);$pending=$st->fetch();
   if($pending){

@@ -24,6 +24,35 @@ final class GuardiaSumillaService
   $day=substr($at,0,10);
   return (!$start||$start<=$day)&&$end>=$day?'VIGENTE A LA FECHA DEL ACCIDENTE':'NO VIGENTE A LA FECHA DEL ACCIDENTE';
  }
+ public function whatsappText(int $id):string{
+  $case=$this->rows("SELECT a.*,ud.nombre distrito,c.nombre comisaria,f.nombre fiscalia,CONCAT_WS(' ',fi.nombres,fi.apellido_paterno,fi.apellido_materno) fiscal,fi.telefono fiscal_telefono,cg.comunicante,cg.telefono,u.nombre jefe_nombre,u.grado jefe_grado,u.telefono jefe_telefono FROM accidentes a JOIN comunicaciones_guardia cg ON cg.accidente_id=a.id LEFT JOIN ubigeo_distrito ud ON ud.cod_dep=a.cod_dep AND ud.cod_prov=a.cod_prov AND ud.cod_dist=a.cod_dist LEFT JOIN comisarias c ON c.id=a.comisaria_id LEFT JOIN fiscalia f ON f.id=a.fiscalia_id LEFT JOIN fiscales fi ON fi.id=a.fiscal_id LEFT JOIN usuarios u ON u.id=cg.jefe_id WHERE a.id=? AND a.eliminado_en IS NULL AND cg.eliminado_en IS NULL",[$id])[0]??null;
+  if(!$case)throw new RuntimeException('Registro no encontrado.');
+  $modalities=$this->rows('SELECT m.nombre FROM accidente_modalidad x JOIN modalidad_accidente m ON m.id=x.modalidad_id WHERE x.accidente_id=? ORDER BY m.id',[$id]);
+  $people=$this->rows("SELECT ip.id involucrado_id,ip.vehiculo_id,ip.lesion,p.nombres,p.apellido_paterno,p.apellido_materno,r.Nombre rol,IF(ip.snapshot_guardado=1,ip.edad_snapshot,TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)) edad FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id JOIN accidentes a ON a.id=ip.accidente_id LEFT JOIN participacion_persona r ON r.Id=ip.rol_id WHERE ip.accidente_id=? ORDER BY ip.id",[$id]);
+  $location=$this->text($case['lugar']);
+  if($case['sentido'])$location.=' · Sentido: '.$this->text($case['sentido']);
+  if($case['referencia'])$location.=' ('.$this->text($case['referencia']).')';
+  if($case['distrito'])$location.=' · Distrito de '.$this->text($case['distrito']);
+  $time=static fn($date)=>$date?date('H:i',strtotime($date)):'Sin registrar';
+  $lines=['COMISARÍA: '.$this->value($case['comisaria']),'CLASE DE ACCIDENTE: '.$this->value(implode(' Y ',array_column($modalities,'nombre'))),'LUGAR: '.($location?:'Sin registrar'),'Hora del accidente: '.$time($case['fecha_accidente']),'Hora comunicación: '.$time($case['fecha_comunicacion']),'Hora de intervención: '.$time($case['fecha_intervencion'])];
+  $personLines=function(array $person):array{
+   $state=match($person['lesion']){'Fallecido'=>'FALLECIDO','Herido'=>'LESIONADO',default=>'ILESO'};
+   return [($this->text($person['rol'])?:'Participante').': ('.$state.')',$this->text($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno']).($person['edad']!==null?' ('.$person['edad'].')':'')];
+  };
+  $used=[];
+  foreach((new \App\Repositories\InvolucradoPersonaRepository($this->pdo))->vehiculosPorAccidente($id) as $index=>$vehicle){
+   $lines[]='';$lines[]=($vehicle['orden_participacion']?:'UT-'.($index+1)).': '.$vehicle['placa'].($vehicle['tipo']==='Combinado vehicular'?' (Combinado vehicular)':'');
+   foreach($people as $person)if(in_array((int)$person['vehiculo_id'],array_map('intval',$vehicle['ids']??[$vehicle['id']]),true)){
+    array_push($lines,...$personLines($person));$used[$person['involucrado_id']]=true;
+   }
+  }
+  foreach($people as $person)if(!isset($used[$person['involucrado_id']])){$lines[]='';array_push($lines,...$personLines($person));}
+  $contact=fn($name,$phone)=>($this->text($name)?:'Sin registrar').($this->text($phone)?' · Telf. '.$this->text($phone):'');
+  $lines[]='';$lines[]='EMI: '.$contact(trim(($case['jefe_grado']??'').' '.($case['jefe_nombre']??'')),$case['jefe_telefono']);
+  $lines[]='SIAT: '.$contact($case['comunicante_nombre']?:$case['comunicante'],$case['comunicante_telefono']?:$case['telefono']);
+  $lines[]='FISCALÍA: '.$contact($case['fiscal'],$case['fiscal_telefono']);$lines[]=$this->value($case['fiscalia']);
+  return implode("\n",$lines);
+ }
  public function build(int $id):PhpWord{
   $case=$this->rows("SELECT a.*,c.nombre comisaria,f.nombre fiscalia,CONCAT_WS(' ',fi.nombres,fi.apellido_paterno,fi.apellido_materno) fiscal,fi.cargo fiscal_cargo,cg.comunicante,cg.telefono,cg.descripcion,cg.jefe_id,u.nombre jefe_nombre,u.grado jefe_grado,u.telefono jefe_telefono FROM accidentes a JOIN comunicaciones_guardia cg ON cg.accidente_id=a.id LEFT JOIN comisarias c ON c.id=a.comisaria_id LEFT JOIN fiscalia f ON f.id=a.fiscalia_id LEFT JOIN fiscales fi ON fi.id=a.fiscal_id LEFT JOIN usuarios u ON u.id=cg.jefe_id WHERE a.id=? AND a.eliminado_en IS NULL AND cg.eliminado_en IS NULL",[$id])[0]??null;
   if(!$case)throw new RuntimeException('Registro no encontrado.');

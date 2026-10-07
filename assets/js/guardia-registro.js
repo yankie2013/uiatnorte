@@ -45,3 +45,30 @@
     }
   });
 })();
+
+(() => {
+ const button = document.getElementById('guardia-whatsapp-copy');
+ const text = document.getElementById('guardia-whatsapp-text');
+ const status = document.getElementById('guardia-whatsapp-status');
+ if (!button || !text || !status) return;
+ button.addEventListener('click', async () => {
+  button.disabled = true;
+  let copied = false;
+  try {
+   if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text.value);
+    copied = true;
+   }
+  } catch (_) { /* Use the selection fallback when clipboard permission is denied. */ }
+  if (!copied) {
+   text.hidden = false;
+   text.focus();
+   text.select();
+   try { copied = document.execCommand('copy'); } catch (_) { copied = false; }
+  }
+  text.hidden = copied;
+  status.textContent = copied ? '✓ Copiado. Ya puedes pegarlo en WhatsApp.' : 'Selecciona el resumen y cópialo con Ctrl+C o ⌘C para pegarlo en WhatsApp.';
+  button.disabled = false;
+  if (copied) button.focus();
+ });
+})();
