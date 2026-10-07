@@ -98,12 +98,15 @@ async function crearFiscal(ev){
   const fiscaliaSel = qs('#fiscalia').value;
   if(!fiscaliaSel){ alert('Primero selecciona una Fiscalía.'); return false; }
   const fd=new FormData(ev.target); fd.append('fiscalia_id', fiscaliaSel);
+  if (qs('#fiscalia-numero-valor')) fd.append('fiscalia_numero', qs('#fiscalia-numero-valor').value);
   const r=await fetch(`?ajax=create&type=fiscal`,{method:'POST',body:fd});
   const j=await r.json();
   if(j.ok){
-    const sel=qs('#fiscal'); const o=document.createElement('option'); o.value=j.id; o.textContent=j.label;
-    sel.appendChild(o); sel.value=j.id; ev.target.reset(); cerrarModal('modal-fiscal');
-    actualizarTelefonoFiscal();
+    if (j.fiscalia) document.dispatchEvent(new CustomEvent('fiscalia-catalog-added', {detail:j.fiscalia}));
+    await cargarFiscales();
+    qs('#fiscal').value = String(j.id);
+    qs('#fiscal').dispatchEvent(new Event('change'));
+    ev.target.reset(); cerrarModal('modal-fiscal');
   } else alert(j.msg||'No se pudo crear');
   return false;
 }
@@ -150,17 +153,58 @@ qs('#dist').addEventListener('change', async (e)=>{
 
 /* Fiscales dependientes y teléfono */
 qs('#fiscalia').addEventListener('change', cargarFiscales);
-qs('#fiscal').addEventListener('change', actualizarTelefonoFiscal);
+qs('#fiscal').addEventListener('change', () => {
+  const grade = qs('#fiscal-grado');
+  if (grade) grade.value = fiscalGrade(fiscalesActuales.find(item => String(item.id) === qs('#fiscal').value)?.cargo);
+  actualizarTelefonoFiscal();
+});
 
+let fiscalesActuales = [];
+function fiscalGrade(value) {
+  const grade = String(value || '').trim();
+  return /^fisca\s+adjunto$/i.test(grade) ? 'Fiscal Adjunto' : grade;
+}
+function renderFiscales(selected = '') {
+  const sel = qs('#fiscal');
+  const grade = qs('#fiscal-grado')?.value || '';
+  sel.replaceChildren(new Option('-- Selecciona (según fiscalía) --', ''));
+  fiscalesActuales.filter(item => !grade || fiscalGrade(item.cargo) === grade).forEach(item => sel.add(new Option(item.nombre, String(item.id))));
+  sel.value = selected;
+  if (!sel.value) qs('#fiscal_tel').value = '';
+}
+qs('#fiscal-grado')?.addEventListener('change', () => {
+  renderFiscales(qs('#fiscal').value);
+  actualizarTelefonoFiscal();
+});
+let fiscalLoadVersion = 0;
 async function cargarFiscales(){
+  const loadVersion = ++fiscalLoadVersion;
+  const previousFiscal = qs('#fiscal').value;
   const fid = qs('#fiscalia').value;
-  const sel=qs('#fiscal');
-  sel.innerHTML = '<option value="" disabled selected>-- Selecciona (según fiscalía) --</option>';
+  const officeNumber = qs('#fiscalia-numero-valor')?.value;
+  fiscalesActuales = [];
+  const grade = qs('#fiscal-grado');
+  if (grade) {
+    grade.replaceChildren(new Option('Todos los grados', ''));
+    grade.disabled = true;
+  }
+  renderFiscales();
   qs('#fiscal_tel').value='';
   if(!fid) return;
-  const r=await fetch(`?ajax=fiscales&fiscalia_id=${encodeURIComponent(fid)}`);
+  const r=await fetch(`?ajax=fiscales&fiscalia_id=${encodeURIComponent(fid)}${officeNumber === undefined ? '' : '&fiscalia_numero=' + encodeURIComponent(officeNumber)}`);
   const j=await r.json();
-  j.data.forEach(x=>{ const o=document.createElement('option'); o.value=x.id; o.textContent=x.nombre; sel.appendChild(o); });
+  if (loadVersion !== fiscalLoadVersion || qs('#fiscalia').value !== fid || qs('#fiscalia-numero-valor')?.value !== officeNumber) return;
+  fiscalesActuales = j.data || [];
+  if (grade) {
+    const grades = [...new Set(fiscalesActuales.map(item => fiscalGrade(item.cargo)).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'es'));
+    grades.forEach(value => grade.add(new Option(value, value)));
+    grade.disabled = grades.length === 0;
+  }
+  const initialFiscal = qs('#fiscal').dataset.initialFiscal || '';
+  const selection = initialFiscal || previousFiscal;
+  renderFiscales(fiscalesActuales.some(item => String(item.id) === selection) ? selection : '');
+  delete qs('#fiscal').dataset.initialFiscal;
+  if (qs('#fiscal').value) qs('#fiscal').dispatchEvent(new Event('change', {bubbles:true}));
 }
 async function actualizarTelefonoFiscal(){
   const f=qs('#fiscal').value;

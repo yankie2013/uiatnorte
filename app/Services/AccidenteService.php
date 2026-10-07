@@ -20,7 +20,10 @@ final class AccidenteService
     {
     }
 
-    private const DISTRITOS_LIMA_NORTE = ['02', '06', '10', '12', '17', '25', '35', '39'];
+    private const DISTRITOS_LIMA_NORTE = [
+        '01' => ['02', '06', '10', '12', '17', '25', '35', '39'],
+        '04' => ['01', '02', '03', '04', '05', '06', '07'],
+    ];
 
     private function registraEnLimaNorte(): bool
     {
@@ -30,11 +33,32 @@ final class AccidenteService
 
     public function distritosRegistro(string $dep, string $prov): array
     {
-        if ($this->registraEnLimaNorte() && ($dep !== '15' || $prov !== '01')) return [];
+        if ($this->registraEnLimaNorte() && ($dep !== '15' || !isset(self::DISTRITOS_LIMA_NORTE[$prov]))) return [];
         $districts = $this->repository->distritos($dep, $prov);
         return $this->registraEnLimaNorte()
-            ? array_values(array_filter($districts, static fn(array $district): bool => in_array((string)$district['cod_dist'], self::DISTRITOS_LIMA_NORTE, true)))
+            ? array_values(array_filter($districts, static fn(array $district): bool => in_array((string)$district['cod_dist'], self::DISTRITOS_LIMA_NORTE[$prov], true)))
             : $districts;
+    }
+
+    public function fiscaliasSeleccion(): array
+    {
+        return array_map(static fn(array $row): array => $row + ['selection'=>\App\Support\FiscaliaSelection::describe($row['nombre'])], $this->repository->fiscalias());
+    }
+
+    public function fiscalesSeleccion(int $id, ?string $number = null): array
+    {
+        return $this->repository->fiscalesByFiscalia($id, $number);
+    }
+
+    public function fiscaliaConFiscal(?int $id, ?int $fiscal): ?int
+    {
+        if (!$id || !$fiscal) return $id;
+        $source = $this->repository->fiscaliaDeFiscal($fiscal);
+        if ($source === $id) return $id;
+        $selection = [];
+        foreach ($this->fiscaliasSeleccion() as $row) $selection[(int)$row['id']] = $row['selection'];
+        if ($source && isset($selection[$id], $selection[$source]) && \App\Support\FiscaliaSelection::sameDispatch($selection[$id], $selection[$source])) return $source;
+        throw new InvalidArgumentException('El fiscal seleccionado no pertenece a la fiscalía elegida.');
     }
 
     public function createComisaria(array $input): array
@@ -75,10 +99,15 @@ final class AccidenteService
             throw new InvalidArgumentException('Fiscalía y nombres son requeridos');
         }
 
+        $officeName = array_key_exists('fiscalia_numero', $input) ? $this->nombreFiscaliaRegistro($fiscaliaId, $input['fiscalia_numero']) : null;
+        if ($officeName !== null) {
+            $fiscaliaId = $this->repository->findCatalogIdByName('fiscalia', 'nombre', $officeName)
+                ?? $this->repository->createCatalogItem('fiscalia', 'nombre', $officeName);
+        }
         $id = $this->repository->createFiscal($fiscaliaId, $nombres, $apellidoPaterno, $apellidoMaterno, $cargo, $telefono);
         $label = trim($nombres . ' ' . ($apellidoPaterno ?? '') . ' ' . ($apellidoMaterno ?? ''));
 
-        return ['id' => $id, 'label' => $label, 'type' => 'fiscal'];
+        return ['id' => $id, 'label' => $label, 'type' => 'fiscal', 'fiscalia' => $officeName !== null ? ['id'=>$fiscaliaId, 'nombre'=>$officeName, 'selection'=>\App\Support\FiscaliaSelection::describe($officeName)] : null];
     }
 
     public function createSimpleCatalog(string $type, string $nombre): array
@@ -103,12 +132,42 @@ final class AccidenteService
         return ['id' => $id, 'label' => $nombre, 'type' => $type];
     }
 
+    public function nombreFiscaliaRegistro(?int $id, mixed $number): ?string
+    {
+        $number = trim((string)$number);
+        if ($number !== '' && !in_array($number, ['1', '2', '3'], true)) throw new InvalidArgumentException('El número de fiscalía debe ser 1°, 2° o 3°. Puede dejarse vacío.');
+        if (!$id) return null;
+        foreach ($this->fiscaliasSeleccion() as $office) {
+            if ((int)$office['id'] !== $id) continue;
+            $selection = $office['selection'];
+            if ($selection === null) return null;
+            $name = \App\Support\FiscaliaSelection::name($selection['office'], $selection['dispatch'], $number === '' ? 0 : (int)$number);
+            if (mb_strlen($name) > 150) throw new InvalidArgumentException('El nombre completo de la fiscalía es demasiado largo.');
+            return $name;
+        }
+        throw new InvalidArgumentException('Selecciona una fiscalía válida.');
+    }
+
     public function registerAccidente(array $input): array
     {
         $payload = $this->normalizePayload($input);
+        $payload['fiscalia_id'] = $this->fiscaliaConFiscal($payload['fiscalia_id'], $payload['fiscal_id']);
         $this->validatePayload($payload);
+        $officeName = array_key_exists('fiscalia_numero', $input) ? $this->nombreFiscaliaRegistro($payload['fiscalia_id'], $input['fiscalia_numero']) : null;
+        if ($officeName !== null && $payload['fiscal_id']) {
+            foreach ($this->fiscaliasSeleccion() as $office) {
+                if ((int)$office['id'] !== $payload['fiscalia_id']) continue;
+                if (!\App\Support\FiscaliaSelection::sameDispatch($office['selection'], \App\Support\FiscaliaSelection::describe($officeName))) {
+                    throw new InvalidArgumentException('El fiscal debe coincidir con el despacho y el número de fiscalía seleccionados.');
+                }
+            }
+        }
 
-        $accidenteId = $this->repository->transaction(function (AccidenteRepository $repository) use ($payload): int {
+        $accidenteId = $this->repository->transaction(function (AccidenteRepository $repository) use ($payload, $officeName): int {
+            if ($officeName !== null) {
+                $payload['fiscalia_id'] = $repository->findCatalogIdByName('fiscalia', 'nombre', $officeName)
+                    ?? $repository->createCatalogItem('fiscalia', 'nombre', $officeName);
+            }
             $accidenteId = $repository->insertAccidente($payload);
             if (\App\Support\Access::role()==='guardia') $repository->registerGuardiaDraft($accidenteId, $payload);
             $repository->attachModalidades($accidenteId, $payload['modalidad_ids']);
@@ -121,6 +180,35 @@ final class AccidenteService
             'id' => $accidenteId,
             'sidpol' => $this->generatedSidpol($accidenteId),
         ];
+    }
+
+    public function updateGuardiaDraft(int $id, array $input): array
+    {
+        $pdo = \App\Database\Database::connection();
+        return $this->repository->transaction(function ($repository) use ($pdo, $id, $input): array {
+            $lock=$pdo->prepare('SELECT id FROM comunicaciones_guardia WHERE accidente_id=? FOR UPDATE');
+            $lock->execute([$id]);
+            $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$id]);
+            if (\App\Support\Access::role() !== 'guardia' || !$check->fetchColumn()) {
+                throw new \RuntimeException('El registro ya no permite correcciones.');
+            }
+            $payload=$this->normalizePayload($input);
+            $payload['fiscalia_id']=$this->fiscaliaConFiscal($payload['fiscalia_id'], $payload['fiscal_id']);
+            $this->validatePayload($payload);
+            $name=$this->nombreFiscaliaRegistro($payload['fiscalia_id'], $input['fiscalia_numero'] ?? '');
+            if ($name !== null) {
+                if ($payload['fiscal_id']) {
+                    foreach($this->fiscaliasSeleccion() as $office) {
+                        if((int)$office['id']===$payload['fiscalia_id'] && !\App\Support\FiscaliaSelection::sameDispatch($office['selection'], \App\Support\FiscaliaSelection::describe($name)))throw new InvalidArgumentException('El fiscal debe coincidir con el despacho y el número de fiscalía seleccionados.');
+                    }
+                }
+                $payload['fiscalia_id']=$repository->findCatalogIdByName('fiscalia','nombre',$name) ?? $repository->createCatalogItem('fiscalia','nombre',$name);
+            }
+            $repository->updateAccidente($id,$payload);
+            $repository->syncModalidades($id,$payload['modalidad_ids']);
+            $repository->syncConsecuencias($id,$payload['consecuencia_ids']);
+            return ['id'=>$id,'sidpol'=>$this->generatedSidpol($id)];
+        });
     }
 
     public function updateAccidente(int $accidenteId, array $input): array
@@ -199,7 +287,7 @@ final class AccidenteService
             throw new InvalidArgumentException('Selecciona un Distrito válido.');
         }
 
-        if ($this->registraEnLimaNorte() && ($payload['cod_dep'] !== '15' || $payload['cod_prov'] !== '01' || !in_array($payload['cod_dist'], self::DISTRITOS_LIMA_NORTE, true))) {
+        if ($this->registraEnLimaNorte() && ($payload['cod_dep'] !== '15' || !in_array($payload['cod_dist'], self::DISTRITOS_LIMA_NORTE[$payload['cod_prov']] ?? [], true))) {
             throw new InvalidArgumentException('Selecciona un distrito de la jurisdicción de DEPIAT NORTE.');
         }
 
@@ -213,6 +301,19 @@ final class AccidenteService
 
         if (!$this->repository->comisariaMappedToDistrito($payload['comisaria_id'], $payload['cod_dep'], $payload['cod_prov'], $payload['cod_dist'])) {
             throw new InvalidArgumentException('La comisaría no pertenece al distrito seleccionado.');
+        }
+
+        if ($payload['fiscalia_id']) {
+            $expectedOffice = \App\Support\FiscaliaSelection::officeForDistrict($payload['cod_dep'], $payload['cod_prov'], $payload['cod_dist']);
+            $found = false;
+            foreach ($this->fiscaliasSeleccion() as $office) {
+                if ((int)$office['id'] !== $payload['fiscalia_id']) continue;
+                $found = true;
+                if ($expectedOffice !== null && ($office['selection']['office'] ?? null) !== $expectedOffice) {
+                    throw new InvalidArgumentException('Selecciona una fiscalía correspondiente al distrito del accidente.');
+                }
+            }
+            if (!$found) throw new InvalidArgumentException('Selecciona una fiscalía válida.');
         }
 
         if ($payload['fiscal_id'] && !$this->repository->fiscalBelongsToFiscalia($payload['fiscal_id'], $payload['fiscalia_id'])) {

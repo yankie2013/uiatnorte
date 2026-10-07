@@ -74,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'vehiculo' => [
                     'id' => $vehiculoId,
                     'texto' => vehiculo_resumen($vehiculo),
+                    'placa' => placa_visible((string)($vehiculo['placa'] ?? '')),
+                    'anio' => $vehiculo['anio'] ?? null,
                 ],
             ];
             ?><!doctype html>
@@ -84,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Vehiculo creado</title>
 <link rel="stylesheet" href="style_gian.css">
 </head>
-<body>
+<body class="<?= $isEmbed ? 'vehicle-modal' : '' ?>">
 <div class="wrap">
   <div class="card">
     <div class="body">
@@ -163,10 +165,22 @@ if (window.parent && window.parent !== window) {
   .modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
   .modal .help{ font-size:12px; color: rgba(var(--g-muted),1) }
   .hidden{ display:none }
+  .category-select{position:relative}
+  .category-select select{color:transparent!important}
+  .category-select select option{color:rgb(var(--g-fg))}
+  .category-select>span{position:absolute;left:11px;right:28px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:13px;white-space:nowrap;overflow:hidden}
+  body.vehicle-modal{padding:0!important;margin:0;background:#f8fafc}
+  .vehicle-modal .wrap{display:block;min-height:0;max-width:none;margin:0;padding:8px 12px}
+  .vehicle-modal .card{box-shadow:none;border-radius:12px}
+  .vehicle-modal .hdr{display:none}
+  .vehicle-modal .body{padding:12px 8px}
+  .vehicle-modal [hidden]{display:none!important}
+  .vehicle-modal form.grid{gap:14px}
+  @media(min-width:641px){.vehicle-modal form.grid>.col-3,.vehicle-modal form.grid>.col-4{grid-column:span 4}}
 </style>
 </head>
-<body>
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<body class="<?= $isEmbed ? 'vehicle-modal' : '' ?>">
+<?php if (!$isEmbed) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
   <div class="card">
@@ -190,46 +204,47 @@ if (window.parent && window.parent !== window) {
           <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button type="button" class="btn small" id="btnCheckPlaca">Verificar</button>
             <button type="button" class="btn small" id="btnAbrirSeeker">Consultar Seeker</button>
-            <button type="button" class="btn small" id="btnPegarJson">Pegar JSON</button>
-            <button type="button" class="btn small" id="btnSubirImagen">Subir/Pegar Imagen</button>
+            <button type="submit" class="btn small">Guardar</button>
+            <button type="button" class="btn small" id="btnPegarJson" <?= $isEmbed ? 'hidden' : '' ?>>Pegar JSON</button>
+            <button type="button" class="btn small" id="btnSubirImagen" <?= $isEmbed ? 'hidden' : '' ?>>Subir/Pegar Imagen</button>
           </div>
           <div id="placaStatus" style="margin-top:6px; font-size:12px; opacity:.9;"></div>
         </div>
 
-        <div class="col-3">
+        <div class="col-3" <?= $isEmbed ? 'hidden' : '' ?>>
           <label for="serie_vin">Serie / VIN</label>
           <input id="serie_vin" name="serie_vin" value="<?=h($old['serie_vin'])?>">
         </div>
-        <div class="col-3">
+        <div class="col-3" <?= $isEmbed ? 'hidden' : '' ?>>
           <label for="nro_motor">Nro. Motor</label>
           <input id="nro_motor" name="nro_motor" value="<?=h($old['nro_motor'])?>">
         </div>
-        <div class="col-3">
-          <label for="anio">Año</label>
-          <input id="anio" name="anio" value="<?=h($old['anio'])?>" maxlength="4" inputmode="numeric" placeholder="YYYY">
+        <div class="col-4">
+          <label for="tipo_id">Tipo</label>
+          <div class="row">
+            <select name="tipo_id" id="tipo_id" required style="flex:1;">
+              <option value="">(Selecciona una categoría primero)</option>
+            </select>
+            <button type="button" class="btn small" id="btnAddTipo">+ nuevo</button>
+          </div>
         </div>
 
         <!-- Categoría / Tipo / Carrocería -->
         <div class="col-4">
           <label for="categoria_id">Categoría</label>
-          <select name="categoria_id" id="categoria_id" required>
+          <div class="category-select"><select name="categoria_id" id="categoria_id">
             <option value="">(Selecciona)</option>
             <?php foreach($categorias as $c): ?>
-              <option value="<?=$c['id']?>" <?=$old['categoria_id']==$c['id']?'selected':''?>>
+              <option data-code="<?= h($c['codigo']) ?>" value="<?=$c['id']?>" <?=$old['categoria_id']==$c['id']?'selected':''?>>
                 <?= h($c['codigo'].($c['descripcion']?' — '.$c['descripcion']:'')) ?>
               </option>
             <?php endforeach; ?>
-          </select>
+          </select><span id="categoria-codigo" aria-hidden="true"></span></div>
         </div>
 
-        <div class="col-4">
-          <label for="tipo_id">Tipo</label>
-          <div class="row">
-            <select name="tipo_id" id="tipo_id" disabled style="flex:1;">
-              <option value="">(Selecciona una categoría primero)</option>
-            </select>
-            <button type="button" class="btn small" id="btnAddTipo">+ nuevo</button>
-          </div>
+        <div class="col-3">
+          <label for="anio">Año</label>
+          <input id="anio" name="anio" value="<?=h($old['anio'])?>" maxlength="4" inputmode="numeric" placeholder="YYYY">
         </div>
 
         <div class="col-4">
@@ -246,7 +261,7 @@ if (window.parent && window.parent !== window) {
         <div class="col-4">
           <label for="marca_id">Marca</label>
           <div class="row">
-            <select name="marca_id" id="marca_id" required style="flex:1;">
+            <select name="marca_id" id="marca_id" style="flex:1;">
               <option value="">(Selecciona)</option>
               <?php foreach($marcas as $m): ?>
                 <option value="<?=$m['id']?>" <?=$old['marca_id']==$m['id']?'selected':''?>><?=h($m['nombre'])?></option>
@@ -352,10 +367,11 @@ function refreshTipos(){
   clearInit(selTipo, "(Selecciona)");
 
   const catId = selCat.value;
-  if(!catId){ selTipo.innerHTML = '<option value="">(Selecciona una categoría primero)</option>'; selTipo.disabled = true; return; }
-
-  TIPOS.filter(t => String(t.categoria_id)===String(catId))
-       .forEach(t => selTipo.appendChild(option(t.id, `${t.codigo} — ${t.nombre}`, String(t.id)===OLD.tipo)));
+  const seen = new Set();
+  TIPOS.filter(t => !catId || String(t.categoria_id)===String(catId))
+       .sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'}))
+       .filter(t=>{const key=t.nombre.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(seen.has(key))return false;seen.add(key);return true;})
+       .forEach(t => selTipo.appendChild(option(t.id, t.nombre, String(t.id)===OLD.tipo)));
   selTipo.disabled = false;
   refreshCarrocerias();
 }
@@ -374,15 +390,39 @@ function refreshCarrocerias(){
   selCar.disabled = false;
 }
 
+const categorySelect = document.getElementById('categoria_id');
+const showCategoryCode = () => {
+ const selected = categorySelect.selectedOptions[0];
+ document.getElementById('categoria-codigo').textContent = selected?.dataset.code || selected?.textContent.trim().split(' — ')[0] || '(Selecciona)';
+};
+categorySelect.addEventListener('change', showCategoryCode);
+new MutationObserver(showCategoryCode).observe(categorySelect, {childList:true});
+showCategoryCode();
 /* Eventos cascada */
 document.getElementById('marca_id').addEventListener('change', () => { OLD.modelo = ""; refreshModelos(); });
 document.getElementById('categoria_id').addEventListener('change', () => { OLD.tipo = ""; refreshTipos(); });
-document.getElementById('tipo_id').addEventListener('change', () => { OLD.carroceria = ""; refreshCarrocerias(); });
+document.getElementById('tipo_id').addEventListener('change', event => {
+  // Solo elecciones manuales: SEEKER conserva su categoría y sus selecciones explícitas.
+  if (event.isTrusted) {
+    const select = event.target;
+    const chosen = TIPOS.find(type => String(type.id) === select.value);
+    const key = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es').trim();
+    const matches = chosen ? TIPOS.filter(type => key(type.nombre) === key(chosen.nombre) && type.categoria_id) : [];
+    const categories = [...new Set(matches.map(type => String(type.categoria_id)))];
+    if (chosen && !categorySelect.value && categories.length === 1) {
+      categorySelect.value = categories[0];
+      OLD.tipo = String(matches[0].id);
+      refreshTipos();
+      showCategoryCode();
+    }
+  }
+  OLD.carroceria = ''; refreshCarrocerias();
+});
 
 /* Init */
 window.addEventListener('DOMContentLoaded', () => {
   if(document.getElementById('marca_id').value){ refreshModelos(); }
-  if(document.getElementById('categoria_id').value){ refreshTipos(); }
+  refreshTipos();
   if(document.getElementById('tipo_id').value){ refreshCarrocerias(); }
 });
 
@@ -496,7 +536,7 @@ function showBlocks(kind){
   inpMarcaNombre.value = inpModeloNombre.value = inpTipoCodigo.value = inpTipoNombre.value = inpCarroceriaNombre.value = '';
   if(kind==='marca'){ blkMarca.classList.remove('hidden'); title.textContent='Nueva marca'; }
   if(kind==='modelo'){ blkModelo.classList.remove('hidden'); title.textContent='Nuevo modelo'; }
-  if(kind==='tipo'){ blkTipo.classList.remove('hidden'); blkTipo2.classList.remove('hidden'); helpTipo.classList.remove('hidden'); title.textContent='Nuevo tipo'; }
+  if(kind==='tipo'){ if(document.getElementById('categoria_id').value) blkTipo.classList.remove('hidden'); blkTipo2.classList.remove('hidden'); helpTipo.classList.remove('hidden'); title.textContent='Nuevo tipo'; helpTipo.querySelector('.help').textContent=document.getElementById('categoria_id').value ? 'Se creará para la categoría seleccionada.' : 'Se agregará a la lista general, sin categoría.'; }
   if(kind==='carroceria'){ blkCar.classList.remove('hidden'); title.textContent='Nueva carrocería'; }
 }
 function openModal(kind){
@@ -505,7 +545,7 @@ function openModal(kind){
   setTimeout(()=>{
     (kind==='marca' && inpMarcaNombre.focus())||
     (kind==='modelo' && inpModeloNombre.focus())||
-    (kind==='tipo' && inpTipoCodigo.focus())||
+    (kind==='tipo' && (document.getElementById('categoria_id').value ? inpTipoCodigo : inpTipoNombre).focus())||
     (kind==='carroceria' && inpCarroceriaNombre.focus());
   },0);
 }
@@ -520,7 +560,6 @@ document.getElementById('btnAddModelo').addEventListener('click', ()=>{
   openModal('modelo');
 });
 document.getElementById('btnAddTipo').addEventListener('click', ()=>{
-  if(!document.getElementById('categoria_id').value) return alert('Primero selecciona una CATEGORÍA.');
   openModal('tipo');
 });
 document.getElementById('btnAddCarroceria').addEventListener('click', ()=>{
@@ -546,14 +585,14 @@ document.getElementById('btnCatSave').addEventListener('click', async ()=>{
       alert('Modelo creado.'); closeModal(); return;
     }
     if(currentKind==='tipo'){
-      const cid = document.getElementById('categoria_id').value; if(!cid) return alert('Selecciona una categoría.');
-      const codigo= inpTipoCodigo.value.trim(); if(!codigo) return alert('Ingresa el código del tipo.');
+      const cid = document.getElementById('categoria_id').value;
+      const codigo= cid ? inpTipoCodigo.value.trim() : ''; if(cid && !codigo) return alert('Ingresa el código del tipo.');
       const nombre= inpTipoNombre.value.trim(); if(!nombre) return alert('Ingresa el nombre del tipo.');
       const js = await postForm('add_catalogo.php',{kind:'tipo', codigo, nombre, padre_id: cid});
       const sel = document.getElementById('tipo_id'); if(sel.disabled) sel.disabled=false;
-      sel.add(new Option(`${codigo} — ${nombre}`, js.id, true, true));
+      sel.add(new Option(nombre, js.id, true, true));
       TIPOS.push({id: js.id, categoria_id: cid, codigo, nombre});
-      alert('Tipo creado.'); closeModal(); refreshCarrocerias(); return;
+      OLD.tipo=String(js.id); refreshTipos(); alert('Tipo creado.'); closeModal(); refreshCarrocerias(); return;
     }
     if(currentKind==='carroceria'){
       const tid = document.getElementById('tipo_id').value; if(!tid) return alert('Selecciona un tipo.');

@@ -102,15 +102,40 @@ final class AccidenteRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function fiscalesByFiscalia(int $fiscaliaId): array
+    public function fiscalesByFiscalia(int $fiscaliaId, ?string $number = null): array
     {
-        $sql = "SELECT id, CONCAT(nombres,' ',apellido_paterno,' ',apellido_materno) AS nombre
-                  FROM fiscales
-                 WHERE fiscalia_id=?
-                 ORDER BY nombres,apellido_paterno";
+        $ids = $this->fiscaliasDelDespacho($fiscaliaId, $number);
+        if ($ids === []) return [];
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT id, CONCAT_WS(' ',nombres,NULLIF(apellido_paterno,''),NULLIF(apellido_materno,'')) AS nombre, cargo
+                  FROM fiscales WHERE fiscalia_id IN ($marks) ORDER BY nombres,apellido_paterno";
         $st = $this->pdo->prepare($sql);
-        $st->execute([$fiscaliaId]);
+        $st->execute($ids);
         return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function fiscaliasDelDespacho(int $id, ?string $number = null): array
+    {
+        $rows = $this->fiscalias();
+        $selected = null;
+        foreach ($rows as $row) if ((int)$row['id'] === $id) $selected = \App\Support\FiscaliaSelection::describe($row['nombre']);
+        $ids = [$id];
+        if ($number !== null && $selected !== null && in_array($selected['office'], ['puente', 'santa'], true)) {
+            $selected['number'] = $number === '' ? 0 : (int)$number;
+            $ids = [];
+        }
+        foreach ($rows as $row) {
+            if (\App\Support\FiscaliaSelection::sameDispatch($selected, \App\Support\FiscaliaSelection::describe($row['nombre']))) $ids[] = (int)$row['id'];
+        }
+        return array_values(array_unique($ids));
+    }
+
+    public function fiscaliaDeFiscal(int $fiscalId): ?int
+    {
+        $st = $this->pdo->prepare('SELECT fiscalia_id FROM fiscales WHERE id=?');
+        $st->execute([$fiscalId]);
+        $id = $st->fetchColumn();
+        return $id === false ? null : (int)$id;
     }
 
     public function fiscalTelefono(int $fiscalId): array
@@ -136,8 +161,10 @@ final class AccidenteRepository
 
     public function fiscalBelongsToFiscalia(int $fiscalId, ?int $fiscaliaId): bool
     {
-        $st = $this->pdo->prepare('SELECT 1 FROM fiscales WHERE id=? AND fiscalia_id=? LIMIT 1');
-        $st->execute([$fiscalId, $fiscaliaId ?: 0]);
+        $ids = $this->fiscaliasDelDespacho($fiscaliaId ?: 0);
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $st = $this->pdo->prepare("SELECT 1 FROM fiscales WHERE id=? AND fiscalia_id IN ($marks) LIMIT 1");
+        $st->execute([$fiscalId, ...$ids]);
         return (bool) $st->fetchColumn();
     }
 

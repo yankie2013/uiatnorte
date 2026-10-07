@@ -210,15 +210,11 @@ final class VehiculoService
         $ancho = $this->nullableDecimal($old['ancho_mm'], 'ancho_mm', $errors);
         $alto = $this->nullableDecimal($old['alto_mm'], 'alto_mm', $errors);
 
-        if ($categoriaId === null) {
-            $errors[] = 'Selecciona la categoría.';
-        } elseif (!$this->repository->categoriaExists($categoriaId)) {
+        if ($categoriaId !== null && !$this->repository->categoriaExists($categoriaId)) {
             $errors[] = 'La categoría seleccionada no existe.';
         }
 
-        if ($marcaId === null) {
-            $errors[] = 'Selecciona la marca.';
-        } elseif (!$this->repository->marcaExists($marcaId)) {
+        if ($marcaId !== null && !$this->repository->marcaExists($marcaId)) {
             $errors[] = 'La marca seleccionada no existe.';
         }
 
@@ -231,6 +227,7 @@ final class VehiculoService
             }
         }
 
+        if ($tipoId === null) $errors[] = 'Selecciona el tipo de vehículo.';
         if ($tipoId !== null) {
             $tipoCategoriaId = $this->repository->tipoCategoriaId($tipoId);
             if ($tipoCategoriaId === null) {

@@ -16,6 +16,14 @@ $accidenteRepo = new AccidenteRepository($pdo);
 $accidenteService = new AccidenteService($accidenteRepo);
 $googleMapsApiKey = trim((string) app_config('services.google_maps.js_api_key', ''));
 
+$draftEditId = (int)($_GET['draft_id'] ?? $_POST['draft_id'] ?? 0);
+$guidedEmbed = $draftEditId > 0 && \App\Support\Access::role()==='guardia';
+$savedDraft = null;
+if ($draftEditId > 0) {
+  $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$draftEditId]);
+  if (!$guidedEmbed || !$check->fetchColumn()) {http_response_code(403);exit('Solo puedes corregir tu registro antes de entregarlo y dentro de las primeras 12 horas.');}
+  $query=$pdo->prepare('SELECT * FROM accidentes WHERE id=?');$query->execute([$draftEditId]);$savedDraft=$query->fetch(PDO::FETCH_ASSOC);
+}
 /* =========================================================
  *                         AJAX
  * =======================================================*/
@@ -46,7 +54,7 @@ if (isset($_GET['ajax'])) {
   // Fiscales por fiscalía
   if ($a==='fiscales'){
     $fid = (int)($_GET['fiscalia_id'] ?? 0);
-    json_out(['ok'=>true,'data'=>$accidenteRepo->fiscalesByFiscalia($fid)]);
+    json_out(['ok'=>true,'data'=>$accidenteService->fiscalesSeleccion($fid, isset($_GET['fiscalia_numero']) ? (string)$_GET['fiscalia_numero'] : null)]);
   }
 
   // Teléfono del fiscal
@@ -154,13 +162,20 @@ $modalidades   = $pdo->query("SELECT id,nombre FROM modalidad_accidente ORDER BY
 $consecuencias = $pdo->query("SELECT id,nombre FROM consecuencia_accidente ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC);
 
 $deps          = $accidenteRepo->departamentos();
-$fiscalias     = $accidenteRepo->fiscalias();
+$fiscalias     = $accidenteService->fiscaliasSeleccion();
 $modalidades   = $accidenteRepo->modalidades();
 $consecuencias = $accidenteRepo->consecuencias();
 
 /* =========================================================
  *                       Guardado
  * =======================================================*/
+if ($savedDraft && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+ $_POST=$savedDraft;
+ $_POST['modalidad_ids']=$accidenteRepo->modalidadIdsForAccidente($draftEditId);
+ $_POST['consecuencia_ids']=$accidenteRepo->consecuenciaIdsForAccidente($draftEditId);
+ foreach($fiscalias as $office)if((int)$office['id']===(int)$savedDraft['fiscalia_id'])$_POST['fiscalia_numero']=$office['selection']['number'] ?: '';
+}
+foreach(['registro_sidpol','tipo_registro','lugar','referencia','latitud','longitud','comunicante_nombre','comunicante_telefono','comunicacion_decreto','comunicacion_oficio','comunicacion_carpeta_nro'] as $field) $$field=$_POST[$field] ?? '';
 $err='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   // $sidpol eliminado del POST (se autogenera) // NUEVO
@@ -210,11 +225,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   if(!$err && (count($modalidad_ids)===0 || count($consecuencia_ids)===0)){
     $err='Selecciona al menos una Modalidad y una Consecuencia.';
   }
-  if(!$err && $fiscal_id){
-    $chk=$pdo->prepare("SELECT 1 FROM fiscales WHERE id=? AND fiscalia_id=?");
-    $chk->execute([$fiscal_id,$fiscalia_id?:0]);
-    if(!$chk->fetch()) $err='El fiscal seleccionado no pertenece a la fiscalía elegida.';
+  if (!$err && $fiscal_id) {
+    try { $fiscalia_id = $accidenteService->fiscaliaConFiscal($fiscalia_id, $fiscal_id); }
+    catch (InvalidArgumentException $e) { $err = $e->getMessage(); }
   }
+
   // Validación antigua de duplicado SIDPOL eliminada (se genera por BD) // NUEVO
 
   $cod_dep  = str_pad($cod_dep,  2, '0', STR_PAD_LEFT);
@@ -245,7 +260,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
   if(!$err){
     try{
-      $result = $accidenteService->registerAccidente([
+      $save = $draftEditId ? fn($input) => $accidenteService->updateGuardiaDraft($draftEditId, $input) : fn($input) => $accidenteService->registerAccidente($input);
+      $result = $save([
         'registro_sidpol' => $registro_sidpol,
         'tipo_registro' => $tipo_registro,
         'lugar' => $lugar,
@@ -265,6 +281,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         'comunicacion_oficio' => $comunicacion_oficio,
         'comunicacion_carpeta_nro' => $comunicacion_carpeta_nro,
         'fiscalia_id' => $fiscalia_id,
+        'fiscalia_numero' => $_POST['fiscalia_numero'] ?? '',
         'fiscal_id' => $fiscal_id,
         'nro_informe_policial' => $nro_informe,
         'sentido' => $sentido,
@@ -328,7 +345,6 @@ $upd->execute([$sidpol_gen, $newId]);
 }
 
 $accidente_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$sidpol_url   = $_GET['sidpol'] ?? ''; // mostrado como solo-lectura
 
 $inicioRegistro = new DateTimeImmutable('now', new DateTimeZone('America/Lima'));
 $minutoRedondeado = (int)(round((int)$inicioRegistro->format('i') / 10) * 10);
@@ -345,7 +361,7 @@ $provinciasIniciales = $accidenteRepo->provinciasByDepartamento($departamentoIni
 $distritosIniciales = $accidenteService->distritosRegistro($departamentoInicial, $provinciaInicial);
 
 // incluir el sidebar (archivo en la misma carpeta uiatnorte)
-include __DIR__ . '/sidebar.php';
+if (!$guidedEmbed) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -354,9 +370,10 @@ include __DIR__ . '/sidebar.php';
 <title>Nuevo Accidente | UIAT Norte</title>
 <link rel="stylesheet" href="assets/accidente.css?v=<?= (int) filemtime(__DIR__ . '/assets/accidente.css') ?>">
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+<?php if($guidedEmbed): ?><style>body{padding:0!important;background:white}.wrap{margin:0!important;padding:0!important;max-width:none!important}.title{display:none}.form-block{box-shadow:none}</style><?php endif; ?>
 </head>
 <body>
-<?php if (\App\Support\Access::role()==='guardia'): ?><div style="max-width:1100px;margin:24px auto;padding:20px;background:#e2f3ee;border-radius:16px"><strong>1 · Datos del accidente → 2 · Vehículos → 3 · Personas → 4 · Entrega</strong><p>Completa los datos conocidos. Al guardar continuarás con los vehículos y las personas involucradas.</p></div><?php endif ?>
+<?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?><div style="max-width:1100px;margin:24px auto;padding:20px;background:#e2f3ee;border-radius:16px"><strong>1 · Datos del accidente → 2 · Vehículos → 3 · Personas → 4 · Entrega</strong><p>Completa los datos conocidos. Al guardar continuarás con los vehículos y las personas involucradas.</p></div><?php endif ?>
 <div class="wrap">
   <div class="title">
     <h1>Registrar Accidente <span class="badge">Nuevo</span></h1>
@@ -369,20 +386,17 @@ include __DIR__ . '/sidebar.php';
 
   <?php if($err):?><div class="error">Atención: <?=h($err)?></div><?php endif;?>
 
-  <div class="card">
-    <form class="grid" method="post" onsubmit="return validarForm();">
-      <!-- SIDPOL (autogenerado) + Registro SIDPOL -->
-      <div class="col-3">
-        <label>SIDPOL</label>
-        <input type="text" id="sidpol" value="<?=h($sidpol_url)?>" readonly placeholder="Se autogenera al guardar">
-      </div>
-
-      <div class="col-3">
+  <div class="accident-form-wrap">
+    <form class="grid accident-form" method="post" onsubmit="return validarForm();">
+      <input type="hidden" name="draft_id" value="<?= $draftEditId ?>">
+      <section class="form-block" aria-labelledby="registro-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">01</span><h2 id="registro-title">Datos del registro</h2></header>
+      <div class="col-4">
         <label>Registro SIDPOL</label>
         <input type="text" name="registro_sidpol" id="registro_sidpol" maxlength="50" placeholder="Opcional" value="<?=h($registro_sidpol ?? '')?>">
       </div>
 
-      <div class="col-3">
+      <div class="col-4">
         <label>Tipo de registro</label>
         <?php $tipoRegistroActual = $tipo_registro ?? ''; ?>
         <select name="tipo_registro" id="tipo_registro">
@@ -393,20 +407,37 @@ include __DIR__ . '/sidebar.php';
       </div>
 
       <!-- ESTADO -->
-      <div class="col-3">
+      <div class="col-4">
         <label>Estado</label>
         <select name="estado" id="estado">
-          <option value="Pendiente" selected>Pendiente</option>
-          <option value="Resuelto">Resuelto</option>
-          <option value="Con diligencias">Con diligencias</option>
+          <option value="Pendiente" <?= ($_POST['estado']??'Pendiente')==='Pendiente' ? 'selected' : '' ?>>Pendiente</option>
+          <option value="Resuelto" <?= ($_POST['estado']??'')==='Resuelto' ? 'selected' : '' ?>>Resuelto</option>
+          <option value="Con diligencias" <?= ($_POST['estado']??'')==='Con diligencias' ? 'selected' : '' ?>>Con diligencias</option>
         </select>
       </div>
-      <div class="col-9"><label style="visibility:hidden">.</label></div>
+      </section>
 
+
+      <section class="form-block" aria-labelledby="fechas-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">02</span><h2 id="fechas-title">Fechas y horas</h2></header>
+      <div class="col-4"><label for="accidente_fecha">Fecha y hora del accidente *</label>
+        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;">
+          <input type="date" name="accidente_fecha" id="accidente_fecha" value="<?= h($diaAccidenteInicial) ?>" required aria-label="Fecha del accidente">
+          <input type="time" name="accidente_hora" id="accidente_hora" value="<?= h($horaAccidenteInicial) ?>" required aria-label="Hora del accidente">
+        </div>
+        <input type="hidden" name="fecha_accidente" value="<?= h($fechaAccidenteInicial) ?>">
+      </div>
+      <div class="col-4"><label>Comunicación</label><input type="datetime-local" name="fecha_comunicacion" value="<?= h($fechaComunicacionInicial) ?>"></div>
+      <div class="col-4"><label>Intervención</label><input type="datetime-local" name="fecha_intervencion" value="<?= h($fechaIntervencionInicial) ?>"></div>
+
+      </section>
+
+      <section class="form-block" aria-labelledby="clasificacion-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">03</span><h2 id="clasificacion-title">Clasificación del evento</h2></header>
       <!-- Clasificación -->
       <div class="col-12">
         <fieldset class="groupbox">
-          <legend>Clasificación del evento</legend>
+
           <div class="groupbox-row">
             <div class="group">
               <div class="group-title">Modalidades *</div>
@@ -418,7 +449,7 @@ include __DIR__ . '/sidebar.php';
               <div id="grid-mod" class="option-grid">
                 <?php foreach($modalidades as $r): ?>
                   <label class="option-card" data-kind="mod" data-text="<?=h(mb_strtolower($r['nombre']))?>">
-                    <input type="checkbox" name="modalidad_ids[]" value="<?=$r['id']?>">
+                    <input type="checkbox" name="modalidad_ids[]" value="<?=$r['id']?>" <?= in_array((int)$r['id'], array_map('intval', $_POST['modalidad_ids'] ?? []), true) ? 'checked' : '' ?>>
                     <span class="check"></span>
                     <span class="text"><?=h($r['nombre'])?></span>
                   </label>
@@ -436,7 +467,7 @@ include __DIR__ . '/sidebar.php';
               <div id="grid-con" class="option-grid">
                 <?php foreach($consecuencias as $r): ?>
                   <label class="option-card" data-kind="con" data-text="<?=h(mb_strtolower($r['nombre']))?>">
-                    <input type="checkbox" name="consecuencia_ids[]" value="<?=$r['id']?>">
+                    <input type="checkbox" name="consecuencia_ids[]" value="<?=$r['id']?>" <?= in_array((int)$r['id'], array_map('intval', $_POST['consecuencia_ids'] ?? []), true) ? 'checked' : '' ?>>
                     <span class="check"></span>
                     <span class="text"><?=h($r['nombre'])?></span>
                   </label>
@@ -448,8 +479,37 @@ include __DIR__ . '/sidebar.php';
         </fieldset>
       </div>
 
-      <div class="col-6"><label>Lugar del hecho *</label><input type="text" name="lugar" maxlength="200" required></div>
-      <div class="col-6"><label>Referencia</label><input type="text" name="referencia" maxlength="200"></div>
+      </section>
+
+      <section class="form-block" aria-labelledby="ubicacion-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">04</span><h2 id="ubicacion-title">Ubicación y jurisdicción</h2></header>
+      <div class="col-6"><label>Lugar del hecho *</label><input type="text" name="lugar" maxlength="200" value="<?=h($lugar)?>" required></div>
+      <div class="col-6"><label>Referencia</label><input type="text" name="referencia" maxlength="200" value="<?=h($referencia)?>"></div>
+
+      <div class="col-4"><label>Departamento *</label>
+        <select name="cod_dep" id="dep" required>
+          <option value="" disabled <?= $departamentoInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+          <?php foreach($deps as $d):?><option value="<?=h($d['cod_dep'])?>" <?= (string)$d['cod_dep'] === $departamentoInicial ? 'selected' : '' ?>><?=h($d['nombre'])?></option><?php endforeach;?>
+        </select></div>
+      <div class="col-4"><label>Provincia *</label>
+        <select name="cod_prov" id="prov" required>
+          <option value="" disabled <?= $provinciaInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
+          <?php foreach($provinciasIniciales as $p): ?><option value="<?= h($p['cod_prov']) ?>" <?= (string)$p['cod_prov'] === $provinciaInicial ? 'selected' : '' ?>><?= h($p['nombre']) ?></option><?php endforeach; ?>
+        </select></div>
+      <div class="col-4"><label>Distrito *</label>
+        <select name="cod_dist" id="dist" required>
+          <option value="" disabled selected>-- Selecciona --</option>
+          <?php foreach($distritosIniciales as $d): ?><option value="<?= h($d['cod_dist']) ?>" <?= (string)($_POST['cod_dist']??'')===(string)$d['cod_dist'] ? 'selected' : '' ?>><?= h($d['nombre']) ?></option><?php endforeach; ?>
+        </select></div>
+
+      <div class="col-12"><label>Comisaría *</label>
+        <div class="rowflex">
+          <select name="comisaria_id" id="comisaria" required disabled>
+            <option value="" disabled selected>-- Selecciona --</option>
+          </select>
+          <button type="button" class="plus" data-modal="modal-comisaria">+</button>
+        </div>
+      </div>
 
       <div class="col-3">
         <label>Latitud</label>
@@ -472,77 +532,67 @@ include __DIR__ . '/sidebar.php';
         <div class="geo-preview" id="geo-preview-status">Todavía no hay un punto georreferenciado para este accidente.</div>
       </div>
 
-      <div class="col-4"><label>Departamento *</label>
-        <select name="cod_dep" id="dep" required>
-          <option value="" disabled <?= $departamentoInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
-          <?php foreach($deps as $d):?><option value="<?=h($d['cod_dep'])?>" <?= (string)$d['cod_dep'] === $departamentoInicial ? 'selected' : '' ?>><?=h($d['nombre'])?></option><?php endforeach;?>
-        </select></div>
-      <div class="col-4"><label>Provincia *</label>
-        <select name="cod_prov" id="prov" required>
-          <option value="" disabled <?= $provinciaInicial === '' ? 'selected' : '' ?>>-- Selecciona --</option>
-          <?php foreach($provinciasIniciales as $p): ?><option value="<?= h($p['cod_prov']) ?>" <?= (string)$p['cod_prov'] === $provinciaInicial ? 'selected' : '' ?>><?= h($p['nombre']) ?></option><?php endforeach; ?>
-        </select></div>
-      <div class="col-4"><label>Distrito *</label>
-        <select name="cod_dist" id="dist" required>
-          <option value="" disabled selected>-- Selecciona --</option>
-          <?php foreach($distritosIniciales as $d): ?><option value="<?= h($d['cod_dist']) ?>"><?= h($d['nombre']) ?></option><?php endforeach; ?>
-        </select></div>
+      </section>
 
-      <div class="col-3"><label>Comisaría *</label>
-        <div class="rowflex">
-          <select name="comisaria_id" id="comisaria" required disabled>
-            <option value="" disabled selected>-- Selecciona --</option>
-          </select>
-          <button type="button" class="plus" data-modal="modal-comisaria">+</button>
-        </div>
-      </div>
 
-      <div class="col-3"><label for="accidente_fecha">Fecha y hora del accidente *</label>
-        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;">
-          <input type="date" name="accidente_fecha" id="accidente_fecha" value="<?= h($diaAccidenteInicial) ?>" required aria-label="Fecha del accidente">
-          <input type="time" name="accidente_hora" id="accidente_hora" value="<?= h($horaAccidenteInicial) ?>" required aria-label="Hora del accidente">
-        </div>
-        <input type="hidden" name="fecha_accidente" value="<?= h($fechaAccidenteInicial) ?>">
-      </div>
-      <div class="col-3"><label>Comunicación</label><input type="datetime-local" name="fecha_comunicacion" value="<?= h($fechaComunicacionInicial) ?>"></div>
-      <div class="col-3"><label>Intervención</label><input type="datetime-local" name="fecha_intervencion" value="<?= h($fechaIntervencionInicial) ?>"></div>
 
-      <div class="col-4"><label>Comunicante</label><input type="text" name="comunicante_nombre" maxlength="120" value="<?=h($comunicante_nombre ?? '')?>"></div>
-      <div class="col-4"><label>Teléfono</label><input type="text" name="comunicante_telefono" maxlength="20" value="<?=h($comunicante_telefono ?? '')?>"></div>
+      <section class="form-block" aria-labelledby="comunicacion-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">05</span><h2 id="comunicacion-title">Datos de la comunicación</h2></header>
+      <div class="col-6"><label>Comunicante</label><input type="text" name="comunicante_nombre" maxlength="120" value="<?=h($comunicante_nombre ?? '')?>"></div>
+      <div class="col-6"><label>Teléfono</label><input type="text" name="comunicante_telefono" maxlength="20" value="<?=h($comunicante_telefono ?? '')?>"></div>
       <div class="col-4"><label>Decreto</label><input type="text" name="comunicacion_decreto" maxlength="120" value="<?=h($comunicacion_decreto ?? '')?>"></div>
-      <div class="col-6"><label>Oficio</label><input type="text" name="comunicacion_oficio" maxlength="120" value="<?=h($comunicacion_oficio ?? '')?>"></div>
-      <div class="col-6"><label>Carpeta N°</label><input type="text" name="comunicacion_carpeta_nro" maxlength="120" value="<?=h($comunicacion_carpeta_nro ?? '')?>"></div>
+      <div class="col-4"><label>Oficio</label><input type="text" name="comunicacion_oficio" maxlength="120" value="<?=h($comunicacion_oficio ?? '')?>"></div>
+      <div class="col-4"><label>Carpeta N°</label><input type="text" name="comunicacion_carpeta_nro" maxlength="120" value="<?=h($comunicacion_carpeta_nro ?? '')?>"></div>
 
-      <div class="col-4"><label>Fiscalía</label>
-        <div class="rowflex">
-          <select name="fiscalia_id" id="fiscalia">
-            <option value="" disabled selected>-- Selecciona --</option>
-            <?php foreach($fiscalias as $r):?><option value="<?=$r['id']?>"><?=h($r['nombre'])?></option><?php endforeach;?>
-          </select>
-          <button type="button" class="plus" data-modal="modal-fiscalia">+</button>
-        </div>
+      </section>
+
+      <section class="form-block" aria-labelledby="fiscalia-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">06</span><h2 id="fiscalia-title">Fiscalía y fiscal a cargo</h2></header>
+      <div class="col-3" id="fiscalia-despacho-box"><label for="fiscalia-despacho">Despacho</label><select id="fiscalia-despacho" disabled><option value="">-- Selecciona distrito --</option></select></div>
+      <div class="col-2" id="fiscalia-numero-box"><label for="fiscalia-numero">Nro. Fis.</label><select id="fiscalia-numero"><option value="">Sin número (opcional)</option><?php for ($n=1; $n<=3; $n++): ?><option value="<?= $n ?>"><?= $n ?>°</option><?php endfor; ?></select>
+
+        <input type="hidden" name="fiscalia_numero" id="fiscalia-numero-valor" value="<?= h($_POST['fiscalia_numero'] ?? '') ?>"></div>
+      <div class="col-4" id="fiscalia-nombre-box"><label for="fiscalia-nombre">Nombre de Fiscalía</label><select id="fiscalia-nombre" disabled><option value="">-- Selecciona distrito --</option></select></div>
+      <div class="col-3" id="fiscalia-distrito-box"><label for="fiscalia-distrito">Distrito Fiscal</label><input id="fiscalia-distrito" readonly placeholder="Según distrito del accidente"></div>
+      <div class="col-12" id="fiscalia-resumen" role="status" aria-live="polite" style="padding:12px 16px;border:1px solid var(--border);border-radius:12px;">Selecciona el distrito y los datos de la fiscalía para visualizar su nombre completo.</div>
+      <div class="col-12" id="fiscalia-catalogo-box" hidden><label for="fiscalia">Fiscalía</label>
+        <div class="rowflex"><select name="fiscalia_id" id="fiscalia">
+          <option value="">-- Selecciona --</option>
+          <?php foreach($fiscalias as $r):?><option value="<?= (int)$r['id'] ?>" <?= (string)($_POST['fiscalia_id'] ?? '') === (string)$r['id'] ? 'selected' : '' ?>><?= h($r['selection']['name'] ?? $r['nombre']) ?></option><?php endforeach;?>
+        </select><button type="button" class="plus" data-modal="modal-fiscalia">+</button></div>
       </div>
+      <script type="application/json" id="fiscalia-selection-data"><?= json_encode($fiscalias, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 
-      <div class="col-4"><label>Fiscal</label>
-        <div class="rowflex">
-          <select name="fiscal_id" id="fiscal">
+      <div class="col-5"><label for="fiscal">Fiscal</label>
+        <div class="fiscal-person-row">
+          <select data-initial-fiscal="<?= h($_POST['fiscal_id'] ?? '') ?>" name="fiscal_id" id="fiscal">
             <option value="" disabled selected>-- Selecciona (según fiscalía) --</option>
           </select>
           <button type="button" class="plus" data-modal="modal-fiscal">+</button>
         </div>
       </div>
 
+      <div class="col-4"><label for="fiscal-grado">Grado fiscal (opcional)</label>
+        <select id="fiscal-grado" disabled><option value="">Todos los grados</option></select>
+      </div>
+
       <div class="col-3"><label>Tel. Fiscal</label>
         <input type="text" id="fiscal_tel" placeholder="Auto" readonly>
       </div>
 
-      <div class="col-4"><label>N° Informe Policial</label><input type="text" name="nro_informe_policial" maxlength="40"></div>
+      </section>
 
-      <div class="col-12"><label>Sentido / Dirección</label><input type="text" name="sentido" maxlength="100"></div>
-      <div class="col-12"><label>Secuencia de eventos</label><textarea name="secuencia" rows="4"></textarea></div>
+      <section class="form-block" aria-labelledby="relato-title">
+        <header class="form-block-heading"><span class="form-block-number" aria-hidden="true">07</span><h2 id="relato-title">Relato e informe</h2></header>
+      <div class="col-4"><label>N° Informe Policial</label><input type="text" name="nro_informe_policial" maxlength="40" value="<?=h($_POST['nro_informe_policial']??'')?>"></div>
 
-      <div class="col-12 rowflex" style="justify-content:flex-end">
-        <a class="btn" href="accidentes_listar.php">Cancelar</a>
+      <div class="col-12"><label>Sentido / Dirección</label><input type="text" name="sentido" maxlength="100" value="<?=h($_POST['sentido']??'')?>"></div>
+      <div class="col-12"><label>Secuencia de eventos</label><textarea name="secuencia" rows="4"><?=h($_POST['secuencia']??'')?></textarea></div>
+
+      </section>
+
+      <div class="col-12 rowflex accident-form-actions">
+        <a class="btn" href="accidente_listar.php">Cancelar</a>
         <button class="btn primary" type="submit">Guardar</button>
       </div>
     </form>
@@ -596,7 +646,8 @@ include __DIR__ . '/sidebar.php';
     </div>
     <div style="margin-top:8px">
       <input type="text" name="telefono" placeholder="Teléfono" style="width:100%">
-      <input type="text" name="cargo" placeholder="Cargo (opcional)" style="width:100%;margin-top:6px">
+      <label for="nuevo-fiscal-grado" style="margin-top:8px">Grado del nuevo fiscal (opcional)</label>
+      <select name="cargo" id="nuevo-fiscal-grado"><option value="">-- Sin especificar --</option><option>Fiscal Provincial</option><option>Fiscal Adjunto Provincial</option><option>Fiscal Superior</option><option>Fiscal Adjunto Superior</option><option>Fiscal Supremo</option><option>Fiscal Adjunto Supremo</option></select>
       <div style="color:#9aa3b2;margin-top:6px">Se registrará en la fiscalía seleccionada.</div>
     </div>
     <div class="rowflex" style="justify-content:flex-end;margin-top:12px">
@@ -663,11 +714,22 @@ include __DIR__ . '/sidebar.php';
   </div>
 </div>
 
+<script src="assets/js/fiscalia-selection.js?v=<?= (int) filemtime(__DIR__ . '/assets/js/fiscalia-selection.js') ?>"></script>
 <script src="assets/accidente.js?v=<?= (int) filemtime(__DIR__ . '/assets/accidente.js') ?>"></script>
 <script src="assets/vendor/leaflet/leaflet.js"></script>
 <?php if ($googleMapsApiKey !== ''): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= h($googleMapsApiKey) ?>&libraries=places" async defer></script>
 <?php endif; ?>
 <script>window.initAccidenteGeoMap && window.initAccidenteGeoMap();</script>
+<?php if($draftEditId): ?>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const restore=(id,value)=>{if(!value)return;const select=document.getElementById(id);const apply=()=>{if([...select.options].some(o=>o.value===String(value))){select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));return true;}return false;};if(!apply()){const observer=new MutationObserver(()=>{if(apply())observer.disconnect();});observer.observe(select,{childList:true});}};
+ document.getElementById('dist').dispatchEvent(new Event('change',{bubbles:true}));
+ restore('comisaria',<?= json_encode((string)($_POST['comisaria_id']??'')) ?>);
+ queueMicrotask(() => cargarFiscales());
+});
+</script>
+<?php endif; ?>
 </body>
 </html>

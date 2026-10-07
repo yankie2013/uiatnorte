@@ -18,6 +18,8 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function ipost($k,$d=null){ return isset($_POST[$k]) ? trim($_POST[$k]) : $d; }
 function iget($k,$d=null){ return isset($_GET[$k])  ? trim($_GET[$k])  : $d; }
 function okjson($arr){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($arr,JSON_UNESCAPED_UNICODE); exit; }
+$guidedEmbed = \App\Support\Access::role()==='guardia' && (string)($_GET['guided_embed'] ?? $_POST['guided_embed'] ?? '')==='1';
+
 function safe_return_to($value, $fallback){
   $value = trim((string)$value);
   if ($value === '') return $fallback;
@@ -98,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
       'next' => (int)ipost('next',0),
     ]);
     $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
-    if($result['next']===1) header('Location: involucrados_vehiculos_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].'&return_to='.urlencode($postReturnTo));
+    if($result['next']===1) header('Location: involucrados_vehiculos_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].($guidedEmbed?'&guided_embed=1':'').'&return_to='.urlencode($postReturnTo));
     else header('Location: '.$postReturnTo);
     exit;
   }catch(Throwable $e){
@@ -187,13 +189,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
     #formIV{ --field-label:#1e3a70; --field-bg:#f1f5fa; --field-border:#b8c6d9; --field-ink:#172033; --field-placeholder:#64748b; }
   }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px; }
-  .modal-frame-box{ width:min(100%, 1240px) !important; padding:0 !important; overflow:hidden !important; }
+  .modal-frame-box{ width:min(calc(100% - 32px), 860px) !important; padding:0 !important; overflow:hidden !important; }
   .modal-frame-head{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding:12px 14px; border-bottom:1px solid rgba(0,0,0,.08);
   }
   .modal-frame-head h3{ margin:0; }
-  .modal-frame-body{ height:min(88vh, 860px); background:rgba(255,255,255,.75); }
+  .modal-frame-body{ height:min(76vh, 680px); background:rgba(255,255,255,.75); }
   .modal-frame-body iframe{ width:100%; height:100%; border:0; background:transparent; }
   @media (prefers-color-scheme: dark){
     .modal-frame-head{ border-bottom:1px solid rgba(255,255,255,.12); }
@@ -497,16 +499,17 @@ body.modal-open{ overflow: hidden !important; }
 
 
 </style>
+<style>body.guided-embed{background:white;margin:0;padding:0!important}.guided-embed .wrap{margin:0!important;max-width:none!important;padding:8px!important}.guided-embed .topbar{display:none}</style>
 </head>
-<body>
-<?php if (\App\Support\Access::role()==='guardia'): ?>
+<body class="<?= $guidedEmbed ? 'guided-embed' : '' ?>">
+<?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?>
 <div style="max-width:1100px;margin:20px auto;padding:18px;border-radius:16px;background:#e2f3ee">
 <strong>Registro guiado de guardia · Paso 2: vehículos</strong>
 <p>Busca primero el registro existente. Agrega los datos conocidos y guarda para continuar.</p>
 <a href="guardia_registro.php?accidente_id=<?= $draftId ?>&amp;paso=vehiculos">Volver al registro guiado</a></div>
 <?php endif ?>
 
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!$guidedEmbed) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
 
@@ -521,10 +524,14 @@ body.modal-open{ overflow: hidden !important; }
   <?php if($err): ?><div class="err"><?=h($err)?></div><?php endif; ?>
 
   <form method="post" class="card" autocomplete="off" id="formIV">
+    <input type="hidden" name="guided_embed" value="<?= $guidedEmbed ? '1' : '0' ?>">
     <input type="hidden" name="return_to" value="<?=h($return_to)?>">
     <input type="hidden" name="next" id="next" value="0">
 
     <div class="accident-search-fields">
+      <?php if ($guidedEmbed): ?>
+        <input type="hidden" name="accidente_id" id="accidente_id" value="<?= (int)$accidente_id ?>">
+      <?php else: ?>
       <div>
         <label for="accidente_id">Accidente</label>
         <select name="accidente_id" id="accidente_id" required>
@@ -534,6 +541,7 @@ body.modal-open{ overflow: hidden !important; }
           <?php endforeach; ?>
         </select>
       </div>
+      <?php endif; ?>
       <div>
         <label for="qplaca">Búsqueda por placa</label>
         <div class="plate-search-controls">
@@ -887,7 +895,7 @@ $('#btnGuardar')?.addEventListener('click', ()=>{ $('#next').value='0'; });
 function $(sel){ return document.querySelector(sel); }
 
 window.addEventListener('message', (event)=>{
-  if (event.origin !== window.location.origin) return;
+  if (event.origin !== window.location.origin || event.source !== $('#vehiculoNuevoFrame')?.contentWindow) return;
 
   const data = event.data || {};
   if (data.type === 'vehiculo_modal_cerrar') {
@@ -909,9 +917,13 @@ window.addEventListener('message', (event)=>{
   } else if (data.vehiculo.texto) {
     option.textContent = data.vehiculo.texto;
   }
+  sel.disabled = false;
   sel.value = String(data.vehiculo.id);
-  sel.dispatchEvent(new Event('change'));
+  const plateInput = $('#' + (targetId === 'vehiculo_id_2' ? 'qplaca_2' : 'qplaca'));
+  if (plateInput && data.vehiculo.placa) plateInput.value = data.vehiculo.placa === 'SIN PLACA' ? '' : data.vehiculo.placa;
+  sel.dispatchEvent(new Event('change', {bubbles:true}));
   closeModal('mdVehiculo');
+  sel.focus();
 });
 
 $('#formIV')?.addEventListener('submit', (event)=>{

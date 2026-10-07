@@ -54,7 +54,7 @@ final class Database
         }
         if ($actorId > 0) {
             $select = ['id', 'nombre', 'email', 'rol', 'activo'];
-            foreach (['grado', 'must_change_password', 'auth_version'] as $optional) {
+            foreach (['grado', 'unidad', 'must_change_password', 'auth_version'] as $optional) {
                 $select[] = isset($available[$optional]) ? "`$optional`" : "0 AS `$optional`";
             }
             $actor = self::$connection->prepare('SELECT ' . implode(',', $select) . ' FROM usuarios WHERE id=?');
@@ -64,7 +64,7 @@ final class Database
         $actorId = $identity && (int)$identity['activo'] === 1 && !(int)$identity['must_change_password'] && (int)$identity['auth_version'] === (int)($_SESSION['user']['auth_version'] ?? 0) ? (int)$identity['id'] : 0;
         self::$connection->exec('SET @actor_id = ' . $actorId);
         if ($actorId > 0 && isset($_SESSION['user'])) {
-            $_SESSION['user'] = array_intersect_key($identity, array_flip(['id','nombre','grado','email','rol','auth_version']));
+            $_SESSION['user'] = array_intersect_key($identity, array_flip(['id','nombre','grado','unidad','email','rol','auth_version']));
             $_SESSION['rol'] = $identity['rol'];
         } elseif (isset($_SESSION['user'])) {
             unset($_SESSION['user'], $_SESSION['rol'], $_SESSION['id']);

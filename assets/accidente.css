@@ -62,8 +62,8 @@ body{margin:0;background:var(--bg);color:var(--fg);font:14px system-ui}
 
 /* Grid */
 form.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-5{grid-column:span 5}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
-@media(max-width:920px){.col-8,.col-6,.col-5,.col-4,.col-3{grid-column:span 12}}
+.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-5{grid-column:span 5}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}
+@media(max-width:920px){.col-8,.col-6,.col-5,.col-4,.col-3,.col-2{grid-column:span 12}}
 
 /* Controles */
 label{display:block;font-weight:600;margin-bottom:6px}
@@ -403,3 +403,31 @@ input,select,textarea{
 
 /* Bloquear scroll del body cuando hay modal */
 body.modal-open{ overflow: hidden; }
+
+/* Selección de fiscalía y fiscal: alineación y anchos uniformes. */
+#fiscalia-despacho-box,#fiscalia-numero-box,#fiscalia-nombre-box,#fiscalia-distrito-box{min-width:0}
+#fiscalia-numero{min-height:40px;padding-right:32px;font-weight:600}
+.fiscal-person-row{display:flex;align-items:center;gap:8px}
+.fiscal-person-row select{flex:1;min-width:0}
+.fiscal-person-row .plus{flex:0 0 36px;width:36px}
+
+/* Formulario de registro agrupado por etapa. */
+form.accident-form{gap:20px}
+.form-block{
+  grid-column:1 / -1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+  gap:18px 16px;padding:24px;background:var(--field-bg);border:1px solid var(--panel-bd);
+  border-radius:18px;box-shadow:0 3px 12px rgba(15,23,42,.035)
+}
+.form-block > div{min-width:0}
+.form-block-heading{grid-column:1 / -1;display:flex;align-items:center;gap:12px;padding-bottom:16px;margin-bottom:2px;border-bottom:1px solid var(--panel-bd)}
+.form-block-heading h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.02em}
+.form-block-number{display:flex;align-items:center;justify-content:center;flex:0 0 34px;height:34px;border-radius:10px;background:rgba(22,128,110,.1);color:#16806e;font-size:12px;font-weight:800}
+.form-block .groupbox{margin:0;padding:0;border:0;background:transparent}
+.form-block .groupbox-row{gap:18px}
+.form-block .group{padding:16px}
+.form-block .rowflex:has(#comisaria){flex-wrap:nowrap}
+.form-block #comisaria{flex:1;min-width:0}
+.form-block .rowflex:has(#comisaria) .plus{flex:0 0 36px}
+.accident-form-actions{justify-content:flex-end;padding:4px 0 12px;gap:10px}
+.accident-form-actions .btn{padding:12px 22px;font-weight:600}
+@media(max-width:920px){.form-block{padding:18px;gap:16px}.form-block-heading h2{font-size:17px}}

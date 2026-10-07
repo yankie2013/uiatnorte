@@ -1,0 +1,102 @@
+[
+    {
+        "id": 1,
+        "antes": "Fiscalia Corporativa de Tránsito y Seguridad Vial-Primer Despacho-Lima Norte",
+        "despues": "Primer Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 2,
+        "antes": "Fiscalia Corporativa de Tránsito y Seguridad Vial-Segundo Despacho-Lima Norte",
+        "despues": "Segundo Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 3,
+        "antes": "Tercera Fiscalia Provincial Penal Corporativa de Santa Rosa-Primer Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Primer Despacho de la 3° Fiscalía Provincial Penal Corporativa de Santa Rosa - Ancón del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 4,
+        "antes": "Fiscalia Corporativa de Tránsito y Seguridad Vial Lima Norte-Tercer Despacho",
+        "despues": "Tercer Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 5,
+        "antes": "Fiscalía Corporativa de Tránsito y Seguridad Vial Lima Norte- Primer Despacho",
+        "despues": "Primer Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 6,
+        "antes": "Fiscalía Corporativa de Tránsito y Seguridad Vial -Segun Despacho-Lima Norte",
+        "despues": "Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 7,
+        "antes": "Primera Fiscalia Provincial Penal Corporativa de Santa Rosa- Tercer Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Tercer Despacho de la 1° Fiscalía Provincial Penal Corporativa de Santa Rosa - Ancón del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 8,
+        "antes": "Segunda Fiscalia Provincial Penal Corporativa de Puente Piedra-Segundo Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Segundo Despacho de la 2° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 9,
+        "antes": "Fiscalia Corporativa de Tránsito y Seguridad Vial-Cuarto Despacho-Lima Norte",
+        "despues": "Cuarto Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 10,
+        "antes": "Primera Fiscalía Penal Corporativa de Santa Rosa-Segundo Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Segundo Despacho de la 1° Fiscalía Provincial Penal Corporativa de Santa Rosa - Ancón del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 11,
+        "antes": "Segunda Fiscalía Provincial Penal Corporativa de Santa Rosa-Segundo Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Segundo Despacho de la 2° Fiscalía Provincial Penal Corporativa de Santa Rosa - Ancón del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 12,
+        "antes": "Fiscalía Corporativa de Tránsito y Seguridad Vial-Tercer Despacho-Lima norte",
+        "despues": "Tercer Despacho de la Fiscalía Corporativa de Tránsito y Seguridad Vial del Distrito Fiscal de Lima Norte"
+    },
+    {
+        "id": 13,
+        "antes": "Primera Fiscalía Provincial Penal Corporativo de Puente Piedra-Tercer Despacho- D.F. Lima Noroeste",
+        "despues": "Tercer Despacho de la 1° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 14,
+        "antes": "Tercera Fiscalía Provincial Penal Corporativo de Puente Piedra-Primer Despacho-D.F. Lima Noroeste",
+        "despues": "Primer Despacho de la 3° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 15,
+        "antes": "Primera Fiscalía Provincial Penal Corporativa de Puente Piedra-Cuarto Despacho-Distrito Fiscal Lima Noroeste",
+        "despues": "Cuarto Despacho de la 1° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 16,
+        "antes": "Segunda Fiscalía Provincial Penal Corporativa de Puente Piedra-Primer Despacho-Distrito Fiscal Lima Noroeste",
+        "despues": "Primer Despacho de la 2° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 17,
+        "antes": "Segunda Fiscalía Provincial Penal Corporativa de Puente Piedra-Tercer Despacho-Distrito fiscal Lima Noroeste",
+        "despues": "Tercer Despacho de la 2° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 18,
+        "antes": "Primera Fiscalía Provincial Penal Corporativa de Santa Rosa-Ancón-Segundo Despacho-Distrito Fiscal de Lima Noroeste",
+        "despues": "Segundo Despacho de la 1° Fiscalía Provincial Penal Corporativa de Santa Rosa - Ancón del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 19,
+        "antes": "Primera Fiscalía Provincial Penal Corporativa de Puente Piedra-Segundo Despacho-Distrito Fiscal Lima Noroeste",
+        "despues": "Segundo Despacho de la 1° Fiscalía Provincial Penal Corporativa de Puente Piedra del Distrito Fiscal de Lima Noroeste"
+    },
+    {
+        "id": 20,
+        "antes": "Fiscalía Penal de Canta",
+        "despues": "Fiscalía Provincial Penal de Canta del Distrito Fiscal de Lima Norte"
+    }
+]

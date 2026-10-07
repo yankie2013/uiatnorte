@@ -83,7 +83,7 @@ final class InvolucradoVehiculoRepository
         return $id;
     }
 
-    public function createTipo(int $categoriaId, string $codigo, string $nombre, ?string $descripcion): int
+    public function createTipo(?int $categoriaId, string $codigo, string $nombre, ?string $descripcion): int
     {
         $st = $this->pdo->prepare('INSERT INTO tipos_vehiculo(categoria_id,codigo,nombre,descripcion,creado_en) VALUES (?,?,?,?,NOW())');
         $st->execute([$categoriaId, $codigo, $nombre, $descripcion]);

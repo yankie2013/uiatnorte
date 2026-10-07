@@ -18,6 +18,8 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function ipost($k,$d=null){ return isset($_POST[$k]) ? trim($_POST[$k]) : $d; }
 function iget($k,$d=null){ return isset($_GET[$k])  ? trim($_GET[$k])  : $d; }
 function okjson($a){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($a,JSON_UNESCAPED_UNICODE); exit; }
+$guidedEmbed = \App\Support\Access::role()==='guardia' && (string)($_GET['guided_embed'] ?? $_POST['guided_embed'] ?? '')==='1';
+
 function safe_return_to($value, $fallback){
   $value = trim((string)$value);
   if ($value === '') return $fallback;
@@ -104,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
     ]);
 
     $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
-    if($result['next']===1) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].'&return_to='.urlencode($postReturnTo));
+    if($result['next']===1) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].($guidedEmbed?'&guided_embed=1':'').'&return_to='.urlencode($postReturnTo));
     else header('Location: '.$postReturnTo);
     exit;
   }catch(Throwable $e){
@@ -177,16 +179,17 @@ textarea{min-height:60px; resize:vertical}
 .ifwrap{position:relative; height:min(76vh,760px);}
 .ifwrap iframe{position:absolute; inset:0; width:100%; height:100%; border:0;}
 </style>
+<style>body.guided-embed{background:white;margin:0;padding:0!important}.guided-embed .wrap{margin:0!important;max-width:none!important;padding:8px!important}.guided-embed .topbar{display:none}</style>
 </head>
-<body>
-<?php if (\App\Support\Access::role()==='guardia'): ?>
+<body class="<?= $guidedEmbed ? 'guided-embed' : '' ?>">
+<?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?>
 <div style="max-width:1100px;margin:20px auto;padding:18px;border-radius:16px;background:#e2f3ee">
 <strong>Registro guiado de guardia · Paso 3: personas</strong>
 <p>Busca primero el registro existente. Agrega los datos conocidos y guarda para continuar.</p>
 <a href="guardia_registro.php?accidente_id=<?= $draftId ?>&amp;paso=personas">Volver al registro guiado</a></div>
 <?php endif ?>
 
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!$guidedEmbed) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
   <h1 class="title">Nuevo involucrado – Persona</h1>
@@ -199,6 +202,7 @@ textarea{min-height:60px; resize:vertical}
   <form method="post" class="card" autocomplete="off" id="formIP">
     <input type="hidden" name="next" id="next" value="0">
     <input type="hidden" name="persona_id" id="persona_id" value="0">
+    <input type="hidden" name="guided_embed" value="<?= $guidedEmbed ? '1' : '0' ?>">
     <input type="hidden" name="return_to" value="<?=h($return_to)?>">
 
     <div class="grid-2">

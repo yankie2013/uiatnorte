@@ -44,10 +44,13 @@ final class InvolucradoVehiculoService
         $codigo = trim((string) ($input['codigo'] ?? ''));
         $nombre = trim((string) ($input['nombre'] ?? ''));
         $descripcion = trim((string) ($input['descripcion'] ?? '')) ?: null;
-        if ($categoriaId <= 0 || $codigo === '' || $nombre === '') {
-            throw new InvalidArgumentException('Categoría, código y nombre son requeridos');
+        if ($categoriaId <= 0 && $codigo === '') {
+            $codigo = 'GEN-' . strtoupper(bin2hex(random_bytes(6)));
         }
-        $id = $this->repository->createTipo($categoriaId, $codigo, $nombre, $descripcion);
+        if ($codigo === '' || $nombre === '') {
+            throw new InvalidArgumentException($categoriaId > 0 ? 'Código y nombre son requeridos' : 'Nombre requerido');
+        }
+        $id = $this->repository->createTipo($categoriaId ?: null, $codigo, $nombre, $descripcion);
         return ['id' => $id, 'nombre' => $codigo . '  ' . $nombre];
     }
 
