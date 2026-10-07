@@ -19,7 +19,7 @@ try{
  foreach(['rbac_documento_lc_insert','rbac_documento_lc_update','rbac_documento_vehiculo_insert','rbac_documento_vehiculo_update'] as $trigger)$pdo->query('SHOW CREATE TRIGGER `'.$trigger.'`')->fetch();
  // Comprueba todas las dependencias de las copias históricas sin escribir.
  runGuardiaMigration('migrar_persona_snapshots.php',['--database='.$database]);
- echo "Orden: copias históricas → esquema y auditoría → datos opcionales → documentos → plazo de edición → licencias propias → enlace MTC.\n";
+ echo "Orden: copias históricas → esquema y auditoría → datos opcionales → documentos → plazo de edición → licencias propias → fallecimientos y sumilla → enlace MTC.\n";
  if(!isset($options['apply'])){echo "Comprobación terminada sin modificar datos. Tras un respaldo, repita con --apply.\n";exit;}
  runGuardiaMigration('migrar_persona_snapshots.php',['--database='.$database,'--apply']);
  runGuardiaMigration('migrar_multiusuario.php',['--schema-only','--apply']);
@@ -27,6 +27,7 @@ try{
  runGuardiaMigration('migrar_guardia_documentos.php',[]);
  runGuardiaMigration('migrar_guardia_plazo_edicion.php',[]);
  runGuardiaMigration('migrar_guardia_licencia_propia.php',[]);
+ runGuardiaMigration('migrar_guardia_sumilla.php',['--database='.$database,'--apply']);
  $pdo->beginTransaction();
  try{
   $pdo->exec('SET @rbac_migration=1');

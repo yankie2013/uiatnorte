@@ -39,7 +39,7 @@
   dialog.addEventListener('close', () => frame.removeAttribute('src'));
   window.addEventListener('message', event => {
     if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
-    if (['lc.saved', 'docveh:created', 'docveh:updated'].includes(event.data?.type)) {
+    if (['lc.saved', 'docveh:created', 'docveh:updated', 'fallecimiento.saved'].includes(event.data?.type)) {
       close();
       window.location.reload();
     }

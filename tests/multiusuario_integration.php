@@ -44,6 +44,20 @@ try{
     if($conductor!==$role)$p->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id) VALUES(?,?,?,?)')->execute([$draft,$person,$conductor,$vehicle]);
     $p->exec("INSERT INTO documento_lc(persona_id,clase,categoria,numero) VALUES($person,'A','I','TEST-GUARDIA')");
     check(true,'guardia guarda licencia del conductor del borrador');
+    $personInvol=(int)$p->query("SELECT id FROM involucrados_personas WHERE accidente_id=$draft AND persona_id=$person AND rol_id=$conductor LIMIT 1")->fetchColumn();
+    $p->exec("UPDATE involucrados_personas SET lesion='Fallecido' WHERE id=$personInvol");
+    $p->exec("INSERT INTO guardia_hospitales(nombre) VALUES('Hospital de prueba integración')");$hospital=(int)$p->lastInsertId();
+    $p->exec("INSERT INTO guardia_persona_fallecimiento(accidente_id,involucrado_persona_id,tipo,hospital_id) VALUES($draft,$personInvol,'hospital',$hospital)");
+    check(true,'guardia registra hospital de fallecimiento en borrador propio');
+    $p->exec("UPDATE guardia_persona_fallecimiento SET tipo='lugar_hechos',hospital_id=NULL WHERE involucrado_persona_id=$personInvol");
+    check(true,'guardia cambia fallecimiento a lugar de los hechos');
+    check((int)$p->query("SELECT COUNT(*) FROM guardia_hospitales WHERE nombre='Hospital de prueba integración'")->fetchColumn()===1,'hospital queda disponible para reutilizar');
+    actor($p,$adj);
+    deny(fn()=>$p->exec("UPDATE guardia_persona_fallecimiento SET observaciones='Cambio ajeno' WHERE involucrado_persona_id=$personInvol"),'otro usuario no modifica lugar de fallecimiento');
+    actor($p,$guard);
+    $p->exec("UPDATE involucrados_personas SET lesion='Ileso' WHERE id=$personInvol");
+    deny(fn()=>$p->exec("UPDATE guardia_persona_fallecimiento SET observaciones='Cambio ileso' WHERE involucrado_persona_id=$personInvol"),'datos de fallecimiento solo para personas fallecidas');
+
     $p->exec('SET @guardia_document_case=NULL');
     deny(fn()=>$p->exec("INSERT INTO documento_lc(persona_id,clase,categoria,numero) VALUES($person,'A','I','TEST-DENIED')"),'guardia no guarda licencia sin contexto del borrador');
 
@@ -179,6 +193,7 @@ try{
     actor($p,2);
     $service->change($draft,'cambiar_estado',0,'Resuelto');
     $p->prepare('UPDATE accidentes SET nro_informe_policial=? WHERE id=?')->execute(['002-2026',$draft]);
+    $draftInvestigator=Access::profile($draft)['nombre'];
     $service->change($draft,'archivar',$administration,'Archivo de segunda prueba',['oficio_numero'=>'043','oficio_anio'=>'2026']);
     actor($p,$other);
     deny(fn()=>$service->change($draft,'aceptar',0,''),'JEFE EMI no acepta una entrega a Archivo');
@@ -186,7 +201,7 @@ try{
     $service->change($draft,'aceptar',0,'');
     check(in_array($draft,$workspaceIds(),true) && !Access::canEdit($draft),'Administración recibe archivos como consulta');
     check(Access::canViewWorkspaceCase($draft) && !Access::canOpenInvestigationCase($draft),'Administración consulta documentos sin abrir la vista editable');
-    check(Access::profile($draft)['nombre']==='Giancarlo Jorge MERINO SANCHO','documentos conservan identidad del investigador tras archivo');
+    check(Access::profile($draft)['nombre']===$draftInvestigator,'documentos conservan identidad del investigador tras archivo');
     actor($p,$guard);
     $guardia->save($call,$input+['referencia'=>'Corrección posterior']);check(true,'guardia corrige después de asignar dentro del plazo');
     $p->exec("UPDATE accidentes SET lugar='Guardia' WHERE id=$newcase");check(true,'guardia conserva edición de su registro dentro de 12 horas');

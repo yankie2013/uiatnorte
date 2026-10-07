@@ -211,14 +211,6 @@ if (window.parent && window.parent !== window) {
           <div id="placaStatus" style="margin-top:6px; font-size:12px; opacity:.9;"></div>
         </div>
 
-        <div class="col-3" <?= $isEmbed ? 'hidden' : '' ?>>
-          <label for="serie_vin">Serie / VIN</label>
-          <input id="serie_vin" name="serie_vin" value="<?=h($old['serie_vin'])?>">
-        </div>
-        <div class="col-3" <?= $isEmbed ? 'hidden' : '' ?>>
-          <label for="nro_motor">Nro. Motor</label>
-          <input id="nro_motor" name="nro_motor" value="<?=h($old['nro_motor'])?>">
-        </div>
         <div class="col-4">
           <label for="tipo_id">Tipo</label>
           <div class="row">
@@ -271,13 +263,24 @@ if (window.parent && window.parent !== window) {
           </div>
         </div>
 
-        <div class="col-4">
+        <div class="col-12" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            <div>
           <label for="modelo_id">Modelo</label>
           <div class="row">
             <select name="modelo_id" id="modelo_id" disabled style="flex:1;">
               <option value="">(Selecciona una marca primero)</option>
             </select>
             <button type="button" class="btn small" id="btnAddModelo">+ nuevo</button>
+          </div>
+        </div>
+
+          <div>
+            <label for="serie_vin">Serie / VIN</label>
+            <input id="serie_vin" name="serie_vin" value="<?=h($old['serie_vin'])?>">
+          </div>
+          <div>
+            <label for="nro_motor">Nro. Motor</label>
+            <input id="nro_motor" name="nro_motor" value="<?=h($old['nro_motor'])?>">
           </div>
         </div>
 

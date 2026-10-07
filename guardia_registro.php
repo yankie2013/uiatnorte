@@ -52,6 +52,7 @@ if($step==='datos'){
  echo '</ul><h3>Personas registradas</h3><ul>';
  foreach($people as $person)echo '<li>'.Page::escape($person['nombre']).'</li>';
  echo '</ul>';
+ if($record['jefe_id'])echo '<div class="guardia-sumilla-download"><a class="button" href="word_sumilla_guardia.php?accidente_id='.$id.'">📄 Descargar sumilla Word ↓</a><p>Incluye los datos generales, participantes y documentos registrados.</p></div>';
  if($record['jefe_id']){
   $st=$pdo->prepare("SELECT t.id,u.nombre,u.grado FROM expediente_transferencias t JOIN usuarios u ON u.id=t.destino_id WHERE t.accidente_id=? AND t.origen_id=? AND t.destino_id=? AND t.tipo='investigacion' AND t.estado='pendiente' ORDER BY t.id DESC LIMIT 1");$st->execute([$id,Access::id(),$record['jefe_id']]);$pending=$st->fetch();
   if($pending){
@@ -105,6 +106,7 @@ if(in_array($step,['personas','documentos'],true)){
    if($person['orden_persona'])$description.=' · '.$person['orden_persona'];
    echo '<article class="guardia-person-card guardia-person-card-'.$status.'"><div class="guardia-person-heading"><span class="guardia-person-icon" aria-hidden="true">'.$icon.'</span><div class="guardia-person-body"><div class="guardia-person-name"><strong>'.Page::escape($person['nombre']).'</strong><span class="guardia-person-document">'.Page::escape($person['num_doc']?'DNI: '.$person['num_doc']:'Documento sin registrar').'</span></div><div class="guardia-person-description"><span>'.Page::escape($description).'</span><span class="guardia-health guardia-health-'.$status.'">'.Page::escape($label).'</span></div></div></div>';
    if($step==='documentos' && mb_strtolower($role,'UTF-8')==='conductor'){require __DIR__.'/partials/guardia_documentos_botones.php';}
+   if($step==='documentos' && $person['lesion']==='Fallecido'){require __DIR__.'/partials/guardia_fallecimiento_boton.php';}
    if($editable && $step==='personas')echo '<a class="guardia-edit-record" href="involucrados_personas_editar.php?id='.(int)$person['involucrado_id'].'&amp;return_to='.rawurlencode($return).'">✎ Corregir persona</a>';
    echo '</article>';
 

@@ -23,7 +23,7 @@ $additiveCatalogs = [
     'oficio_categoria_entidad', 'oficio_entidad', 'oficio_oficial_ano', 'grado_cargo',
     'oficio_asunto', 'oficio_subentidad', 'oficio_persona_entidad',
     'categoria_vehiculos', 'marcas_vehiculo', 'modelos_vehiculo',
-    'tipos_vehiculo', 'carroceria_vehiculo', 'enlace_interes',
+    'tipos_vehiculo', 'carroceria_vehiculo', 'enlace_interes', 'guardia_hospitales',
 ];
 $activeActor = "EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1)";
 $operational="EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol IN ('admin','jefe_emi','adjunto'))";
@@ -91,7 +91,7 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
         } else {
             $guard='rbac_admin()'; // Catálogos y cuentas: administración.
         }
-        if (in_array($table,['accidente_modalidad','accidente_consecuencia','involucrados_vehiculos','involucrados_personas'],true) && ($event!=='DELETE' || in_array($table,$internal,true))) {
+        if (in_array($table,['accidente_modalidad','accidente_consecuencia','involucrados_vehiculos','involucrados_personas','guardia_persona_fallecimiento'],true) && ($event!=='DELETE' || in_array($table,$internal,true))) {
             $draftGuard="rbac_guardia_draft($row.accidente_id)";
             if($event==='UPDATE')$draftGuard.=' AND NEW.accidente_id=OLD.accidente_id';
             $guard = "(($guard) OR ($draftGuard))";
@@ -106,6 +106,10 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
                 if($event==='UPDATE')$draft.=" AND NEW.involucrado_vehiculo_id=OLD.involucrado_vehiculo_id AND NEW.vehiculo_id=OLD.vehiculo_id";
             }
             $guard="(($guard) OR ($draft))";
+        }
+        if($table==='guardia_persona_fallecimiento' && $event!=='DELETE'){
+            $guard="($guard) AND EXISTS(SELECT 1 FROM involucrados_personas ip WHERE ip.id=NEW.involucrado_persona_id AND ip.accidente_id=NEW.accidente_id AND ip.lesion='Fallecido')";
+            if($event==='UPDATE')$guard.=' AND NEW.involucrado_persona_id=OLD.involucrado_persona_id AND NEW.accidente_id=OLD.accidente_id';
         }
         if($table==='usuarios' && $event==='UPDATE') {
             $unchanged=[];
