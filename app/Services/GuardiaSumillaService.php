@@ -33,7 +33,7 @@ final class GuardiaSumillaService
   if($case['sentido'])$location.=' · Sentido: '.$this->text($case['sentido']);
   if($case['referencia'])$location.=' ('.$this->text($case['referencia']).')';
   if($case['distrito'])$location.=' · Distrito de '.$this->text($case['distrito']);
-  $lines=['COMISARÍA: '.$this->value($case['comisaria']),'CLASE DE ACCIDENTE: '.$this->value(implode(' Y ',array_column($modalities,'nombre'))),'LUGAR: '.($location?:'Sin registrar'),'Fecha y hora del accidente: '.$this->date($case['fecha_accidente'],true),'Fecha y hora de comunicación: '.$this->date($case['fecha_comunicacion'],true),'Fecha y hora de intervención: '.$this->date($case['fecha_intervencion'],true)];
+  $lines=['COMISARÍA: '.$this->value($case['comisaria']),'CLASE DE ACCIDENTE: '.$this->value(implode(' Y ',array_column($modalities,'nombre'))),'LUGAR: '.($location?:'Sin registrar'),'Fecha y hora del accidente: '.str_replace(' HORAS','',$this->date($case['fecha_accidente'],true)),'Fecha y hora de comunicación: '.str_replace(' HORAS','',$this->date($case['fecha_comunicacion'],true)),'Fecha y hora de intervención: '.str_replace(' HORAS','',$this->date($case['fecha_intervencion'],true))];
   $personLines=function(array $person):array{
    $state=match($person['lesion']){'Fallecido'=>'FALLECIDO','Herido'=>'LESIONADO',default=>'ILESO'};
    return [($this->text($person['rol'])?:'Participante').': ('.$state.')',$this->text($person['nombres'].' '.$person['apellido_paterno'].' '.$person['apellido_materno']).($person['edad']!==null?' ('.$person['edad'].')':'')];
