@@ -88,9 +88,15 @@ $districts = $pdo->query("SELECT DISTINCT CONCAT(d.cod_dep,'-',d.cod_prov,'-',d.
 $where = 'a.eliminado_en IS NULL';
 $params = [];
 if ($q !== '') {
-    $where .= " AND (a.registro_sidpol LIKE ? OR a.lugar LIKE ? OR u.nombre LIKE ?
-    OR EXISTS(SELECT 1 FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id WHERE ip.accidente_id=a.id AND CONCAT_WS(' ',p.nombres,p.apellido_paterno,p.apellido_materno) LIKE ?)
-    OR EXISTS(SELECT 1 FROM involucrados_vehiculos iv JOIN vehiculos v ON v.id=iv.vehiculo_id LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo mo ON mo.id=v.modelo_id WHERE iv.accidente_id=a.id AND CONCAT_WS(' ',v.placa,mv.nombre,mo.nombre) LIKE ?))";
+    // Normaliza columnas y parámetros: producción conserva columnas con
+    // distintos juegos de caracteres y SIDPOL puede ser una expresión binaria.
+    $text = static fn(string $column): string => "CONVERT($column USING utf8mb4) COLLATE utf8mb4_unicode_ci";
+    $like = static fn(string $expression): string => "$expression LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci)";
+    $personName = "CONCAT_WS(' ',".$text('p.nombres').','.$text('p.apellido_paterno').','.$text('p.apellido_materno').')';
+    $vehicleName = "CONCAT_WS(' ',".$text('v.placa').','.$text('mv.nombre').','.$text('mo.nombre').')';
+    $where .= ' AND ('.$like($text('a.registro_sidpol')).' OR '.$like($text('a.lugar')).' OR '.$like($text('u.nombre')).'
+    OR EXISTS(SELECT 1 FROM involucrados_personas ip JOIN personas p ON p.id=ip.persona_id WHERE ip.accidente_id=a.id AND '.$like($personName).')
+    OR EXISTS(SELECT 1 FROM involucrados_vehiculos iv JOIN vehiculos v ON v.id=iv.vehiculo_id LEFT JOIN marcas_vehiculo mv ON mv.id=v.marca_id LEFT JOIN modelos_vehiculo mo ON mo.id=v.modelo_id WHERE iv.accidente_id=a.id AND '.$like($vehicleName).'))';
     $params = array_fill(0, 5, '%'.$q.'%');
 }
 if ($district !== '') {
