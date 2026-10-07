@@ -344,7 +344,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <section class="office-mode-choice" id="office-mode-choice" aria-labelledby="office-choice-title">
     <span class="office-choice-eyebrow">NUEVO OFICIO DE GESTIÓN</span><h1 id="office-choice-title">¿Está relacionado con un caso?</h1><p>Elige cómo registrar el oficio.</p>
     <div class="office-choice-grid">
-      <button type="button" class="office-choice related" data-case-mode="related"><span class="office-choice-symbol" aria-hidden="true">▣</span><strong>Con caso relacionado</strong><span>Selecciona comisaría, encargado y expediente.</span><b aria-hidden="true">→</b></button>
+      <button type="button" class="office-choice related" data-case-mode="related"><span class="office-choice-symbol" aria-hidden="true">▣</span><strong>Con caso relacionado</strong><span>Selecciona distrito, comisaría y expediente; luego confirma el encargado.</span><b aria-hidden="true">→</b></button>
       <button type="button" class="office-choice standalone" data-case-mode="standalone"><span class="office-choice-symbol" aria-hidden="true">✉</span><strong>Sin caso relacionado</strong><span>Registra el oficio y elige el encargado.</span><b aria-hidden="true">→</b></button>
     </div>
   </section>
@@ -359,18 +359,19 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <section class="office-section">
       <div class="section-head"><h2 id="office-assignment-title">Comisaría y encargado</h2></div>
       <div class="grid">
+        <div class="c6" data-related-case><label for="oficio_distrito">Distrito</label><select id="oficio_distrito"><option value="">Seleccionar distrito</option><?php foreach ($gestionCtx['distritos'] as $item): ?><option value="<?= h($item['codigo']) ?>"><?= h($item['nombre']) ?></option><?php endforeach; ?></select></div>
         <div class="c6" data-related-case><label for="comisaria_id">Comisaría (opcional)</label><select name="comisaria_id" id="comisaria_id">
           <option value="">Sin comisaría</option>
           <?php foreach ($gestionCtx['comisarias'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['comisaria_id']===(string)$item['id']?'selected':'' ?>><?= h($item['nombre']) ?></option><?php endforeach; ?>
         </select></div>
+        <div class="c12" data-related-case><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
+          <option value="">Sin expediente</option>
+          <?php foreach ($gestionCtx['expedientes'] as $item): ?><option value="<?= (int)$item['id'] ?>" data-distrito="<?= h($item['distrito']) ?>" data-encargado="<?= (int)$item['responsable_id'] ?>" data-comisaria="<?= (int)$item['comisaria_id'] ?>" <?= (string)$data['accidente_id']===(string)$item['id']?'selected':'' ?>><?= h($item['label']) ?></option><?php endforeach; ?>
+        </select><div class="combo-hint">Selecciona distrito y comisaría para ver los expedientes. Al elegir uno se completa su encargado. Cada opción muestra fecha, lugar y tipo de accidente.</div></div>
         <div class="c6"><label for="encargado_id">Encargado (opcional)</label><select name="encargado_id" id="encargado_id">
           <option value="">Sin encargado</option>
           <?php foreach ($gestionCtx['encargados'] as $item): ?><option value="<?= (int)$item['id'] ?>" <?= (string)$data['encargado_id']===(string)$item['id']?'selected':'' ?>><?= h(trim($item['grado'].' '.$item['nombre']) . ' — ' . (\App\Support\Access::ROLES[$item['rol']] ?? $item['rol'])) ?></option><?php endforeach; ?>
         </select><div class="combo-hint">JEFE EMI de tu misma unidad.</div></div>
-        <div class="c12" data-related-case><label for="accidente_id">Expediente del encargado (opcional)</label><select name="accidente_id" id="accidente_id">
-          <option value="">Sin expediente</option>
-          <?php foreach ($gestionCtx['expedientes'] as $item): ?><option value="<?= (int)$item['id'] ?>" data-encargado="<?= (int)$item['responsable_id'] ?>" data-comisaria="<?= (int)$item['comisaria_id'] ?>" <?= (string)$data['accidente_id']===(string)$item['id']?'selected':'' ?>><?= h($item['label']) ?></option><?php endforeach; ?>
-        </select><div class="combo-hint">Selecciona comisaría y encargado para ver los expedientes que coincidan con ambos. Cada opción muestra fecha, lugar y tipo de accidente.</div></div>
       </div>
     </section>
     <?php endif; ?>
@@ -1144,23 +1145,37 @@ fechaInp.addEventListener('change', () => {
 const comisariaSel = document.getElementById('comisaria_id');
 const encargadoSel = document.getElementById('encargado_id');
 if (encargadoSel) {
+  const districtSel = document.getElementById('oficio_distrito');
   const caseOptions = Array.from(accSel.options).filter(option => option.value).map(option => option.cloneNode(true));
+  const stationOptions = Array.from(comisariaSel.options).filter(option => option.value).map(option => option.cloneNode(true));
+  const initialCase = caseOptions.find(option => option.value === accSel.value);
+  if (initialCase) districtSel.value = initialCase.dataset.distrito;
   const filterCases = () => {
     const selected = accSel.value;
-    const matches = comisariaSel.value && encargadoSel.value
-      ? caseOptions.filter(option => option.dataset.encargado === encargadoSel.value && option.dataset.comisaria === comisariaSel.value)
-      : [];
-    accSel.replaceChildren(new Option('Sin expediente', ''), ...matches.map(option => option.cloneNode(true)));
+    const matches = districtSel.value && comisariaSel.value
+      ? caseOptions.filter(option => option.dataset.distrito === districtSel.value && option.dataset.comisaria === comisariaSel.value) : [];
+    accSel.replaceChildren(new Option('Seleccionar expediente', ''), ...matches.map(option => option.cloneNode(true)));
     accSel.value = matches.some(option => option.value === selected) ? selected : '';
+    accSel.disabled = !districtSel.value || !comisariaSel.value;
   };
-  filterCases();
-  const updateCaseFilters = () => {
+  const filterStations = () => {
+    const selected = comisariaSel.value;
+    const ids = new Set(caseOptions.filter(option => option.dataset.distrito === districtSel.value).map(option => option.dataset.comisaria));
+    const matches = stationOptions.filter(option => ids.has(option.value));
+    comisariaSel.replaceChildren(new Option('Seleccionar comisaría', ''), ...matches.map(option => option.cloneNode(true)));
+    comisariaSel.value = matches.some(option => option.value === selected) ? selected : '';
+    comisariaSel.disabled = !districtSel.value;
     filterCases();
-    syncListadoHref();
-    toggleBoxesPorAsunto().catch(console.error);
   };
-  encargadoSel.addEventListener('change', updateCaseFilters);
-  comisariaSel.addEventListener('change', updateCaseFilters);
+  filterStations();
+  document.addEventListener('office-case-filter', filterStations);
+  const update = () => { syncListadoHref(); toggleBoxesPorAsunto().catch(console.error); };
+  districtSel.addEventListener('change', () => { comisariaSel.value = ''; accSel.value = ''; encargadoSel.value = ''; filterStations(); update(); });
+  comisariaSel.addEventListener('change', () => { accSel.value = ''; encargadoSel.value = ''; filterCases(); update(); });
+  accSel.addEventListener('change', () => {
+    const option = accSel.selectedOptions[0];
+    encargadoSel.value = option?.dataset.encargado || '';
+  });
 }
 accSel.addEventListener('change', () => { syncListadoHref(); toggleBoxesPorAsunto().catch(console.error); });
 if (entidadTextInp) {
@@ -1290,12 +1305,13 @@ document.addEventListener('click', (event) => {
     document.getElementById('encargado_id').required = related;
     document.querySelector('label[for="comisaria_id"]').textContent = related ? 'Comisaría *' : 'Comisaría';
     document.querySelector('label[for="encargado_id"]').textContent = related ? 'Encargado *' : 'Encargado (opcional)';
-    document.querySelector('label[for="accidente_id"]').textContent = related ? 'Expediente del encargado *' : 'Expediente';
+    document.querySelector('label[for="accidente_id"]').textContent = related ? 'Expediente *' : 'Expediente';
     document.querySelectorAll('[data-related-case]').forEach(field => {
       field.hidden = !related;
       field.querySelectorAll('select').forEach(control => { control.disabled = !related; control.required = related; if (!related) control.value = ''; });
     });
-    document.getElementById('office-assignment-title').textContent = related ? 'Comisaría y encargado' : 'Encargado del oficio';
+    if (related) document.dispatchEvent(new Event('office-case-filter'));
+    document.getElementById('office-assignment-title').textContent = related ? 'Distrito, comisaría, expediente y encargado' : 'Encargado del oficio';
     document.getElementById('office-mode-choice')?.remove();
     form.hidden = false;
     toggleBoxesPorAsunto().catch(console.error);

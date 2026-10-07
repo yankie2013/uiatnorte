@@ -79,9 +79,10 @@ final class OficioRepository
             ?: ((int)$a['id'] <=> (int)$b['id'])
         );
         return [
+            'distritos' => $this->pdo->query("SELECT DISTINCT CONCAT(a.cod_dep,'-',a.cod_prov,'-',a.cod_dist) codigo,d.nombre FROM accidentes_activos a JOIN ubigeo_distrito d ON d.cod_dep=a.cod_dep AND d.cod_prov=a.cod_prov AND d.cod_dist=a.cod_dist ORDER BY d.nombre")->fetchAll(PDO::FETCH_ASSOC),
             'comisarias' => $this->pdo->query('SELECT id,nombre FROM comisarias ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC),
             'encargados' => $encargados,
-            'expedientes' => $this->pdo->query("SELECT a.id,a.comisaria_id,a.responsable_id,a.fecha_accidente,a.lugar,
+            'expedientes' => $this->pdo->query("SELECT a.id,a.comisaria_id,a.responsable_id,a.fecha_accidente,a.lugar,CONCAT(a.cod_dep,'-',a.cod_prov,'-',a.cod_dist) distrito,
                 COALESCE((SELECT GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ')
                     FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
                     WHERE am.accidente_id=a.id),'Sin tipo registrado') AS tipo_accidente,
