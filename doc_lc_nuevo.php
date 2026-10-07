@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require __DIR__.'/partials/guardia_documento_acceso.php';
 
 use App\Repositories\DocumentoLcRepository;
 use App\Services\DocumentoLcService;
@@ -29,7 +30,13 @@ function lc_emit_saved_and_exit(string $message, int $personaId): void
     exit;
 }
 
+$licenseLinkQuery=$pdo->prepare('SELECT url FROM enlace_interes WHERE activo=1 AND nombre=? ORDER BY orden,id LIMIT 1');
+$licenseLinkQuery->execute(['Licencias MTC']);
+$licenseConsultUrl=(string)($licenseLinkQuery->fetchColumn()?:'');
+if(!filter_var($licenseConsultUrl,FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($licenseConsultUrl,PHP_URL_SCHEME)),['http','https'],true))$licenseConsultUrl='';
+
 $service = new DocumentoLcService(new DocumentoLcRepository($pdo));
+$expedidores=(new DocumentoLcRepository($pdo))->expedidores();
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $personaId = (int) ($_GET['persona_id'] ?? $_POST['persona_id'] ?? 0);
@@ -42,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['buscar'])) {
     $persona = $service->buscarPersona($personaId > 0 ? $personaId : null, (string) ($_GET['dni'] ?? ''));
     if ($persona !== null) {
         $url = 'doc_lc_nuevo.php?persona_id=' . (int) $persona['id'];
+        if(isset($caseId))$url.='&accidente_id='.$caseId;
         if ($embed) {
             $url .= '&embed=1';
         }
@@ -121,12 +129,20 @@ if (!$embed) {
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#2563eb;--danger:#b91c1c;--ok:#166534}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--danger:#fecaca;--ok:#bbf7d0}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1040px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#eff6ff;border-color:transparent}.btn.danger{color:var(--danger)}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.field{display:flex;flex-direction:column;gap:6px}.label{font-size:12px;color:var(--muted);font-weight:700}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin-bottom:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text)}textarea{min-height:88px;resize:vertical}.search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.search-row input{flex:1}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:860px}th,td{padding:12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:860px){.c6,.c4{grid-column:span 12}}
+.license-title{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.license-consult{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid #bcd8cc;border-radius:999px;background:#e6f3ec;color:#205e49;font-size:12px;font-weight:700;text-decoration:none;transition:background .18s,transform .18s}.license-consult:hover{background:#d5ebdf;transform:translateY(-1px)}.license-consult:focus-visible{outline:3px solid #4a9075;outline-offset:3px}
+
+.license-consult{position:relative;isolation:isolate;background:linear-gradient(125deg,#125541,#237b5b);color:#fff;border:1px solid #56c88c;box-shadow:0 0 0 2px #49c18515,0 0 14px #37bd7040;animation:license-led-glow 2.4s ease-in-out infinite;letter-spacing:.01em}
+.license-consult::before{content:"";width:7px;height:7px;flex-shrink:0;border-radius:50%;background:#a7ffbd;box-shadow:0 0 5px #a7ffbd,0 0 12px #74ff96;animation:license-led-dot 2.4s ease-in-out infinite}
+.license-consult:hover{background:linear-gradient(125deg,#17634b,#298b66);color:#fff;animation-play-state:paused;box-shadow:0 0 0 3px #49c18525,0 0 22px #37bd7060}
+@keyframes license-led-glow{0%,100%{box-shadow:0 0 0 2px #49c18515,0 0 8px #37bd7025}50%{box-shadow:0 0 0 3px #49c18530,0 0 22px #37bd7060}}
+@keyframes license-led-dot{0%,100%{opacity:.65;box-shadow:0 0 4px #a7ffbd,0 0 7px #74ff96}50%{opacity:1;box-shadow:0 0 7px #a7ffbd,0 0 15px #74ff96}}
+@media(prefers-reduced-motion:reduce){.license-consult,.license-consult::before{animation:none}.license-consult{transition:none}.license-consult:hover{transform:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="toolbar">
-    <div><h1 style="margin:0 0 6px">Licencia de conducir <span class="badge">Nueva</span></h1><div class="small">Modulo `documento_lc`</div></div>
+    <div><h1 class="license-title" style="margin:0 0 6px">Licencia de conducir <span class="badge">Nueva</span><?php if($licenseConsultUrl!==''): ?><a class="license-consult" href="<?= h($licenseConsultUrl) ?>" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">🪪</span> Consultar licencia <span aria-hidden="true">↗</span></a><?php endif; ?></h1><div class="small">Modulo `documento_lc`</div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if (!$embed): ?><a class="btn" href="javascript:history.back()">Volver</a><?php endif; ?></div>
   </div>
 
@@ -156,7 +172,7 @@ if (!$embed) {
         <div class="c4 field"><label class="label">Clase*</label><select name="clase" id="clase" required><option value="">Selecciona</option><?php foreach(['A','B','C'] as $opt): ?><option value="<?= $opt ?>" <?= (string) $data['clase'] === $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?></select></div>
         <div class="c4 field"><label class="label">Categoria</label><select name="categoria" id="categoria"></select></div>
         <div class="c4 field"><label class="label">Numero*</label><input type="text" name="numero" value="<?= h((string) $data['numero']) ?>" required></div>
-        <div class="c6 field"><label class="label">Expedido por</label><input type="text" name="expedido_por" value="<?= h((string) $data['expedido_por']) ?>"></div>
+        <div class="c6 field"><label class="label">Expedido por</label><input type="text" name="expedido_por" id="expedido_por" list="licencia_expedidores" placeholder="Selecciona o escribe una entidad" value="<?= h((string) $data['expedido_por']) ?>"><datalist id="licencia_expedidores"><?php foreach($expedidores as $entidad): ?><option value="<?= h((string)$entidad) ?>"></option><?php endforeach; ?></datalist><div class="small">Las nuevas entidades quedarán disponibles al guardar la licencia.</div></div>
         <div class="c3 field"><label class="label">Vigente desde</label><input type="date" name="vigente_desde" value="<?= h((string) $data['vigente_desde']) ?>"></div>
         <div class="c3 field"><label class="label">Vigente hasta</label><input type="date" name="vigente_hasta" value="<?= h((string) $data['vigente_hasta']) ?>"></div>
         <div class="c12 field"><label class="label">Restricciones</label><textarea name="restricciones"><?= h((string) $data['restricciones']) ?></textarea></div>
@@ -179,7 +195,7 @@ if (!$embed) {
               <td><?= h((string) (($lic['numero'] ?? '') !== '' ? $lic['numero'] : '-')) ?></td>
               <td><?= h((string) (($lic['expedido_por'] ?? '') !== '' ? $lic['expedido_por'] : '-')) ?></td>
               <td><?= h((string) (($lic['vigente_desde'] ?? '') !== '' ? $lic['vigente_desde'] : '-')) ?> - <?= h((string) (($lic['vigente_hasta'] ?? '') !== '' ? $lic['vigente_hasta'] : '-')) ?></td>
-              <td><div class="stack-actions"><a class="btn" href="doc_lc_leer.php?id=<?= (int) $lic['id'] ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . rawurlencode($returnTo) : '' ?>">Ver</a><a class="btn" href="doc_lc_editar.php?id=<?= (int) $lic['id'] ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . rawurlencode($returnTo) : '' ?>">Editar</a><form method="post" style="display:inline;" onsubmit="return confirm('Eliminar esta licencia?');"><input type="hidden" name="do" value="del"><input type="hidden" name="id" value="<?= (int) $lic['id'] ?>"><input type="hidden" name="persona_id" value="<?= (int) $persona['id'] ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><button class="btn danger" type="submit">Eliminar</button></form></div></td>
+              <td><div class="stack-actions"><a class="btn" href="doc_lc_leer.php?id=<?= (int) $lic['id'] ?><?= isset($caseId) ? '&accidente_id='.(int)$caseId : '' ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . rawurlencode($returnTo) : '' ?>">Ver</a><a class="btn guardia-license-edit" href="doc_lc_editar.php?id=<?= (int) $lic['id'] ?><?= isset($caseId) ? '&accidente_id='.(int)$caseId : '' ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . rawurlencode($returnTo) : '' ?>">Editar</a><?php if(\App\Support\Access::admin()): ?><form method="post" style="display:inline;" onsubmit="return confirm('Eliminar esta licencia?');"><input type="hidden" name="do" value="del"><input type="hidden" name="id" value="<?= (int) $lic['id'] ?>"><input type="hidden" name="persona_id" value="<?= (int) $persona['id'] ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><button class="btn danger" type="submit">Eliminar</button></form><?php endif; ?></div></td>
             </tr>
           <?php endforeach; ?>
         <?php endif; ?>

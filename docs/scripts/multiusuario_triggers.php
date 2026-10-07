@@ -4,7 +4,7 @@ if (PHP_SAPI !== 'cli' || !isset($p)) { http_response_code(404); exit; }
 foreach(['rbac_admin','rbac_case','rbac_person','rbac_vehicle','rbac_guardia_draft'] as $f) $p->exec("DROP FUNCTION IF EXISTS $f");
 $p->exec("CREATE FUNCTION rbac_admin() RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM usuarios WHERE id=@actor_id AND activo=1 AND rol='admin')");
 $p->exec("CREATE FUNCTION rbac_case(case_id INT) RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM accidentes a JOIN usuarios u ON u.id=@actor_id AND u.activo=1 WHERE a.id=case_id AND a.eliminado_en IS NULL AND (u.rol='admin' OR (u.rol='jefe_emi' AND a.responsable_id=u.id) OR (u.rol='adjunto' AND EXISTS(SELECT 1 FROM expediente_colaboradores c WHERE c.accidente_id=a.id AND c.usuario_id=u.id AND c.revocado_en IS NULL))))");
-$p->exec("CREATE FUNCTION rbac_guardia_draft(case_id INT) RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM comunicaciones_guardia c JOIN accidentes a ON a.id=c.accidente_id JOIN usuarios u ON u.id=@actor_id WHERE a.id=case_id AND a.responsable_id IS NULL AND a.eliminado_en IS NULL AND c.creado_por=u.id AND u.activo=1 AND u.rol='guardia' AND c.jefe_id IS NULL AND c.eliminado_en IS NULL AND NOW()<DATE_ADD(c.registrado_en,INTERVAL 12 HOUR))");
+$p->exec("CREATE FUNCTION rbac_guardia_draft(case_id INT) RETURNS BOOLEAN READS SQL DATA RETURN EXISTS(SELECT 1 FROM comunicaciones_guardia c JOIN accidentes a ON a.id=c.accidente_id JOIN usuarios u ON u.id=@actor_id WHERE a.id=case_id AND a.eliminado_en IS NULL AND c.creado_por=u.id AND u.activo=1 AND u.rol='guardia' AND c.eliminado_en IS NULL AND NOW()<DATE_ADD(c.registrado_en,INTERVAL 12 HOUR))");
 // Un dato de identidad compartido no se modifica si afecta expedientes fuera del permiso del actor.
 $p->exec("CREATE FUNCTION rbac_person(person_id INT) RETURNS BOOLEAN READS SQL DATA BEGIN
 DECLARE total INT DEFAULT 0; DECLARE denied INT DEFAULT 0;
@@ -91,8 +91,21 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
         } else {
             $guard='rbac_admin()'; // Catálogos y cuentas: administración.
         }
-        if ($event==='INSERT' && in_array($table,['accidente_modalidad','accidente_consecuencia','involucrados_vehiculos','involucrados_personas'],true)) {
-            $guard = "($guard OR rbac_guardia_draft(NEW.accidente_id))";
+        if (in_array($table,['accidente_modalidad','accidente_consecuencia','involucrados_vehiculos','involucrados_personas'],true) && ($event!=='DELETE' || in_array($table,$internal,true))) {
+            $draftGuard="rbac_guardia_draft($row.accidente_id)";
+            if($event==='UPDATE')$draftGuard.=' AND NEW.accidente_id=OLD.accidente_id';
+            $guard = "(($guard) OR ($draftGuard))";
+        }
+        if(in_array($table,['documento_lc','documento_vehiculo'],true) && in_array($event,['INSERT','UPDATE'],true)) {
+            $draft="rbac_guardia_draft(@guardia_document_case)";
+            if($table==='documento_lc') {
+                $draft.=" AND EXISTS(SELECT 1 FROM involucrados_personas ip JOIN participacion_persona r ON r.Id=ip.rol_id WHERE ip.accidente_id=@guardia_document_case AND ip.persona_id=NEW.persona_id AND LOWER(r.Nombre)='conductor')";
+                if($event==='UPDATE')$draft.=" AND NEW.persona_id=OLD.persona_id AND (NOT EXISTS(SELECT 1 FROM involucrados_personas WHERE persona_id=OLD.persona_id AND accidente_id<>@guardia_document_case) OR EXISTS(SELECT 1 FROM comunicaciones_guardia c WHERE c.accidente_id=@guardia_document_case AND OLD.creado_en>=c.registrado_en AND EXISTS(SELECT 1 FROM auditoria au WHERE au.tabla='documento_lc' AND au.registro_id=OLD.id AND au.accion='INSERT' AND au.usuario_id=@actor_id)))";
+            } else {
+                $draft.=" AND EXISTS(SELECT 1 FROM involucrados_vehiculos_activos iv WHERE iv.id=NEW.involucrado_vehiculo_id AND iv.accidente_id=@guardia_document_case AND iv.vehiculo_id=NEW.vehiculo_id)";
+                if($event==='UPDATE')$draft.=" AND NEW.involucrado_vehiculo_id=OLD.involucrado_vehiculo_id AND NEW.vehiculo_id=OLD.vehiculo_id";
+            }
+            $guard="(($guard) OR ($draft))";
         }
         if($table==='usuarios' && $event==='UPDATE') {
             $unchanged=[];

@@ -436,9 +436,11 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
 }
 $listContextUrl = AccidentNavigation::listUrl('accidente_listar.php?' . http_build_query($_GET)) ?? 'accidente_listar.php';
 $userTopbarBreadcrumbs = AccidentNavigation::breadcrumbs($listContextUrl);
-$caseLink = $isArchivo
+$caseLink = $isGuardia
+  ? static fn(int $id, array $extra = []): string => 'guardia_registro.php?accidente_id='.$id.'&paso=datos'
+  : ($isArchivo
   ? static fn(int $id, array $extra = []): string => 'gestion_expedientes.php?' . http_build_query(['id' => $id, 'lista' => $listContextUrl])
-  : static fn(int $id, array $extra = []): string => AccidentNavigation::caseUrl($id, $listContextUrl, $extra);
+  : static fn(int $id, array $extra = []): string => AccidentNavigation::caseUrl($id, $listContextUrl, $extra));
 $clearFilterParams = [];
 if ($favoritos === '1') {
   $clearFilterParams = ['favoritos' => '1', 'estado' => 'todos'];
@@ -1781,7 +1783,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
           $hasGps = is_numeric(str_replace(',', '.', $lat)) && is_numeric(str_replace(',', '.', $lng));
           $gpsUrl = $hasGps ? 'https://www.google.com/maps?q=' . rawurlencode(str_replace(',', '.', $lat) . ',' . str_replace(',', '.', $lng)) : '';
       ?>
-        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" <?php if (!$isGuardia): ?>tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="<?= h($caseLink((int)$r['id'])) ?>"<?php endif; ?> data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
+        <article class="acc-card <?= (int)$r['id'] === $ultimoAccidenteAbiertoId ? 'last-opened' : '' ?>" role="listitem" <?php if (!$isGuardia || !empty($guardiaRecords[(int)$r['id']]['vigente'])): ?>tabindex="0" aria-label="Abrir accidente SIDPOL <?=h($r['registro_sidpol'])?>" data-url="<?= h($caseLink((int)$r['id'])) ?>"<?php endif; ?> data-id="<?= (int)$r['id'] ?>" data-priority="<?= $isPrior ? '1' : '0' ?>" data-date="<?= h($r['fecha_accidente'] ?? '') ?>">
           <div class="acc-card-main">
             <div class="acc-card-left">
               <div class="acc-head">
@@ -1897,8 +1899,8 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
             <?php if ($isGuardia): $guardiaRecord = $guardiaRecords[(int)$r['id']] ?? []; ?>
             <div class="acc-guardia-status">
               <p><?= !empty($guardiaRecord['jefe_id']) ? 'JEFE EMI: '.h(trim(($guardiaRecord['grado'] ?? '').' '.($guardiaRecord['jefe'] ?? ''))) : 'Pendiente de entrega al JEFE EMI' ?></p>
-              <?php if (!empty($guardiaRecord['vigente']) && empty($guardiaRecord['jefe_id'])): ?>
-                <a class="btn small" href="guardia_registro.php?accidente_id=<?= (int)$r['id'] ?>">Continuar registro</a>
+              <?php if (!empty($guardiaRecord['vigente'])): ?>
+                <a class="btn small" href="guardia_registro.php?accidente_id=<?= (int)$r['id'] ?>">Abrir / corregir registro</a>
               <?php endif; ?>
             </div>
             <?php elseif (!$isArchivo): ?>

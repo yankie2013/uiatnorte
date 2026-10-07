@@ -23,6 +23,11 @@ $inv = $repo->involucradoById($inv_id);
 if(!$inv){ header('Location: involucrados_personas_listar.php'); exit; }
 
 $accidente_id = (int)$inv['accidente_id'];
+if(\App\Support\Access::role()==='guardia'){
+ $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$accidente_id]);
+ if(!$check->fetchColumn()){http_response_code(403);exit('El plazo de 12 horas terminó o este registro pertenece a otro usuario.');}
+}
+
 $returnTo = trim((string)($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 if($returnTo === ''){
   $returnTo = 'involucrados_personas_listar.php?accidente_id=' . $accidente_id;
@@ -245,7 +250,7 @@ include __DIR__ . '/sidebar.php';
         <label>Lesión</label>
         <select name="lesion" id="lesion">
           <?php foreach($lesiones_opts as $opt): ?>
-            <option value="<?=$opt?>" <?=($inv['lesion']===$opt?'selected':'')?> ><?=$opt?></option>
+            <option value="<?=$opt?>" <?=($inv['lesion']===$opt?'selected':'')?> ><?=$opt==='Herido'?'Lesionado o herido':$opt?></option>
           <?php endforeach; ?>
         </select>
       </div>

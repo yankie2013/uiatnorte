@@ -20,3 +20,28 @@
     observer.observe(content);
   });
 })();
+
+(() => {
+  const dialog = document.getElementById('guardia-document-dialog');
+  if (!dialog) return;
+  const frame = document.getElementById('guardia-document-frame');
+  const close = () => { dialog.close(); frame.removeAttribute('src'); };
+  document.getElementById('guardia-document-close').addEventListener('click', close);
+  document.querySelectorAll('.guardia-document-open').forEach(link => {
+    link.addEventListener('click', event => {
+      event.preventDefault();
+      document.getElementById('guardia-document-title').textContent = link.dataset.title;
+      frame.title = link.dataset.title;
+      frame.src = link.href;
+      dialog.showModal();
+    });
+  });
+  dialog.addEventListener('close', () => frame.removeAttribute('src'));
+  window.addEventListener('message', event => {
+    if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
+    if (['lc.saved', 'docveh:created', 'docveh:updated'].includes(event.data?.type)) {
+      close();
+      window.location.reload();
+    }
+  });
+})();

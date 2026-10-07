@@ -155,15 +155,12 @@ final class PersonaService
         $sexo = strtoupper(trim((string) ($input['sexo'] ?? '')));
         $fechaNacimiento = trim((string) ($input['fecha_nacimiento'] ?? ''));
         $email = $this->nullableTrim($input['email'] ?? null);
-        $edad = $this->calculateAge($fechaNacimiento);
+        $edad = $fechaNacimiento === '' ? null : $this->calculateAge($fechaNacimiento);
 
         if (!in_array($tipoDoc, ['DNI', 'CE', 'PAS', 'OTRO'], true)) {
             throw new InvalidArgumentException('Tipo de documento invalido.');
         }
-        if ($numDoc === '') {
-            throw new InvalidArgumentException('Numero de documento es requerido.');
-        }
-        if ($tipoDoc === 'DNI' && !preg_match('/^\d{8}$/', $numDoc)) {
+        if ($numDoc !== '' && $tipoDoc === 'DNI' && !preg_match('/^\d{8}$/', $numDoc)) {
             throw new InvalidArgumentException('El DNI debe tener 8 digitos.');
         }
         if ($tipoDoc !== 'DNI' && strlen($numDoc) > 20) {
@@ -178,27 +175,24 @@ final class PersonaService
         if ($nombres === '') {
             throw new InvalidArgumentException('Nombres es requerido.');
         }
-        if (!in_array($sexo, ['M', 'F'], true)) {
-            throw new InvalidArgumentException('Sexo es requerido.');
-        }
-        if ($fechaNacimiento === '') {
-            throw new InvalidArgumentException('Fecha de nacimiento es requerida.');
+        if ($sexo !== '' && !in_array($sexo, ['M', 'F'], true)) {
+            throw new InvalidArgumentException('Sexo invalido.');
         }
         if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new InvalidArgumentException('Correo invalido.');
         }
-        if ($this->repository->existsDuplicate($tipoDoc, $numDoc, $excludeId)) {
+        if ($numDoc !== '' && $this->repository->existsDuplicate($tipoDoc, $numDoc, $excludeId)) {
             throw new InvalidArgumentException('Ya existe otra persona con ese tipo y numero de documento.');
         }
 
         return [
             'tipo_doc' => $tipoDoc,
-            'num_doc' => $numDoc,
+            'num_doc' => $numDoc === '' ? null : $numDoc,
             'apellido_paterno' => $apellidoPaterno,
             'apellido_materno' => $apellidoMaterno,
             'nombres' => $nombres,
-            'sexo' => $sexo,
-            'fecha_nacimiento' => $fechaNacimiento,
+            'sexo' => $sexo === '' ? null : $sexo,
+            'fecha_nacimiento' => $fechaNacimiento === '' ? null : $fechaNacimiento,
             'edad' => $edad,
             'estado_civil' => $this->nullableTitleText($input['estado_civil'] ?? null),
             'nacionalidad' => $this->nullableTitleText($input['nacionalidad'] ?? 'PERUANA') ?? 'Peruana',

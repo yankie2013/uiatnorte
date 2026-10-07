@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require_login();
 require __DIR__ . '/db.php';
+require __DIR__.'/partials/guardia_documento_acceso.php';
 
 use App\Repositories\DocumentoLcRepository;
 use App\Services\DocumentoLcService;
@@ -30,6 +31,7 @@ function lc_emit_saved_and_exit_edit(string $message, int $personaId): void
 }
 
 $service = new DocumentoLcService(new DocumentoLcRepository($pdo));
+$expedidores=(new DocumentoLcRepository($pdo))->expedidores();
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
 $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
@@ -122,7 +124,7 @@ if (!$embed) {
       <div class="c4 field"><label class="label">Clase*</label><select name="clase" id="clase" required><option value="">Selecciona</option><?php foreach(['A','B','C'] as $opt): ?><option value="<?= $opt ?>" <?= (string) $data['clase'] === $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?></select></div>
       <div class="c4 field"><label class="label">Categoria</label><select name="categoria" id="categoria"></select></div>
       <div class="c4 field"><label class="label">Numero*</label><input type="text" name="numero" value="<?= h((string) $data['numero']) ?>" required></div>
-      <div class="c6 field"><label class="label">Expedido por</label><input type="text" name="expedido_por" value="<?= h((string) $data['expedido_por']) ?>"></div>
+      <div class="c6 field"><label class="label">Expedido por</label><input type="text" name="expedido_por" id="expedido_por" list="licencia_expedidores" placeholder="Selecciona o escribe una entidad" value="<?= h((string) $data['expedido_por']) ?>"><datalist id="licencia_expedidores"><?php foreach($expedidores as $entidad): ?><option value="<?= h((string)$entidad) ?>"></option><?php endforeach; ?></datalist><div class="small">Las nuevas entidades quedarán disponibles al guardar la licencia.</div></div>
       <div class="c3 field"><label class="label">Vigente desde</label><input type="date" name="vigente_desde" value="<?= h((string) $data['vigente_desde']) ?>"></div>
       <div class="c3 field"><label class="label">Vigente hasta</label><input type="date" name="vigente_hasta" value="<?= h((string) $data['vigente_hasta']) ?>"></div>
       <div class="c12 field"><label class="label">Restricciones</label><textarea name="restricciones"><?= h((string) $data['restricciones']) ?></textarea></div>

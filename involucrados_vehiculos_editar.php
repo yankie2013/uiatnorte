@@ -43,7 +43,12 @@ $iv = $repo->involucradoById($id);
 if(!$iv){ http_response_code(404); echo 'Registro no encontrado'; exit; }
 
 $accidente_id = (int)$iv['accidente_id'];
-$return = iget('return', 'involucrados_vehiculos_listar.php?accidente_id='.$accidente_id);
+if(\App\Support\Access::role()==='guardia'){
+ $check=$pdo->prepare('SELECT rbac_guardia_draft(?)');$check->execute([$accidente_id]);
+ if(!$check->fetchColumn()){http_response_code(403);exit('El plazo de 12 horas terminó o este registro pertenece a otro usuario.');}
+}
+
+$return = iget('return_to', iget('return', 'involucrados_vehiculos_listar.php?accidente_id='.$accidente_id));
 $tipo_opts = $service->tipoOptions();
 
 if (iget('ajax')==='buscar_vehiculos') {

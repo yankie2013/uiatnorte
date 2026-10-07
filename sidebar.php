@@ -32,12 +32,6 @@ $sidebarGroups = [
         ['calendar', \App\Support\CalendarAccess::ownsConnectedCalendar() ? 'Google Calendar' : 'Agenda de citaciones', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],
     ],
 ];
-if ($sidebarAccidentId > 0) {
-    $sidebarGroups['EXPEDIENTE ACTUAL'] = [
-        ['file', 'Datos generales', 'Dato_General_accidente.php?accidente_id=' . $sidebarAccidentId, in_array($sidebarPath, ['Dato_General_accidente.php','accidente_general_tabs.php','accidente_general_sticky_modulos.php'], true)],
-        ['folder', 'Vista del expediente', 'accidente_vista_tabs.php?accidente_id=' . $sidebarAccidentId, $sidebarPath === 'accidente_vista_tabs.php'],
-    ];
-}
 $sidebarGroups['GESTIÓN'] = [
     ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],
     ['folder', 'Buscador general', 'gestion_expedientes.php', $sidebarPath === 'gestion_expedientes.php'],
@@ -49,9 +43,6 @@ if (\App\Support\Access::admin()) {
         ['people', 'Usuarios y perfiles', 'usuarios_gestion.php', in_array($sidebarPath, ['usuarios_gestion.php','usuarios_nuevo.php'], true)],
         ['grid', 'Estadísticas de gestión', 'estadisticas.php', $sidebarPath === 'estadisticas.php'],
     ];
-}
-if ($sidebarAccidentId > 0) {
-    $sidebarGroups['EXPEDIENTE ACTUAL'][] = ['people', 'Estado y colaboración', 'accidente_vista_tabs.php?tab=estado&accidente_id=' . $sidebarAccidentId, false];
 }
 $sidebarGroups['DIRECTORIO'] = [];
 if (\App\Support\Access::admin()) {

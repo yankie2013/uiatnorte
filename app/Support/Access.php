@@ -129,7 +129,7 @@ final class Access
             echo '<input type="hidden" name="_csrf" value="'.self::csrf().'"><input type="hidden" name="confirm" value="1"><button>Confirmar eliminación</button></form></body></html>';exit;
         }
 
-        $guardiaCreation = self::role()==='guardia' && in_array($script,['accidente_nuevo.php','involucrados_vehiculos_nuevo.php','involucrados_personas_nuevo.php','persona_nuevo.php','vehiculo_nuevo.php'],true);
+        $guardiaCreation = self::role()==='guardia' && in_array($script,['accidente_nuevo.php','involucrados_vehiculos_nuevo.php','involucrados_personas_nuevo.php','persona_nuevo.php','vehiculo_nuevo.php','involucrados_personas_editar.php','involucrados_vehiculos_editar.php','doc_lc_nuevo.php','doc_lc_editar.php','documento_vehiculo_nuevo.php','documento_vehiculo_editar.php'],true);
         $newPage=in_array($script,['gestion_expedientes.php','guardia_registro.php','guardia.php','usuarios_gestion.php','estadisticas.php'],true);
         $catalogCreationPage = in_array($script, self::CATALOG_CREATE_PAGES, true);
         $catalogAjaxCreate = $script === 'involucrados_vehiculos_nuevo.php'

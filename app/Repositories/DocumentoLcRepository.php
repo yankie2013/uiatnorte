@@ -19,6 +19,16 @@ final class DocumentoLcRepository
         return $row ?: null;
     }
 
+    public function expedidores(): array
+    {
+        $st = $this->pdo->query("SELECT DISTINCT TRIM(expedido_por) FROM documento_lc
+            WHERE expedido_por IS NOT NULL AND TRIM(expedido_por) <> ''
+            ORDER BY 1");
+        $items = array_unique(array_merge(['Ministerio de Transporte y Comunicaciones - MTC'], $st->fetchAll(PDO::FETCH_COLUMN)));
+        natcasesort($items);
+        return array_values($items);
+    }
+
     public function personaByDocument(string $number): ?array
     {
         $st = $this->pdo->prepare('SELECT id, num_doc, apellido_paterno, apellido_materno, nombres FROM personas WHERE num_doc = ? ORDER BY id DESC LIMIT 1');

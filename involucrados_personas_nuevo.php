@@ -80,7 +80,7 @@ $accidente_id = (int)iget('accidente_id', ($accidentes[0]['id'] ?? 0));
 $accidente_fecha = $accidente_id ? $repo->accidenteFecha($accidente_id) : null;
 $return_to = safe_return_to(iget('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$accidente_id);
 $roles = $repo->roles();
-$lesiones = ['Ileso','Leve','Moderada','Grave','Fallecido'];
+$lesiones = ['Ileso','Herido','Fallecido'];
 
 $ok=''; $err='';
 if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
     ]);
 
     $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
-    if($result['next']===1) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].($guidedEmbed?'&guided_embed=1':'').'&return_to='.urlencode($postReturnTo));
+    if($result['next']===1 && !$guidedEmbed) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].($guidedEmbed?'&guided_embed=1':'').'&return_to='.urlencode($postReturnTo));
     else header('Location: '.$postReturnTo);
     exit;
   }catch(Throwable $e){
@@ -161,6 +161,7 @@ label{display:block; margin:0 0 3px 2px; font-size:var(--fs-sm); font-weight:700
 input,select,textarea{width:100%; height:var(--input-h); font-size:var(--fs); padding:6px 10px; border-radius:var(--radius); border:1px solid var(--line-dark); background:rgba(255,255,255,.04); color:inherit; outline:none;}
 textarea{min-height:60px; resize:vertical}
 .inline{display:flex; gap:6px; align-items:center}
+.inline #dni{width:160px;max-width:100%;flex:0 1 160px;min-width:0}
 .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px}
 .btn{border:1px solid var(--line-dark); border-radius:var(--radius); cursor:pointer; padding:6px 12px; font-size:var(--fs-sm); font-weight:700; background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));}
 .btn.primary{background:linear-gradient(180deg,var(--brand),#386bdf); color:#fff;}
@@ -179,7 +180,32 @@ textarea{min-height:60px; resize:vertical}
 .ifwrap{position:relative; height:min(76vh,760px);}
 .ifwrap iframe{position:absolute; inset:0; width:100%; height:100%; border:0;}
 </style>
-<style>body.guided-embed{background:white;margin:0;padding:0!important}.guided-embed .wrap{margin:0!important;max-width:none!important;padding:8px!important}.guided-embed .topbar{display:none}</style>
+<style>
+body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;color-scheme:light;--brand:#1b6956;--brand2:#308b76;--muted-dark:#58736b;--line-dark:#ccded7}
+.guided-embed .wrap{margin:0!important;max-width:none!important;padding:16px!important}
+.guided-embed .topbar{display:none}
+.guided-embed .title{font-size:22px;margin-bottom:6px}
+.guided-embed .subtitle{font-size:12px;color:#58736b}
+.guided-embed .card{background:linear-gradient(145deg,#fff,#f7fbf9);border:1px solid #cddfd7;border-top:4px solid #28775f;padding:20px;border-radius:18px;box-shadow:0 8px 24px #1b59400a}
+.guided-embed .grid-3{gap:14px;margin-top:14px}
+.guided-embed label{color:#46675d;font-size:12px;margin-bottom:6px}
+.guided-embed input,.guided-embed select,.guided-embed textarea{background:#fff;border:1px solid #bfd5cb;border-radius:10px;min-height:38px;color:#203f38}
+.guided-embed input[readonly]{background:#edf4f0;border-color:#dce7e1;color:#365b4e}
+.guided-embed input:focus,.guided-embed select:focus,.guided-embed textarea:focus{border-color:#2b8569;box-shadow:0 0 0 3px #2b85691a}
+.guided-embed details{border:1px solid #c9ded3;border-radius:12px;background:#edf5f0;overflow:hidden}
+.guided-embed summary{padding:13px 16px;cursor:pointer;color:#235d49}
+.guided-embed summary:hover{background:#e1eee6}
+.guided-embed summary:focus-visible{outline:2px solid #28775f;outline-offset:-3px}
+.guided-embed summary .subtitle{display:inline;margin-left:6px}
+.guided-embed details[open] summary{border-bottom:1px solid #c9ded3}
+.guided-embed details>.grid-3{padding:0 16px 16px}
+.guided-embed .btn{background:#e5f0e9;border:1px solid #bad5c7;color:#205e49;min-height:36px;border-radius:10px}
+.guided-embed .btn:hover{filter:brightness(.96)}
+.guided-embed .btn.primary{background:#205e49;border-color:#205e49;color:white}
+.guided-embed .btn.safe{background:#daf0e3;border-color:#acd4bc;color:#205e49}
+.guided-embed .actions{border-top:1px solid #d5e4dc;padding-top:16px;margin-top:18px;gap:10px}
+@media(max-width:600px){.guided-embed .wrap{padding:8px!important}.guided-embed .card{padding:14px}.guided-embed summary .subtitle{display:block;margin:4px 0 0}.guided-embed .inline{flex-wrap:wrap}}
+</style>
 </head>
 <body class="<?= $guidedEmbed ? 'guided-embed' : '' ?>">
 <?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?>
@@ -205,7 +231,11 @@ textarea{min-height:60px; resize:vertical}
     <input type="hidden" name="guided_embed" value="<?= $guidedEmbed ? '1' : '0' ?>">
     <input type="hidden" name="return_to" value="<?=h($return_to)?>">
 
-    <div class="grid-2">
+    <?php if ($guidedEmbed): ?>
+      <input type="hidden" name="accidente_id" id="accidente_id" value="<?= (int)$accidente_id ?>">
+    <?php endif; ?>
+    <div<?= $guidedEmbed ? '' : ' class="grid-2"' ?>>
+      <?php if (!$guidedEmbed): ?>
       <div>
         <label>Accidente</label>
         <select name="accidente_id" id="accidente_id" required>
@@ -215,6 +245,7 @@ textarea{min-height:60px; resize:vertical}
           <?php endforeach; ?>
         </select>
       </div>
+      <?php endif; ?>
       <div>
         <label>DNI</label>
         <div class="inline">
@@ -251,7 +282,7 @@ textarea{min-height:60px; resize:vertical}
       </div>
     </details>
 
-    <details style="margin-top:10px" open>
+    <details style="margin-top:10px">
       <summary><strong>Datos vigentes para este accidente</strong> <span class="subtitle">(solo esta copia; no cambia otros registros)</span></summary>
       <div class="grid-3" style="margin-top:8px">
         <div><label>Estado civil</label><input name="estado_civil" id="estado_civil"></div>
@@ -283,7 +314,7 @@ textarea{min-height:60px; resize:vertical}
       </div>
       <div>
         <label>Lesión</label>
-        <select name="lesion" id="lesion"><?php foreach($lesiones as $l): ?><option value="<?=$l?>"><?=$l?></option><?php endforeach; ?></select>
+        <select name="lesion" id="lesion"><?php foreach($lesiones as $l): ?><option value="<?=$l?>"><?=$l==='Herido'?'Lesionado o herido':$l?></option><?php endforeach; ?></select>
       </div>
     </div>
 

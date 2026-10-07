@@ -36,6 +36,17 @@ try{
     $role=(int)$p->query('SELECT MIN(Id) FROM participacion_persona')->fetchColumn();
     (new \App\Services\InvolucradoPersonaService(new \App\Repositories\InvolucradoPersonaRepository($p)))->registrar(['accidente_id'=>$draft,'persona_id'=>$person,'rol_id'=>$role,'vehiculo_id'=>$vehicle]);
     check(true,'guardia vincula persona con el formulario habitual sin modificar identidad compartida');
+    $p->exec('SET @guardia_document_case='.$draft);
+    $invol=(int)$p->query("SELECT id FROM involucrados_vehiculos WHERE accidente_id=$draft LIMIT 1")->fetchColumn();
+    $p->exec("INSERT INTO documento_vehiculo(involucrado_vehiculo_id,vehiculo_id,numero_soat) VALUES($invol,$vehicle,'TEST-GUARDIA')");
+    check(true,'guardia guarda SOAT de su borrador');
+    $conductor=(int)$p->query("SELECT Id FROM participacion_persona WHERE LOWER(Nombre)='conductor' LIMIT 1")->fetchColumn();
+    if($conductor!==$role)$p->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id) VALUES(?,?,?,?)')->execute([$draft,$person,$conductor,$vehicle]);
+    $p->exec("INSERT INTO documento_lc(persona_id,clase,categoria,numero) VALUES($person,'A','I','TEST-GUARDIA')");
+    check(true,'guardia guarda licencia del conductor del borrador');
+    $p->exec('SET @guardia_document_case=NULL');
+    deny(fn()=>$p->exec("INSERT INTO documento_lc(persona_id,clase,categoria,numero) VALUES($person,'A','I','TEST-DENIED')"),'guardia no guarda licencia sin contexto del borrador');
+
     $p->exec('SET @rbac_migration=1');
     $p->exec("UPDATE comunicaciones_guardia SET registrado_en=DATE_SUB(NOW(),INTERVAL 13 HOUR) WHERE accidente_id=$draft");
     $p->exec('SET @rbac_migration=NULL');
@@ -49,13 +60,30 @@ try{
     deny(fn()=>$p->exec("INSERT INTO involucrados_vehiculos(accidente_id,vehiculo_id,orden_participacion,tipo) VALUES($draft,$vehicle,'UT-2','Unidad')"),'otro actor no modifica borrador');
     actor($p,$guard);
     (new GuardiaService($p))->deliverDraft($draft,$other);
-    check(!(bool)$p->query("SELECT rbac_guardia_draft($draft)")->fetchColumn(),'entrega cierra el registro de guardia');
+    check((bool)$p->query("SELECT rbac_guardia_draft($draft)")->fetchColumn(),'entrega conserva las 12 horas de edición de guardia');
+    $pendingId=(int)$p->query("SELECT id FROM expediente_transferencias WHERE accidente_id=$draft AND estado='pendiente' LIMIT 1")->fetchColumn();
+    $registered=$p->query("SELECT registrado_en FROM comunicaciones_guardia WHERE accidente_id=$draft")->fetchColumn();
+    (new GuardiaService($p))->cancelPendingDelivery($draft,$pendingId);
+    check($p->query("SELECT estado FROM expediente_transferencias WHERE id=$pendingId")->fetchColumn()==='cancelada','cancelación conserva envío en historial');
+    check(!(bool)$p->query("SELECT COUNT(*) FROM expediente_transferencias WHERE accidente_id=$draft AND destino_id=$other AND estado='pendiente'")->fetchColumn(),'envío cancelado desaparece de bandeja de pendientes');
+    check($p->query("SELECT registrado_en FROM comunicaciones_guardia WHERE accidente_id=$draft")->fetchColumn()===$registered,'cancelación no reinicia plazo de edición');
+    deny(fn()=>(new GuardiaService($p))->cancelPendingDelivery($draft,$pendingId),'no se cancela nuevamente un envío resuelto');
+    (new GuardiaService($p))->deliverDraft($draft,$other);
+    check(true,'guardia puede designar nuevamente después de cancelar');
+    $newPending=(int)$p->query("SELECT id FROM expediente_transferencias WHERE accidente_id=$draft AND estado='pendiente' LIMIT 1")->fetchColumn();
+    $p->exec('SET @rbac_migration=1');$p->exec("UPDATE comunicaciones_guardia SET registrado_en=DATE_SUB(NOW(),INTERVAL 12 HOUR) WHERE accidente_id=$draft");$p->exec('SET @rbac_migration=NULL');
+    deny(fn()=>(new GuardiaService($p))->cancelPendingDelivery($draft,$newPending),'cancelación bloqueada al cumplirse 12 horas');
+    $p->exec('SET @rbac_migration=1');$st=$p->prepare('UPDATE comunicaciones_guardia SET registrado_en=? WHERE accidente_id=?');$st->execute([$registered,$draft]);$p->exec('SET @rbac_migration=NULL');
+
+    deny(fn()=>(new GuardiaService($p))->cancelPendingDelivery($draft,$pendingId),'solicitud antigua no cancela una nueva designación');
+
     check(!(bool)$p->query("SELECT responsable_id FROM accidentes WHERE id=$draft")->fetchColumn(),'entrega de guardia espera aceptación');
-    deny(fn()=>$p->exec("UPDATE accidentes SET lugar='Cambio posterior' WHERE id=$draft"),'guardia no altera investigación entregada');
+    $p->exec("UPDATE accidentes SET lugar='Cambio posterior' WHERE id=$draft");check(true,'guardia corrige después de entregar dentro de 12 horas');
     actor($p,$secretary);deny(fn()=>(new ExpedienteAccessService($p))->change($draft,'aceptar',0,''),'Secretaría no acepta una investigación');
     actor($p,$other);check(!Access::canEdit($draft),'jefe no edita antes de aceptar');
     (new ExpedienteAccessService($p))->change($draft,'aceptar',0,'');
     check(Access::canEdit($draft),'jefe recibe registro completo al aceptar');
+    actor($p,$guard);deny(fn()=>(new GuardiaService($p))->cancelPendingDelivery($draft,$newPending),'no se cancela un expediente ya aceptado');actor($p,$other);
     actor($p,1);(new ExpedienteAccessService($p))->change($draft,'reasignar',2,'Restablecer fixture');
     actor($p,$other);
     foreach (['fiscalia','modalidad_accidente','consecuencia_accidente','comisarias','marcas_vehiculo'] as $catalog) {
@@ -161,7 +189,7 @@ try{
     check(Access::profile($draft)['nombre']==='Giancarlo Jorge MERINO SANCHO','documentos conservan identidad del investigador tras archivo');
     actor($p,$guard);
     $guardia->save($call,$input+['referencia'=>'Corrección posterior']);check(true,'guardia corrige después de asignar dentro del plazo');
-    deny(fn()=>$p->exec("UPDATE accidentes SET lugar='Guardia' WHERE id=$newcase"),'guardia no edita investigación');
+    $p->exec("UPDATE accidentes SET lugar='Guardia' WHERE id=$newcase");check(true,'guardia conserva edición de su registro dentro de 12 horas');
     deny(fn()=>$guardia->assign($call,$other),'asignación duplicada rechazada');
     $p->exec('SET @rbac_migration=1');$p->exec("UPDATE comunicaciones_guardia SET registrado_en=DATE_SUB(NOW(),INTERVAL 12 HOUR) WHERE id=$call");$p->exec('SET @rbac_migration=NULL');
     deny(fn()=>$guardia->save($call,$input),'12 horas exactas: edición bloqueada');

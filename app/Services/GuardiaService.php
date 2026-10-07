@@ -33,11 +33,33 @@ final class GuardiaService
             $this->pdo->commit();return $id;
         } catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
+    public function cancelPendingDelivery(int $case, int $transferId): void {
+        if(Access::role()!=='guardia')throw new RuntimeException('Solo el comandante de guardia puede cancelar su envío inicial.');
+        $this->pdo->beginTransaction();
+        try {
+            $st=$this->pdo->prepare('SELECT responsable_id FROM accidentes WHERE id=? FOR UPDATE');$st->execute([$case]);$accident=$st->fetch();
+            $st=$this->pdo->prepare('SELECT rbac_guardia_draft(?)');$st->execute([$case]);
+            if(!$accident || !$st->fetchColumn())throw new RuntimeException('El registro no es tuyo o terminó el plazo de 12 horas.');
+            if($accident['responsable_id'])throw new RuntimeException('El JEFE EMI ya aceptó el expediente. La cancelación ya no está disponible.');
+            $st=$this->pdo->prepare('SELECT jefe_id FROM comunicaciones_guardia WHERE accidente_id=? AND creado_por=? FOR UPDATE');$st->execute([$case,Access::id()]);$chief=(int)$st->fetchColumn();
+            $st=$this->pdo->prepare("SELECT id FROM expediente_transferencias WHERE id=? AND accidente_id=? AND origen_id=? AND destino_id=? AND tipo='investigacion' AND estado='pendiente' FOR UPDATE");$st->execute([$transferId,$case,Access::id(),$chief]);
+            if(!$chief || !$st->fetchColumn())throw new RuntimeException('Este envío ya no está pendiente. Recarga la página.');
+            $this->pdo->exec('SET @rbac_assignment=1,@rbac_guardia_assign=1');
+            $this->pdo->prepare("UPDATE expediente_transferencias SET estado='cancelada',resuelto_en=NOW() WHERE id=?")->execute([$transferId]);
+            $this->pdo->prepare('UPDATE comunicaciones_guardia SET jefe_id=NULL,asignado_en=NULL WHERE accidente_id=? AND creado_por=?')->execute([$case,Access::id()]);
+            $this->pdo->commit();
+        } catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
+        finally{$this->pdo->exec('SET @rbac_assignment=NULL,@rbac_guardia_assign=NULL');}
+    }
     public function deliverDraft(int $case, int $chief): void {
         $this->pdo->beginTransaction();
         try {
-            $st=$this->pdo->prepare('SELECT id FROM accidentes WHERE id=? FOR UPDATE');
+            $st=$this->pdo->prepare('SELECT responsable_id FROM accidentes WHERE id=? FOR UPDATE');
             $st->execute([$case]);
+            if($st->fetchColumn())throw new RuntimeException('El expediente ya fue aceptado. La designación corresponde al flujo de transferencia.');
+            $sent=$this->pdo->prepare('SELECT jefe_id FROM comunicaciones_guardia WHERE accidente_id=? FOR UPDATE');
+            $sent->execute([$case]);
+            if($sent->fetchColumn())throw new RuntimeException('El registro ya fue enviado al JEFE EMI. Puedes corregirlo dentro de las 12 horas sin volver a entregarlo.');
             $st=$this->pdo->prepare('SELECT rbac_guardia_draft(?)');$st->execute([$case]);
             if (!$st->fetchColumn()) throw new RuntimeException('Este registro ya fue entregado, venció o pertenece a otro usuario.');
             $st=$this->pdo->prepare("SELECT id FROM usuarios WHERE id=? AND activo=1 AND rol='jefe_emi'");

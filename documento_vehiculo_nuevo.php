@@ -2,6 +2,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
+require __DIR__.'/partials/guardia_documento_acceso.php';
 
 use App\Repositories\DocumentoVehiculoRepository;
 use App\Services\DocumentoVehiculoService;
@@ -66,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Documento de Vehiculo - Nuevo<?= h($sectionTitle) ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style_mushu.css">
+<link rel="stylesheet" href="assets/css/soat-consulta.css">
 <style>
 .p{ padding:18px; }
 .topbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
@@ -160,6 +162,7 @@ textarea{ min-height:96px; resize:vertical; }
         <span><b>Sin vehiculo vinculado</b></span>
       <?php endif; ?>
     </div>
+    <?php if($section==='soat' || !$singleCardMode)require __DIR__.'/partials/soat_consulta.php'; ?>
   </div>
   <div><a class="btn ghost" href="javascript:history.back()">Volver</a></div>
 </div>
@@ -569,5 +572,6 @@ textarea{ min-height:96px; resize:vertical; }
 })();
 </script>
 
+<script src="assets/js/soat-vigencia.js"></script>
 </body>
 </html>

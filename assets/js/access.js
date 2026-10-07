@@ -34,6 +34,8 @@
     });
     if(role==='adjunto')document.querySelectorAll('a[href*="accidente_nuevo.php"]').forEach(link=>link.hidden=true);
     if(!['admin','jefe_emi','adjunto'].includes(role))document.querySelectorAll('a[href]').forEach(link => {
+      if(role==='guardia' && location.pathname.endsWith('/guardia_registro.php') && (link.classList.contains('guardia-document-open') || link.classList.contains('guardia-edit-record')))return;
+      if(role==='guardia' && location.pathname.endsWith('/doc_lc_nuevo.php') && link.classList.contains('guardia-license-edit') && new URL(link.href).searchParams.has('accidente_id'))return;
       if(/(?:_nuevo|_editar)\.php/.test(link.getAttribute('href')))link.hidden=true;
     });
   }

@@ -1,0 +1,4 @@
+.soat-consult{display:inline-flex;align-items:center;gap:7px;margin:8px 0 8px 10px;padding:9px 13px;border-radius:999px;border:1px solid #56c88c;background:linear-gradient(125deg,#125541,#237b5b);color:#fff!important;font-size:12px;font-weight:700;text-decoration:none;animation:soat-led 2.4s ease-in-out infinite;transition:transform .18s}
+.soat-consult::before{content:"";width:7px;height:7px;border-radius:50%;background:#a7ffbd;box-shadow:0 0 5px #a7ffbd,0 0 12px #74ff96}.soat-consult:hover{transform:translateY(-1px);background:#237b5b;animation-play-state:paused}.soat-consult:focus-visible{outline:3px solid #4a9075;outline-offset:3px}
+@keyframes soat-led{0%,100%{box-shadow:0 0 0 2px #49c18515,0 0 8px #37bd7025}50%{box-shadow:0 0 0 3px #49c18530,0 0 22px #37bd7060}}
+@media(prefers-reduced-motion:reduce){.soat-consult{animation:none;transition:none}.soat-consult:hover{transform:none}}
