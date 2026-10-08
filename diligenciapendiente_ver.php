@@ -235,7 +235,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
                         (string) ($citacion['persona_apem'] ?? ''),
                     ], static fn (string $part): bool => trim($part) !== '')));
                     $detalleCitacion = [];
-                    if (!empty($citacion['tipo_diligencia'])) { $detalleCitacion[] = (string) $citacion['tipo_diligencia']; }
+                    if (App\Support\CitacionMotivo::texto($citacion) !== '') { $detalleCitacion[] = App\Support\CitacionMotivo::texto($citacion); }
                     if (!empty($citacion['en_calidad'])) { $detalleCitacion[] = 'Calidad: ' . $citacion['en_calidad']; }
                     if (!empty($citacion['persona_doc_num'])) { $detalleCitacion[] = trim((string) ($citacion['persona_doc_tipo'] ?? 'Doc') . ' ' . $citacion['persona_doc_num']); }
                     if (!empty($citacion['fecha'])) { $detalleCitacion[] = 'Fecha: ' . $citacion['fecha'] . (!empty($citacion['hora']) ? ' ' . substr((string) $citacion['hora'], 0, 5) : ''); }

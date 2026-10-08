@@ -544,7 +544,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $valuesMap['citacion' . $numero . '_persona_linea'] = $personaCitacion !== '' ? 'Persona: ' . $personaCitacion : '';
             $valuesMap['citacion' . $numero . '_en_calidad_linea'] = $calidadCitacion !== '' ? 'En calidad de: ' . $calidadCitacion : '';
             $valuesMap['citacion' . $numero . '_resumen'] = $resumenCitacion;
-            $valuesMap['citacion' . $numero . '_tipo_diligencia'] = (string) ($citacion['tipo_diligencia'] ?? '');
+            $valuesMap['citacion' . $numero . '_tipo_diligencia'] = App\Support\CitacionMotivo::texto($citacion);
             $valuesMap['citacion' . $numero . '_motivo'] = (string) ($citacion['motivo'] ?? '');
             $valuesMap['citacion' . $numero . '_lugar'] = (string) ($citacion['lugar'] ?? '');
             $valuesMap['citacion' . $numero . '_fecha'] = $fechaAbrev;
@@ -597,7 +597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'citacion_en_calidad_linea' => $calidadCitacion !== '' ? 'En calidad de: ' . $calidadCitacion : '',
                 'citacion_resumen' => $resumenCitacion,
                 'diligencia_resumen' => $resumenCitacion,
-                'citacion_tipo_diligencia' => (string) ($citacion['tipo_diligencia'] ?? ''),
+                'citacion_tipo_diligencia' => App\Support\CitacionMotivo::texto($citacion),
                 'citacion_motivo' => (string) ($citacion['motivo'] ?? ''),
                 'citacion_lugar' => (string) ($citacion['lugar'] ?? ''),
                 'citacion_fecha' => $fechaAbrev,
@@ -850,8 +850,8 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
                     <div class="value"><?= h(substr((string) ($citacion['hora'] ?? ''), 0, 5)) ?></div>
                   </div>
                   <div class="span-6">
-                    <div class="label">Tipo de diligencia</div>
-                    <div class="value"><?= h((string) ($citacion['tipo_diligencia'] ?? 'Sin tipo')) ?></div>
+                    <div class="label">Motivo</div>
+                    <div class="value"><?= h(App\Support\CitacionMotivo::texto($citacion)) ?></div>
                   </div>
                 </div>
               </label>

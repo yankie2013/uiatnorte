@@ -50,7 +50,7 @@ final class CitacionService
             'fecha' => $row['fecha'] ?? date('Y-m-d'),
             'hora' => isset($row['hora']) ? substr((string) $row['hora'], 0, 5) : '09:00',
             'lugar' => $row['lugar'] ?? '',
-            'motivo' => $row['motivo'] ?? '',
+            'motivo' => \App\Support\CitacionMotivo::texto($row ?? []),
             'orden_citacion' => $row['orden_citacion'] ?? 1,
             'oficio_id' => $row['oficio_id'] ?? '',
         ];
@@ -131,9 +131,11 @@ final class CitacionService
 
     public function update(int $id, array $input): void
     {
-        if ($this->repository->find($id) === null) {
+        $existing = $this->repository->find($id);
+        if ($existing === null) {
             throw new InvalidArgumentException('Citacion no encontrada.');
         }
+        $input['tipo_diligencia'] = $existing['tipo_diligencia'] ?? '';
         $this->repository->update($id, $this->updatePayload($input));
     }
 
@@ -162,8 +164,8 @@ final class CitacionService
     {
         $payload = $createResult['payload'];
         $titulo = 'Citacion - ' . $createResult['nombre_persona'];
-        if ($payload['tipo_diligencia'] !== '') {
-            $titulo .= ' - ' . $payload['tipo_diligencia'];
+        if ($payload['motivo'] !== '') {
+            $titulo .= ' - ' . $payload['motivo'];
         }
 
         $lines = [
@@ -171,9 +173,8 @@ final class CitacionService
             'Citacion ID: ' . $citacionId,
             'Persona: ' . $createResult['nombre_persona'] . ' (' . $createResult['fuente'] . ':' . $createResult['fuente_id'] . ')',
             'En calidad de: ' . $payload['en_calidad'],
-            'Tipo de diligencia: ' . $payload['tipo_diligencia'],
             'Lugar: ' . $payload['lugar'],
-            'Motivo / Observaciones: ' . $payload['motivo'],
+            'Motivo: ' . $payload['motivo'],
             'Orden de citacion: ' . $payload['orden_citacion'],
         ];
         if (!empty($payload['oficio_id'])) {
@@ -221,9 +222,6 @@ final class CitacionService
         if ($payload['en_calidad'] === '') {
             throw new InvalidArgumentException('Selecciona la calidad.');
         }
-        if ($payload['tipo_diligencia'] === '') {
-            throw new InvalidArgumentException('Indica el tipo de diligencia.');
-        }
         if ($payload['fecha'] === '') {
             throw new InvalidArgumentException('Indica la fecha.');
         }
@@ -262,9 +260,6 @@ final class CitacionService
 
         if ($payload['en_calidad'] === '') {
             throw new InvalidArgumentException('Selecciona "En calidad de".');
-        }
-        if ($payload['tipo_diligencia'] === '') {
-            throw new InvalidArgumentException('Selecciona "Tipo de diligencia".');
         }
         if ($payload['fecha'] === '') {
             throw new InvalidArgumentException('Indica la fecha.');

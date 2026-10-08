@@ -150,7 +150,6 @@ $calendarEmbedUrl = 'https://calendar.google.com/calendar/embed?height=600&wkst=
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $context !== null) {
     $data = [
         'en_calidad' => $_POST['en_calidad'] ?? '',
-        'tipo_diligencia' => $_POST['tipo_diligencia'] ?? '',
         'fecha' => $_POST['fecha'] ?? '',
         'hora' => $_POST['hora'] ?? '',
         'lugar' => $_POST['lugar'] ?? '',
@@ -302,7 +301,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
           <article class="agenda-item">
             <div class="agenda-top">
               <div>
-                <div class="agenda-title"><?= h((string) (($row['tipo_diligencia'] ?? '') !== '' ? $row['tipo_diligencia'] : 'Citación programada')) ?></div>
+                <div class="agenda-title"><?= h((App\Support\CitacionMotivo::texto($row) ?: 'Citación programada')) ?></div>
                 <div class="agenda-sub"><?= h($personaNombre !== '' ? $personaNombre : 'Persona no especificada') ?></div>
               </div>
               <div class="agenda-meta">
@@ -312,7 +311,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
               </div>
             </div>
             <?php if (!empty($row['lugar'])): ?><div class="agenda-sub"><strong>Lugar:</strong> <?= h((string) $row['lugar']) ?></div><?php endif; ?>
-            <?php if (!empty($row['motivo'])): ?><div class="agenda-sub"><strong>Motivo:</strong> <?= h((string) $row['motivo']) ?></div><?php endif; ?>
             <?php if ($syncStatus === 'error' && !empty($row['google_calendar_last_error'])): ?><div class="agenda-sub"><strong>Detalle sync:</strong> <?= h((string) $row['google_calendar_last_error']) ?></div><?php endif; ?>
             <div class="agenda-sub">
               <strong>SIDPOL:</strong> <?= h((string) (($row['registro_sidpol'] ?? '') !== '' ? $row['registro_sidpol'] : '—')) ?>
@@ -409,16 +407,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
         </div>
 
         <div class="c4">
-          <label>Tipo de diligencia*</label>
-          <select name="tipo_diligencia" required>
-            <option value="">Selecciona</option>
-            <?php foreach ($context['tipos'] as $tipo): ?>
-              <option value="<?= h($tipo) ?>" <?= (string) $data['tipo_diligencia'] === (string) $tipo ? 'selected' : '' ?>><?= h($tipo) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-
-        <div class="c4">
           <label>Oficio que ordena</label>
           <select name="oficio_id">
             <option value="">Sin oficio</option>
@@ -450,7 +438,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
         </div>
 
         <div class="c12">
-          <label>Motivo / observaciones*</label>
+          <label>Motivo*</label>
           <div style="display:flex;gap:8px;align-items:flex-start;">
             <select id="motivo_sel" style="flex:1;">
               <option value="">Selecciona</option>
@@ -538,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function () {
       motivoFinal.value = (usandoMotivoCustom ? motivoOtro.value : motivoSel.value).trim();
       if (!motivoFinal.value) {
         event.preventDefault();
-        alert('Indica el motivo / observaciones.');
+        alert('Indica el motivo.');
       }
     });
   }

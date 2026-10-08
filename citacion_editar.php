@@ -52,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'persona_domicilio' => $_POST['persona_domicilio'] ?? '',
         'persona_edad' => $_POST['persona_edad'] ?? '',
         'en_calidad' => $_POST['en_calidad'] ?? '',
-        'tipo_diligencia' => $_POST['tipo_diligencia'] ?? '',
         'fecha' => $_POST['fecha'] ?? '',
         'hora' => $_POST['hora'] ?? '',
         'lugar' => $_POST['lugar'] ?? '',
@@ -174,16 +173,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
         </select>
       </div>
 
-      <div class="c6">
-        <label class="label">Tipo de diligencia</label>
-        <select name="tipo_diligencia" required>
-          <option value="">Selecciona</option>
-          <?php foreach ($ctx['tipos'] as $tipo): ?>
-            <option value="<?= h($tipo) ?>" <?= $data['tipo_diligencia'] === $tipo ? 'selected' : '' ?>><?= h($tipo) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
       <div class="c3"><label class="label">Fecha</label><input type="date" name="fecha" value="<?= h($data['fecha']) ?>" required></div>
       <div class="c3"><label class="label">Hora</label><input type="time" name="hora" value="<?= h($data['hora']) ?>" required></div>
       <div class="c3"><label class="label">Orden de citacion</label><input type="number" name="orden_citacion" min="1" value="<?= h((string) $data['orden_citacion']) ?>"></div>
@@ -195,7 +184,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
       </div>
 
       <div class="c12">
-        <label class="label">Motivo / observaciones</label>
+        <label class="label">Motivo</label>
         <textarea name="motivo" required><?= h($data['motivo']) ?></textarea>
       </div>
     </div>

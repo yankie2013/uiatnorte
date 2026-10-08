@@ -98,11 +98,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:960px;margin:24px 
       </div>
 
       <div class="c6 field">
-        <div class="label">Tipo de diligencia</div>
-        <div class="value"><?= h((string) ($row['tipo_diligencia'] ?? '')) ?></div>
-      </div>
-
-      <div class="c6 field">
         <div class="label">Fecha</div>
         <div class="value"><?= h((string) ($row['fecha'] ?? '')) ?></div>
       </div>
@@ -133,8 +128,8 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:960px;margin:24px 
       </div>
 
       <div class="c12 field">
-        <div class="label">Motivo / observaciones</div>
-        <div class="value"><?= nl2br(h((string) ($row['motivo'] ?? ''))) ?></div>
+        <div class="label">Motivo</div>
+        <div class="value"><?= nl2br(h(App\Support\CitacionMotivo::texto($row))) ?></div>
       </div>
     </div>
   </div>

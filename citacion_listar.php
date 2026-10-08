@@ -61,7 +61,7 @@ $rows = $service->listado($accidenteId, $filters);
 $lawyers = (new App\Repositories\AbogadoRepository($pdo))->listByAccidente($accidenteId);
 $groups = [];
 foreach ($rows as $row) {
-    $key = json_encode([$row['fecha'] ?? '', $row['hora'] ?? '', trim((string)($row['tipo_diligencia'] ?? '')), trim((string)($row['lugar'] ?? ''))]);
+    $key = json_encode([$row['fecha'] ?? '', $row['hora'] ?? '', App\Support\CitacionMotivo::texto($row), trim((string)($row['lugar'] ?? ''))]);
     if (empty($row['fecha']) || empty($row['hora'])) $key .= ':' . (int)$row['id'];
     $groups[$key][] = $row;
 }
@@ -138,7 +138,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <b><?= $stamp ? $months[(int)date('n',$stamp)-1] : 'Sin fecha' ?></b>
         </div>
         <div class="diligencia-heading"><span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
-          <h2>📋 <?= h($first['tipo_diligencia'] ?: 'Diligencia') ?></h2>
+          <h2>📋 <?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>
         <span class="pill diligence-count">👥 <?= count($group) ?> citado<?= count($group) === 1 ? '' : 's' ?></span>

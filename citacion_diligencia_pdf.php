@@ -49,7 +49,6 @@ $persona = trim((string) ($values['persona_nombre_completo'] ?? ''));
 $documento = trim((string) ($values['persona_doc'] ?? ''));
 $domicilio = trim((string) ($values['persona_domicilio'] ?? ''));
 $calidad = trim((string) ($values['cit_en_calidad'] ?? ''));
-$diligencia = trim((string) ($values['cit_tipo_diligencia'] ?? ''));
 $fecha = trim((string) ($values['cit_fecha_larga'] ?? $values['cit_fecha'] ?? ''));
 $hora = trim((string) ($values['cit_hora'] ?? ''));
 $lugar = trim((string) ($values['cit_lugar'] ?? ''));
@@ -98,8 +97,7 @@ h1 { font-size: 18px; margin: 0 0 4px; text-align: center; }
 
 <table class="grid section">
   <tr>
-    <td><span class="label">En calidad de</span><br>' . h($calidad) . '</td>
-    <td><span class="label">Tipo de diligencia</span><br>' . h($diligencia) . '</td>
+    <td colspan="2"><span class="label">En calidad de</span><br>' . h($calidad) . '</td>
   </tr>
   <tr>
     <td><span class="label">Fecha</span><br>' . h($fecha) . '</td>
@@ -116,7 +114,7 @@ h1 { font-size: 18px; margin: 0 0 4px; text-align: center; }
 </table>
 
 <div class="section box">
-  <div class="label">Motivo / observaciones</div>
+  <div class="label">Motivo</div>
   <div>' . nl2br(h($motivo !== '' ? $motivo : 'Sin observaciones registradas')) . '</div>
 </div>
 
