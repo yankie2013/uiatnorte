@@ -270,8 +270,8 @@ body.is-embed .wrap{margin:0 auto;padding:14px}
 .section-mark{width:8px;height:26px;border-radius:99px;background:var(--section-accent);box-shadow:0 0 16px rgba(var(--section-accent-rgb),.42)}
 .section-head h2{margin:0;font-size:15px;color:var(--section-title)}
 .section-head span{margin-left:auto;padding:4px 9px;border:1px solid rgba(var(--section-accent-rgb),.34);border-radius:999px;background:rgba(var(--section-accent-rgb),.10);color:var(--form-text);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-.section-toggle{display:grid;place-items:center;width:30px;height:30px;margin-left:2px;border:1px solid rgba(var(--section-accent-rgb),.38);border-radius:50%;background:rgba(var(--section-accent-rgb),.12);color:var(--form-text);font-size:18px;font-weight:900;transition:transform .18s ease}
-.accordion-section.is-collapsed .section-toggle{transform:rotate(-90deg)}
+.section-toggle{display:grid;place-items:center;width:30px;height:30px;margin-left:2px;border:1px solid rgba(var(--section-accent-rgb),.38);border-radius:50%;background:rgba(var(--section-accent-rgb),.12);color:var(--form-text);font-size:18px;font-weight:900;transition:background .18s ease}
+.section-toggle{flex-shrink:0;line-height:1}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
 .c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
 .office-recipient-row{grid-column:span 12;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -376,7 +376,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     </section>
     <?php endif; ?>
     <section class="office-section accordion-section is-expanded" data-accordion-section>
-      <div class="section-head" role="button" tabindex="0" aria-expanded="true"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="true"><i class="section-mark"></i><h2>Datos del oficio</h2><span>Numeracion</span><b class="section-toggle" aria-hidden="true">+</b></div>
     <div class="office-accordion-body grid">
       <?php if (!$gestion): ?><input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>"><?php endif; ?>
 
@@ -439,7 +439,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
     <?php if ($gestion) ob_start(); ?>
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
-      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad, cargo y persona</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad, cargo y persona</span><b class="section-toggle" aria-hidden="true">+</b></div>
       <div class="office-accordion-body grid">
       <?php include __DIR__ . '/app/Views/oficio_destinatario.php'; ?>
 
@@ -448,7 +448,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
     <?php if ($gestion) $gestionRecipientSection = ob_get_clean(); ?>
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
-      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">⌄</b></div>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Asunto y contenido</h2><span>Detalle</span><b class="section-toggle" aria-hidden="true">+</b></div>
       <div class="office-accordion-body grid">
       <input type="hidden" name="asunto_id" id="asunto_id" value="<?= h($data['asunto_id']) ?>">
       <div class="c12">
@@ -604,7 +604,7 @@ let handlingInvalidField = false;
 let plantillaRequestSerial = 0;
 
 function openAccordionSection(section) {
-  if (!section || !accordionSections.includes(section)) return;
+  if (section && !accordionSections.includes(section)) return;
   accordionSections.forEach((item) => {
     const expanded = item === section;
     item.classList.toggle('is-collapsed', !expanded);
@@ -613,17 +613,20 @@ function openAccordionSection(section) {
     if (body) body.style.setProperty('display', expanded ? 'grid' : 'none', 'important');
     const head = item.querySelector(':scope > .section-head');
     if (head) head.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    const icon = item.querySelector('.section-toggle');
+    if (icon) icon.textContent = expanded ? '−' : '+';
   });
 }
 
 accordionSections.forEach((section) => {
   const head = section.querySelector(':scope > .section-head');
   if (!head) return;
-  head.addEventListener('click', () => openAccordionSection(section));
+  const toggleSection = () => openAccordionSection(section.classList.contains('is-expanded') ? null : section);
+  head.addEventListener('click', toggleSection);
   head.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    openAccordionSection(section);
+    toggleSection();
   });
 });
 openAccordionSection(accordionSections[0]);
