@@ -175,6 +175,8 @@ $rangoCamara = extraer_rango_camaras($of['motivo'] ?? '');
 $asuntoExportado = OficioContenido::componer([
   'motivo' => $of['motivo'] ?? '',
   'asunto_nombre' => $of['asunto_nombre'] ?? '',
+  'categoria' => 'Cámaras de video vigilancia',
+  'fecha_accidente' => $of['fecha_accidente'] ?? '',
 ]);
 $modalidadNombre = lista_espanol(explode('||', (string) ($of['modalidad_nombre'] ?? '')));
 $consecuenciaNombre = lista_espanol(explode('||', (string) ($of['consecuencia_nombre'] ?? '')));
@@ -185,7 +187,10 @@ $tpl->setValue('oficio_anio',          h($of['anio']));
 $tpl->setValue('oficio_fecha',         fecha_larga($of['fecha_emision']));
 $tpl->setValue('oficio_fecha_abrev',   fecha_abrev($of['fecha_emision']));
 $tpl->setValue('oficio_motivo',        h($asuntoExportado));
-$tpl->setValue('oficio_asunto',       h($asuntoExportado));
+$asuntoRun = new \PhpOffice\PhpWord\Element\TextRun();
+$asuntoRun->addText(preg_replace('/\s+SOLICITA$/u', '', $asuntoExportado) . ' ', ['name'=>'Arial','bold'=>false,'underline'=>'none']);
+$asuntoRun->addText('SOLICITA', ['name'=>'Arial','bold'=>true,'underline'=>'single']);
+$tpl->setComplexValue('oficio_asunto', $asuntoRun);
 $tpl->setValue('oficio_rango_camaras', h($rangoCamara['texto']));
 $tpl->setValue('oficio_rango_desde',   h($rangoCamara['desde']));
 $tpl->setValue('oficio_rango_hasta',   h($rangoCamara['hasta']));

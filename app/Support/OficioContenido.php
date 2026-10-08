@@ -53,9 +53,19 @@ final class OficioContenido
             }
         } elseif (str_contains($categoria, 'camara') && (str_contains($categoria, 'video') || str_contains($categoria, 'vigilancia'))) {
             [$desde, $hasta] = self::rango((string) ($oficio['motivo'] ?? ''));
-            if ($desde !== '' && $hasta !== '') {
-                $base = rtrim($base, ' .,;') . ', entre las ' . $desde . ' y las ' . $hasta . ' horas';
+            $fecha = (string) ($oficio['fecha_accidente'] ?? '');
+            if (preg_match('/(?:^|\R)Día solicitado:\s*(\d{4}-\d{2}-\d{2})/u', (string) ($oficio['motivo'] ?? ''), $matches)) {
+                $fecha = $matches[1];
             }
+            $base = 'Grabación de cámara de video vigilancia';
+            if ($fecha !== '' && ($stamp = strtotime($fecha)) !== false) {
+                $meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC'];
+                $base .= ', del día ' . date('d', $stamp) . $meses[(int)date('n', $stamp)-1] . date('Y', $stamp);
+            }
+            if ($desde !== '' && $hasta !== '') {
+                $base .= ' entre las ' . $desde . ' y las ' . $hasta . ' horas';
+            }
+            $base .= ', por motivo que se indica. SOLICITA';
         }
 
         return trim($base);

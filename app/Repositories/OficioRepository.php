@@ -769,6 +769,7 @@ final class OficioRepository
             'COALESCE(NULLIF(e.siglas, \'\'), e.nombre) AS entidad',
             'COALESCE(o.persona_destino_manual, \'\') AS persona_destino_manual',
             'a.registro_sidpol',
+            'a.fecha_accidente',
             'a.id AS accid',
             'COALESCE(s.detalle,\'\') AS detalle',
             'COALESCE(s.nombre,\'\') AS asunto_nombre',
