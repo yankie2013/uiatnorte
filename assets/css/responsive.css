@@ -63,3 +63,33 @@
   .office-page-head .toolbar > * { flex-basis:90px; font-size:11px; }
   :where(.kpi-grid,.metrics,.quick-grid) { grid-template-columns:minmax(0,1fr)!important; }
 }
+/* Ajustes táctiles y lectura compacta del expediente. */
+@media screen and (max-width:760px){
+ html{-webkit-text-size-adjust:100%}
+ .uiat-user-breadcrumb{max-width:100%;width:100%;min-width:0}
+ .uiat-user-topbar-right{min-width:0;flex-shrink:1}
+ .uiat-mobile-case-summary{grid-column:1/-1;border:1px solid #dbe5f2;border-radius:12px;background:var(--card,#fff);min-width:0}
+ .uiat-mobile-case-summary>summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text,#29425f);min-height:44px}
+ .uiat-mobile-case-summary .case-facts-scroll{padding:8px}
+ .case-overview-layout .case-facts-topline{gap:6px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .case-overview-layout .case-facts-topline .case-facts-top-item{min-width:0;padding:8px;min-height:52px}
+ .case-overview-layout .case-facts-topline .case-facts-top-item dd{font-size:13px}
+ .case-module-sidebar #accTabs{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto;max-width:100%;gap:8px;padding:4px 2px 10px;scroll-snap-type:x proximity}
+ .case-module-sidebar #accTabs>.nav-link:not([hidden]){flex:0 0 138px!important;width:138px!important;min-width:138px!important;min-height:56px;padding:10px!important;scroll-snap-align:start}
+ .case-module-sidebar #accTabs .main-tab-title{font-size:12px}
+ .case-module-sidebar #accTabs .tab-sub{font-size:10px}
+ .case-module-sidebar summary{font-size:14px;padding:12px}
+ .case-overview-layout>.tabs-shell-main{grid-row:4!important}
+ .uiat-case-view .field-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ .uiat-case-view .field-card{min-width:0;padding:10px}
+ .uiat-case-view .field-card.span-2{grid-column:auto!important}
+ .uiat-case-view .persona-edit-head{position:sticky;top:0;z-index:2;background:var(--card,#fff);gap:10px}
+ .uiat-case-view .persona-edit-head .editable-actions{width:100%;display:flex;gap:8px}
+ .uiat-case-view .persona-edit-head .editable-actions>button{flex:1;min-height:44px}
+ .uiat-case-view .persona-edit-body{padding:12px}
+ .uiat-case-view .person-primary-record{min-width:0;padding:12px}
+ .uiat-case-view .btn-shell,.uiat-case-view .person-contact-actions a,.uiat-case-view .person-contact-actions button{min-height:40px}
+ .guardia-layout{gap:14px}.guardia-navigation{padding:14px}.guardia-navigation nav{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px}.guardia-navigation nav a{padding:10px 8px;font-size:12px;gap:7px;min-width:0}.guardia-navigation .guardia-case{margin-bottom:10px;padding-bottom:10px}.guardia-navigation .muted{font-size:12px}
+}
+@media screen and (min-width:761px){.uiat-mobile-case-summary{display:contents}.uiat-mobile-case-summary>summary{display:none}}
+@media screen and (min-width:360px) and (max-width:760px){.case-overview-layout .case-facts-topline{grid-template-columns:repeat(3,minmax(0,1fr))}.case-overview-layout .case-facts-topline .case-facts-top-item{padding:6px;min-height:44px}}

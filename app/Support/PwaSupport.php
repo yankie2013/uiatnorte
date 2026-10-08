@@ -105,9 +105,13 @@ final class PwaSupport
         if (!preg_match('~<meta\b[^>]*name\s*=\s*[\"\']viewport[\"\']~i', $buffer)) {
             $buffer = preg_replace('~</head>~i', '<meta name="viewport" content="width=device-width, initial-scale=1"></head>', $buffer, 1);
         }
-        $responsiveCss = self::assetUrl($basePath, 'assets/css/responsive.css?v=20261006');
-        $responsiveJs = self::assetUrl($basePath, 'assets/js/responsive.js?v=20261006');
+        // El ingreso tiene su propio diseño; evita que reglas genéricas de main/form lo deformen.
+        if (!preg_match('~<body\b[^>]*class=[\"\'][^\"\']*\buiat-login\b~i', $buffer)) {
+        $responsiveCss = self::assetUrl($basePath, 'assets/css/responsive.css?v=' . filemtime(__DIR__.'/../../assets/css/responsive.css'));
+        $responsiveJs = self::assetUrl($basePath, 'assets/js/responsive.js?v=' . filemtime(__DIR__.'/../../assets/js/responsive.js'));
         $buffer = preg_replace('~</body>~i', '<link rel="stylesheet" href="'.$responsiveCss.'"><script src="'.$responsiveJs.'"></script></body>', $buffer, 1);
+
+        }
 
         $headMarkup = self::headMarkup($basePath);
         $bodyMarkup = self::bodyMarkup($basePath);

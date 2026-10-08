@@ -591,3 +591,33 @@ form {
     transition:none!important;
   }
 }
+/* Acceso móvil: identidad breve y formulario visible sin una portada extensa. */
+@media(max-width:700px){
+ body.uiat-login{display:block;padding:12px;min-height:100svh}
+ .uiat-login .login-shell{width:100%;max-width:460px;min-height:0;margin:0 auto;border-radius:18px}
+ .uiat-login .welcome{padding:18px 20px}
+ .uiat-login .institution{font-size:8px;letter-spacing:1px}
+ .uiat-login .division-brand{margin-top:14px;gap:14px}
+ .uiat-login .emblem{width:64px;height:62px;padding:5px;border-radius:12px}
+ .uiat-login .division-name strong{font-size:21px;letter-spacing:3px}
+ .uiat-login .division-name span{font-size:10px;line-height:1.5;margin-top:4px}
+ .uiat-login .welcome-copy,.uiat-login .welcome-footer{display:none}
+ .uiat-login .login-panel{padding:22px 20px 16px}
+ .uiat-login .form-container{padding:0;margin:0}
+ .uiat-login .form-heading h2{font-size:23px;letter-spacing:-.6px;margin-bottom:8px}
+ .uiat-login .form-heading p{font-size:13px;line-height:1.5;margin-bottom:18px}
+ .uiat-login .form-heading p br{display:none}
+ .uiat-login form{gap:16px}
+ .uiat-login .field>label{font-size:13px;margin-bottom:7px}
+ .uiat-login .input-wrap input{height:48px;font-size:16px}
+ .uiat-login .input-icon{top:15px}
+ .uiat-login .toggle{top:2px;width:44px;height:44px}
+ .uiat-login .form-options{flex-wrap:wrap;gap:6px;align-items:center;flex-direction:row}
+ .uiat-login .remember,.uiat-login .help-link{font-size:11px;min-height:36px}
+ .uiat-login .remember input{width:18px;height:18px}
+ .uiat-login .submit{height:48px;font-size:14px}
+ .uiat-login .access-note{margin-top:16px;font-size:10px}
+ .uiat-login .panel-footer{margin-top:18px;padding-top:12px;font-size:9px;flex-wrap:wrap}
+ .uiat-login .message{font-size:13px;line-height:1.5;padding:10px 12px;margin-bottom:16px}
+}
+@media(max-width:360px){.uiat-login .login-panel,.uiat-login .welcome{padding-left:16px;padding-right:16px}.uiat-login .form-heading h2{font-size:21px}}
