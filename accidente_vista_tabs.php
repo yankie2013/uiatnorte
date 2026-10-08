@@ -4675,7 +4675,7 @@ $personaSections = [
         'celular', 'email',
     ],
     'Perfil Complementario' => [
-        'ocupacion', 'grado_instruccion',
+        'ocupacion', 'grado_instruccion', 'numero_hijos',
         ['key' => 'nombre_padre', 'class' => 'span-2'],
         ['key' => 'nombre_madre', 'class' => 'span-2'],
         ['key' => 'notas', 'class' => 'span-2'],
@@ -9048,11 +9048,12 @@ $resumenInterventionRows = [
                       </div>
                     </div>
 
+                    <?php $personaPrincipal = (new PersonaRepository($pdo))->find((int)$persona['persona_id']) ?? $persona; ?>
                     <div class="editable-view person-primary-grid" data-edit-view="persona-<?= (int) $persona['involucrado_id'] ?>">
                       <?php foreach ($personaSections as $sectionTitle => $sectionFields): ?>
                         <article class="record-card dosage-record person-primary-record">
                           <header class="dosage-record-head"><h5><?= h($sectionTitle) ?></h5></header>
-                          <dl class="dosage-detail-grid"><?= render_record_field_lines($persona, $sectionFields) ?></dl>
+                          <dl class="dosage-detail-grid"><?= render_record_field_lines($personaPrincipal, $sectionFields) ?></dl>
                         </article>
                       <?php endforeach; ?>
                     </div>
@@ -9074,7 +9075,6 @@ $resumenInterventionRows = [
                           <input type="hidden" name="api_fuente" value="<?= h((string) ($persona['api_fuente'] ?? '')) ?>">
                           <input type="hidden" name="api_ref" value="<?= h((string) ($persona['api_ref'] ?? '')) ?>">
 
-                          <?php $personaPrincipal = (new PersonaRepository($pdo))->find((int)$persona['persona_id']) ?? $persona; ?>
                           <p class="small">Los datos de identidad registrados son fijos; los campos vacíos se pueden completar. Los datos variables actualizan la ficha principal y conservan las copias de los expedientes.</p>
                           <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                             <div class="section-block">
