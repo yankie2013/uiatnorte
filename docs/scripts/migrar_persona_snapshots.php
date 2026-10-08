@@ -183,37 +183,7 @@ $pdo->exec("CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW prop
     LEFT JOIN accidentes a ON a.id=d.accidente_id
     WHERE d.accidente_id IS NULL OR a.eliminado_en IS NULL");
 
-$pdo->exec('DROP TRIGGER IF EXISTS bu_personas_identidad_inmutable');
-$pdo->exec("CREATE TRIGGER bu_personas_identidad_inmutable BEFORE UPDATE ON personas FOR EACH ROW
-BEGIN
-    IF NOT (OLD.tipo_doc <=> NEW.tipo_doc)
-       OR NOT (OLD.num_doc <=> NEW.num_doc)
-       OR NOT (OLD.apellido_paterno <=> NEW.apellido_paterno)
-       OR NOT (OLD.apellido_materno <=> NEW.apellido_materno)
-       OR NOT (OLD.nombres <=> NEW.nombres)
-       OR NOT (OLD.sexo <=> NEW.sexo)
-       OR NOT (OLD.fecha_nacimiento <=> NEW.fecha_nacimiento)
-       OR NOT (OLD.departamento_nac <=> NEW.departamento_nac)
-       OR NOT (OLD.provincia_nac <=> NEW.provincia_nac)
-       OR NOT (OLD.distrito_nac <=> NEW.distrito_nac)
-       OR NOT (OLD.nombre_padre <=> NEW.nombre_padre)
-       OR NOT (OLD.nombre_madre <=> NEW.nombre_madre) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Los datos de identidad de una persona son inmutables';
-    END IF;
-    IF EXISTS(SELECT 1 FROM involucrados_personas WHERE persona_id=OLD.id)
-       AND (NOT (OLD.edad <=> NEW.edad)
-         OR NOT (OLD.estado_civil <=> NEW.estado_civil)
-         OR NOT (OLD.grado_instruccion <=> NEW.grado_instruccion)
-         OR NOT (OLD.numero_hijos <=> NEW.numero_hijos)
-         OR NOT (OLD.domicilio <=> NEW.domicilio)
-         OR NOT (OLD.domicilio_departamento <=> NEW.domicilio_departamento)
-         OR NOT (OLD.domicilio_provincia <=> NEW.domicilio_provincia)
-         OR NOT (OLD.domicilio_distrito <=> NEW.domicilio_distrito)
-         OR NOT (OLD.celular <=> NEW.celular)
-         OR NOT (OLD.email <=> NEW.email)) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Actualice datos variables desde el expediente para conservar sus copias históricas';
-    END IF;
-END");
+require __DIR__.'/persona_identidad_trigger.php';
 
 fwrite(STDOUT, "Migración de copias históricas aplicada a {$schema} en {$host}:{$port}.\n");
 fwrite(STDOUT, "Las copias existentes no se reescriben. Las iniciales usan la ficha disponible hoy.\n");

@@ -105,27 +105,20 @@ final class PersonaService
         if ($existing === null) {
             throw new InvalidArgumentException('Persona no encontrada.');
         }
-        foreach (['tipo_doc', 'num_doc', 'apellido_paterno', 'apellido_materno', 'nombres', 'sexo', 'fecha_nacimiento', 'departamento_nac', 'provincia_nac', 'distrito_nac', 'nombre_padre', 'nombre_madre'] as $field) {
-            $old = mb_strtoupper(trim((string) ($existing[$field] ?? '')), 'UTF-8');
-            $new = mb_strtoupper(trim((string) ($input[$field] ?? '')), 'UTF-8');
-            if ($old !== $new) {
-                throw new InvalidArgumentException('Los datos de identidad (documento, nombres, nacimiento y padres) no se modifican desde una ficha ya registrada.');
-            }
-        }
-        $hasInvolvements = $this->repository->involvementCount($id) > 0;
-        if ($hasInvolvements) {
-            foreach (['estado_civil', 'grado_instruccion', 'numero_hijos', 'domicilio', 'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito', 'celular', 'email'] as $field) {
-                $old = trim((string) ($existing[$field] ?? ''));
-                $new = trim((string) ($input[$field] ?? ''));
-                if ($old !== $new) {
-                    throw new InvalidArgumentException('Esta persona ya participa en expedientes. Cambia esos datos desde el registro de cada accidente para conservar el historial.');
-                }
-            }
-        }
+        $input = array_replace($existing, $input);
         $payload = $this->payload($input, $id);
-        if ($hasInvolvements) {
-            $payload['edad'] = $existing['edad'];
+        foreach (['num_doc', 'apellido_paterno', 'apellido_materno', 'nombres', 'fecha_nacimiento', 'departamento_nac', 'provincia_nac', 'distrito_nac', 'nombre_padre', 'nombre_madre'] as $field) {
+            $old = mb_strtoupper(trim((string) ($existing[$field] ?? '')), 'UTF-8');
+            $new = mb_strtoupper(trim((string) ($payload[$field] ?? '')), 'UTF-8');
+            if ($old !== '' && $old !== $new) {
+                throw new InvalidArgumentException('El dato de identidad «'.$field.'» ya está registrado y es fijo. Solo se pueden completar datos vacíos.');
+            }
+            if ($old !== '') $payload[$field] = $existing[$field];
         }
+        if (trim((string)($existing['num_doc'] ?? '')) !== '') {
+            if ($existing['tipo_doc'] !== $payload['tipo_doc']) throw new InvalidArgumentException('El tipo de documento registrado es fijo.');
+        }
+        if ($this->repository->involvementCount($id) > 0) $payload['edad'] = $existing['edad'];
         $this->repository->update($id, $payload);
     }
 

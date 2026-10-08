@@ -2561,6 +2561,14 @@ function render_editable_fields(array $record, array $fields, string $idPrefix =
         $value = (string) ($record[$valueKey] ?? ($field['value'] ?? ''));
         $inputId = $idPrefix !== '' ? $idPrefix . '-' . $name : $name;
         $attrs = [];
+        if (str_starts_with($idPrefix, 'persona-')) {
+            $identity = ['num_doc','apellido_paterno','apellido_materno','nombres','fecha_nacimiento','departamento_nac','provincia_nac','distrito_nac','nombre_padre','nombre_madre'];
+            if ((in_array($name, $identity, true) && trim($value) !== '') || ($name === 'tipo_doc' && trim((string)($record['num_doc'] ?? '')) !== '')) {
+                if ($type === 'select') $field['disabled'] = true;
+                else $field['readonly'] = true;
+            }
+            if (in_array($name, ['num_doc','sexo','fecha_nacimiento'], true)) $field['required'] = false;
+        }
 
         if (!empty($field['required'])) {
             $attrs[] = 'required';
@@ -3210,7 +3218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'sexo', 'fecha_nacimiento', 'estado_civil', 'nacionalidad',
                 'departamento_nac', 'provincia_nac', 'distrito_nac',
                 'domicilio', 'domicilio_departamento', 'domicilio_provincia', 'domicilio_distrito',
-                'ocupacion', 'grado_instruccion', 'nombre_padre', 'nombre_madre',
+                'ocupacion', 'grado_instruccion', 'numero_hijos', 'nombre_padre', 'nombre_madre',
                 'celular', 'email', 'notas', 'foto_path', 'api_fuente', 'api_ref',
             ] as $field) {
                 $payload[$field] = array_key_exists($field, $_POST) ? $_POST[$field] : ($current[$field] ?? '');
@@ -4851,6 +4859,7 @@ $personaEditSections = [
     ],
     'Perfil Complementario' => [
         ['name' => 'ocupacion'],
+        ['name' => 'numero_hijos', 'type' => 'number', 'min' => 0, 'max' => 255, 'label' => 'Número de hijos'],
         ['name' => 'grado_instruccion'],
         ['name' => 'nombre_padre', 'class' => 'span-2'],
         ['name' => 'nombre_madre', 'class' => 'span-2'],
@@ -9065,10 +9074,12 @@ $resumenInterventionRows = [
                           <input type="hidden" name="api_fuente" value="<?= h((string) ($persona['api_fuente'] ?? '')) ?>">
                           <input type="hidden" name="api_ref" value="<?= h((string) ($persona['api_ref'] ?? '')) ?>">
 
+                          <?php $personaPrincipal = (new PersonaRepository($pdo))->find((int)$persona['persona_id']) ?? $persona; ?>
+                          <p class="small">Los datos de identidad registrados son fijos; los campos vacíos se pueden completar. Los datos variables actualizan la ficha principal y conservan las copias de los expedientes.</p>
                           <?php foreach ($personaEditSections as $sectionTitle => $sectionFields): ?>
                             <div class="section-block">
                               <h3><?= h($sectionTitle) ?></h3>
-                              <div class="field-grid"><?= render_editable_fields($persona, $sectionFields, 'persona-' . (int) $persona['involucrado_id']) ?></div>
+                              <div class="field-grid"><?= render_editable_fields($personaPrincipal, $sectionFields, 'persona-' . (int) $persona['involucrado_id']) ?></div>
                             </div>
                           <?php endforeach; ?>
                         </div>
