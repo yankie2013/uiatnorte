@@ -178,7 +178,12 @@ final class CitacionRepository
 
     public function searchByAccidente(int $accidenteId, array $filters): array
     {
-        $sql = "SELECT c.*, o.numero AS oficio_num, o.anio AS oficio_anio
+        $sql = "SELECT c.*, CASE c.fuente
+                    WHEN 'INV' THEN (SELECT ip.persona_id FROM involucrados_personas_activos ip WHERE ip.id=c.fuente_id AND ip.accidente_id=c.accidente_id)
+                    WHEN 'PNP' THEN (SELECT pi.persona_id FROM policial_interviniente_activos pi WHERE pi.id=c.fuente_id AND pi.accidente_id=c.accidente_id)
+                    WHEN 'PRO' THEN (SELECT pv.propietario_persona_id FROM propietario_vehiculo_activos pv WHERE pv.id=c.fuente_id AND pv.accidente_id=c.accidente_id)
+                    WHEN 'FAM' THEN (SELECT ff.familiar_persona_id FROM familiar_fallecido_activos ff WHERE ff.id=c.fuente_id AND ff.accidente_id=c.accidente_id)
+                    END AS persona_id, o.numero AS oficio_num, o.anio AS oficio_anio
                 FROM citacion_activos c
                 LEFT JOIN oficios_activos o ON o.id = c.oficio_id
                 WHERE c.accidente_id = ?";
