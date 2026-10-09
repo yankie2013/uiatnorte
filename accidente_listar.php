@@ -1535,8 +1535,8 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 @media screen and (max-width:760px){
   .wrap>.title{flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .title h1 .badge{font-size:10px}
-  .title .toolbar{display:flex;gap:6px!important;width:100%}
-  .title .toolbar>.btn{flex:1;min-height:44px;padding:8px 6px;font-size:12px;border-radius:10px;box-shadow:none}
+  .title .toolbar{display:flex;gap:6px!important;width:auto;flex-wrap:nowrap!important;margin-left:auto}
+  .title .toolbar>.btn{flex:0 0 auto!important;min-height:44px;padding:8px 6px;font-size:12px;border-radius:10px;box-shadow:none}
   .filter-card.filter-glass{padding:12px;border-radius:14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
   .filter-glass-head{margin-bottom:8px;gap:8px}
   .filter-glass-title{font-size:14px;gap:6px}
@@ -1570,18 +1570,20 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   .acc-involved{gap:6px}
   .acc-involved-name{font-size:12px}
 }
+.title .title-icon{width:44px;padding:0!important}
+.title .title-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:760px){.wrap>.title{flex-wrap:nowrap}.wrap>.title h1{font-size:clamp(20px,5.5vw,26px)!important}.title .toolbar{gap:4px!important}.title .toolbar>.btn{padding:8px!important}.title .title-icon{width:40px}}
 </style>
 </head>
 <body>
 <?php include __DIR__ . '/sidebar.php'; $userTopbarSection='Lista de accidentes'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="wrap">
   <div class="title">
-    <h1 style="margin:0">Accidentes <span class="badge">Listado</span></h1>
+    <h1 style="margin:0">Accidentes</h1>
     <nav class="toolbar" aria-label="Acciones">
-      <a class="btn" href="#" onclick="history.back();return false;">Atras</a>
-      <a class="btn" href="index.php">Inicio</a>
-      <a class="btn" href="accidente_mapa.php">Mapa</a>
-      <?php if (!$isArchivo): ?><a class="btn primary" href="accidente_nuevo.php">Nuevo</a><?php endif; ?>
+      <a class="btn title-icon" href="#" onclick="history.back();return false;" aria-label="Atrás" title="Atrás"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></a>
+      <a class="btn title-icon" href="index.php" aria-label="Inicio" title="Inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8"/></svg></a>
+      <?php if (!$isArchivo): ?><a class="btn primary" href="accidente_nuevo.php">Nuevo <span aria-hidden="true">+</span></a><?php endif; ?>
     </nav>
   </div>
 
