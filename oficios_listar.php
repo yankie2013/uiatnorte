@@ -400,16 +400,25 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   table,thead,tbody,tr,td,th{display:block;min-width:0}
   table{min-width:0}
   thead{display:none}
-  tbody{display:grid;gap:12px;padding:12px}
-  tbody tr{display:block;border:1px solid var(--border);border-radius:18px;overflow:hidden;background:var(--card)}
-  tbody td{display:block;padding:12px 14px;border-bottom:1px solid var(--border)}
+  tbody{display:grid;gap:10px;padding:8px}
+  tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+  tbody td{display:block;min-width:0;padding:7px 10px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+  tbody td:nth-child(n+5){grid-column:1/-1}
+  tbody td:nth-child(2){text-align:right}
+  tbody td:nth-child(3){border-right:1px solid var(--border)}
+  tbody td:nth-child(6),tbody td:nth-child(7){display:flex;gap:8px;align-items:baseline}
+  tbody td:nth-child(6)::before,tbody td:nth-child(7)::before{flex:0 0 85px;margin:0}
+  tbody td:last-child::before{display:none}
+  tbody td:last-child{padding:8px 10px}
+  tbody td .office-icon-actions{gap:8px}
+  .table-area{padding-left:8px;padding-right:8px}
   tbody td:last-child{border-bottom:none}
   tbody td::before{
     content:attr(data-label);
     display:block;
-    margin-bottom:6px;
+    margin-bottom:3px;
     color:var(--muted);
-    font-size:.78rem;
+    font-size:10px;
     font-weight:800;
     text-transform:uppercase;
     letter-spacing:.04em;
