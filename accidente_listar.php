@@ -1531,6 +1531,44 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   .acc-meta{display:grid;grid-template-columns:1fr}
   .acc-actions-menu{position:fixed;top:auto;right:14px;bottom:14px;left:14px;width:auto}
 }
+
+@media screen and (max-width:760px){
+  .wrap>.title{flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .title h1 .badge{font-size:10px}
+  .title .toolbar{display:flex;gap:6px!important;width:100%}
+  .title .toolbar>.btn{flex:1;min-height:44px;padding:8px 6px;font-size:12px;border-radius:10px;box-shadow:none}
+  .filter-card.filter-glass{padding:12px;border-radius:14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+  .filter-glass-head{margin-bottom:8px;gap:8px}
+  .filter-glass-title{font-size:14px;gap:6px}
+  .filter-glass-icon{width:26px;height:26px;border-radius:8px;box-shadow:none}
+  .filter-mode-chip{display:none}
+  .filter-glass .filter-primary{gap:8px}
+  .filter-glass label{margin-bottom:4px;font-size:10px}
+  .filter-glass input,.filter-glass select{border-radius:10px;box-shadow:none}
+  .filter-glass .filter-actions{gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:0}
+  .filter-glass .filter-action-buttons{display:flex;gap:6px;margin-left:auto}
+  .filter-glass .filter-toggle,.filter-glass .filter-clear,.filter-glass .filter-submit{min-height:44px!important;font-size:11px;padding:8px!important;border-radius:10px!important;box-shadow:none}
+  .filter-glass .filter-advanced{padding:10px;border-radius:12px}
+  .wrap>.card:has(.acc-card-list){padding:8px;border-radius:14px}
+  .acc-card-list{grid-template-columns:minmax(0,1fr);gap:10px}
+  .acc-card{border-radius:12px}
+  .acc-card .acc-card-main{padding:10px 12px;gap:10px}
+  .acc-card-left{gap:8px}
+  .acc-head{gap:5px;padding-right:42px}
+  .acc-head .acc-report,.acc-head .tipo-reg-chip,.acc-head .sidpol,.acc-head .estado-badge{font-size:10px;padding:4px 7px}
+  .acc-card .acc-card-right{top:8px;right:8px}
+  .acc-card .acc-actions-trigger{width:40px;height:44px;border-radius:10px}
+  .acc-card .prio-btn{min-width:32px;min-height:44px;padding:4px}
+  .acc-card .acc-folder-select{min-width:60px;padding-left:8px!important;padding-right:28px!important;background-position:right 7px center!important}
+  .acc-place{font-size:14px;line-height:1.3}
+  .acc-meta{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:8px}
+  .acc-meta-item{min-width:0}
+  .acc-meta-label{font-size:10px}
+  .acc-meta-value{font-size:12px;line-height:1.3;overflow-wrap:anywhere}
+  .acc-card-center{padding-top:9px;gap:7px}
+  .acc-involved{gap:6px}
+  .acc-involved-name{font-size:12px}
+}
 </style>
 </head>
 <body>
