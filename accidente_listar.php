@@ -1575,6 +1575,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 @media(max-width:760px){.wrap>.title{flex-wrap:nowrap}.wrap>.title h1{font-size:clamp(20px,5.5vw,26px)!important}.title .toolbar{gap:4px!important}.title .toolbar>.btn{padding:8px!important}.title .title-icon{width:40px}}
 
 .mobile-station-heading{display:none}
+@media screen and (max-width:760px){.filter-card.mobile-hide-filters{display:none}}
 @media screen and (max-width:760px){
   .card.district-browser-home{padding:8px 0 14px}
   .district-browser-home .district-buttons{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -1606,7 +1607,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </div>
 
   <?php if ($stationSelected || $favoritos === '1' || $verTodos === '1'): ?>
-  <div class="card filter-card filter-glass">
+  <div class="card filter-card filter-glass<?= $verTodos === '1' && !$stationSelected && $favoritos !== '1' && !in_array($orden, ['abiertos_desc', 'registrados_desc'], true) ? '' : ' mobile-hide-filters' ?>">
     <div class="filter-glass-head">
       <h2 class="filter-glass-title"><span class="filter-glass-icon" aria-hidden="true">⌕</span><span>Buscar accidentes</span></h2>
       <span class="filter-mode-chip"><?php if ($favoritos === '1'): ?>Favoritos<?php elseif ($orden === 'abiertos_desc'): ?>Últimos abiertos<?php elseif ($orden === 'registrados_desc'): ?>Últimos registrados<?php elseif ($verTodos === '1'): ?>Todos los accidentes<?php else: ?>Comisaría seleccionada<?php endif; ?></span>
