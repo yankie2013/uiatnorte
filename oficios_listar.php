@@ -417,6 +417,27 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   .ref-text{max-width:none}
   .ok{margin-left:14px;margin-right:14px}
 }
+
+.office-more-filters,.office-extra-filters{display:contents}
+.office-more-filters>summary{display:none}
+@media screen and (max-width:760px){
+  .panel-head{padding:8px 8px 0}
+  .filter-box{margin-top:0;padding:10px!important;border-radius:12px}
+  .filter-title{margin-bottom:8px;gap:4px}
+  .filter-description{display:none}
+  #oficio-filters .filters-grid{gap:8px!important}
+  #oficio-filters .field label{font-size:12px;margin-bottom:4px}
+  .office-more-filters{display:block;border-top:1px solid var(--border)}
+  .office-more-filters>summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;font-size:13px;font-weight:800;cursor:pointer;list-style:none}
+  .office-more-filters>summary::-webkit-details-marker{display:none}
+  .office-more-filters>summary::after{content:'+';font-size:21px;color:var(--primary)}
+  .office-more-filters[open]>summary::after{content:'−'}
+  #oficio-filters .office-extra-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .office-extra-filters>.field{min-width:0}
+  .office-extra-filters>.field:nth-child(2),.office-extra-filters>.field:nth-child(3){grid-column:1/-1}
+  #oficio-filters .filters-actions{margin-top:8px;gap:8px}
+  #oficio-filters .filters-actions>.btn{min-height:44px;padding:8px 10px;font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -446,7 +467,7 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
         <div class="filter-title">
           <div>
             <strong>Filtros de b&uacute;squeda</strong>
-            <div class="small">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad y JEFE EMI encargado.</div>
+            <div class="small filter-description">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad y JEFE EMI encargado.</div>
           </div>
           <?php if ($activeFilters): ?><div class="small"><?= count($activeFilters) ?> filtro(s) activo(s)</div><?php endif; ?>
         </div>
@@ -458,6 +479,9 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
               <label for="q">B&uacute;squeda general</label>
               <input id="q" type="text" name="q" value="<?= h($q) ?>" placeholder="N&uacute;mero, asunto, referencia o placa">
             </div>
+            <details class="office-more-filters">
+              <summary>Más filtros</summary>
+              <div class="office-extra-filters">
             <div class="field">
               <label for="anio">A&ntilde;o</label>
               <select id="anio" name="anio">
@@ -505,6 +529,8 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
               </select>
             </div>
 
+              </div>
+            </details>
           </div>
 
           <div class="filters-actions">
@@ -747,6 +773,11 @@ document.addEventListener('oficios:filtered', bindOficioStates);
 <script>
 (() => {
   const form = document.getElementById('oficio-filters');
+  const moreFilters = form.querySelector('.office-more-filters');
+  const mobileFilters = window.matchMedia('(max-width:760px)');
+  const syncFilterLayout = () => { moreFilters.open = !mobileFilters.matches; };
+  syncFilterLayout();
+  mobileFilters.addEventListener('change', syncFilterLayout);
   const search = form.querySelector('[name="q"]');
   let timer, controller, revision = 0;
   const status = document.createElement('div');
