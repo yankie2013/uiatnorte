@@ -1573,6 +1573,24 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 .title .title-icon{width:44px;padding:0!important}
 .title .title-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:760px){.wrap>.title{flex-wrap:nowrap}.wrap>.title h1{font-size:clamp(20px,5.5vw,26px)!important}.title .toolbar{gap:4px!important}.title .toolbar>.btn{padding:8px!important}.title .title-icon{width:40px}}
+
+.mobile-station-heading{display:none}
+@media screen and (max-width:760px){
+  .card.district-browser-home{padding:8px 0 14px}
+  .district-browser-home .district-buttons{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .district-browser-home .district-btn{min-height:68px;padding:8px 5px;border-radius:12px;font-size:11px;line-height:1.25;letter-spacing:0;box-shadow:0 3px 9px rgba(15,23,42,.05)}
+  .district-browser-home .district-btn::after{display:none}
+  .district-browser-home .district-sidebar{width:100%;min-width:0;padding:0}
+  .station-browser .district-wheel-wrap{display:none}
+  .station-browser .district-browser-stage{display:block;min-height:0}
+  .station-browser .district-detail{padding:0}
+  .mobile-station-heading{display:grid;gap:4px;margin:10px 0 12px}
+  .mobile-station-heading strong{font-size:17px}
+  .mobile-station-heading span{font-size:12px;color:var(--muted,#64748b)}
+  .station-browser .district-station-panel{gap:8px}
+  .station-browser .district-station-panel .station-btn{min-height:54px;padding:10px;border-radius:10px;font-size:12px;box-shadow:none;transform:none}
+  .station-browser .browse-back{min-height:44px;font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -1746,6 +1764,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   <?php elseif ($districtSelected && !$stationSelected): ?>
   <section class="card browse-panel station-browser" aria-label="Seleccionar distrito y comisaría" style="--district-hue:<?= (int)($selectedDistrictHue ?? 220) ?>" data-close-url="accidente_listar.php">
     <a class="btn browse-back" href="accidente_listar.php">← Cerrar distrito</a>
+    <div class="mobile-station-heading"><strong><?=h($distrito)?></strong><span>Selecciona una comisaría para ver sus registros</span></div>
     <div class="district-browser-stage">
       <div class="district-wheel-wrap">
         <div class="district-wheel" id="districtWheel" role="listbox" aria-label="Seleccionar distrito">
