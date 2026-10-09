@@ -333,12 +333,13 @@ tbody td{padding:11px;border-bottom:1px solid var(--border);vertical-align:top;f
 tbody tr:last-child td{border-bottom:none}
 tbody tr:nth-child(odd) td{background:#ffffff}
 tbody tr:nth-child(even) td{background:#e8eee4}
-tbody tr:hover td{background:#d9e7d4}
+tbody tr:hover td,tbody tr:focus-within td{background:#dbeafe}
+tbody tr:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}
 tbody td+td{border-left:1px solid #d6dfd1}
 thead th{background:#e0ead9;color:#31583d;border-bottom:2px solid #7f9d72}
 html[data-theme-resolved="dark"] tbody tr:nth-child(odd) td{background:#17251f}
 html[data-theme-resolved="dark"] tbody tr:nth-child(even) td{background:#22352a}
-html[data-theme-resolved="dark"] tbody tr:hover td{background:#304b39}
+html[data-theme-resolved="dark"] tbody tr:hover td,html[data-theme-resolved="dark"] tbody tr:focus-within td{background:#1e3a5f}
 html[data-theme-resolved="dark"] thead th{background:#263c2d;color:#c7dfbc}
 tbody tr[data-case-id]{cursor:pointer}
 tbody tr[data-case-id]:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
@@ -402,6 +403,7 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   thead{display:none}
   tbody{display:grid;gap:10px;padding:8px}
   tbody tr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+  tbody tr:hover,tbody tr:focus-within{border-color:#2563eb;box-shadow:inset 3px 0 0 #2563eb}
   tbody td{display:block;min-width:0;padding:7px 10px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
   tbody td:nth-child(1){grid-column:1/3;grid-row:1}
   tbody td:nth-child(2){grid-column:3/5;grid-row:1;white-space:nowrap}
