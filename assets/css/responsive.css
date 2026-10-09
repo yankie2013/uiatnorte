@@ -87,6 +87,10 @@
  html{-webkit-text-size-adjust:100%}
  .uiat-user-breadcrumb{max-width:100%;width:100%;min-width:0}
  .uiat-user-topbar-right{min-width:0;flex-shrink:1}
+ /* Explicit page bars also share the fixed mobile row with the menu button. */
+ body.uiat-has-sidebar:has(.uiat-user-topbar){padding-top:80px!important}
+ body.uiat-has-sidebar .uiat-user-topbar{position:fixed;top:0;left:0;right:0;width:auto;z-index:900;margin:0}
+ body.uiat-has-sidebar:has(.uiat-user-topbar) #sidebar-toggle{top:8px;left:12px;width:44px;height:44px}
  .uiat-mobile-case-summary{grid-column:1/-1;border:1px solid #dbe5f2;border-radius:12px;background:var(--card,#fff);min-width:0}
  .uiat-mobile-case-summary>summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text,#29425f);min-height:44px}
  .uiat-mobile-case-summary .case-facts-scroll{padding:8px}
