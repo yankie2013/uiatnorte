@@ -13,6 +13,21 @@
   };
   const start = () => {
     prepareTables();
+    const topbar = document.querySelector('.uiat-user-topbar');
+    const breadcrumb = topbar?.querySelector('.uiat-user-breadcrumb');
+    if (breadcrumb) {
+      const anchor = document.createComment('breadcrumb position');
+      breadcrumb.before(anchor);
+      const mobileNavigation = window.matchMedia('(max-width:760px)');
+      const adaptNavigation = () => {
+        breadcrumb.classList.toggle('uiat-mobile-breadcrumb', mobileNavigation.matches);
+        document.body.classList.toggle('uiat-separated-breadcrumb', mobileNavigation.matches);
+        if (mobileNavigation.matches) topbar.after(breadcrumb);
+        else anchor.after(breadcrumb);
+      };
+      mobileNavigation.addEventListener('change', adaptNavigation);
+      adaptNavigation();
+    }
     const facts = document.querySelector('.case-overview-layout .case-facts-scroll');
     if (facts && !facts.closest('.uiat-mobile-case-summary')) {
       const details = document.createElement('details');

@@ -91,6 +91,9 @@
  body.uiat-has-sidebar:has(.uiat-user-topbar){padding-top:80px!important}
  body.uiat-has-sidebar .uiat-user-topbar{position:fixed;top:0;left:0;right:0;width:auto;z-index:900;margin:0}
  body.uiat-has-sidebar:has(.uiat-user-topbar) #sidebar-toggle{top:8px;left:12px;width:44px;height:44px}
+ body.uiat-has-sidebar.uiat-separated-breadcrumb{padding-top:60px!important}
+ body.uiat-separated-breadcrumb .uiat-user-topbar{min-height:60px!important;height:60px;padding-bottom:6px!important;flex-wrap:nowrap}
+ .uiat-user-breadcrumb.uiat-mobile-breadcrumb{position:relative;order:initial;width:100%;min-height:34px;padding:8px 12px;margin:0;gap:7px;font-size:10px;background:var(--page,#f4f7fb);border-bottom:1px solid #e6ebe3}
  .uiat-mobile-case-summary{grid-column:1/-1;border:1px solid #dbe5f2;border-radius:12px;background:var(--card,#fff);min-width:0}
  .uiat-mobile-case-summary>summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:700;color:var(--text,#29425f);min-height:44px}
  .uiat-mobile-case-summary .case-facts-scroll{padding:8px}
