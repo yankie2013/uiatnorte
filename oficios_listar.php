@@ -461,6 +461,12 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
 .office-filter-panel[open]>.filter-title::after{content:'−'}
 .office-filter-panel>.filter-title>div:first-child{flex:1}
 .office-filter-panel[open]>form{margin-top:8px}
+.filter-box.office-filter-panel{background:#f3efff;border-color:#c4b5fd;box-shadow:inset 3px 0 0 #8b5cf6}
+.office-filter-panel>.filter-title strong,.office-filter-panel>.filter-title::after{color:#5b21b6}
+.office-filter-panel>.filter-title .small{color:#6d5b8e}
+html[data-theme-resolved="dark"] .filter-box.office-filter-panel{background:#251d3b;border-color:#6d4e9c;box-shadow:inset 3px 0 0 #a78bfa}
+html[data-theme-resolved="dark"] .office-filter-panel>.filter-title strong,html[data-theme-resolved="dark"] .office-filter-panel>.filter-title::after{color:#ddd6fe}
+html[data-theme-resolved="dark"] .office-filter-panel>.filter-title .small{color:#c4b5d8}
 </style>
 </head>
 <body>
