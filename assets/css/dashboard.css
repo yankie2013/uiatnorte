@@ -274,10 +274,14 @@ td:nth-child(2) { white-space: nowrap; }
   .profile strong { max-width: 130px; }
   .profile small { font-size: 10px; }
   main { padding: 25px 20px 20px; }
-  .page-heading { flex-direction: column; gap: 18px; }
+  .page-heading { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px 12px; }
+  .page-heading > div { display: contents; }
+  .page-heading .greeting { grid-column: 1; grid-row: 1; min-width: 0; line-height: 1.4; }
+  .page-heading h1 { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+  .page-heading p { grid-column: 1 / -1; grid-row: 3; margin-top: 0; }
   h1 { font-size: 29px; max-width: 380px; }
   .page-heading p { font-size: 11px; line-height: 1.6; }
-  .page-heading .button { order: -1; align-self: flex-end; min-height: 44px; font-size: 11px; padding: 0 14px; }
+  .page-heading .button { grid-column: 2; grid-row: 1; align-self: center; min-height: 44px; font-size: 11px; padding: 0 14px; }
   .scope-row { margin-top: 22px; }
   .period-form { align-self: auto; flex-wrap: wrap; gap: 8px; }
   .period-form label { font-size: 10px; }
