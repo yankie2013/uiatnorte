@@ -1542,7 +1542,8 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   .filter-glass-title{font-size:14px;gap:6px}
   .filter-glass-icon{width:26px;height:26px;border-radius:8px;box-shadow:none}
   .filter-mode-chip{display:none}
-  .filter-glass .filter-primary{gap:8px}
+  .filter-glass .filter-primary{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
+  .filter-glass .filter-primary>.col-6{grid-column:auto;min-width:0}
   .filter-glass label{margin-bottom:4px;font-size:10px}
   .filter-glass input,.filter-glass select{border-radius:10px;box-shadow:none}
   .filter-glass .filter-actions{gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:0}
