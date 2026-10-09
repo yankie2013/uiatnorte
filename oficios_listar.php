@@ -453,6 +453,12 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   #oficio-filters .filters-actions{margin-top:8px;gap:8px}
   #oficio-filters .filters-actions>.btn{min-height:44px;padding:8px 10px;font-size:13px}
 }
+.office-filter-panel>.filter-title{cursor:pointer;list-style:none;min-height:44px;margin-bottom:0}
+.office-filter-panel>.filter-title::-webkit-details-marker{display:none}
+.office-filter-panel>.filter-title::after{content:'+';font-size:22px;font-weight:800;color:var(--primary)}
+.office-filter-panel[open]>.filter-title::after{content:'−'}
+.office-filter-panel>.filter-title>div:first-child{flex:1}
+.office-filter-panel[open]>form{margin-top:8px}
 </style>
 </head>
 <body>
@@ -478,14 +484,14 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
     <div class="panel-head">
       <?php if ($msg === 'eliminado'): ?><div class="ok">Oficio eliminado correctamente.</div><?php endif; ?>
 
-      <div class="filter-box">
-        <div class="filter-title">
+      <details class="filter-box office-filter-panel" open>
+        <summary class="filter-title">
           <div>
             <strong>Filtros de b&uacute;squeda</strong>
             <div class="small filter-description">Puedes combinar texto, tipo de asunto, categoría, a&ntilde;o, entidad y JEFE EMI encargado.</div>
           </div>
           <?php if ($activeFilters): ?><div class="small"><?= count($activeFilters) ?> filtro(s) activo(s)</div><?php endif; ?>
-        </div>
+        </summary>
 
         <form method="get" id="oficio-filters">
           <?php if ($accidenteId > 0): ?><input type="hidden" name="accidente_id" value="<?= h($accidenteId) ?>"><?php endif; ?>
@@ -555,7 +561,7 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
         </form>
 
 
-      </div>
+      </details>
     </div>
 
     <div class="table-area">
@@ -790,7 +796,8 @@ document.addEventListener('oficios:filtered', bindOficioStates);
   const form = document.getElementById('oficio-filters');
   const moreFilters = form.querySelector('.office-more-filters');
   const mobileFilters = window.matchMedia('(max-width:760px)');
-  const syncFilterLayout = () => { moreFilters.open = !mobileFilters.matches; };
+  const filterPanel = form.closest('.office-filter-panel');
+  const syncFilterLayout = () => { moreFilters.open = !mobileFilters.matches; filterPanel.open = !mobileFilters.matches; };
   syncFilterLayout();
   mobileFilters.addEventListener('change', syncFilterLayout);
   const search = form.querySelector('[name="q"]');
