@@ -401,13 +401,19 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   table{min-width:0}
   thead{display:none}
   tbody{display:grid;gap:10px;padding:8px}
-  tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+  tbody tr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
   tbody td{display:block;min-width:0;padding:7px 10px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
-  tbody td:nth-child(n+5){grid-column:1/-1}
-  tbody td:nth-child(2){text-align:right}
-  tbody td:nth-child(3){border-right:1px solid var(--border)}
-  tbody td:nth-child(6),tbody td:nth-child(7){display:flex;gap:8px;align-items:baseline}
-  tbody td:nth-child(6)::before,tbody td:nth-child(7)::before{flex:0 0 85px;margin:0}
+  tbody td:nth-child(1){grid-column:1/3;grid-row:1}
+  tbody td:nth-child(2){grid-column:3/5;grid-row:1;white-space:nowrap}
+  tbody td:nth-child(3){grid-column:5/7;grid-row:1}
+  tbody td:nth-child(3)::before{content:'Tipo'}
+  tbody td:nth-child(4){grid-column:1/4;grid-row:2}
+  tbody td:nth-child(6){grid-column:4/7;grid-row:2}
+  tbody td:nth-child(6)::before{content:'Entidad'}
+  tbody td:nth-child(5){grid-column:1/-1;grid-row:3}
+  tbody td:nth-child(7){grid-column:1/-1;grid-row:4;display:flex;gap:8px;align-items:baseline}
+  tbody td:nth-child(7)::before{flex:0 0 85px;margin:0}
+  tbody td:nth-child(8){grid-column:1/-1;grid-row:5}
   tbody td:last-child::before{display:none}
   tbody td:last-child{padding:8px 10px}
   tbody td .office-icon-actions{gap:8px}
