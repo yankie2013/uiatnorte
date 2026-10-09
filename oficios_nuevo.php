@@ -439,7 +439,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
     <?php if ($gestion) ob_start(); ?>
     <section class="office-section accordion-section is-collapsed" data-accordion-section>
-      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad, cargo y persona</span><b class="section-toggle" aria-hidden="true">+</b></div>
+      <div class="section-head" role="button" tabindex="0" aria-expanded="false"><i class="section-mark"></i><h2>Destinatario</h2><span>Entidad</span><b class="section-toggle" aria-hidden="true">+</b></div>
       <div class="office-accordion-body grid">
       <?php include __DIR__ . '/app/Views/oficio_destinatario.php'; ?>
 
