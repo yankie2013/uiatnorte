@@ -277,7 +277,7 @@ td:nth-child(2) { white-space: nowrap; }
   .page-heading { flex-direction: column; gap: 18px; }
   h1 { font-size: 29px; max-width: 380px; }
   .page-heading p { font-size: 11px; line-height: 1.6; }
-  .page-heading .button { font-size: 11px; padding: 0 14px; }
+  .page-heading .button { order: -1; align-self: flex-end; min-height: 44px; font-size: 11px; padding: 0 14px; }
   .scope-row { margin-top: 22px; }
   .period-form { align-self: auto; flex-wrap: wrap; gap: 8px; }
   .period-form label { font-size: 10px; }
