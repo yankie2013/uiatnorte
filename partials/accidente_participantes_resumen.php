@@ -147,7 +147,6 @@
             <?php else: ?>
               <a class="case-person-view" href="vehiculo_editar.php?id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=participantes') ?>">Ver vehículo ↗</a>
             <?php endif; ?></div>
-            <a class="case-person-view" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&vehiculo_id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>">+ Agregar persona a esta UT</a>
           <?php endforeach; ?></header>
           <?php if (!$unit['personas']): ?>
             <p class="overview-person-meta">UT registrada. Pendiente de agregar conductor, pasajeros u ocupantes.</p>
@@ -169,7 +168,6 @@
           } ?>
         </article>
       <?php endforeach; ?>
-      <a class="btn-shell" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&rol=peaton">+ Agregar peatón</a>
       <?php foreach ($personas as $person): if (isset($seen[(int) $person['involucrado_id']])) continue; ?>
         <article class="participant-overview-unit"><header><h3><?= h(trim((string) ($person['orden_participacion'] ?? '') . ' · ' . (string) ($person['rol_nombre'] ?? 'Participante'), ' ·')) ?></h3></header>
         <?php $renderPerson($person, (string) ($person['rol_nombre'] ?? 'Participante'), 'persona-' . (int) $person['involucrado_id']); ?></article>
