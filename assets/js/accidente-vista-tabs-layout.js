@@ -40,22 +40,69 @@
   generalButton.type = 'button';
   generalButton.className = 'case-mobile-general-button';
   generalButton.textContent = '📁 Datos generales';
-  generalButton.addEventListener('click', () => document.querySelector('.js-header-view-general')?.click());
+  const navigateMobileSection = (section) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('mobile_section', section);
+    if (section === 'datos-generales') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', section);
+    window.location.assign(url.href);
+  };
+  generalButton.addEventListener('click', () => navigateMobileSection('datos-generales'));
+  tabs.addEventListener('click', event => {
+    if (!mobileLayout.matches) return;
+    const trigger = event.target.closest('.nav-link[data-bs-target]');
+    if (!trigger) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    navigateMobileSection(trigger.dataset.bsTarget.slice(1));
+  }, true);
   tabs.prepend(generalButton);
   const registration = page.querySelector('.case-registration-block');
   const registrationAnchor = document.createComment('Registro del expediente');
   registration?.before(registrationAnchor);
   const mobileLayout = window.matchMedia('(max-width:760px)');
+  const generalRecord = document.getElementById('datos-generales');
+  const generalAnchor = document.createComment('Datos generales');
+  generalRecord?.before(generalAnchor);
+  const generalScreen = document.createElement('section');
+  generalScreen.className = 'case-mobile-general-screen';
+  page.append(generalScreen);
+  const screenHeading = document.createElement('div');
+  screenHeading.className = 'case-mobile-screen-heading';
+  const backLink = document.createElement('a');
+  const backUrl = new URL(window.location.href);
+  backUrl.searchParams.delete('mobile_section');
+  backUrl.searchParams.delete('tab');
+  backUrl.hash = '';
+  backLink.href = backUrl.href;
+  backLink.textContent = '← Atrás';
+  const screenTitle = document.createElement('h1');
+  screenHeading.append(backLink, screenTitle);
+  page.append(screenHeading);
   const adaptCaseMobile = () => {
     if (participantTab) participantTab.hidden = !mobileLayout.matches;
     tabs.setAttribute('aria-orientation', mobileLayout.matches ? 'horizontal' : 'vertical');
     const generalContent = document.querySelector('#general-details-modal .general-modal-content');
     if (registration && generalContent) {
-      if (mobileLayout.matches) generalContent.prepend(registration);
-      else registrationAnchor.after(registration);
+      if (mobileLayout.matches) {
+        generalScreen.append(registration);
+        if (generalRecord) generalScreen.append(generalRecord);
+      } else {
+        registrationAnchor.after(registration);
+        if (generalRecord) generalAnchor.after(generalRecord);
+      }
     }
   };
-  mobileLayout.addEventListener('change', adaptCaseMobile);
+  const syncMobileScreen = () => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('mobile_section') || params.get('tab') || '';
+    const selected = requested === 'datos-generales' || document.getElementById(requested + '-tab') ? requested : '';
+    page.classList.toggle('case-mobile-hub', mobileLayout.matches && !selected);
+    page.classList.toggle('case-mobile-section', mobileLayout.matches && !!selected);
+    page.classList.toggle('case-mobile-general-active', mobileLayout.matches && selected === 'datos-generales');
+    screenTitle.textContent = selected === 'datos-generales' ? 'Datos generales' : (document.getElementById(selected + '-tab')?.querySelector('.main-tab-title')?.textContent || 'Expediente');
+  };
+  mobileLayout.addEventListener('change', () => { adaptCaseMobile(); syncMobileScreen(); });
   adaptCaseMobile();
   // Measure the actual header: wrapped text and zoom change its height.
   const caseFacts = page.querySelector('.case-header-facts-list');
@@ -109,6 +156,7 @@
   const requestedTabId = tabAliases[requestedTab] || requestedTab;
   const requestedTrigger = requestedTabId ? document.getElementById(requestedTabId + '-tab') : null;
   activateModuleTab(requestedTrigger || tabs.querySelector('.nav-link.active'));
+  syncMobileScreen();
   summary.addEventListener('click', (event) => {
     event.preventDefault();
     participantPane?.classList.add('show-participants-overview');

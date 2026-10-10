@@ -157,3 +157,23 @@
  .general-modal-content>.case-registration-block .case-facts-topline {display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-top:10px;}
  .general-modal-content>.case-registration-block .case-facts-titlebar {margin-top:10px;}
 }
+
+/* Mobile case hub: each section has its own URL and full content screen. */
+.case-mobile-screen-heading,.case-mobile-general-screen {display:none;}
+@media screen and (max-width:760px) {
+ .case-overview-layout.case-mobile-hub>.tabs-shell-main {display:none!important;}
+ .case-module-sidebar #accTabs {grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+ .case-module-sidebar #accTabs>.nav-link:not([hidden]),.case-module-sidebar #accTabs>.case-mobile-general-button {min-height:76px;justify-content:center;flex-direction:column;text-align:center;gap:5px;border-radius:14px;padding:8px!important;background:linear-gradient(145deg,var(--card,#fff),#edf4ff);box-shadow:0 4px 12px #243b5310;}
+ .case-module-sidebar #accTabs>.nav-link .main-tab-title {font-size:11px;line-height:1.25;}
+ .case-module-sidebar #accTabs>.nav-link .tab-sub {font-size:10px;}
+ .case-overview-layout.case-mobile-section>.case-mobile-overview,.case-overview-layout.case-mobile-section>.case-module-sidebar {display:none!important;}
+ .case-overview-layout.case-mobile-section>.case-mobile-screen-heading {display:flex;grid-column:1/-1;grid-row:1;align-items:center;gap:12px;padding:4px 0 8px;}
+ .case-mobile-screen-heading>a {display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #d4deed;border-radius:10px;background:var(--card,#fff);color:var(--text,#29425f);text-decoration:none;font-size:12px;font-weight:700;}
+ .case-mobile-screen-heading>h1 {font-size:20px!important;margin:0;}
+ .case-overview-layout.case-mobile-section>.tabs-shell-main {grid-row:2!important;grid-column:1/-1;padding:0;}
+ .case-overview-layout.case-mobile-general-active>.tabs-shell-main {display:none!important;}
+ .case-overview-layout.case-mobile-general-active>.case-mobile-general-screen {display:block;grid-column:1/-1;grid-row:2;min-width:0;}
+ .case-mobile-general-screen .case-registration-block {display:block;margin-bottom:12px;padding:12px;}
+ .case-mobile-general-screen .case-facts-topline {width:100%!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:10px 0;}
+ .case-mobile-general-screen #datos-generales .main-module-panel {padding:10px;}
+}

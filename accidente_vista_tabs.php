@@ -13018,6 +13018,10 @@ $resumenInterventionRows = [
     const generalModal = document.getElementById('general-details-modal');
     const openGeneralModal = (edit = false) => {
       if (!generalModal) return;
+      if (window.matchMedia('(max-width:760px)').matches && document.querySelector('.case-mobile-general-screen #datos-generales')) {
+        if (edit && !getEditState('general-accidente')) openEditShell('general-accidente');
+        return;
+      }
       if (!generalModal.open) generalModal.showModal();
       document.body.classList.add('has-general-details-modal');
       if (edit && !getEditState('general-accidente')) openEditShell('general-accidente');
