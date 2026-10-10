@@ -237,7 +237,11 @@ include __DIR__ . '/sidebar.php';
   });
   document.getElementById('btnNuevo').addEventListener('click', function(){
     title.textContent = 'Nueva persona';
-    frame.src = 'persona_nuevo.php' + ((numDoc.value || '').trim() !== '' ? ('?dni=' + encodeURIComponent(numDoc.value.trim())) : '');
+    const url = new URL('persona_nuevo.php', window.location.href);
+    url.searchParams.set('embed', '1');
+    url.searchParams.set('accidente_id', <?= json_encode((string) $accidenteId) ?>);
+    url.searchParams.set('dni', (numDoc.value || '').trim());
+    frame.src = url.href;
     modal.style.display = 'flex';
   });
   document.getElementById('btnPersonaCerrar').addEventListener('click', function(){
@@ -245,6 +249,7 @@ include __DIR__ . '/sidebar.php';
     frame.src = 'about:blank';
   });
   window.addEventListener('message', async function(ev){
+    if (ev.origin !== window.location.origin || ev.source !== frame.contentWindow) return;
     const d = ev.data || {};
     if (d.type === 'persona_creada' && d.id) {
       modal.style.display = 'none';
