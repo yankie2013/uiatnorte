@@ -120,9 +120,28 @@ if (!$embed) {
 :root{--page:#f6f8fc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#d7deea;--primary:#1d4ed8;--ok:#166534;--danger:#b91c1c}
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#3b82f6;--ok:#bbf7d0;--danger:#fecaca}}
 body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px auto;padding:0 12px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c3{grid-column:span 3}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(29,78,216,.12);color:var(--primary);border:1px solid rgba(29,78,216,.18);font-size:11px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin:10px 0}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin:10px 0}.small{color:var(--muted);font-size:12px}.hstack{display:flex;align-items:center;gap:8px}label{font-weight:700;color:var(--muted);font-size:13px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text);box-sizing:border-box}textarea{min-height:110px;resize:vertical}.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}body.is-embed{background:transparent}.is-embed .wrap{max-width:none;margin:0;padding:12px}.is-embed h1{font-size:22px}.is-embed .card{padding:14px}@media(max-width:820px){.c6,.c3{grid-column:span 12}}
+
+@media(max-width:760px){
+  .citation-create-page .wrap{margin:10px auto;padding:0 10px}
+  .citation-create-page .wrap>h1{display:block!important;font-size:21px;margin-bottom:4px!important}
+  .citation-create-page #frmCitacion{padding:12px;border-radius:12px;margin-top:10px}
+  .citation-create-page #frmCitacion>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px 10px!important}
+  .citation-create-page #frmCitacion>.grid>.c12,.citation-create-page #frmCitacion>.grid>.c6{grid-column:1/-1!important}
+  .citation-create-page #frmCitacion>.grid>.c3{grid-column:span 1!important}
+  .citation-create-page #frmCitacion label{display:block;font-size:12px;line-height:1.3;margin-bottom:4px;color:var(--text)}
+  .citation-create-page #frmCitacion input,.citation-create-page #frmCitacion select{height:44px!important;min-height:44px!important;border-radius:9px;padding:8px 10px!important;font-size:16px;min-width:0;max-width:100%}
+  .citation-create-page #frmCitacion select{padding-right:30px!important}
+  .citation-create-page .wrap>.actions{gap:6px!important;margin-top:10px}
+  .citation-create-page .wrap>.actions>.btn{font-size:12px;padding:8px;min-height:44px}
+  .citation-create-page .hstack{gap:6px}
+  .citation-create-page .hstack>.btn{flex:none;min-width:44px;min-height:44px;padding:8px}
+  .citation-create-page .citation-calendar{margin-top:10px!important;padding:12px}
+  .citation-create-page .citation-calendar>summary{cursor:pointer;font-size:13px;font-weight:700;min-height:24px}
+  .citation-create-page .citation-calendar iframe{height:360px!important}
+}
 </style>
 </head>
-<body class="<?= $embed ? 'is-embed' : '' ?>">
+<body class="citation-create-page <?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <h1 style="margin:0 0 10px">Citación <span class="badge">Nueva</span></h1>
   <div class="small">Accidente ID: <?= (int) $accidenteId ?></div>
@@ -222,17 +241,24 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
   </form>
 
   <?php if ($calendarOwner): ?>
-  <div class="card" style="margin-top:16px;">
-    <h2 style="margin-top:0;font-size:15px;">Calendario de turnos</h2>
+  <details class="card citation-calendar" open style="margin-top:16px;">
+    <summary>Calendario de turnos</summary>
     <p class="small">Aquí puedes ver tus días de servicio y franco.</p>
     <div style="border-radius:12px;overflow:hidden;">
       <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FLima&showPrint=0&src=YTg4ZTg1MjI3NDkwZDZhMzJlNDcyMzIwMDZjMDYxZjljMDYyNmIzMmM2M2E1ZmQ2NWRkMGVlNGVkNTFlNTYwZUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MjUzNmFiZGUzMWY3YjA5ZmNhMDBhMGQ4NjEwZTY0ZDM3MWMwNDBmMGQ4ZWU0YTlhZTdlMWJhMmZhY2RiNjFkYUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=N250Ym05aGFibG00am0wbGJpMXN2Mm83YTRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%2333b679&color=%23d50000&color=%23009688" style="border:solid 1px #777;width:100%;height:600px;" frameborder="0" scrolling="no"></iframe>
     </div>
-  </div>
+  </details>
   <?php endif; ?>
 </div>
 <script>
 (function(){
+  const calendarPanel = document.querySelector('.citation-calendar');
+  if (calendarPanel) {
+    const mobile = window.matchMedia('(max-width:760px)');
+    const syncCalendar = () => calendarPanel.open = !mobile.matches;
+    syncCalendar();
+    mobile.addEventListener('change', syncCalendar);
+  }
   const form = document.getElementById('frmCitacion');
   const lugarSel = document.getElementById('lugar_sel');
   const lugarOtro = document.getElementById('lugar_otro');
