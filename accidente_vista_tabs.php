@@ -3989,7 +3989,7 @@ $personas = safe_query_all(
     [$accidente_id]
 );
 
-$comboVehiculosRows = safe_query_all(
+$participantVehicleRows = safe_query_all(
     $pdo,
     "SELECT
             iv.id AS inv_vehiculo_id,
@@ -4026,7 +4026,6 @@ $comboVehiculosRows = safe_query_all(
   LEFT JOIN marcas_vehiculo mar ON mar.id = v.marca_id
   LEFT JOIN modelos_vehiculo modv ON modv.id = v.modelo_id
       WHERE iv.accidente_id = ?
-        AND iv.tipo IN ('Combinado vehicular 1', 'Combinado vehicular 2')
    ORDER BY
             CASE COALESCE(iv.orden_participacion, '')
                 WHEN 'UT-1' THEN 1
@@ -4043,6 +4042,7 @@ $comboVehiculosRows = safe_query_all(
     [$accidente_id]
 );
 
+$comboVehiculosRows = array_values(array_filter($participantVehicleRows, static fn(array $vehicle): bool => in_array((string) ($vehicle['veh_participacion'] ?? ''), ['Combinado vehicular 1', 'Combinado vehicular 2'], true)));
 $comboVehiculosPorUnidad = [];
 foreach ($comboVehiculosRows as $comboVehiculo) {
     $ut = trim((string) ($comboVehiculo['orden_participacion'] ?? ''));
@@ -5313,7 +5313,7 @@ $summaryFamiliarRecordFields = ['parentesco', ['key' => 'observaciones', 'class'
 $summaryOficioFields = ['numero', 'anio', 'fecha_emision', 'estado', ['key' => 'entidad', 'class' => 'span-2'], ['key' => 'asunto_nombre', 'class' => 'span-2'], ['key' => 'referencia_texto', 'class' => 'span-4'], ['key' => 'motivo', 'class' => 'span-4'], 'veh_ut', 'veh_placa', ['key' => 'persona_nombre', 'class' => 'span-2']];
 
 $summaryUnits = [];
-foreach ($comboVehiculosRows as $comboVehiculo) {
+foreach ($participantVehicleRows as $comboVehiculo) {
     $ut = trim((string) ($comboVehiculo['orden_participacion'] ?? ''));
     if ($ut === '') {
         continue;
