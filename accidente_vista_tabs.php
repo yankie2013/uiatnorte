@@ -827,10 +827,12 @@ function render_whatsapp_message_actions(string $phone, array $messages): string
     $citacion = (string) ($messages['citacion'] ?? $saludo);
     $meet = (string) ($messages['meet'] ?? $citacion);
 
-    return '<details class="person-contact-menu"><summary class="quick-pill-btn whatsapp" aria-label="Desplegar opciones de contacto">Contacto <span class="contact-toggle" aria-hidden="true"></span></summary><div class="person-contact-options">'
+    static $contactIndex = 0;
+    $menuId = 'person-contact-' . ++$contactIndex;
+    return '<button type="button" class="quick-pill-btn whatsapp person-contact-trigger" popovertarget="' . $menuId . '" aria-label="Opciones de WhatsApp" title="Opciones de WhatsApp"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-4.7A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M8 7.5c.4-.3.7-.2.9.3l.7 1.5c.2.4-.4.9-.6 1.1.6 1.3 1.6 2.3 3 2.9.3-.3.7-1.1 1.1-.9l1.7.8c.4.2.4.6.2 1-.4.8-1.1 1.1-2 1-2.6-.4-5.8-3.5-6.1-6.1-.1-.7.3-1.3 1.1-1.6Z"/></svg></button><div id="' . $menuId . '" class="person-contact-options" popover>'
         . '<a class="quick-pill-btn whatsapp" href="' . h(whatsapp_link($phone, $saludo)) . '" target="_blank" rel="noopener" aria-label="WhatsApp saludo" title="WhatsApp saludo">WA</a>'
         . '<a class="quick-pill-btn whatsapp whatsapp-citacion" href="' . h(whatsapp_link($phone, $citacion)) . '" target="_blank" rel="noopener" aria-label="WhatsApp citación policial" title="WhatsApp citación policial">CIT</a>'
-        . '<button type="button" class="quick-pill-btn whatsapp whatsapp-meet js-whatsapp-meet" data-wa-phone="' . h($phone) . '" data-wa-template="' . h($meet) . '" aria-label="WhatsApp manifestación virtual con Google Meet" title="WhatsApp manifestación virtual con Google Meet">MEET</button></div></details>';
+        . '<button type="button" class="quick-pill-btn whatsapp whatsapp-meet js-whatsapp-meet" data-wa-phone="' . h($phone) . '" data-wa-template="' . h($meet) . '" aria-label="WhatsApp manifestación virtual con Google Meet" title="WhatsApp manifestación virtual con Google Meet">MEET</button></div>';
 }
 
 function person_tab_tone_class(array $row): string
@@ -6165,13 +6167,10 @@ $resumenInterventionRows = [
   .person-title p{margin:3px 0 0;color:var(--muted);font-weight:600;font-size:12px}
   .person-name-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .person-quick-actions{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .person-contact-menu{display:inline-block;max-width:100%;vertical-align:middle}
-  .person-contact-menu>summary{list-style:none;cursor:pointer;white-space:nowrap}
-  .person-contact-menu>summary::-webkit-details-marker{display:none}
-  .person-contact-menu .contact-toggle::after{content:'+'}
-  .person-contact-menu[open] .contact-toggle::after{content:'−'}
-  .person-contact-options{display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
-  .person-contact-menu:not([open])>.person-contact-options{display:none}
+  .person-contact-trigger{flex:none;width:32px;min-width:32px;padding:0;border-radius:50%}
+  .person-contact-options{position:fixed;inset:auto;margin:0;padding:8px;border:1px solid #9fe0b7;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(17,24,39,.18);overflow:visible}
+  .person-contact-options:popover-open{display:flex;gap:6px;align-items:center}
+  html[data-theme-resolved="dark"] .person-contact-options{background:#1b2c45;border-color:#39835d}
   .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
@@ -13793,6 +13792,17 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   });
   updateLocation();
 })();
+</script>
+<script>
+document.querySelectorAll('.person-contact-trigger').forEach(button => {
+  button.addEventListener('click', () => {
+    const menu = document.getElementById(button.getAttribute('popovertarget'));
+    const rect = button.getBoundingClientRect();
+    menu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 200)) + 'px';
+    menu.style.top = (rect.bottom + 6 + 52 < window.innerHeight ? rect.bottom + 6 : Math.max(8, rect.top - 58)) + 'px';
+  });
+});
+window.addEventListener('scroll', () => document.querySelectorAll('.person-contact-options:popover-open').forEach(menu => menu.hidePopover()), true);
 </script>
 <script src="assets/js/accidente-edit-catalogs.js?v=1" defer></script>
 </body>
