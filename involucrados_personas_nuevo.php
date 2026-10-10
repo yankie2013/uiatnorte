@@ -430,6 +430,8 @@ async function cargarVehiculos(){
     j.forEach(it=>{
       const o=document.createElement('option'); o.value=it.id; o.textContent=it.t; sel.appendChild(o);
     });
+    const requestedVehicle = <?= json_encode((string) (int) iget('vehiculo_id', 0)) ?>;
+    if (aid === <?= json_encode((string) $accidente_id) ?> && Array.from(sel.options).some(o => o.value === requestedVehicle)) sel.value = requestedVehicle;
   }catch(_){}
 }
 $('#accidente_id').addEventListener('change', async ()=>{
@@ -555,6 +557,12 @@ function applyRoleVehicleRequirement(){
   }
 }
 document.getElementById('rol_id').addEventListener('change', applyRoleVehicleRequirement);
+const initialRole = <?= json_encode(iget('rol', '') === 'peaton' ? 'peaton' : ((int) iget('vehiculo_id', 0) > 0 ? 'conductor' : '')) ?>;
+if (initialRole) {
+  const roleSelect = document.getElementById('rol_id');
+  const option = Array.from(roleSelect.options).find(o => normalize(o.textContent.trim()) === initialRole);
+  if (option) roleSelect.value = option.value;
+}
 applyRoleVehicleRequirement(); // al cargar
 
 /* -------- Botones submit -------- */
