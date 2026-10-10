@@ -217,10 +217,10 @@ final class InvolucradoPersonaService
         foreach ($fields as $source => $target) {
             $value = array_key_exists($source, $input) ? trim((string) $input[$source]) : (string) ($base[$source] ?? '');
             if ($source === 'numero_hijos') {
-                $value = $value === '' ? null : filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 99]]);
-                if ($value === false) {
+                if ($value !== '' && !preg_match('/\A0*[0-9]{1,2}\z/', $value)) {
                     throw new InvalidArgumentException('El número de hijos debe ser un número entre 0 y 99.');
                 }
+                $value = $value === '' ? null : (int) $value;
             } elseif ($source === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
                 throw new InvalidArgumentException('El correo electrónico no es válido.');
             } else {

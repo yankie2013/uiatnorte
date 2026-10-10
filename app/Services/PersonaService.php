@@ -238,11 +238,10 @@ final class PersonaService
         if ($text === '') {
             return null;
         }
-        $number = filter_var($text, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 99]]);
-        if ($number === false) {
+        if (!preg_match('/\A0*[0-9]{1,2}\z/', $text)) {
             throw new InvalidArgumentException($label . ' debe estar entre 0 y 99.');
         }
-        return $number;
+        return (int) $text;
     }
 
     private function cleanSpaces(mixed $value): string
