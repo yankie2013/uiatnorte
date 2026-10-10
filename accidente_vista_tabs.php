@@ -7520,6 +7520,8 @@ $resumenInterventionRows = [
   <div class="case-sticky-header">
   <section class="accident-case-header" aria-label="Resumen del accidente">
     <div class="case-header-facts case-header-facts-list">
+      <section class="case-registration-block" aria-labelledby="case-registration-title">
+        <h3 id="case-registration-title">📁 Registro del expediente</h3>
       <dl class="case-facts-topline">
         <div class="case-facts-top-item case-facts-sidpol"><dt>SIDPOL</dt><dd><button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></button></dd></div>
         <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
@@ -7542,6 +7544,7 @@ $resumenInterventionRows = [
         <button type="button" class="case-facts-edit-chip js-header-view-general"><span aria-hidden="true">👁</span> Ver</button>
         <button type="button" class="case-facts-edit-chip js-header-edit-general" title="Editar datos generales del accidente"><span aria-hidden="true">✎</span> Editar</button>
       </div>
+      </section>
       <div class="case-facts-scroll" role="region" aria-label="Lista de datos generales del accidente">
       <section class="case-facts-card case-facts-card--combined">
         <div class="case-facts-combined-grid">

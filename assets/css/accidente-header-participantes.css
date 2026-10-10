@@ -879,3 +879,21 @@ html[data-theme-resolved="dark"] .case-overview-layout .case-facts-topline .sidp
 .case-inline-editor .inline-frame {display:block;height:max(300px,calc(100dvh - var(--case-sticky-offset,12px) - 100px));min-height:300px}
 html[data-theme-resolved="dark"] .case-inline-editor .inline-head {background:linear-gradient(120deg,#233b57,#17283e)}
 @media(max-width:900px) {.case-inline-editor .inline-frame {height:75dvh}.case-inline-editor {scroll-margin-top:12px}}
+
+/* Identificadores y estado bajo un único bloque de registro. */
+.case-overview-layout .case-registration-block {grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;border:1px solid #d2deef;border-radius:14px;background:#f8fbff;padding:12px 16px;min-width:0;}
+.case-registration-block>h3 {grid-column:1/-1;margin:0;color:#365d85;font-size:12px;font-weight:800;}
+.case-overview-layout .case-registration-block .case-facts-topline {width:100%;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;}
+.case-overview-layout .case-registration-block .case-facts-top-item {background:transparent;box-shadow:none;border:0;border-right:1px solid #dce5f1;border-radius:0;align-items:flex-start;text-align:left;min-height:44px;padding:2px 12px;}
+.case-overview-layout .case-registration-block .case-facts-top-item:first-child {padding-left:0;}
+.case-overview-layout .case-registration-block .case-facts-top-item:last-child {border-right:0;}
+.case-registration-block .case-facts-top-item dt {justify-content:flex-start;}
+html[data-theme-resolved="dark"] .case-registration-block {background:#18283e;border-color:#31475f;}
+html[data-theme-resolved="dark"] .case-registration-block>h3 {color:#b8d4f4;}
+@media(max-width:760px){
+ .case-overview-layout .case-registration-block {padding:10px 12px;gap:8px;grid-template-columns:minmax(0,1fr) auto;}
+ .case-overview-layout .case-registration-block .case-facts-topline {grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px;}
+ .case-overview-layout .case-registration-block .case-facts-top-item {padding:4px!important;border:0;min-height:44px;}
+ .case-registration-block>h3 {grid-column:1;align-self:center;}
+ .case-registration-block .case-facts-titlebar {grid-column:2;grid-row:1;}
+}
