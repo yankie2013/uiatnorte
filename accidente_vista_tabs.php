@@ -827,9 +827,10 @@ function render_whatsapp_message_actions(string $phone, array $messages): string
     $citacion = (string) ($messages['citacion'] ?? $saludo);
     $meet = (string) ($messages['meet'] ?? $citacion);
 
-    return '<a class="quick-pill-btn whatsapp" href="' . h(whatsapp_link($phone, $saludo)) . '" target="_blank" rel="noopener" aria-label="WhatsApp saludo" title="WhatsApp saludo">WA</a>'
+    return '<details class="person-contact-menu"><summary class="quick-pill-btn whatsapp" aria-label="Desplegar opciones de contacto">Contacto <span class="contact-toggle" aria-hidden="true"></span></summary><div class="person-contact-options">'
+        . '<a class="quick-pill-btn whatsapp" href="' . h(whatsapp_link($phone, $saludo)) . '" target="_blank" rel="noopener" aria-label="WhatsApp saludo" title="WhatsApp saludo">WA</a>'
         . '<a class="quick-pill-btn whatsapp whatsapp-citacion" href="' . h(whatsapp_link($phone, $citacion)) . '" target="_blank" rel="noopener" aria-label="WhatsApp citación policial" title="WhatsApp citación policial">CIT</a>'
-        . '<button type="button" class="quick-pill-btn whatsapp whatsapp-meet js-whatsapp-meet" data-wa-phone="' . h($phone) . '" data-wa-template="' . h($meet) . '" aria-label="WhatsApp manifestación virtual con Google Meet" title="WhatsApp manifestación virtual con Google Meet">MEET</button>';
+        . '<button type="button" class="quick-pill-btn whatsapp whatsapp-meet js-whatsapp-meet" data-wa-phone="' . h($phone) . '" data-wa-template="' . h($meet) . '" aria-label="WhatsApp manifestación virtual con Google Meet" title="WhatsApp manifestación virtual con Google Meet">MEET</button></div></details>';
 }
 
 function person_tab_tone_class(array $row): string
@@ -6164,6 +6165,13 @@ $resumenInterventionRows = [
   .person-title p{margin:3px 0 0;color:var(--muted);font-weight:600;font-size:12px}
   .person-name-copy{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .person-quick-actions{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .person-contact-menu{display:inline-block;max-width:100%;vertical-align:middle}
+  .person-contact-menu>summary{list-style:none;cursor:pointer;white-space:nowrap}
+  .person-contact-menu>summary::-webkit-details-marker{display:none}
+  .person-contact-menu .contact-toggle::after{content:'+'}
+  .person-contact-menu[open] .contact-toggle::after{content:'−'}
+  .person-contact-options{display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
+  .person-contact-menu:not([open])>.person-contact-options{display:none}
   .copy-name-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 10px;border:1px solid #cfd8e7;border-radius:999px;background:#fff;color:#4d5b72;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(17,24,39,.06);transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
   .copy-name-btn:hover{background:#f6f9ff;border-color:#b8cae7;color:#234a84}
   .copy-name-btn.is-copied{background:#e8f7ef;border-color:#86d6a4;color:#166534}
