@@ -3776,6 +3776,7 @@ if (!$accidente) {
 
 $accidente_id = (int) $accidente['id'];
 \App\Support\Access::requireInvestigationCase($accidente_id);
+\App\Support\RecentAccidents::record($pdo, $accidente_id);
 $_SESSION['accidente_ultimo_abierto'] = $accidente_id;
 $recentOpenedIds = array_values(array_filter(
     array_map('intval', (array)($_SESSION['accidentes_ultimos_abiertos'] ?? [])),

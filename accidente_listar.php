@@ -531,10 +531,7 @@ if($favoritos === '1'){
   $sql .= " AND COALESCE(a.priority, 0) = 1";
 }
 
-$recentOpenedIds = array_values(array_unique(array_filter(array_map('intval',
-  (array)($_SESSION['accidentes_ultimos_abiertos'] ?? [$ultimoAccidenteAbiertoId])
-), static fn($id) => $id > 0)));
-$recentOpenedIds = array_slice($recentOpenedIds, 0, 6);
+$recentOpenedIds = \App\Support\RecentAccidents::ids($pdo);
 if ($orden === 'abiertos_desc') {
   if ($recentOpenedIds === []) {
     $sql .= " AND 1 = 0";
