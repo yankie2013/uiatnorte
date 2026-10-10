@@ -247,3 +247,36 @@
  .case-overview-layout .participants-overview .overview-title-actions .case-command-button{min-width:0!important;max-width:100%;white-space:normal;font-size:9px!important;gap:4px!important;padding:6px 4px!important;letter-spacing:0;}
  .case-overview-layout .participants-overview .case-command-icon{display:inline-flex;flex:0 0 16px;width:16px;height:16px;}
 }
+
+@media screen and (max-width:760px){
+ .case-overview-layout .case-module-sidebar #accTabs>button{--tile-rgb:55,116,236}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-participantes{--tile-rgb:16,160,139}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-itp{--tile-rgb:114,79,217}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-oficios{--tile-rgb:219,140,29}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-documentos-recibidos{--tile-rgb:19,155,190}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-documentos-actas{--tile-rgb:223,104,77}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-diligencias-pendientes{--tile-rgb:206,71,145}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-analisis{--tile-rgb:87,101,218}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-componentes-informe{--tile-rgb:40,153,97}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-estado{--tile-rgb:198,130,25}
+ .case-overview-layout .case-module-sidebar #accTabs>.tab-resumen-integral{--tile-rgb:129,84,187}
+ .case-overview-layout .case-module-sidebar #accTabs>.nav-link:not([hidden]),.case-overview-layout .case-module-sidebar #accTabs>.case-mobile-general-button{background:linear-gradient(140deg,rgba(255,255,255,.96),rgba(var(--tile-rgb),.23));border-color:rgba(var(--tile-rgb),.28);box-shadow:0 6px 18px rgba(var(--tile-rgb),.11),inset 0 1px 0 #fff;}
+ .case-overview-layout .case-module-sidebar #accTabs .main-tab-icon{background:linear-gradient(145deg,rgba(var(--tile-rgb),.78),rgb(var(--tile-rgb)));color:white;box-shadow:0 4px 10px rgba(var(--tile-rgb),.26),inset 0 1px 0 #ffffff75;}
+ .case-overview-layout .case-module-sidebar #accTabs .tab-sub{background:rgba(var(--tile-rgb),.14);color:#324863}
+ .case-overview-layout .participants-overview .participant-overview-unit>header{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;padding:10px!important;background:linear-gradient(120deg,#dce8ff,#eff6ff);}
+ .case-overview-layout .participants-overview .participant-overview-unit>header h3{grid-column:1;grid-row:1;align-self:start;padding-top:5px;}
+ .case-overview-layout .participants-overview .participant-overview-unit>header>.case-person-actions{grid-column:2;display:flex;padding:0!important;min-height:36px;gap:6px;}
+ .case-overview-layout .participants-overview .vehicle-label-prefix{display:none}
+ .case-overview-layout .participants-overview .participant-overview-unit>header strong{font-size:13px;font-weight:800;letter-spacing:.025em;color:#294d86}
+ .case-overview-layout .participants-overview .overview-group-toggle{min-height:32px;padding:3px!important}
+ .case-overview-layout .participants-overview .participant-overview-unit>header .case-person-view{background:#ffffffb8;min-height:32px;font-size:10px;padding:5px 8px;}
+ .case-overview-layout .participants-overview .participant-overview-person,.case-overview-layout .participants-overview .overview-linked-row .participant-overview-person{border-left:3px solid var(--role-accent,#477ccc);background:linear-gradient(115deg,white,color-mix(in srgb,var(--role-tint,#eef4ff) 30%,white));gap:3px 8px;padding:9px!important;}
+ .case-overview-layout .participants-overview .participant-overview-person>.case-person-actions{margin-top:5px;justify-content:flex-end;}
+ .case-overview-layout .participants-overview .participant-overview-person .case-person-view{display:inline-flex;gap:6px;min-height:36px;padding:6px 10px;border:1px solid #3974d6;color:white;background:linear-gradient(135deg,#438cf0,#3567cc);box-shadow:0 3px 7px #3567cc25,inset 0 1px 0 #ffffff38;font-weight:700;}
+ .case-overview-layout .participants-overview .person-contact-trigger{background:linear-gradient(145deg,#29d86d,#0eaf53);border:1px solid #13af56;color:white;box-shadow:0 3px 7px #12ad532a,inset 0 1px 0 #ffffff65;width:36px;height:36px;border-radius:11px;}
+ .case-overview-layout .participants-overview .person-contact-trigger svg{width:22px;height:22px;}
+ .case-overview-layout .participants-overview .overview-related-people{margin-left:12px;padding-left:8px;}
+ .case-overview-layout .participants-overview .overview-role-group[data-tone]{margin-top:7px;margin-bottom:5px;}
+ html[data-theme-resolved="dark"] .case-overview-layout .participants-overview .participant-overview-person{background:#1c3049;}
+}
+.person-view-icon{flex:none}

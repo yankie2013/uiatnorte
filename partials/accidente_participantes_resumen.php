@@ -68,7 +68,7 @@
         <div class="participant-overview-person<?= needs_occ($person) ? ' is-fatal' : '' ?>" data-tone="<?= h($roleTone) ?>">
           <span class="overview-person-icon" aria-hidden="true"><span class="overview-legacy-icon"><?= needs_occ($person) ? '💀' : h($roleIcon) ?></span><svg class="overview-modern-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?= h($mobileIconPath) ?>"/></svg></span>
           <div class="overview-person-info">
-            <?php if ($role !== $roleGroup && $roleGroup !== 'Conductor'): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
+            <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
             <p><?php if (!empty($person['lesion'])): ?><span class="overview-condition <?= h(lesion_chip_class((string) $person['lesion'])) ?>"><?= h($person['lesion']) ?></span> <?php endif; ?><span class="overview-person-meta"><?= h(person_heading_meta($person)) ?></span></p>
           </div>
@@ -77,7 +77,7 @@
               <?php $overviewWhatsAppMessages=whatsapp_message_pack($GLOBALS['modalidades']??[], $GLOBALS['A']['fecha_accidente']??null, $GLOBALS['A']['lugar']??null, $GLOBALS['A']['registro_sidpol']??null); ?>
               <?= render_whatsapp_message_actions($phone,$overviewWhatsAppMessages) ?>
             <?php endif; ?>
-            <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($target) ?>" data-vehicle-only="0">Ver persona ↗</button>
+            <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($target) ?>" data-vehicle-only="0"><svg class="person-view-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M6 16c0-3 6-3 6 0 M15 9h3 M15 13h3"/></svg><span>Ver persona</span><span aria-hidden="true">›</span></button>
           </div>
         </div>
         <?php
@@ -147,7 +147,7 @@
                 break;
             }
             ?>
-            <div class="case-person-actions"><strong>Vehículo de placa <?= h($vehicle['veh_placa'] ?: 'Sin placa registrada') ?></strong>
+            <div class="case-person-actions"><strong><span class="vehicle-label-prefix">Vehículo de placa </span><?= h($vehicle['veh_placa'] ?: 'Sin placa registrada') ?></strong>
             <?php if ($vehiclePersonTarget !== ''): ?>
               <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($vehiclePersonTarget) ?>" data-vehicle-only="1" data-vehicle-panel="<?= h($vehiclePanelTarget) ?>">Ver vehículo ↗</button>
             <?php else: ?>
