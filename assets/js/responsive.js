@@ -13,6 +13,19 @@
   };
   const start = () => {
     prepareTables();
+    document.querySelectorAll('form .grid').forEach(grid => {
+      if (!grid.querySelector(':scope > .c3, :scope > .c4, :scope > .c6, :scope > .c12')) return;
+      grid.classList.add('uiat-compact-form-grid');
+      grid.closest('form').classList.add('uiat-compact-form');
+      Array.from(grid.children).forEach(field => {
+        const control = field.querySelector('input:not([type="hidden"]), select, textarea');
+        if (!control || control.tagName === 'TEXTAREA' || field.querySelectorAll('input:not([type="hidden"]), select').length > 1) return;
+        const label = (field.querySelector('label')?.textContent || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const shortType = ['date', 'time', 'number'].includes(control.type);
+        const shortLabel = /^(sexo|edad|estado civil|nacionalidad|celular|telefono|numero de hijos|orden de citacion|oficio que ordena|clase|categoria de licencia)\b/.test(label);
+        if (shortType || shortLabel) field.classList.add('uiat-compact-half');
+      });
+    });
     const topbar = document.querySelector('.uiat-user-topbar');
     const breadcrumb = topbar?.querySelector('.uiat-user-breadcrumb');
     if (breadcrumb) {

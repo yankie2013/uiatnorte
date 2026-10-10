@@ -119,3 +119,19 @@
 }
 @media screen and (min-width:761px){.uiat-mobile-case-summary{display:contents}.uiat-mobile-case-summary>summary{display:none}}
 @media screen and (min-width:360px) and (max-width:760px){.case-overview-layout .case-facts-topline{grid-template-columns:repeat(3,minmax(0,1fr))}.case-overview-layout .case-facts-topline .case-facts-top-item{padding:6px;min-height:44px}}
+
+/* Compact traditional forms; long identity, address and description fields stay full width. */
+@media screen and (max-width:760px) {
+  form.uiat-compact-form {padding:12px!important;border-radius:12px!important;}
+  form .grid.uiat-compact-form-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px 10px!important;}
+  form .grid.uiat-compact-form-grid > * {grid-column:1 / -1!important;min-width:0!important;}
+  form .grid.uiat-compact-form-grid > .uiat-compact-half {grid-column:span 1!important;}
+  form.uiat-compact-form label {display:block;font-size:12px!important;line-height:1.3;margin-bottom:4px;}
+  form.uiat-compact-form :is(.field,.hstack,.search-row) {gap:6px;}
+  form.uiat-compact-form input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]),
+  form.uiat-compact-form select:not([multiple]):not([size]) {height:44px!important;min-height:44px!important;border-radius:9px;padding:8px 10px!important;}
+  form.uiat-compact-form select:not([multiple]):not([size]) {padding-right:30px!important;}
+  form.uiat-compact-form .small {font-size:11px;line-height:1.4;}
+  form.uiat-compact-form .actions {margin-top:10px;gap:6px!important;}
+  form.uiat-compact-form .btn {min-height:44px;font-size:12px;padding:8px 10px;}
+}
