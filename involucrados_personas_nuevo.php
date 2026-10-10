@@ -411,7 +411,11 @@ function closeModal(id, srcId){
   document.body.style.overflow='';
 }
 $all('[data-modalxl]').forEach(b=>{
-  b.addEventListener('click', ()=> openModal(b.getAttribute('data-modalxl'), 'frame-per', b.getAttribute('data-src')));
+  b.addEventListener('click', ()=> {
+    const url = new URL(b.getAttribute('data-src'), window.location.href);
+    url.searchParams.set('dni', ($('#dni').value || '').replace(/\D/g, ''));
+    openModal(b.getAttribute('data-modalxl'), 'frame-per', url.href);
+  });
 });
 $all('[data-closexl]').forEach(b=>{
   b.addEventListener('click', ()=> closeModal(b.getAttribute('data-closexl'), 'frame-per'));
