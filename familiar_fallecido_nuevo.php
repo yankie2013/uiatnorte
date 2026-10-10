@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->create($data);
-        header('Location: familiar_fallecido_listar.php?accidente_id=' . $accidenteId . '&ok=created');
+        header('Location: accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes', true, 303);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
