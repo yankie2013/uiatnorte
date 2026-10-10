@@ -7508,6 +7508,11 @@ $resumenInterventionRows = [
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
 <?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
+  <section class="case-mobile-overview" aria-label="Accidente">
+    <div class="case-mobile-overview-heading"><h1><?= h($modsConcat ?: 'Accidente de tránsito') ?></h1><span><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></span></div>
+    <p class="case-mobile-overview-place"><?= fmt($A['lugar'] ?? '') ?></p>
+    <dl><div><dt>Distrito</dt><dd><?= h($caseSummaryDistrict ?: '—') ?></dd></div><div><dt>Jurisdicción policial</dt><dd><?= fmt($A['comisaria_nom'] ?? '') ?></dd></div></dl>
+  </section>
   <?php if ($caseStatePanel['error'] !== null): ?>
     <div role="alert" style="grid-column:1/-1;padding:14px;border:1px solid #e4b76a;border-radius:12px;background:#fff7e6;color:#704400">
       <strong>No se pudo cargar Estado y colaboración.</strong>

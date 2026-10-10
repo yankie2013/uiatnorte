@@ -135,3 +135,25 @@
   form.uiat-compact-form .actions {margin-top:10px;gap:6px!important;}
   form.uiat-compact-form .btn {min-height:44px;font-size:12px;padding:8px 10px;}
 }
+
+.case-mobile-overview,.case-mobile-general-button {display:none;}
+@media screen and (max-width:760px) {
+ .case-overview-layout>.case-mobile-overview {display:block;grid-column:1/-1;grid-row:1;padding:12px;border:1px solid #d6e2ee;border-radius:12px;background:var(--card,#fff);}
+ .case-mobile-overview-heading {display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;}
+ .case-mobile-overview-heading h1 {margin:0;font-size:20px!important;line-height:1.2;}
+ .case-mobile-overview-heading>span {font-size:12px;color:var(--muted,#60758b);}
+ .case-mobile-overview-place {margin:8px 0;font-size:14px;font-weight:700;line-height:1.4;}
+ .case-mobile-overview dl {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;margin:0;}
+ .case-mobile-overview dt {font-size:10px;color:var(--muted,#60758b);margin-bottom:3px;}
+ .case-mobile-overview dd {margin:0;font-size:12px;line-height:1.4;}
+ .case-overview-layout .accident-case-header>.case-header-facts-list {display:none!important;}
+ .case-overview-layout>.case-module-sidebar {grid-column:1/-1;grid-row:2!important;padding:0!important;background:transparent;box-shadow:none;border:0;}
+ .case-module-sidebar>.case-participants-disclosure {display:none!important;}
+ .case-module-sidebar #accTabs {display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:0;gap:8px;}
+ .case-module-sidebar #accTabs>.nav-link:not([hidden]),.case-module-sidebar #accTabs>.case-mobile-general-button {display:flex!important;align-items:center;justify-content:flex-start;gap:6px;width:100%!important;min-width:0!important;min-height:48px;padding:9px!important;margin:0;border:1px solid #d4deed;border-radius:10px;box-sizing:border-box;}
+ .case-mobile-general-button {background:var(--card,#fff);color:var(--text,#29425f);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+ .case-overview-layout>.tabs-shell-main {grid-row:3!important;}
+ .general-modal-content>.case-registration-block {display:block;margin-bottom:12px;}
+ .general-modal-content>.case-registration-block .case-facts-topline {display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-top:10px;}
+ .general-modal-content>.case-registration-block .case-facts-titlebar {margin-top:10px;}
+}

@@ -36,6 +36,27 @@
   details.append(summary, people);
   sidebar.append(details, tabs);
   page.append(sidebar);
+  const generalButton = document.createElement('button');
+  generalButton.type = 'button';
+  generalButton.className = 'case-mobile-general-button';
+  generalButton.textContent = '📁 Datos generales';
+  generalButton.addEventListener('click', () => document.querySelector('.js-header-view-general')?.click());
+  tabs.prepend(generalButton);
+  const registration = page.querySelector('.case-registration-block');
+  const registrationAnchor = document.createComment('Registro del expediente');
+  registration?.before(registrationAnchor);
+  const mobileLayout = window.matchMedia('(max-width:760px)');
+  const adaptCaseMobile = () => {
+    if (participantTab) participantTab.hidden = !mobileLayout.matches;
+    tabs.setAttribute('aria-orientation', mobileLayout.matches ? 'horizontal' : 'vertical');
+    const generalContent = document.querySelector('#general-details-modal .general-modal-content');
+    if (registration && generalContent) {
+      if (mobileLayout.matches) generalContent.prepend(registration);
+      else registrationAnchor.after(registration);
+    }
+  };
+  mobileLayout.addEventListener('change', adaptCaseMobile);
+  adaptCaseMobile();
   // Measure the actual header: wrapped text and zoom change its height.
   const caseFacts = page.querySelector('.case-header-facts-list');
   if (caseFacts) {
@@ -52,7 +73,7 @@
     updateStickyLayout();
   }
 
-  tabs.setAttribute('aria-orientation', 'vertical');
+  tabs.setAttribute('aria-orientation', mobileLayout.matches ? 'horizontal' : 'vertical');
   details.open = false;
   participantPane?.classList.add('show-participants-overview');
   const activateModuleTab = (trigger) => {
