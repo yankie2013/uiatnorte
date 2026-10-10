@@ -241,9 +241,21 @@ final class InvolucradoPersonaRepository
         return str_starts_with($placa, 'SPLACA') ? 'SIN PLACA' : $placa;
     }
 
+    public function completarIdentidadVacia(int $personaId, array $input): void
+    {
+        $fields = ['num_doc','nombres','apellido_paterno','apellido_materno','sexo','fecha_nacimiento','nacionalidad','departamento_nac','provincia_nac','distrito_nac','nombre_padre','nombre_madre'];
+        foreach ($fields as $field) {
+            $value = trim((string)($input[$field] ?? ''));
+            if ($value === '') continue;
+            if ($field === 'fecha_nacimiento' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) || date('Y-m-d', strtotime($value)) !== $value)) throw new \InvalidArgumentException('Fecha de nacimiento inválida; utiliza AAAA-MM-DD.');
+            $st = $this->pdo->prepare("UPDATE personas SET `$field`=? WHERE id=? AND (`$field` IS NULL OR TRIM(`$field`)='')");
+            $st->execute([$value, $personaId]);
+        }
+    }
+
     public function createInvolucrado(array $payload): int
     {
-        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona,edad_snapshot,estado_civil_snapshot,grado_instruccion_snapshot,numero_hijos_snapshot,domicilio_snapshot,domicilio_departamento_snapshot,domicilio_provincia_snapshot,domicilio_distrito_snapshot,celular_snapshot,email_snapshot,detenido,snapshot_guardado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)');
+        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona,edad_snapshot,estado_civil_snapshot,grado_instruccion_snapshot,numero_hijos_snapshot,domicilio_snapshot,domicilio_departamento_snapshot,domicilio_provincia_snapshot,domicilio_distrito_snapshot,celular_snapshot,email_snapshot,detenido,ocupacion_snapshot,snapshot_guardado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)');
         $st->execute([
             $payload['accidente_id'],
             $payload['persona_id'],
@@ -263,6 +275,7 @@ final class InvolucradoPersonaRepository
             $payload['celular_snapshot'],
             $payload['email_snapshot'],
             $payload['detenido'] ?? null,
+            $payload['ocupacion_snapshot'] ?? null,
         ]);
         return (int) $this->pdo->lastInsertId();
     }
@@ -283,7 +296,7 @@ final class InvolucradoPersonaRepository
                        IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
                        IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
                        IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
-                       IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email
+                       IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email, COALESCE(ip.ocupacion_snapshot,p.ocupacion) AS ocupacion
                   FROM involucrados_personas_activos ip
                   JOIN accidentes_activos a ON a.id = ip.accidente_id
                   JOIN personas   p ON p.id = ip.persona_id
@@ -319,7 +332,7 @@ final class InvolucradoPersonaRepository
 
     public function personaSnapshot(int $personaId, int $accidenteId): ?array
     {
-        $st = $this->pdo->prepare("SELECT p.estado_civil,p.grado_instruccion,p.numero_hijos,p.domicilio,p.domicilio_departamento,
+        $st = $this->pdo->prepare("SELECT p.ocupacion,p.estado_civil,p.grado_instruccion,p.numero_hijos,p.domicilio,p.domicilio_departamento,
                     p.domicilio_provincia,p.domicilio_distrito,p.celular,p.email,
                     CASE WHEN p.fecha_nacimiento IS NOT NULL AND a.fecha_accidente >= p.fecha_nacimiento
                          THEN TIMESTAMPDIFF(YEAR,p.fecha_nacimiento,a.fecha_accidente)

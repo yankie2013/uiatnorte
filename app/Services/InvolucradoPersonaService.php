@@ -111,6 +111,7 @@ final class InvolucradoPersonaService
         }
 
         [$vehiculoId, $ordenPersona] = $this->resolverReglasRol($rolId, $vehiculoId, $ordenIn);
+        $this->repository->completarIdentidadVacia($personaId, $input);
         $snapshot = $this->snapshotDatos($personaId, $accidenteId, $input);
 
         $this->repository->createInvolucrado([
@@ -201,6 +202,7 @@ final class InvolucradoPersonaService
             throw new InvalidArgumentException('No se encontraron los datos de la persona o del accidente.');
         }
         $fields = [
+            'ocupacion' => 'ocupacion_snapshot',
             'estado_civil' => 'estado_civil_snapshot',
             'grado_instruccion' => 'grado_instruccion_snapshot',
             'numero_hijos' => 'numero_hijos_snapshot',

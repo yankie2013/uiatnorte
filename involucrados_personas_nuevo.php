@@ -92,6 +92,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
       'vehiculo_id' => ipost('vehiculo_id','')==='' ? null : (int)ipost('vehiculo_id'),
       'lesion' => ipost('lesion','Ileso'),
       'detenido' => ipost('detenido',''),
+      'ocupacion' => ipost('ocupacion',''),
+      'nombres' => ipost('nombres',''),
+      'apellido_paterno' => ipost('apellido_paterno',''),
+      'apellido_materno' => ipost('apellido_materno',''),
+      'num_doc' => ipost('num_doc',''),
+      'sexo' => ipost('sexo',''),
+      'fecha_nacimiento' => ipost('fecha_nacimiento',''),
+      'nacionalidad' => ipost('nacionalidad',''),
+      'departamento_nac' => ipost('departamento_nac',''),
+      'provincia_nac' => ipost('provincia_nac',''),
+      'distrito_nac' => ipost('distrito_nac',''),
+      'nombre_padre' => ipost('nombre_padre',''),
+      'nombre_madre' => ipost('nombre_madre',''),
+
       'observaciones' => ipost('observaciones',''),
       'next' => (int)ipost('next',0),
       'orden_persona' => strtoupper(trim(ipost('orden_persona',''))),
@@ -274,34 +288,35 @@ html[data-theme-resolved="dark"] #formIP input,html[data-theme-resolved="dark"] 
 
     <section class="person-form-block"><h2>Identificación de la persona</h2>
     <div class="grid-3" style="margin-top:8px">
-      <div><label>Nombres</label><input type="text" id="nombres" readonly></div>
-      <div><label>Apellido paterno</label><input type="text" id="ap" readonly></div>
-      <div><label>Apellido materno</label><input type="text" id="am" readonly></div>
+      <div><label>Nombres</label><input type="text" id="nombres" name="nombres" readonly></div>
+      <div><label>Apellido paterno</label><input type="text" id="ap" name="apellido_paterno" readonly></div>
+      <div><label>Apellido materno</label><input type="text" id="am" name="apellido_materno" readonly></div>
     </div>
 
     <div class="grid-3">
-      <div><label>DNI</label><input type="text" id="dni_show" readonly></div>
+      <div><label>DNI</label><input type="text" id="dni_show" name="num_doc" readonly></div>
       <div><label>Edad</label><input type="number" id="edad" readonly></div>
-      <div><label>Sexo</label><input type="text" id="sexo" readonly></div>
+      <div><label>Sexo</label><input type="text" id="sexo" name="sexo" readonly></div>
     </div>
 
     <details style="margin-top:10px">
-      <summary><strong>Datos de la ficha de la persona</strong> <span class="subtitle">(solo lectura)</span></summary>
+      <summary><strong>Datos de la ficha de la persona</strong> <span class="subtitle">(los campos vacíos se pueden completar)</span></summary>
       <div class="grid-3" style="margin-top:8px">
-        <div><label>Fecha de nacimiento</label><input type="text" id="fecha_nacimiento" readonly></div>
-        <div><label>Nacionalidad</label><input type="text" id="nacionalidad" readonly></div>
-        <div><label>Ocupación registrada</label><input type="text" id="ocupacion" readonly></div>
-        <div><label>Departamento de nacimiento</label><input type="text" id="departamento_nac" readonly></div>
-        <div><label>Provincia de nacimiento</label><input type="text" id="provincia_nac" readonly></div>
-        <div><label>Distrito de nacimiento</label><input type="text" id="distrito_nac" readonly></div>
-        <div><label>Nombre del padre</label><input type="text" id="nombre_padre" readonly></div>
-        <div><label>Nombre de la madre</label><input type="text" id="nombre_madre" readonly></div>
+        <div><label>Fecha de nacimiento</label><input type="text" id="fecha_nacimiento" name="fecha_nacimiento" readonly></div>
+        <div><label>Nacionalidad</label><input type="text" id="nacionalidad" name="nacionalidad" readonly></div>
+
+        <div><label>Departamento de nacimiento</label><input type="text" id="departamento_nac" name="departamento_nac" readonly></div>
+        <div><label>Provincia de nacimiento</label><input type="text" id="provincia_nac" name="provincia_nac" readonly></div>
+        <div><label>Distrito de nacimiento</label><input type="text" id="distrito_nac" name="distrito_nac" readonly></div>
+        <div><label>Nombre del padre</label><input type="text" id="nombre_padre" name="nombre_padre" readonly></div>
+        <div><label>Nombre de la madre</label><input type="text" id="nombre_madre" name="nombre_madre" readonly></div>
       </div>
     </details>
 
     <details style="margin-top:10px">
       <summary><strong>Datos vigentes para este accidente</strong> <span class="subtitle">(solo esta copia; no cambia otros registros)</span></summary>
       <div class="grid-3" style="margin-top:8px">
+        <div><label>Ocupación</label><input name="ocupacion" id="ocupacion"></div>
         <div><label>Estado civil</label><input name="estado_civil" id="estado_civil"></div>
         <div><label>Grado de instrucción</label><input name="grado_instruccion" id="grado_instruccion"></div>
         <div><label>Número de hijos</label><input type="number" min="0" max="99" name="numero_hijos" id="numero_hijos"></div>
@@ -430,8 +445,8 @@ $('#accidente_id').addEventListener('change', async ()=>{
 cargarVehiculos();
 
 /* -------- Datos de la persona y copia para este accidente -------- */
-const camposFicha = ['fecha_nacimiento','nacionalidad','ocupacion','departamento_nac','provincia_nac','distrito_nac','nombre_padre','nombre_madre'];
-const camposCopia = ['estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'];
+const camposFicha = ['fecha_nacimiento','nacionalidad','departamento_nac','provincia_nac','distrito_nac','nombre_padre','nombre_madre'];
+const camposCopia = ['ocupacion','estado_civil','grado_instruccion','numero_hijos','domicilio','domicilio_departamento','domicilio_provincia','domicilio_distrito','celular','email'];
 function limpiarPersona(){
   $('#persona_id').value = '0';
   ['nombres','ap','am','dni_show','sexo','edad',...camposFicha,...camposCopia].forEach(k=>{
@@ -450,6 +465,7 @@ function cargarPersona(p){
   [...camposFicha,...camposCopia].forEach(k=>{
     const campo=$('#'+k); if(campo) campo.value=p[k] ?? '';
   });
+  ['nombres','ap','am','dni_show','sexo',...camposFicha].forEach(k=>{const campo=$('#'+k);if(campo) campo.readOnly = String(campo.value).trim() !== '';});
 }
 $('#dni').addEventListener('input', ()=>{
   if ($('#dni').value.trim() !== $('#dni_show').value) limpiarPersona();
