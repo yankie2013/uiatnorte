@@ -101,7 +101,7 @@
             <a class="case-new-item" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Registrar interviniente</small></span></a>
           </div>
         </div>
-        <a class="btn-shell btn-citacion case-command-button" href="citacion_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true">📅</span>CITACIONES</a>
+        <a class="btn-shell btn-citacion case-command-button" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true">📅</span>CITACIONES</a>
         <div class="case-manifest-actions">
           <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true">📝</span>MANIFESTACIÓN</button>
           <div class="case-new-menu case-manifest-menu" id="case-manifest-menu" hidden>

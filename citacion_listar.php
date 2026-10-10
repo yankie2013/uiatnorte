@@ -142,6 +142,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>
         <span class="pill diligence-count">👥 <?= count($group) ?> citado<?= count($group) === 1 ? '' : 's' ?></span>
+        <a class="btn" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
       </header>
       <div class="diligencia-participants">
         <?php foreach ($group as $row): ?>

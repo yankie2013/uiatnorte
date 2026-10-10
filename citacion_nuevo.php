@@ -35,6 +35,17 @@ if ($accidenteId <= 0) {
 
 $ctx = $service->formContext($accidenteId);
 $data = $service->defaultData();
+$baseCitacionId = (int) ($_POST['base_citacion_id'] ?? $_GET['base_citacion_id'] ?? 0);
+$baseCitacion = null;
+if ($baseCitacionId > 0) {
+    $baseCitacion = $citacionRepository->find($baseCitacionId);
+    if (!$baseCitacion || (int) $baseCitacion['accidente_id'] !== $accidenteId) {
+        http_response_code(404);
+        exit('La citación no pertenece a este expediente.');
+    }
+    $data = $service->defaultData($baseCitacion);
+    $data['en_calidad'] = '';
+}
 $error = '';
 $success = '';
 $newId = null;
@@ -51,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'oficio_id' => $_POST['oficio_id'] ?? '',
     ];
 
+    if ($baseCitacion) {
+        foreach (['fecha', 'hora', 'lugar', 'motivo', 'oficio_id'] as $field) {
+            $data[$field] = $field === 'motivo' ? \App\Support\CitacionMotivo::texto($baseCitacion) : ($baseCitacion[$field] ?? '');
+        }
+    }
     try {
         $created = $service->create($accidenteId, $data);
         $newId = (int) $created['id'];
@@ -77,6 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'last_error' => $calendarError->getMessage(),
             ]);
             $success .= ' (No se pudo crear el evento en Google Calendar: ' . $calendarError->getMessage() . ')';
+        }
+        if ($baseCitacion) {
+            header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : '') . '&return_to=' . urlencode($returnTo), true, 303);
+            exit;
         }
         $data = $service->defaultData();
     } catch (Throwable $e) {
@@ -129,6 +149,10 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
   <form method="post" class="card" id="frmCitacion">
     <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+    <?php if ($baseCitacion): ?>
+      <input type="hidden" name="base_citacion_id" value="<?= $baseCitacionId ?>">
+      <p class="small">Agregar participante a la citación existente. Se conservarán su fecha, hora, lugar, motivo y oficio.</p>
+    <?php endif; ?>
     <div class="grid">
       <div class="c12">
         <label>Persona a citar*</label>
@@ -253,6 +277,10 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
 
   initPreset(lugarSel, lugarOtro, lugarFinal, btnLugar, (v)=> usandoLugarCustom = v);
   initPreset(motivoSel, motivoOtro, motivoFinal, btnMotivo, (v)=> usandoMotivoCustom = v);
+  <?php if ($baseCitacion): ?>
+  [lugarSel, motivoSel, btnLugar, btnMotivo].forEach(control => control.disabled = true);
+  [lugarOtro, motivoOtro, ...document.querySelectorAll('[name="fecha"], [name="hora"], [name="oficio_id"]')].forEach(control => control.readOnly = true);
+  <?php endif; ?>
 
   btnLugar.addEventListener('click', ()=>{
     usandoLugarCustom = !usandoLugarCustom;
