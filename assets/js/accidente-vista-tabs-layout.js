@@ -39,7 +39,7 @@
   const generalButton = document.createElement('button');
   generalButton.type = 'button';
   generalButton.className = 'case-mobile-general-button';
-  generalButton.textContent = '📁 Datos generales';
+  generalButton.innerHTML = '<span class="main-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z M8 8h8 M8 12h8 M8 16h4"/></svg></span><span class="main-tab-title">Datos generales</span>';
   const navigateMobileSection = (section) => {
     const url = new URL(window.location.href);
     url.searchParams.set('mobile_section', section);

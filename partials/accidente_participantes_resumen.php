@@ -32,6 +32,12 @@
             'Abogados' => '⚖️',
             default => '👤',
         };
+        $mobileIconPath = match ($roleGroup) {
+            'Conductor' => 'M4 16V9l2-4h12l2 4v7 M4 10h16 M7 14h1 M16 14h1 M6 16v3 M18 16v3',
+            'Propietario' => 'M14 4a5 5 0 1 1-3 9l-7 7H2v-3l7-7a5 5 0 0 1 5-6 M16 7h.01',
+            'Abogados' => 'M12 3v17 M6 20h12 M4 7h16 M6 7l-4 7h8L6 7 M18 7l-4 7h8l-4-7',
+            default => 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
+        };
         if ($lastRoleGroup !== $roleGroup) {
             echo '<h4 class="overview-role-group" data-tone="' . h($roleTone) . '">' . h($roleGroup) . ':</h4>';
             $lastRoleGroup = $roleGroup;
@@ -60,7 +66,7 @@
         if (strlen($phone) === 9) $phone = '51' . $phone;
         ?>
         <div class="participant-overview-person<?= needs_occ($person) ? ' is-fatal' : '' ?>" data-tone="<?= h($roleTone) ?>">
-          <span class="overview-person-icon" aria-hidden="true"><?= needs_occ($person) ? '💀' : h($roleIcon) ?></span>
+          <span class="overview-person-icon" aria-hidden="true"><span class="overview-legacy-icon"><?= needs_occ($person) ? '💀' : h($roleIcon) ?></span><svg class="overview-modern-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?= h($mobileIconPath) ?>"/></svg></span>
           <div class="overview-person-info">
             <?php if ($role !== $roleGroup && $roleGroup !== 'Conductor'): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
@@ -101,9 +107,9 @@
             <a class="case-new-item" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Registrar interviniente</small></span></a>
           </div>
         </div>
-        <a class="btn-shell btn-citacion case-command-button" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true">📅</span>CITACIONES</a>
+        <a class="btn-shell btn-citacion case-command-button" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4 M17 3v4 M3 11h18 M8 15h3 M8 18h6"/></svg></span>CITACIONES</a>
         <div class="case-manifest-actions">
-          <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true">📝</span>MANIFESTACIÓN</button>
+          <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H5v18h14V11 M9 15l1-4 9-9 3 3-9 9-4 1 M8 18h7"/></svg></span>MANIFESTACIÓN</button>
           <div class="case-new-menu case-manifest-menu" id="case-manifest-menu" hidden>
             <?php if ($manifestacionPersonaOptions === []): ?>
               <div class="case-manifest-empty">No hay personas vinculadas al accidente para crear una manifestación.</div>
