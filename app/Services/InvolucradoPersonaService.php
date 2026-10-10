@@ -119,6 +119,7 @@ final class InvolucradoPersonaService
             'rol_id' => $rolId,
             'vehiculo_id' => $vehiculoId,
             'lesion' => $lesion,
+            'detenido' => strtolower((string)($this->repository->rolById($rolId)['Nombre'] ?? '')) === 'conductor' && in_array((string)($input['detenido'] ?? ''), ['0','1'], true) ? (int)$input['detenido'] : null,
             'observaciones' => $observaciones,
             'orden_persona' => $ordenPersona,
             ...$snapshot,

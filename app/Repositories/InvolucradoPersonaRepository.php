@@ -243,7 +243,7 @@ final class InvolucradoPersonaRepository
 
     public function createInvolucrado(array $payload): int
     {
-        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona,edad_snapshot,estado_civil_snapshot,grado_instruccion_snapshot,numero_hijos_snapshot,domicilio_snapshot,domicilio_departamento_snapshot,domicilio_provincia_snapshot,domicilio_distrito_snapshot,celular_snapshot,email_snapshot,snapshot_guardado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)');
+        $st = $this->pdo->prepare('INSERT INTO involucrados_personas(accidente_id,persona_id,rol_id,vehiculo_id,lesion,observaciones,orden_persona,edad_snapshot,estado_civil_snapshot,grado_instruccion_snapshot,numero_hijos_snapshot,domicilio_snapshot,domicilio_departamento_snapshot,domicilio_provincia_snapshot,domicilio_distrito_snapshot,celular_snapshot,email_snapshot,detenido,snapshot_guardado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)');
         $st->execute([
             $payload['accidente_id'],
             $payload['persona_id'],
@@ -262,6 +262,7 @@ final class InvolucradoPersonaRepository
             $payload['domicilio_distrito_snapshot'],
             $payload['celular_snapshot'],
             $payload['email_snapshot'],
+            $payload['detenido'] ?? null,
         ]);
         return (int) $this->pdo->lastInsertId();
     }

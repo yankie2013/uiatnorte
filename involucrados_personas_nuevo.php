@@ -91,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
       'rol_id' => (int)ipost('rol_id',0),
       'vehiculo_id' => ipost('vehiculo_id','')==='' ? null : (int)ipost('vehiculo_id'),
       'lesion' => ipost('lesion','Ileso'),
+      'detenido' => ipost('detenido',''),
       'observaciones' => ipost('observaciones',''),
       'next' => (int)ipost('next',0),
       'orden_persona' => strtoupper(trim(ipost('orden_persona',''))),
@@ -206,6 +207,21 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
 .guided-embed .actions{border-top:1px solid #d5e4dc;padding-top:16px;margin-top:18px;gap:10px}
 @media(max-width:600px){.guided-embed .wrap{padding:8px!important}.guided-embed .card{padding:14px}.guided-embed summary .subtitle{display:block;margin:4px 0 0}.guided-embed .inline{flex-wrap:wrap}}
 </style>
+<style>
+#formIP input,#formIP select,#formIP textarea{border:1px solid #b8c8dc;background:#fff;color:#20334b;min-height:40px}
+#formIP input[readonly]{background:#edf2f7;color:#4b6078}
+#formIP input:focus,#formIP select:focus,#formIP textarea:focus{outline:2px solid #93b4ec;outline-offset:1px}
+.person-form-block{margin-top:16px;padding:16px;border:1px solid #cbd8e8;border-radius:12px;background:#f8faff}
+.person-form-block h2{font-size:15px;margin:0 0 12px;color:#284b76}
+#formIP details{border:1px solid #d4deeb;border-radius:10px;margin-bottom:10px;background:#fff}
+#formIP summary{padding:10px;cursor:pointer}
+#formIP details>.grid-3{padding:0 12px 12px}
+#formIP label{color:#45617e;margin-top:6px;margin-bottom:5px}
+#formIP textarea{height:auto}
+@media(max-width:760px){.person-form-block{padding:12px}.inline{flex-wrap:wrap}}
+html[data-theme-resolved="dark"] .person-form-block{background:#172334;border-color:#40516b}
+html[data-theme-resolved="dark"] #formIP input,html[data-theme-resolved="dark"] #formIP select,html[data-theme-resolved="dark"] #formIP textarea,html[data-theme-resolved="dark"] #formIP details{background:#1e2b40;color:#e5edf7;border-color:#536783}
+</style>
 </head>
 <body class="<?= $guidedEmbed ? 'guided-embed' : '' ?>">
 <?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?>
@@ -231,11 +247,11 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
     <input type="hidden" name="guided_embed" value="<?= $guidedEmbed ? '1' : '0' ?>">
     <input type="hidden" name="return_to" value="<?=h($return_to)?>">
 
-    <?php if ($guidedEmbed): ?>
+    <?php if ($guidedEmbed || $accidente_id > 0): ?>
       <input type="hidden" name="accidente_id" id="accidente_id" value="<?= (int)$accidente_id ?>">
     <?php endif; ?>
     <div<?= $guidedEmbed ? '' : ' class="grid-2"' ?>>
-      <?php if (!$guidedEmbed): ?>
+      <?php if (!$guidedEmbed && $accidente_id <= 0): ?>
       <div>
         <label>Accidente</label>
         <select name="accidente_id" id="accidente_id" required>
@@ -256,6 +272,7 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
       </div>
     </div>
 
+    <section class="person-form-block"><h2>Identificación de la persona</h2>
     <div class="grid-3" style="margin-top:8px">
       <div><label>Nombres</label><input type="text" id="nombres" readonly></div>
       <div><label>Apellido paterno</label><input type="text" id="ap" readonly></div>
@@ -297,6 +314,8 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
       </div>
     </details>
 
+    </section>
+    <section class="person-form-block"><h2>Participación en el accidente</h2>
     <div class="grid-3">
       <div>
         <label>Rol</label>
@@ -318,6 +337,7 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
       </div>
     </div>
 
+    <div id="detenido_field" hidden><label for="detenido">¿El conductor está detenido?</label><select name="detenido" id="detenido" disabled><option value="">Sin información</option><option value="1">Sí, detenido</option><option value="0">No</option></select></div>
     <!-- Campo NUEVO: Orden persona (A, B, C...), habilitado solo para peaton/pasajero/ocupante/testigo -->
     <div style="margin-top:8px">
       <label>Orden persona</label>
@@ -332,6 +352,7 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
 
     <label>Observaciones</label>
     <textarea name="observaciones" rows="4" placeholder="Notas u observaciones…"></textarea>
+    </section>
 
     <div class="actions">
       <a class="btn" href="<?=h($return_to)?>">Cancelar</a>
@@ -502,6 +523,10 @@ function applyRoleVehicleRequirement(){
   const opSel = document.getElementById('orden_persona');
   const opMsg = document.getElementById('op_msg');
   const r = normalize(rolTxt);
+  const conductor = r === 'conductor';
+  document.getElementById('detenido_field').hidden = !conductor;
+  document.getElementById('detenido').disabled = !conductor;
+  if (!conductor) document.getElementById('detenido').value = '';
   const allowOrden = /(peaton|pasajero|ocupante|testigo)/.test(r);
 
   if(allowOrden){
