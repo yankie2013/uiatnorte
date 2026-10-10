@@ -13730,55 +13730,10 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
   const shell = document.querySelector('.tabs-shell-main');
   const tabs = document.getElementById('accTabs');
   if (!shell || !tabs) return;
-  const location = document.createElement('div');
-  location.className = 'case-tab-location';
-  location.setAttribute('role', 'status');
-  location.setAttribute('aria-live', 'polite');
-  location.setAttribute('aria-atomic', 'true');
-  shell.prepend(location);
-  const label = (tab) => {
-    const copy = tab.cloneNode(true);
-    copy.querySelectorAll('.tab-sub, .tab-mini, .main-tab-icon, .badge').forEach((node) => node.remove());
-    return copy.textContent.replace(/\s+/g, ' ').trim();
-  };
   function updateLocation() {
     const active = tabs.querySelector('.nav-link.active');
     if (!active) return;
     const mainId = active.dataset.bsTarget;
-    const pane = document.querySelector(mainId);
-    const parts = [label(active)];
-    const overview = mainId === '#participantes' && pane?.classList.contains('show-participants-overview');
-    if (pane && !overview) {
-      pane.querySelectorAll('[data-bs-toggle="tab"].active').forEach((tab) => {
-        if (tab.getClientRects().length && !tab.closest('[hidden]')) {
-          const text = label(tab);
-          if (text && parts[parts.length - 1] !== text) parts.push(text);
-        }
-      });
-    }
-    const signature = parts.join(' / ');
-    if (location.dataset.path !== signature) {
-      location.dataset.path = signature;
-      const caption = document.createElement('span');
-      caption.className = 'case-location-caption';
-      caption.textContent = 'Estás en';
-      const trail = document.createElement('span');
-      trail.className = 'case-location-trail';
-      parts.forEach((part, index) => {
-        if (index) {
-          const separator = document.createElement('span');
-          separator.className = 'case-location-separator';
-          separator.textContent = '›';
-          separator.setAttribute('aria-hidden', 'true');
-          trail.append(separator);
-        }
-        const item = document.createElement('span');
-        item.textContent = part;
-        if (index === parts.length - 1) item.setAttribute('aria-current', 'location');
-        trail.append(item);
-      });
-      location.replaceChildren(caption, trail);
-    }
     const summary = document.querySelector('.case-participants-disclosure > summary');
     summary?.classList.toggle('is-current-section', mainId === '#participantes');
     if (mainId === '#participantes') summary?.setAttribute('aria-current', 'page');
