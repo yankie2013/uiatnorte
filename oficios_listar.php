@@ -435,8 +435,17 @@ html[data-theme-resolved="dark"] .office-icon-button{color:#c7dfbc;border-color:
   .ok{margin-left:14px;margin-right:14px}
 }
 
-.office-more-filters,.office-extra-filters{display:contents}
 .office-more-filters>summary{display:none}
+@media screen and (min-width:761px){
+  #oficio-filters .filters-grid{grid-template-columns:minmax(240px,2fr) minmax(0,5fr);align-items:end}
+  #oficio-filters .office-more-filters{display:block;min-width:0}
+  #oficio-filters .office-extra-filters{display:grid;grid-template-columns:.7fr 1.2fr 1.2fr 1fr .9fr;gap:8px;align-items:end}
+  #oficio-filters .office-extra-filters>.field{min-width:0}
+}
+@media screen and (min-width:761px) and (max-width:1100px){
+  #oficio-filters .filters-grid{grid-template-columns:minmax(0,1fr)}
+  #oficio-filters .office-extra-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 @media screen and (max-width:760px){
   .panel-head{padding:8px 8px 0}
   .filter-box{margin-top:0;padding:10px!important;border-radius:12px}
