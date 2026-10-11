@@ -44,13 +44,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 #acta-related-dialog::backdrop{background:#17263d80;backdrop-filter:blur(3px)}
 #acta-related-frame{width:100%;height:75dvh;border:0;margin-top:8px}
 @media(max-width:760px){.panel>.head{flex-wrap:wrap;gap:8px}.office-registration-actions .btn{font-size:12px;padding:8px}.office-response-status{margin:5px 0}#acta-related-dialog{padding:8px}}
+.participant-selection>summary{cursor:pointer;font-weight:800;color:var(--text)}.participant-selection>summary h2{display:inline;font-size:20px;margin:0 0 0 5px}.participant-selection>summary:focus-visible{outline:2px solid var(--blue);outline-offset:5px;border-radius:4px}
 .direct-reception[hidden]{display:none}.direct-reception{padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 </style></head><body>
 <?php require_once __DIR__ . '/sidebar.php'; ?>
 <main class="wrap"><div class="panel head"><div><h1 style="margin:0">Acta de visualizacion</h1><div class="muted">Caso #<?= $accidenteId ?> · <?= h($ctx['accident']['registro_sidpol']) ?></div></div><?php if($embed):?><button class="btn" onclick="parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else:?><a class="btn" href="accidente_vista_tabs.php?accidente_id=<?=$accidenteId?>&tab=documentos&subtab=actas">Volver</a><?php endif?></div>
 <?php if($error):?><div class="error"><?=h($error)?></div><?php endif?><div class="draft-bar" role="status"><div class="draft-state" id="draftState">Proteccion de borrador activa</div><div class="draft-actions"><button class="btn draft-save" type="button" id="saveDraftNow">Guardar borrador ahora</button><button class="btn draft-save" type="button" id="discardDraft" hidden>Descartar borrador</button></div></div><form method="post" id="actaForm" novalidate><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="accidente_id" value="<?=$accidenteId?>"><input type="hidden" name="embed" value="<?=$embed?1:0?>">
 <section class="panel grid"><div><label>Fecha</label><input type="date" name="fecha_visualizacion" value="<?=h($_POST['fecha_visualizacion']??$row['fecha_visualizacion']??date('Y-m-d'))?>" required></div><div><label>Hora de inicio</label><input type="time" name="hora_inicio" value="<?=h(substr((string)($_POST['hora_inicio']??$row['hora_inicio']??date('H:i')),0,5))?>" required></div></section>
-<section class="panel"><h2>Personas consideradas</h2>
+<details class="panel participant-selection" open><summary><h2>👥 Personas consideradas</h2></summary>
 <?php $participantGroups = $repo->participantGroups($accidenteId, $ctx['participants']); ?>
 <?php foreach ($participantGroups as $title => $people): ?>
   <fieldset class="participant-selection-block" data-source="<?= $title === 'Peatones' ? 'FAMILIAR' : 'INVOLUCRADO' ?>">
@@ -72,7 +73,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   </fieldset>
 <?php endforeach; ?>
 <?php if (!$ctx['participants']): ?><p class="muted">No hay personas registradas en este expediente.</p><?php endif; ?>
-</section>
+</details>
 <section class="panel">
   <div class="head"><h2>📹 Oficios de cámaras y documentos recibidos</h2><div class="actions"><button type="button" class="btn primary acta-related-open" data-src="oficios_nuevo.php?accidente_id=<?=$accidenteId?>&amp;embed=1&amp;origin=acta_visualizacion" data-title="📄 Nuevo oficio de cámaras">📄 Nuevo oficio</button><button type="button" class="btn" id="add-direct-video">📥 Video presentado</button></div></div>
   <p class="muted">Consulta los oficios de cámaras, registra sus respuestas y agrega los medios recibidos para el acta.</p>
