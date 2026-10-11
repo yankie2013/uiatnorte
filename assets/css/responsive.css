@@ -294,3 +294,25 @@
  .uiat-filter-grid>.uiat-filter-actions:not(button):not(a){display:flex!important;gap:8px!important;align-items:center!important;}
  .uiat-filter-grid>.uiat-filter-actions:not(button):not(a)>.btn{flex:1;}
 }
+
+/* Vehicle detail: keep data within the mobile screen and scroll only its tabs. */
+@media screen and (max-width:760px){
+ #participantes .sidebar-vehicle-only>.tab-panel{padding:8px!important;}
+ #participantes .tab-pane>.inner-panel:has(>.editable-shell .vehicle-detail-view){padding:6px!important;}
+ #participantes .editable-shell:has(.vehicle-detail-view){grid-template-columns:minmax(0,1fr);gap:8px;}
+ #participantes .editable-shell:has(.vehicle-detail-view)>.editable-view{min-width:0;max-width:100%;}
+ #participantes .vehicle-detail-view{min-width:0;width:100%;max-width:100%;}
+ #participantes .vehicle-detail-view>.inner-tabs{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding:5px 2px 9px;gap:8px;}
+ #participantes .vehicle-detail-view>.inner-tabs>.nav-link{flex:0 0 104px;min-width:104px;min-height:44px;white-space:normal;}
+ #participantes .vehicle-detail-view>.tab-content{min-width:0;width:100%;}
+ #participantes .vehicle-detail-view .inner-panel{min-width:0;max-width:100%;padding:8px!important;}
+ #participantes .vehicle-summary-block-grid{grid-template-columns:minmax(0,1fr);gap:10px;}
+ #participantes .vehicle-summary-record{min-width:0;padding:10px!important;border-radius:12px;}
+ #participantes .vehicle-summary-title{font-size:13px;line-height:1.4;margin:2px 0 10px;}
+ #participantes .vehicle-detail-view .dosage-detail-grid{grid-template-columns:minmax(0,1fr);gap:7px;}
+ #participantes .vehicle-detail-view .dosage-detail{grid-template-columns:minmax(0,42%) 8px minmax(0,1fr);gap:4px;line-height:1.45;}
+ #participantes .vehicle-detail-view :is(dt,dd,.record-detail-value-wrap,.record-detail-value){min-width:0;overflow-wrap:anywhere;}
+ #participantes .editable-shell:has(.vehicle-detail-view)>.editable-toolbar{flex-wrap:wrap;gap:6px;}
+ #participantes .editable-shell:has(.vehicle-detail-view)>.editable-toolbar :is(.record-actions,.editable-actions){min-width:0;flex-wrap:wrap;gap:6px;}
+ #participantes .editable-shell:has(.vehicle-detail-view) .btn-shell{min-height:36px;padding:7px 9px;font-size:11px;white-space:normal;}
+}

@@ -4759,6 +4759,7 @@ $renderVehiculoSubtabs = static function (
 
     ob_start();
     ?>
+    <div class="vehicle-detail-view">
     <div class="inner-tabs nav nav-tabs flex-nowrap" id="<?= h($tabPrefix) ?>-subtabs" role="tablist">
       <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#<?= h($tabPrefix) ?>-resumen" type="button" role="tab">
         Resumen
@@ -4831,6 +4832,7 @@ $renderVehiculoSubtabs = static function (
           </div>
         </div>
       <?php endforeach; ?>
+    </div>
     </div>
     <?php
 
