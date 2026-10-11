@@ -38,7 +38,15 @@ final class ActaVisualizacionService
         $disks = [];
         foreach ((array) ($input['discos'] ?? []) as $disk) {
             $officeId = (int)($disk['oficio_id'] ?? 0);
-            if (!isset($officeMap[$officeId]) || $officeMap[$officeId]['respuestas'] === []) throw new InvalidArgumentException('Selecciona un oficio de cámaras que tenga documento recibido relacionado.');
+            if ($officeId > 0 && (!isset($officeMap[$officeId]) || $officeMap[$officeId]['respuestas'] === [])) throw new InvalidArgumentException('Selecciona un oficio de cámaras que tenga documento recibido relacionado.');
+            $receivedDate = null; $receivedType = null; $presentedBy = null;
+            if ($officeId <= 0) {
+                $receivedDate = trim((string)($disk['fecha_recibido'] ?? ''));
+                $receivedType = trim((string)($disk['tipo_documento_recibido'] ?? ''));
+                $presentedBy = trim((string)($disk['presentado_por'] ?? ''));
+                $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $receivedDate);
+                if (!$parsed || $parsed->format('Y-m-d') !== $receivedDate || !in_array($receivedType, ['Escrito','Carta','Oficio','Solicitud'], true) || $presentedBy === '' || mb_strlen($presentedBy)>255) throw new InvalidArgumentException('Completa la fecha de recepción, tipo de documento y presentado por para los videos aportados por las partes.');
+            }
             $mediumType = strtoupper(trim((string)($disk['tipo_medio'] ?? '')));
             if (!in_array($mediumType, ['DISCO','USB'], true)) throw new InvalidArgumentException('Indica si el medio recibido es DISCO o USB.');
             $files = [];
@@ -70,12 +78,13 @@ final class ActaVisualizacionService
             $capacity = trim((string)($disk['capacidad'] ?? ''));
             if ($brand === '' || $serial === '' || $capacity === '') throw new InvalidArgumentException('Completa marca, número de serie y capacidad de cada DISCO o USB.');
             if ($files === []) throw new InvalidArgumentException('Cada DISCO o USB debe contener al menos un archivo.');
-            $disks[] = ['oficio_id'=>$officeId,'tipo_medio'=>$mediumType,'marca'=>$brand,'numero_serie'=>$serial,'capacidad'=>$capacity,'observaciones'=>trim((string)($disk['observaciones']??'')) ?: null,'archivos'=>$files];
+            $disks[] = ['oficio_id'=>$officeId > 0 ? $officeId : null,'fecha_recibido'=>$receivedDate,'tipo_documento_recibido'=>$receivedType,'presentado_por'=>$presentedBy,'tipo_medio'=>$mediumType,'marca'=>$brand,'numero_serie'=>$serial,'capacidad'=>$capacity,'observaciones'=>trim((string)($disk['observaciones']??'')) ?: null,'archivos'=>$files];
+            if ($officeId <= 0) continue;
             $office = $officeMap[$officeId];
             $documentsByKey['OFICIO:'.$officeId] = $office['documento'];
             foreach ($office['respuestas'] as $response) $documentsByKey['RESPUESTA:'.$response['fuente_id']] = $response;
         }
-        if ($disks === []) throw new InvalidArgumentException('Agrega al menos un DISCO o USB a uno de los oficios disponibles.');
+        if ($disks === []) throw new InvalidArgumentException('Agrega al menos un DISCO o USB recibido por oficio o presentado por una parte.');
         return $this->repository->save($id, [
             'accidente_id'=>$accidenteId,'fecha_visualizacion'=>$date,'hora_inicio'=>$time,
             'observaciones'=>trim((string)($input['observaciones']??'')) ?: null,

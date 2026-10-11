@@ -201,11 +201,11 @@ final class ActaVisualizacionRepository
             foreach ($participants as $p) $participantSt->execute([$id,$p['fuente'],$p['fuente_id'],$p['nombre'],$p['condicion']]);
             $documentSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_documentos(acta_visualizacion_id,fuente,fuente_id,descripcion) VALUES(?,?,?,?)');
             foreach ($documents as $d) $documentSt->execute([$id,$d['fuente'],$d['fuente_id'],$d['descripcion']]);
-            $diskSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_discos(acta_visualizacion_id,oficio_id,numero,tipo_medio,marca,numero_serie,capacidad,observaciones) VALUES(?,?,?,?,?,?,?,?)');
+            $diskSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_discos(acta_visualizacion_id,oficio_id,numero,tipo_medio,marca,numero_serie,capacidad,observaciones,fecha_recibido,tipo_documento_recibido,presentado_por) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
             $fileSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_archivos(disco_id,nombre_archivo,tipo_archivo,peso,duracion,observaciones) VALUES(?,?,?,?,?,?)');
             $descriptionSt = $this->pdo->prepare('INSERT INTO actas_visualizacion_descripciones(archivo_id,orden,tiempo,detalle,captura_path) VALUES(?,?,?,?,?)');
             foreach ($disks as $index => $disk) {
-                $diskSt->execute([$id,$disk['oficio_id'],$index+1,$disk['tipo_medio'],$disk['marca'],$disk['numero_serie'],$disk['capacidad'],$disk['observaciones']]);
+                $diskSt->execute([$id,$disk['oficio_id'],$index+1,$disk['tipo_medio'],$disk['marca'],$disk['numero_serie'],$disk['capacidad'],$disk['observaciones'],$disk['fecha_recibido'] ?? null,$disk['tipo_documento_recibido'] ?? null,$disk['presentado_por'] ?? null]);
                 $diskId = (int) $this->pdo->lastInsertId();
                 foreach ($disk['archivos'] as $file) {
                     $fileSt->execute([$diskId,$file['nombre_archivo'],$file['tipo_archivo'],$file['peso'],$file['duracion'],$file['observaciones']]);

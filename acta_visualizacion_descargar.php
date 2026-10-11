@@ -147,6 +147,11 @@ foreach ($disks as $diskIndex => $disk) {
         . ', serie N° ' . (trim((string) ($disk['numero_serie'] ?? '')) ?: 'no consignada')
         . ', capacidad ' . (trim((string) ($disk['capacidad'] ?? '')) ?: 'no consignada')
         . (trim((string) ($disk['observaciones'] ?? '')) !== '' ? ', ' . trim((string) $disk['observaciones']) : '');
+    if ((int)($disk['oficio_id'] ?? 0) === 0 && !empty($disk['fecha_recibido'])) {
+        $reception = 'Presentado por '.trim((string)$disk['presentado_por']).', mediante '.trim((string)$disk['tipo_documento_recibido']).', recibido el '.avv_date_long((string)$disk['fecha_recibido']).'.';
+        $diskHeader .= '. '.$reception;
+        $officeNarratives[] = $reception;
+    }
     $diskLines[] = $diskHeader;
     foreach (($disk['archivos'] ?? []) as $fileIndex => $file) {
         $filesTotal++;
