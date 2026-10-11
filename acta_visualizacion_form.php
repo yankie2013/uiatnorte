@@ -33,7 +33,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 @media(max-width:760px){.participant-selection-block{padding:8px;margin-top:9px}.participant-selection-block .check{padding:8px;font-size:12px}.participant-selection-block .muted{font-size:11px}}
 
 .participant-selection-block .participant-role-icon{display:flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:30px;border-radius:9px;background:#e9f1ff;color:#3973ba}
-.participant-role-icon svg{width:20px;height:20px}
+.participant-selection-block .participant-role-icon{font-size:22px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .participant-selection-block .participant-role-icon[data-role="owner"]{background:#fff3d5;color:#ad7916}
 .participant-selection-block .participant-role-icon[data-role="family"]{background:#e0f7ef;color:#278a74}
 .participant-selection-block .participant-role-icon[data-role="lawyer"]{background:#eee7ff;color:#7955b7}
@@ -54,16 +54,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
           'PROPIETARIO' => 'owner', 'FAMILIAR' => 'family', 'ABOGADO' => 'lawyer',
           default => str_starts_with(mb_strtolower($p['condicion']), 'conductor') ? 'driver' : (str_starts_with(mb_strtolower($p['condicion']), 'peat') ? 'pedestrian' : 'person'),
         };
-        $roleIconPath = match ($personRole) {
-          'driver' => 'M4 16V9l2-4h12l2 4v7 M4 10h16 M7 14h1 M16 14h1 M6 16v3 M18 16v3',
-          'owner' => 'M14 4a5 5 0 1 1-3 9l-7 7H2v-3l7-7a5 5 0 0 1 5-6 M16 7h.01',
-          'family' => 'M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M3 20v-3a6 6 0 0 1 12 0v3 M17 5a3 3 0 0 1 0 6 M18 14a5 5 0 0 1 3 5v1',
-          'lawyer' => 'M12 3v17 M6 20h12 M4 7h16 M6 7l-4 7h8L6 7 M18 7l-4 7h8l-4-7',
-          'pedestrian' => 'M15 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M11 8l3-1 3 5 4 1 M11 8l-4 5 M14 8l-3 7 5 6 M11 15l-5 6',
-          default => 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
+        $roleEmoji = match ($personRole) {
+          'driver' => '🚘', 'owner' => '🔑', 'family' => '👥',
+          'lawyer' => '⚖️', 'pedestrian' => '🚶', default => '👤',
         };
       ?>
-      <label class="check"><input type="checkbox" name="participantes[]" value="<?=h($key)?>" <?=isset($selectedParticipants[$key])?'checked':''?>><span class="participant-role-icon" data-role="<?=h($personRole)?>" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?=h($roleIconPath)?>"/></svg></span><span><strong><?=h($p['nombre'])?></strong><br><span class="muted"><?=h($p['condicion'])?></span></span></label>
+      <label class="check"><input type="checkbox" name="participantes[]" value="<?=h($key)?>" <?=isset($selectedParticipants[$key])?'checked':''?>><span class="participant-role-icon" data-role="<?=h($personRole)?>" aria-hidden="true"><?=h($roleEmoji)?></span><span><strong><?=h($p['nombre'])?></strong><br><span class="muted"><?=h($p['condicion'])?></span></span></label>
       <?php endforeach; ?>
     </div>
   </fieldset>
