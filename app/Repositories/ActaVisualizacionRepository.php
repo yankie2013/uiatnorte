@@ -89,6 +89,53 @@ final class ActaVisualizacionRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Group selectable records by their traffic unit or pedestrian relationship. */
+    public function participantGroups(int $accidenteId, array $participants): array
+    {
+        $sql = "SELECT 'INVOLUCRADO' fuente, ip.id fuente_id, ip.persona_id,
+                       COALESCE(NULLIF(iv.orden_participacion,''), IF(ip.vehiculo_id IS NULL OR ip.vehiculo_id=0,'Peatones','Sin unidad asignada')) grupo
+                  FROM involucrados_personas_activos ip
+             LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id=ip.accidente_id AND iv.vehiculo_id=ip.vehiculo_id
+                 WHERE ip.accidente_id=?
+                 UNION ALL
+                SELECT 'PROPIETARIO', pv.id, pv.propietario_persona_id, COALESCE(NULLIF(iv.orden_participacion,''),'Sin unidad asignada')
+                  FROM propietario_vehiculo_activos pv
+             LEFT JOIN involucrados_vehiculos_activos iv ON iv.id=pv.vehiculo_inv_id AND iv.accidente_id=pv.accidente_id WHERE pv.accidente_id=?
+                 UNION ALL
+                SELECT 'FAMILIAR', ff.id, ff.familiar_persona_id,
+                       COALESCE(NULLIF(iv.orden_participacion,''), IF(ip.id IS NOT NULL AND (ip.vehiculo_id IS NULL OR ip.vehiculo_id=0),'Peatones','Sin unidad asignada'))
+                  FROM familiar_fallecido_activos ff
+             LEFT JOIN involucrados_personas_activos ip ON ip.id=ff.fallecido_inv_id AND ip.accidente_id=ff.accidente_id
+             LEFT JOIN involucrados_vehiculos_activos iv ON iv.accidente_id=ip.accidente_id AND iv.vehiculo_id=ip.vehiculo_id WHERE ff.accidente_id=?";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$accidenteId, $accidenteId, $accidenteId]);
+        $recordGroups = []; $personGroups = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $link) {
+            $recordGroups[$link['fuente'].':'.$link['fuente_id']] ??= $link['grupo'];
+            if ((int)$link['persona_id'] > 0) $personGroups[(int)$link['persona_id']] ??= $link['grupo'];
+        }
+        $st = $this->pdo->prepare('SELECT id,persona_id FROM abogados_activos WHERE accidente_id=?');
+        $st->execute([$accidenteId]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $lawyer) {
+            $recordGroups['ABOGADO:'.$lawyer['id']] = $personGroups[(int)$lawyer['persona_id']] ?? 'Sin unidad asignada';
+        }
+        $groups = [];
+        foreach ($participants as $person) {
+            $group = $recordGroups[$person['fuente'].':'.$person['fuente_id']] ?? 'Sin unidad asignada';
+            $groups[$group][] = $person;
+        }
+        $sourceOrder = ['INVOLUCRADO'=>0, 'PROPIETARIO'=>1, 'FAMILIAR'=>2, 'ABOGADO'=>3];
+        foreach ($groups as &$people) {
+            usort($people, static fn(array $a, array $b): int => ($sourceOrder[$a['fuente']] ?? 4) <=> ($sourceOrder[$b['fuente']] ?? 4));
+        }
+        unset($people);
+        uksort($groups, static function (string $a, string $b): int {
+            $rank = static fn(string $group): int => preg_match('/^UT-(\d+)$/i', $group, $m) ? (int)$m[1] : ($group === 'Peatones' ? PHP_INT_MAX-1 : PHP_INT_MAX);
+            return ($rank($a) <=> $rank($b)) ?: strnatcasecmp($a,$b);
+        });
+        return $groups;
+    }
+
     public function cameraOffices(int $accidenteId): array
     {
         $st = $this->pdo->prepare(

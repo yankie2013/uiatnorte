@@ -37,10 +37,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php if($error):?><div class="error"><?=h($error)?></div><?php endif?><div class="draft-bar" role="status"><div class="draft-state" id="draftState">Proteccion de borrador activa</div><div class="draft-actions"><button class="btn draft-save" type="button" id="saveDraftNow">Guardar borrador ahora</button><button class="btn draft-save" type="button" id="discardDraft" hidden>Descartar borrador</button></div></div><form method="post" id="actaForm" novalidate><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="accidente_id" value="<?=$accidenteId?>"><input type="hidden" name="embed" value="<?=$embed?1:0?>">
 <section class="panel grid"><div><label>Fecha</label><input type="date" name="fecha_visualizacion" value="<?=h($_POST['fecha_visualizacion']??$row['fecha_visualizacion']??date('Y-m-d'))?>" required></div><div><label>Hora de inicio</label><input type="time" name="hora_inicio" value="<?=h(substr((string)($_POST['hora_inicio']??$row['hora_inicio']??date('H:i')),0,5))?>" required></div></section>
 <section class="panel"><h2>Personas consideradas</h2>
-<?php $participantGroups = ['INVOLUCRADO'=>'Participantes del accidente','PROPIETARIO'=>'Propietarios de vehículos','FAMILIAR'=>'Familiares de fallecidos','ABOGADO'=>'Abogados']; ?>
-<?php foreach ($participantGroups as $source => $title): ?>
-  <?php $people = array_filter($ctx['participants'], static fn(array $person): bool => $person['fuente'] === $source); if (!$people) continue; ?>
-  <fieldset class="participant-selection-block" data-source="<?=h($source)?>">
+<?php $participantGroups = $repo->participantGroups($accidenteId, $ctx['participants']); ?>
+<?php foreach ($participantGroups as $title => $people): ?>
+  <fieldset class="participant-selection-block" data-source="<?= $title === 'Peatones' ? 'FAMILIAR' : 'INVOLUCRADO' ?>">
     <legend><?=h($title)?> <span class="participant-count"><?=count($people)?></span></legend>
     <div class="check-grid">
       <?php foreach ($people as $p): $key=$p['fuente'].':'.$p['fuente_id']; ?>
