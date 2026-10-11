@@ -30,6 +30,7 @@ if ($returnTo === '' && $preselectedAccidenteId > 0) {
 }
 
 $editingId = defined('UIAT_GESTION_EDIT_ID') ? (int)UIAT_GESTION_EDIT_ID : 0;
+$cameraActa = $embed && $editingId === 0 && ($_GET['origin'] ?? $_POST['origin'] ?? '') === 'acta_visualizacion';
 $editingOficio = $editingId > 0 ? $service->oficio($editingId) : null;
 $gestion = $editingId > 0 || ($preselectedAccidenteId <= 0 && (!$embed || ($_GET['origin'] ?? '') === 'gestion'));
 $caseMode = (string)($_POST['case_mode'] ?? ($editingOficio ? (!empty($editingOficio['accidente_id']) ? 'related' : 'standalone') : ''));
@@ -96,6 +97,7 @@ if (isset($_GET['ajax'])) {
 $ctx = $service->formContext($preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
 $data = $service->defaultData($editingOficio, $preselectedAccidenteId > 0 ? $preselectedAccidenteId : null);
 if ($gestion) $data = array_replace($data, $service->gestionAnnualData($editingOficio));
+if ($cameraActa) { $data['anio_oficio'] = (int) date('Y'); $data['oficial_ano_id'] = $ctx['oficial_ano_default']; $data['tipo'] = 'SOLICITAR'; }
 $error = '';
 $success = '';
 $asignado = null;
@@ -137,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     if ($gestion) $data = array_replace($data, $service->gestionAnnualData($editingOficio));
+if ($cameraActa) { $data['anio_oficio'] = (int) date('Y'); $data['oficial_ano_id'] = $ctx['oficial_ano_default']; $data['tipo'] = 'SOLICITAR'; }
     try {
         if ($editingId > 0) {
             $service->update($editingId, $data);
@@ -385,7 +388,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <div class="office-accordion-body grid">
       <?php if (!$gestion): ?><input type="hidden" name="accidente_id" id="accidente_id" value="<?= h((string) $data['accidente_id']) ?>"><?php endif; ?>
 
-      <?php if ($gestion): ?>
+      <?php if ($gestion || $cameraActa): ?>
       <input type="hidden" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>">
       <input type="hidden" name="oficial_ano_id" id="oficial_ano_id" value="<?= h($data['oficial_ano_id']) ?>">
       <?php else: ?>
@@ -405,7 +408,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         <label for="fecha_emision">Fecha de emisión*</label>
         <input type="date" name="fecha_emision" id="fecha_emision" value="<?= h($data['fecha_emision']) ?>" required>
       </div>
-      <?php if (!$gestion): ?>
+      <?php if (!$gestion && !$cameraActa): ?>
       <div class="c4">
         <label for="oficial_ano_id">Nombre oficial del año*</label>
         <div class="field-row">
@@ -422,6 +425,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
 
       <?php endif; ?>
 
+      <?php if ($cameraActa): ?>
+      <input type="hidden" name="tipo" id="tipo" value="SOLICITAR">
+      <?php else: ?>
       <div class="c4">
         <label for="tipo">Tipo de asunto*</label>
         <select name="tipo" id="tipo" required>
@@ -431,7 +437,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
         </select>
       </div>
 
-      <div class="c8">
+      <?php endif; ?>
+      <div class="<?= $cameraActa ? 'c12' : 'c8' ?>">
         <label for="plantilla_nombre">Categoría / plantilla*</label>
         <div class="category-combobox" data-creatable-combobox data-filter-select="#tipo" data-options="<?= h(json_encode(array_map(static fn(array $item): array => ['label' => $item['nombre'], 'search' => $item['busqueda'], 'tipo' => $item['tipo']], $plantillasAsunto), JSON_UNESCAPED_UNICODE)) ?>">
           <input id="plantilla_nombre" type="text" name="plantilla_nombre" value="<?= h($plantillaNombreActual) ?>" maxlength="160" autocomplete="off" placeholder="Escribe para buscar o crear una plantilla" role="combobox" aria-autocomplete="list" aria-expanded="false" required>
