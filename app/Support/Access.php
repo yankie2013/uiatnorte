@@ -63,6 +63,16 @@ final class Access
         $s=Database::connection()->prepare('SELECT rbac_case(?)');$s->execute([$case]);return (bool)$s->fetchColumn();
     }
     public static function requireEdit(int $case): void { if(!self::canEdit($case)) throw new RuntimeException('Solo el responsable o un adjunto con colaboración activa puede editar este expediente.'); }
+    public static function canDeletePendingTask(int $case): bool {
+        if (self::admin()) return true;
+        if (self::role() !== 'jefe_emi' || $case <= 0) return false;
+        $s = Database::connection()->prepare('SELECT 1 FROM accidentes_activos WHERE id=? AND responsable_id=?');
+        $s->execute([$case, self::id()]);
+        return (bool) $s->fetchColumn();
+    }
+    public static function requireDeletePendingTask(int $case): void {
+        if (!self::canDeletePendingTask($case)) throw new RuntimeException('Solo el administrador o el JEFE EMI encargado del expediente puede eliminar esta tarea pendiente.');
+    }
     public static function csrf(): string {
         if(empty($_SESSION['rbac_csrf']))$_SESSION['rbac_csrf']=bin2hex(random_bytes(32));
         return $_SESSION['rbac_csrf'];
@@ -116,14 +126,21 @@ final class Access
         }
         $action=implode(' ',array_filter([$_POST['action']??'',$_POST['accion']??'',$_POST['do']??'',$_GET['action']??'',$_GET['accion']??''], 'is_scalar'));
         $deleting=preg_match('/eliminar|delete|_delete|\bdel\b|\bborrar\b/i',$script.' '.$action);
-        if($deleting && !self::admin()) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
+        $pendingTaskDeletion = $deleting && in_array($script, ['diligenciapendiente_eliminar.php', 'diligenciapendiente_listar.php', 'diligenciapendiente_ver.php'], true);
+        if ($pendingTaskDeletion && !self::admin()) {
+            $taskId = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+            $task = Database::connection()->prepare('SELECT accidente_id FROM diligencias_pendientes_activos WHERE id=?');
+            $task->execute([$taskId]);
+            if (!self::canDeletePendingTask((int) $task->fetchColumn())) { http_response_code(403); exit('Solo el encargado del expediente puede eliminar esta tarea pendiente.'); }
+        }
+        if($deleting && !self::admin() && !$pendingTaskDeletion) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
         // Se bloquean también las rutas de diagnóstico que realizan escrituras sin un formulario.
         if(preg_match('/^(tmp_|test_|.*_diag\.php|.*_debug\.php)/',$script) && !self::admin()) {header('Location: index.php', true, 303);exit;}
         $post=($_SERVER['REQUEST_METHOD']??'GET')==='POST';
         if($post) {
             try {self::checkCsrf();} catch(\Throwable $e){http_response_code(419);exit($e->getMessage());}
         }
-        if($deleting && !$post && $script!=='accidente_eliminar.php') {
+        if($deleting && !$post && $script!=='accidente_eliminar.php' && !$pendingTaskDeletion) {
             echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Confirmar eliminación</title><body><h1>Eliminar registro</h1><p>Esta acción está reservada al administrador. El historial conservará el registro eliminado.</p><form method="post">';
             foreach($_GET as $key=>$value) if(is_scalar($value))echo '<input type="hidden" name="'.htmlspecialchars((string)$key,ENT_QUOTES).'" value="'.htmlspecialchars((string)$value,ENT_QUOTES).'">';
             echo '<input type="hidden" name="_csrf" value="'.self::csrf().'"><input type="hidden" name="confirm" value="1"><button>Confirmar eliminación</button></form></body></html>';exit;

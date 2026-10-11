@@ -90,9 +90,11 @@ final class DiligenciaPendienteService
 
     public function eliminar(int $id): void
     {
-        if ($this->repository->find($id) === null) {
+        $row = $this->repository->find($id);
+        if ($row === null) {
             throw new InvalidArgumentException('Diligencia no encontrada.');
         }
+        \App\Support\Access::requireDeletePendingTask((int) $row['accidente_id']);
         $this->repository->delete($id);
     }
 

@@ -126,6 +126,7 @@ IF NOT (NEW.eliminado_en <=> OLD.eliminado_en) AND NOT rbac_admin() THEN SIGNAL 
             if($event==='UPDATE') $extra .= " IF NOT (NEW.responsable_documento <=> OLD.responsable_documento) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='La identidad histórica del documento se conserva'; END IF;";
         }
         if($event==='DELETE' && !in_array($table,$internal,true)) $guard="($guard) AND rbac_admin()";
+        if ($table === 'diligencias_pendientes' && $event === 'DELETE') $guard = "rbac_admin() OR EXISTS(SELECT 1 FROM accidentes a JOIN usuarios u ON u.id=@actor_id AND u.activo=1 AND u.rol='jefe_emi' WHERE a.id=OLD.accidente_id AND a.eliminado_en IS NULL AND a.responsable_id=u.id)";
         $name='rbac_'.substr($table,0,42).'_'.strtolower($event);
         $p->exec("DROP TRIGGER IF EXISTS `$name`");
         $p->exec("CREATE TRIGGER `$name` BEFORE $event ON `$table` FOR EACH ROW BEGIN IF COALESCE(@rbac_migration,0)<>1 THEN IF NOT COALESCE(($guard),0) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Sin permiso para modificar este registro'; END IF; $extra END IF; END");
