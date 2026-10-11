@@ -164,6 +164,17 @@ $personasActuales = $entidadActual > 0 ? $service->personas($entidadActual) : []
 $vehiculosActuales = !empty($data['accidente_id']) ? $service->vehiculosAccidente((int) $data['accidente_id']) : [];
 $fallecidosActuales = !empty($data['accidente_id']) ? $service->fallecidosAccidente((int) $data['accidente_id']) : [];
 $plantillasAsunto = $service->asuntosCatalogo(!empty($data['asunto_id']) ? (int) $data['asunto_id'] : null);
+if ($cameraActa && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $data['plantilla_nombre'] = 'Camaras de video vigilancia';
+    foreach ($plantillasAsunto as $plantilla) {
+        $normalized = strtr(mb_strtolower(trim((string)$plantilla['nombre'])), ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']);
+        if ($plantilla['tipo'] === 'SOLICITAR' && $normalized === 'camaras de video vigilancia') {
+            $data['asunto_id'] = $plantilla['id'];
+            $data['plantilla_nombre'] = $plantilla['nombre'];
+            break;
+        }
+    }
+}
 $asuntoActualInfo = !empty($data['asunto_id']) ? $service->asuntoInfo((int) $data['asunto_id']) : null;
 $plantillaNombreActual = trim((string) ($data['plantilla_nombre'] ?? ($asuntoActualInfo['nombre'] ?? '')));
 $asuntoTextoActual = trim((string) ($data['asunto_texto'] ?? OficioContenido::asuntoBase((string) ($data['motivo'] ?? ''))));
