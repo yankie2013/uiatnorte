@@ -316,3 +316,28 @@
  #participantes .editable-shell:has(.vehicle-detail-view)>.editable-toolbar :is(.record-actions,.editable-actions){min-width:0;flex-wrap:wrap;gap:6px;}
  #participantes .editable-shell:has(.vehicle-detail-view) .btn-shell{min-height:36px;padding:7px 9px;font-size:11px;white-space:normal;}
 }
+
+/* Compact participant cards and actions on phones. */
+@media screen and (max-width:760px){
+ .case-overview-layout #participantes>.participants-overview{padding:8px!important;}
+ .case-overview-layout .participants-overview .overview-title-actions{gap:5px;margin-bottom:8px;}
+ .case-overview-layout .participants-overview .overview-title-actions .case-command-button{min-height:34px;height:34px;padding:5px 4px!important;border-radius:10px;}
+ .case-overview-layout .participants-overview .participant-overview-unit{margin-bottom:8px!important;}
+ .case-overview-layout .participants-overview .participant-overview-unit>header{padding:6px 8px!important;gap:4px 8px;}
+ .case-overview-layout .participants-overview .participant-overview-unit>header>.case-person-actions{min-height:30px;}
+ .case-overview-layout .participants-overview .participant-overview-unit>header .case-person-view{min-height:28px;padding:4px 7px;font-size:9px;}
+ .case-overview-layout .participants-overview .participant-overview-unit>.overview-group-content{padding:6px!important;}
+ .case-overview-layout .participants-overview .participant-overview-person,.case-overview-layout .participants-overview .overview-linked-row .participant-overview-person{grid-template-columns:26px minmax(0,1fr);grid-auto-rows:max-content;align-items:start;gap:2px 6px;padding:6px 7px!important;min-height:0;}
+ .case-overview-layout .participants-overview .overview-person-icon{grid-column:1;grid-row:1;width:26px;height:26px;border-radius:8px;}
+ .case-overview-layout .participants-overview .participant-overview-person>.overview-person-info{grid-column:2;grid-row:1;min-width:0;font-size:11px;line-height:1.3;}
+ .case-overview-layout .participants-overview .participant-overview-person strong{display:block;font-size:11px;line-height:1.3;}
+ .case-overview-layout .participants-overview .participant-overview-person p{margin:2px 0 0;font-size:9px;line-height:1.3;}
+ .case-overview-layout .participants-overview .participant-overview-person>.case-person-actions{grid-column:2;grid-row:2;margin:2px 0 0;gap:5px;}
+ .case-overview-layout .participants-overview .participant-overview-person .case-person-view{min-height:30px;height:30px;padding:4px 8px;font-size:9px;gap:4px;border-radius:8px;box-shadow:0 2px 4px #3567cc18;}
+ .case-overview-layout .participants-overview .person-contact-trigger{width:30px;min-width:30px;height:30px;min-height:30px;border-radius:9px;}
+ .case-overview-layout .participants-overview .person-contact-trigger svg{width:20px;height:20px;}
+ .case-overview-layout .participants-overview .overview-person-role{font-size:9px;margin-bottom:2px;}
+ .case-overview-layout .participants-overview .overview-linked-row{gap:4px;margin-bottom:5px;}
+ .case-overview-layout .participants-overview .overview-related-people{margin-left:10px;padding-left:6px;}
+ .case-overview-layout .participants-overview .overview-role-group[data-tone]{margin:5px 1px 3px;font-size:9px;}
+}
