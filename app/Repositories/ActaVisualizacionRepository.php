@@ -148,7 +148,7 @@ final class ActaVisualizacionRepository
                FROM oficios_activos o
           LEFT JOIN oficio_asunto oa ON oa.id=o.asunto_id
           LEFT JOIN oficio_entidad e ON e.id=o.entidad_id_destino
-               JOIN documentos_recibidos_activos dr ON dr.referencia_oficio_id=o.id AND dr.accidente_id=o.accidente_id
+          LEFT JOIN documentos_recibidos_activos dr ON dr.referencia_oficio_id=o.id AND dr.accidente_id=o.accidente_id
               WHERE o.accidente_id=?
                 AND LOWER(CONVERT(CONCAT_WS(' ',o.categoria,oa.nombre,oa.detalle,o.motivo,o.referencia_texto) USING utf8mb4)) COLLATE utf8mb4_general_ci
                     REGEXP 'c.mara|video|videovigilancia|vigilancia'
@@ -171,6 +171,7 @@ final class ActaVisualizacionRepository
                     'respuestas'=>[],
                 ];
             }
+            if ((int) $row['respuesta_id'] <= 0) continue;
             $responseNumber = trim($row['respuesta_numero'].'-'.$row['respuesta_siglas'], '-');
             $groups[$officeId]['respuestas'][] = [
                 'fuente'=>'RESPUESTA','fuente_id'=>(int)$row['respuesta_id'], 'oficio_id'=>$officeId,

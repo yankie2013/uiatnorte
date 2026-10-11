@@ -38,7 +38,7 @@ final class ActaVisualizacionService
         $disks = [];
         foreach ((array) ($input['discos'] ?? []) as $disk) {
             $officeId = (int)($disk['oficio_id'] ?? 0);
-            if (!isset($officeMap[$officeId])) throw new InvalidArgumentException('Selecciona un oficio de cámaras que tenga documento recibido relacionado.');
+            if (!isset($officeMap[$officeId]) || $officeMap[$officeId]['respuestas'] === []) throw new InvalidArgumentException('Selecciona un oficio de cámaras que tenga documento recibido relacionado.');
             $mediumType = strtoupper(trim((string)($disk['tipo_medio'] ?? '')));
             if (!in_array($mediumType, ['DISCO','USB'], true)) throw new InvalidArgumentException('Indica si el medio recibido es DISCO o USB.');
             $files = [];

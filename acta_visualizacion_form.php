@@ -38,6 +38,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 .participant-selection-block .participant-role-icon[data-role="family"]{background:#e0f7ef;color:#278a74}
 .participant-selection-block .participant-role-icon[data-role="lawyer"]{background:#eee7ff;color:#7955b7}
 .participant-selection-block .participant-role-icon[data-role="pedestrian"]{background:#def4f8;color:#258496}
+
+.office-registration-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.office-response-status{display:inline-block;font-size:11px;margin-left:8px}.btn:disabled{opacity:.5;cursor:not-allowed}
+#acta-related-dialog{width:min(1000px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--text)}
+#acta-related-dialog::backdrop{background:#17263d80;backdrop-filter:blur(3px)}
+#acta-related-frame{width:100%;height:75dvh;border:0;margin-top:8px}
+@media(max-width:760px){.panel>.head{flex-wrap:wrap;gap:8px}.office-registration-actions .btn{font-size:12px;padding:8px}.office-response-status{margin:5px 0}#acta-related-dialog{padding:8px}}
 </style></head><body>
 <?php require_once __DIR__ . '/sidebar.php'; ?>
 <main class="wrap"><div class="panel head"><div><h1 style="margin:0">Acta de visualizacion</h1><div class="muted">Caso #<?= $accidenteId ?> · <?= h($ctx['accident']['registro_sidpol']) ?></div></div><?php if($embed):?><button class="btn" onclick="parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else:?><a class="btn" href="accidente_vista_tabs.php?accidente_id=<?=$accidenteId?>&tab=documentos&subtab=actas">Volver</a><?php endif?></div>
@@ -66,8 +72,30 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php endforeach; ?>
 <?php if (!$ctx['participants']): ?><p class="muted">No hay personas registradas en este expediente.</p><?php endif; ?>
 </section>
-<section class="panel"><h2>Oficios de cámaras y documentos recibidos</h2><p class="muted">Solo se muestran oficios de cámaras o videovigilancia que tienen un documento recibido relacionado.</p><?php if(!$ctx['offices']):?><div class="empty">No existe todavía una coincidencia entre un oficio de cámaras y un documento recibido.</div><?php endif?><?php foreach($ctx['offices'] as $i=>$office):$roman=['I','II','III','IV','V','VI','VII','VIII','IX','X'][$i]??(string)($i+1);?><details class="office" data-office-id="<?=$office['oficio_id']?>" <?=$i===0?'open':''?>><summary><?=h($roman.'. Oficio '.($i+1).' — '.$office['titulo'])?></summary><div class="office-body"><div class="muted"><?=h($office['descripcion'])?></div><div class="responses"><strong>Documento<?=count($office['respuestas'])===1?'':'s'?> recibido<?=count($office['respuestas'])===1?'':'s'?> relacionado<?=count($office['respuestas'])===1?'':'s'?></strong><?php foreach($office['respuestas'] as $response):?><div>• <?=h($response['descripcion'])?></div><?php endforeach?></div><button type="button" class="btn add-medium">+ Agregar DISCO o USB</button><div class="office-media"></div></div></details><?php endforeach?></section>
+<section class="panel">
+  <div class="head"><h2>📹 Oficios de cámaras y documentos recibidos</h2><button type="button" class="btn primary acta-related-open" data-src="oficios_nuevo.php?accidente_id=<?=$accidenteId?>&amp;embed=1&amp;origin=acta_visualizacion" data-title="📄 Nuevo oficio de cámaras">📄 Nuevo oficio</button></div>
+  <p class="muted">Consulta los oficios de cámaras, registra sus respuestas y agrega los medios recibidos para el acta.</p>
+  <?php if (!$ctx['offices']): ?><div class="empty">Aún no hay oficios de cámaras registrados en este expediente.</div><?php endif; ?>
+  <?php foreach ($ctx['offices'] as $i=>$office): ?>
+  <details class="office" data-office-id="<?=$office['oficio_id']?>" <?=$i===0?'open':''?>>
+    <summary>📄 <?=h($office['descripcion'].' — '.$office['titulo'])?> <span class="office-response-status"><?= $office['respuestas'] ? '✅ Con respuesta' : '⏳ Sin respuesta' ?></span></summary>
+    <div class="office-body">
+      <?php if ($office['solicitud']): ?><p class="muted"><?=h($office['solicitud'])?></p><?php endif; ?>
+      <div class="responses">
+        <?php if (!$office['respuestas']): ?><p class="muted">Registra el documento recibido para poder agregar el DISCO o USB.</p><?php endif; ?>
+        <?php foreach ($office['respuestas'] as $response): ?><div>📥 <?=h($response['descripcion'])?></div><?php endforeach; ?>
+      </div>
+      <div class="office-registration-actions">
+        <button type="button" class="btn acta-related-open" data-src="documento_recibido_nuevo.php?accidente_id=<?=$accidenteId?>&amp;referencia_oficio_id=<?=$office['oficio_id']?>&amp;embed=1" data-title="📥 Registrar respuesta">📥 Registrar respuesta</button>
+        <button type="button" class="btn add-medium" <?= !$office['respuestas'] ? 'disabled' : '' ?>>💿 Agregar DISCO o USB</button>
+      </div>
+      <div class="office-media"></div>
+    </div>
+  </details>
+  <?php endforeach; ?>
+</section>
 <section class="panel grid"><div><label>Estado</label><select name="estado"><?php foreach(['Pendiente','Realizada','Anulada'] as $s):?><option <?=($_POST['estado']??$row['estado']??'Pendiente')===$s?'selected':''?>><?=$s?></option><?php endforeach?></select></div><div class="full"><label>Observaciones</label><textarea name="observaciones"><?=h($_POST['observaciones']??$row['observaciones']??'')?></textarea></div><div class="full"><div class="save-help" id="saveHelp">Tu avance se guarda automaticamente en este navegador.</div></div><div class="full actions" style="justify-content:flex-end"><button class="btn primary" id="saveActaButton">Guardar acta</button></div></section></form></main>
+<dialog id="acta-related-dialog"><div class="head"><strong id="acta-related-title"></strong><button type="button" class="btn" id="acta-related-close">Cerrar</button></div><iframe id="acta-related-frame" title="Registrar oficio o respuesta" src="about:blank"></iframe></dialog>
 <template id="disk-template"><div class="disk"><input type="hidden" data-field="oficio_id"><div class="head disk-head"><strong class="disk-title"></strong><button type="button" class="btn remove-disk">Eliminar medio</button></div><div class="grid" style="margin-top:14px"><div><label>Medio recibido</label><select data-field="tipo_medio" required><option value="">Seleccionar</option><option>DISCO</option><option>USB</option></select></div><div><label>Marca</label><input data-field="marca" required></div><div><label>Número de serie</label><input data-field="numero_serie" required></div><div><label>Capacidad</label><input data-field="capacidad" placeholder="Ej.: 16 GB, 1 TB" required></div><div class="full"><label>Características u observaciones</label><input data-field="observaciones"></div></div><div class="head" style="margin-top:14px"><strong>Archivos contenidos en este medio</strong><button type="button" class="btn add-file">+ Agregar archivo</button></div><div class="files"></div></div></template>
 <template id="file-template"><div class="file"><div class="head file-head"><strong class="file-title"></strong><button type="button" class="btn remove-file">Quitar archivo</button></div><div class="file-fields"><div><label>Nombre del archivo</label><input data-file-field="nombre_archivo" required></div><div><label>Tipo</label><input data-file-field="tipo_archivo"></div><div><label>Peso</label><input data-file-field="peso"></div><div><label>Duración</label><input data-file-field="duracion"></div></div><div class="head" style="margin-top:14px"><strong>Momentos observados</strong><span class="muted">Se mostrarán en este mismo orden en el acta.</span></div><div class="descriptions"></div><div class="description-actions"><button type="button" class="btn add-description">+ Agregar descripción debajo</button></div></div></template>
 <template id="description-template"><div class="description"><div><strong class="moment-title"></strong><label>Tiempo observado</label><input type="time" step="1" data-description-field="tiempo" required><div class="muted">Hora, minuto y segundo</div></div><div><label>Descripción del momento observado</label><textarea data-description-field="detalle" rows="5" required></textarea></div><button type="button" class="btn remove-description">Quitar momento</button></div></template>
@@ -125,4 +153,26 @@ discardButton.addEventListener('click',()=>{if(!confirm('Se eliminara solamente 
 actaForm.addEventListener('submit',e=>{e.preventDefault();if(!validateActa())return;saveDraft(true);isSubmitting=true;saveButton.disabled=true;saveButton.textContent='Guardando acta...';actaForm.submit()});
 window.addEventListener('beforeunload',e=>{if(hasUnsavedChanges&&!isSubmitting){e.preventDefault();e.returnValue=''}});
 try{const stored=localStorage.getItem(draftKey);if(stored&&<?=json_encode($_SERVER['REQUEST_METHOD']!=='POST')?>)restoreDraft(JSON.parse(stored));else if(<?=json_encode($_SERVER['REQUEST_METHOD']==='POST')?>)saveDraft(false)}catch(e){setDraftState('No se pudo recuperar el borrador','error')}
-</script></body></html>
+</script>
+<script>
+(() => {
+ const dialog=document.getElementById('acta-related-dialog'),frame=document.getElementById('acta-related-frame');
+ document.querySelectorAll('.acta-related-open').forEach(button=>button.addEventListener('click',()=>{
+   saveDraft(false);
+   document.getElementById('acta-related-title').textContent=button.dataset.title;
+   frame.src=button.dataset.src;
+   dialog.showModal();
+ }));
+ document.getElementById('acta-related-close').addEventListener('click',()=>dialog.close());
+ dialog.addEventListener('close',()=>{frame.src='about:blank';});
+ window.addEventListener('message',event=>{
+   if(event.origin!==location.origin || event.source!==frame.contentWindow)return;
+   if(['oficio.close','documento_recibido.close'].includes(event.data?.type)){dialog.close();return;}
+   if(['oficio.saved','documento_recibido.saved'].includes(event.data?.type)){
+     saveDraft(false);hasUnsavedChanges=false;location.reload();
+   }
+ });
+})();
+</script>
+
+</body></html>

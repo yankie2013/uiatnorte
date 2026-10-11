@@ -144,6 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $asignado = $service->create($data);
         }
+        if ($embed && ($_POST['origin'] ?? '') === 'acta_visualizacion') {
+            echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"oficio.saved"},location.origin);</script>';
+            exit;
+        }
         \App\Support\OficioSaveResponse::redirect($service, (int)$asignado['id'], (int)$data['accidente_id'], $returnGeneralList, $embed, (string)($_POST['save_action'] ?? 'save'));
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -352,6 +356,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
   <form method="post" class="card" id="frmOficio" <?= $showCaseChoice ? 'hidden' : '' ?>>
     <?php if ($gestion): ?><input type="hidden" name="case_mode" id="case_mode" value="<?= h($caseMode) ?>"><?php endif; ?>
     <input type="hidden" name="origin" value="<?= h($oficioOrigin) ?>">
+    <input type="hidden" name="origin" value="<?= h(($_GET['origin'] ?? $_POST['origin'] ?? '') === 'acta_visualizacion' ? 'acta_visualizacion' : '') ?>">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <?php if ($gestion): ?>
