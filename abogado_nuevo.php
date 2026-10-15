@@ -22,6 +22,10 @@ if ($accidenteId <= 0) {
     exit('Falta accidente_id');
 }
 
+$returnTo = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    'accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes'
+);
 $error = '';
 $data = $service->defaultData(null, $accidenteId);
 
@@ -42,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->create($data);
-        header('Location: abogado_listar.php?accidente_id=' . $accidenteId . '&ok=created');
+        header('Location: ' . $returnTo, true, 303);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -72,7 +76,7 @@ include __DIR__ . '/sidebar.php';
       <div class="small">Accidente ID: <?= (int) $accidenteId ?></div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="abogado_listar.php?accidente_id=<?= (int) $accidenteId ?>">Volver</a>
+      <a class="btn" href="<?= h($returnTo) ?>">Volver</a>
       <button class="btn primary" type="submit" form="frmAbogado">Guardar abogado</button>
     </div>
   </div>
@@ -91,6 +95,7 @@ include __DIR__ . '/sidebar.php';
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmAbogado" autocomplete="off">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
 
     <div class="grid">
@@ -148,7 +153,7 @@ include __DIR__ . '/sidebar.php';
     </div>
 
     <div class="actions">
-      <a class="btn" href="abogado_listar.php?accidente_id=<?= (int) $accidenteId ?>">Cancelar</a>
+      <a class="btn" href="<?= h($returnTo) ?>">Cancelar</a>
       <button class="btn primary" type="submit">Guardar</button>
     </div>
   </form>

@@ -59,9 +59,34 @@ $filters = [
 ];
 $rows = $service->listado($accidenteId, $filters);
 $lawyers = (new App\Repositories\AbogadoRepository($pdo))->listByAccidente($accidenteId);
+// Resolve outcomes from linked diligencias, including installations without citacion_ids.
+$linkedStates = [];
+$st = $pdo->prepare('SELECT * FROM diligencias_pendientes_activos WHERE accidente_id = ? ORDER BY actualizado_en DESC, id DESC');
+$st->execute([$accidenteId]);
+foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $diligencia) {
+    $ids = json_decode((string) ($diligencia['citacion_ids'] ?? ''), true);
+    if (!is_array($ids) || $ids === []) {
+        $ids = [$diligencia['citacion_id'] ?? 0];
+    }
+    foreach ($ids as $id) {
+        if ((int) $id > 0 && !isset($linkedStates[(int) $id])) {
+            $linkedStates[(int) $id] = (string) ($diligencia['estado'] ?? 'Pendiente');
+        }
+    }
+}
+$now = new DateTimeImmutable('now', new DateTimeZone('America/Lima'));
+foreach ($rows as &$row) {
+    $state = $linkedStates[(int) $row['id']] ?? 'Pendiente';
+    $scheduled = !empty($row['fecha'])
+        ? new DateTimeImmutable($row['fecha'] . ' ' . ($row['hora'] ?: '23:59:59'), new DateTimeZone('America/Lima'))
+        : null;
+    $row['outcome'] = $state === 'Realizado' ? 'realizada'
+        : (($state === 'Cancelado' || ($scheduled !== null && $scheduled < $now)) ? 'no-realizada' : 'pendiente');
+}
+unset($row);
 $groups = [];
 foreach ($rows as $row) {
-    $key = json_encode([$row['fecha'] ?? '', $row['hora'] ?? '', App\Support\CitacionMotivo::texto($row), trim((string)($row['lugar'] ?? ''))]);
+    $key = json_encode([$row['fecha'] ?? '', $row['hora'] ?? '', App\Support\CitacionMotivo::texto($row), trim((string)($row['lugar'] ?? '')), $row['outcome']]);
     if (empty($row['fecha']) || empty($row['hora'])) $key .= ':' . (int)$row['id'];
     $groups[$key][] = $row;
 }
@@ -84,6 +109,11 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .wrap{max-width:1256px;margin-top:20px}.toolbar h1{font-size:20px;line-height:1.1}.toolbar .small{font-size:11px}.card{padding:12px 14px;border-radius:12px}.grid{gap:8px}.small,label.small{font-size:10.5px;font-weight:700;letter-spacing:.01em}.btn{padding:7px 11px;border-radius:8px;font-size:12px;line-height:1.15}.actions{gap:7px}.badge{padding:2px 7px;font-size:10px}.table-wrap{border-radius:12px;box-shadow:0 8px 18px rgba(15,23,42,.04)}table{min-width:1160px;font-size:12.5px;line-height:1.25}th,td{padding:8px 10px}th{font-size:10px;letter-spacing:.04em}td strong{display:block;font-size:12.5px;line-height:1.25;font-weight:800}.muted{font-size:11.5px}.pill{padding:3px 7px;font-size:10.5px;line-height:1.15}.stack-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:112px}.stack-actions .btn{justify-content:center;text-align:center;padding:6px 9px;font-size:12px}.stack-actions form{display:block!important}.stack-actions form .btn{width:100%}input{padding:8px 11px;border-radius:10px;font-size:12px}td:nth-child(1){width:46px;white-space:nowrap}td:nth-child(2){width:150px}td:nth-child(3){width:92px}td:nth-child(4){width:96px}td:nth-child(5){width:118px}td:nth-child(6),td:nth-child(7){width:68px;white-space:nowrap}td:nth-child(8){max-width:250px}td:nth-child(9){width:72px}td:nth-child(10){width:112px}td:nth-child(11){width:128px}
 
 .diligencia-lawyers{padding:14px 16px;background:rgba(141,114,195,.06);border-top:1px solid var(--border)}.diligencia-lawyers h3{font-size:13px;color:var(--muted);margin:0 0 10px}.diligencia-lawyer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;flex-wrap:wrap}.diligencia-lawyer strong{font-size:13px}.diligencia-lawyer p{font-size:12px;color:var(--muted);margin:5px 0}.diligencia-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,350px),1fr));align-items:start;gap:18px}.diligencia-card{display:flex;flex-direction:column;min-width:0;background:var(--card);border:1px solid #d7c5f5;border-left:5px solid #a466f4;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px #0f172a08}.diligencia-header{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:12px;padding:16px;background:linear-gradient(115deg,#f7f2ff,#f5f9ff);border-bottom:1px solid var(--border);color:#193859}.diligencia-date{flex-shrink:0;min-width:76px;padding:10px;border-radius:12px;background:#fff;box-shadow:0 3px 10px #264e7910;text-align:center;color:#245a86}.diligencia-date>div{display:flex;align-items:center;justify-content:center;gap:6px}.diligencia-date strong{font-size:42px;line-height:1;font-weight:800}.diligencia-date span{font-size:13px;color:#607a91}.diligencia-date b{display:block;margin-top:6px;font-size:13px;letter-spacing:.14em}.diligencia-heading{grid-column:1/-1;grid-row:2;min-width:0}.diligencia-heading h2{font-size:16px;margin:8px 0;line-height:1.3}.diligencia-heading p{font-size:13px;line-height:1.5;margin:0;color:#526b80}.diligencia-time{font-size:13px;font-weight:700;background:#dceafa;border-radius:20px;padding:5px 10px;display:inline-block}.diligence-count{grid-column:2;grid-row:1;justify-self:end;align-self:start;white-space:nowrap;background:#fff}.citacion-person{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--border)}.citacion-person:last-child{border-bottom:0}.citacion-person-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.citacion-person-name strong{font-size:14px}.citacion-person-info p{color:var(--muted);font-size:12px;margin:8px 0 0;line-height:1.5}.citacion-sync .small{font-weight:400;font-size:11px;margin:5px 0;overflow-wrap:anywhere}.citacion-sync>.small:first-child{font-weight:700;margin-top:0}.citacion-actions .stack-actions{display:flex;min-width:0;gap:6px}.citacion-actions .btn{display:inline-flex;align-items:center;min-height:30px;box-sizing:border-box;transition:background .15s,transform .15s}.citacion-actions .btn:hover{background:#e8f2ff;transform:translateY(-1px)}.citacion-actions .btn.danger:hover{background:#fff0f0}.empty-citations{grid-column:1/-1;text-align:center;padding:28px;color:var(--muted)}@media(max-width:800px){.citacion-person{grid-template-columns:minmax(0,1fr)}.citacion-actions{grid-column:1/-1}.diligencia-header{gap:12px;padding:16px}.diligence-count{display:inline-block}}@media(max-width:520px){.citacion-person{grid-template-columns:1fr;padding:16px}.diligencia-date{min-width:70px;padding:10px}.diligencia-date strong{font-size:34px}.diligencia-heading h2{font-size:15px}.diligencia-heading p{font-size:12px}}@media(prefers-color-scheme:dark){.diligencia-header{background:#172c43;color:#d4e7fa}.diligencia-date,.diligence-count{background:#203950;color:#d4e7fa}.diligencia-heading p,.diligencia-date span{color:#a9c0d5}.diligencia-time{background:#244566}.citacion-actions .btn:hover{background:#244566}}
+.diligencia-card.estado-realizada{--outcome-color:#16a34a}
+.diligencia-card.estado-no-realizada{--outcome-color:#dc2626}
+.diligencia-card.estado-pendiente{--outcome-color:#f97316}
+.diligencia-card[class*="estado-"]{border-color:var(--outcome-color);border-left-color:var(--outcome-color)}
+.outcome-label{border-color:var(--outcome-color);color:var(--text);background:var(--card);margin-bottom:6px}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -131,13 +161,13 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       $stamp = !empty($first['fecha']) ? strtotime($first['fecha']) : false;
       $months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC'];
     ?>
-    <article class="diligencia-card">
+    <article class="diligencia-card estado-<?= h($first['outcome']) ?>">
       <header class="diligencia-header">
         <div class="diligencia-date" aria-label="<?= h($first['fecha'] ?? '') ?>">
           <div><strong><?= $stamp ? date('d',$stamp) : '—' ?></strong><span><?= $stamp ? date('Y',$stamp) : '' ?></span></div>
           <b><?= $stamp ? $months[(int)date('n',$stamp)-1] : 'Sin fecha' ?></b>
         </div>
-        <div class="diligencia-heading"><span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
+        <div class="diligencia-heading"><span class="pill outcome-label"><?= h(['realizada' => 'Realizada con éxito', 'no-realizada' => 'No realizada', 'pendiente' => 'Pendiente'][$first['outcome']]) ?></span> <span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
           <h2>📋 <?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>

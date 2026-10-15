@@ -24,6 +24,15 @@ if (!function_exists('h')) {
 $service = new PersonaService(new PersonaRepository($pdo));
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $prefillDni = preg_replace('/\D+/', '', (string) ($_GET['dni'] ?? ''));
+$registrationCaseId = (int) ($_POST['accidente_id'] ?? $_GET['accidente_id'] ?? 0);
+$returnTo = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    $registrationCaseId > 0 ? 'accidente_vista_tabs.php?accidente_id=' . $registrationCaseId . '&tab=participantes' : 'index.php'
+);
+$successReturn = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    $registrationCaseId > 0 ? $returnTo : 'persona_nuevo.php?ok=created'
+);
 $error = '';
 $data = $service->defaultData(null, ['num_doc' => $prefillDni]);
 
@@ -72,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php
             exit;
         }
-        header('Location: persona_listar.php?ok=created');
+        header('Location: ' . $successReturn, true, 303);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -98,14 +107,17 @@ if (!$embed) {
 </head>
 <body>
 <div class="wrap">
+  <?php if (($_GET['ok'] ?? '') === 'created'): ?><div class="card" role="status">Registro guardado correctamente.</div><?php endif; ?>
   <div class="toolbar">
     <div><h1 style="margin:0 0 6px">Persona <span class="badge">Nueva</span></h1><div class="small">Registro base del sistema</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if (!$embed): ?><a class="btn" href="persona_listar.php">Volver</a><?php endif; ?><button class="btn primary" type="submit" form="frmPersona">Guardar persona</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if (!$embed): ?><a class="btn" href="<?= h($returnTo) ?>">Volver</a><?php endif; ?><button class="btn primary" type="submit" form="frmPersona">Guardar persona</button></div>
   </div>
 
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmPersona" autocomplete="off">
+    <input type="hidden" name="return_to" value="<?= h((string) ($_POST['return_to'] ?? $_GET['return_to'] ?? '')) ?>">
+    <input type="hidden" name="accidente_id" value="<?= $registrationCaseId ?>">
     <input type="hidden" name="_csrf" value="<?= h(\App\Support\Access::csrf()) ?>">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" id="foto_path" name="foto_path" value="<?= h((string) $data['foto_path']) ?>">
@@ -162,7 +174,7 @@ if (!$embed) {
       <div class="c6 field"><label class="label">Nombre de la madre</label><input type="text" name="nombre_madre" id="nombre_madre" value="<?= h((string) $data['nombre_madre']) ?>"></div>
       <div class="c12 field"><label class="label">Notas</label><textarea name="notas" id="notas"><?= h((string) $data['notas']) ?></textarea></div>
     </div>
-    <div class="actions"><?php if (!$embed): ?><a class="btn" href="persona_listar.php">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar</button></div>
+    <div class="actions"><?php if (!$embed): ?><a class="btn" href="<?= h($returnTo) ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar</button></div>
   </form>
 </div>
 <script>

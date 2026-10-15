@@ -51,6 +51,15 @@ foreach ($categorias as $categoria) {
     $catCodeToId[(string) $categoria['codigo']] = (int) $categoria['id'];
 }
 
+$registrationCaseId = (int) ($_POST['accidente_id'] ?? $_GET['accidente_id'] ?? 0);
+$returnTo = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    $registrationCaseId > 0 ? 'accidente_vista_tabs.php?accidente_id=' . $registrationCaseId . '&tab=participantes' : 'index.php'
+);
+$successReturn = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    $registrationCaseId > 0 ? $returnTo : 'vehiculo_nuevo.php?ok=created'
+);
 $err = '';
 $old = $vehiculoService->oldInput();
 
@@ -106,7 +115,7 @@ if (window.parent && window.parent !== window) {
 <?php
             exit;
         }
-        header('Location: vehiculo_listar.php?msg=creado');
+        header('Location: ' . $successReturn, true, 303);
         exit;
     } catch (InvalidArgumentException $e) {
         $err = $e->getMessage();
@@ -183,6 +192,7 @@ if (window.parent && window.parent !== window) {
 <?php if (!$isEmbed) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
+  <?php if (($_GET['ok'] ?? '') === 'created'): ?><div class="card" role="status">Registro guardado correctamente.</div><?php endif; ?>
   <div class="card">
     <div class="hdr">
       <div class="ttl">🚗 Nuevo Vehículo — UIAT Norte</div>
@@ -193,6 +203,8 @@ if (window.parent && window.parent !== window) {
       <?php if($err): ?><div class="msg err">⚠️ <?=h($err)?></div><?php endif; ?>
 
       <form method="post" class="grid" novalidate>
+    <input type="hidden" name="return_to" value="<?= h((string) ($_POST['return_to'] ?? $_GET['return_to'] ?? '')) ?>">
+    <input type="hidden" name="accidente_id" value="<?= $registrationCaseId ?>">
         <!-- Placa + acciones -->
         <div class="col-3">
           <label for="placa">Placa</label>
@@ -311,7 +323,7 @@ if (window.parent && window.parent !== window) {
           <?php if($isEmbed): ?>
             <button class="btn sec" type="button" id="btnCerrarEmbed">Cancelar</button>
           <?php else: ?>
-            <a class="btn sec" href="vehiculo_listar.php">Volver</a>
+            <a class="btn sec" href="<?= h($returnTo) ?>">Volver</a>
           <?php endif; ?>
           <button class="btn" type="submit">Guardar</button>
         </div>

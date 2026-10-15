@@ -21,11 +21,7 @@ function okjson($a){ header('Content-Type: application/json; charset=utf-8'); ec
 $guidedEmbed = \App\Support\Access::role()==='guardia' && (string)($_GET['guided_embed'] ?? $_POST['guided_embed'] ?? '')==='1';
 
 function safe_return_to($value, $fallback){
-  $value = trim((string)$value);
-  if ($value === '') return $fallback;
-  if (preg_match('#^(https?:)?//#i', $value)) return $fallback;
-  if ($value[0] === '/') return $fallback;
-  return $value;
+  return \App\Support\RegistrationReturn::resolve((string) $value, $fallback);
 }
 
 $repo = new InvolucradoPersonaRepository($pdo);

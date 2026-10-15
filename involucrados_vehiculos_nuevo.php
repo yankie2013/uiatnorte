@@ -21,11 +21,7 @@ function okjson($arr){ header('Content-Type: application/json; charset=utf-8'); 
 $guidedEmbed = \App\Support\Access::role()==='guardia' && (string)($_GET['guided_embed'] ?? $_POST['guided_embed'] ?? '')==='1';
 
 function safe_return_to($value, $fallback){
-  $value = trim((string)$value);
-  if ($value === '') return $fallback;
-  if (preg_match('#^(https?:)?//#i', $value)) return $fallback;
-  if ($value[0] === '/') return $fallback;
-  return $value;
+  return \App\Support\RegistrationReturn::resolve((string) $value, $fallback);
 }
 
 $repo = new InvolucradoVehiculoRepository($pdo);
@@ -516,7 +512,7 @@ body.modal-open{ overflow: hidden !important; }
   <div class="topbar">
     <div class="title">Nuevo involucrado – Vehículo</div>
     <div class="inline">
-      <a class="btn" href="involucrados_vehiculos_listar.php?accidente_id=<?=h($accidente_id)?>">📋 Volver al listado</a>
+      <a class="btn" href="<?= h($return_to) ?>">Volver al expediente</a>
     </div>
   </div>
 

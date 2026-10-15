@@ -48,6 +48,10 @@ if ($accidenteId <= 0) {
     exit('Falta accidente_id');
 }
 
+$returnTo = \App\Support\RegistrationReturn::resolve(
+    (string) ($_POST['return_to'] ?? $_GET['return_to'] ?? ''),
+    'accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes'
+);
 $error = '';
 $data = $service->defaultData(null, $accidenteId);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -66,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->create($data);
-        header('Location: policial_interviniente_listar.php?accidente_id=' . $accidenteId . '&ok=created');
+        header('Location: ' . $returnTo, true, 303);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -92,13 +96,14 @@ include __DIR__ . '/sidebar.php';
 <div class="wrap">
   <div class="toolbar">
     <div><h1 style="margin:0 0 6px">Interviniente policial <span class="badge">Nuevo</span></h1><div class="small">Accidente ID: <?= (int) $accidenteId ?></div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidenteId ?>">Volver</a><button class="btn primary" type="submit" form="frmPolicia">Guardar registro</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="<?= h($returnTo) ?>">Volver</a><button class="btn primary" type="submit" form="frmPolicia">Guardar registro</button></div>
   </div>
 
   <?php if ($ctx['accidente']): ?><div class="card header-card"><strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($ctx['accidente']['sidpol'] ?? 'Sin SIDPOL')) ?> - Registro: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? 'Sin registro')) ?> - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? 'Sin fecha')) ?> - Lugar: <?= h((string) ($ctx['accidente']['lugar'] ?? 'Sin lugar')) ?></div></div><?php endif; ?>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmPolicia" autocomplete="off">
+    <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
     <input type="hidden" name="persona_id" id="persona_id" value="<?= h((string) $data['persona_id']) ?>">
     <div class="grid">
@@ -113,7 +118,7 @@ include __DIR__ . '/sidebar.php';
       <div class="c6 field"><label class="label">Rol / funcion</label><input type="text" name="rol_funcion" value="<?= h((string) $data['rol_funcion']) ?>"></div>
       <div class="c12 field"><label class="label">Observaciones</label><textarea name="observaciones"><?= h((string) $data['observaciones']) ?></textarea></div>
     </div>
-    <div class="actions"><a class="btn" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidenteId ?>">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
+    <div class="actions"><a class="btn" href="<?= h($returnTo) ?>">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
   </form>
 </div>
 <div class="modal-backdrop" id="personaModal"><div class="modal"><header><h3>Nueva persona</h3><button class="btn" type="button" id="btnModalCerrar">Cerrar</button></header><div class="body"><iframe id="personaFrame" src="about:blank"></iframe></div></div></div>
