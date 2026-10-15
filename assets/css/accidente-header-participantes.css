@@ -897,3 +897,5 @@ html[data-theme-resolved="dark"] .case-registration-block>h3 {color:#b8d4f4;}
  .case-registration-block>h3 {grid-column:1;align-self:center;}
  .case-registration-block .case-facts-titlebar {grid-column:2;grid-row:1;}
 }
+
+.participants-overview .overview-company-representative {margin-top:8px;padding-top:8px;border-top:1px solid currentColor;overflow-wrap:anywhere}

@@ -43,6 +43,7 @@
             $lastRoleGroup = $roleGroup;
         }
         $related = [];
+        $companyOwner = null;
         $representedId = 0;
         if (str_starts_with($target, 'persona-')) {
             $representedId = (int) ($person['persona_id'] ?? 0);
@@ -52,7 +53,16 @@
                 $related[] = [project_prefixed_record($relative, 'fam_'), 'Familiar · ' . ($relative['parentesco'] ?? ''), 'familiar-registro-' . (int) $relative['id']];
             }
         } elseif (str_starts_with($target, 'propietario-registro-')) {
-            foreach ($propietarios as $owner) if ($target === 'propietario-registro-' . (int) $owner['id']) $representedId = (int) ($owner['propietario_persona_id'] ?? 0);
+            foreach ($propietarios as $owner) {
+                if ($target !== 'propietario-registro-' . (int) $owner['id']) continue;
+                if (($owner['tipo_propietario'] ?? '') === 'JURIDICA') {
+                    $companyOwner = $owner;
+                    $representedId = (int) ($owner['representante_persona_id'] ?? 0);
+                } else {
+                    $representedId = (int) ($owner['propietario_persona_id'] ?? 0);
+                }
+                break;
+            }
         } elseif (str_starts_with($target, 'familiar-registro-')) {
             foreach ($familiares as $relative) if ($target === 'familiar-registro-' . (int) $relative['id']) $representedId = (int) ($relative['familiar_persona_id'] ?? 0);
         }
@@ -71,6 +81,26 @@
             <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
             <p><?php if (!empty($person['lesion'])): ?><span class="overview-condition <?= h(lesion_chip_class((string) $person['lesion'])) ?>"><?= h($person['lesion']) ?></span> <?php endif; ?><span class="overview-person-meta"><?= h(person_heading_meta($person)) ?></span></p>
+            <?php if ($companyOwner !== null): ?>
+              <?php if (!empty($companyOwner['ruc'])): ?><p>RUC <?= h($companyOwner['ruc']) ?></p><?php endif; ?>
+              <div class="overview-company-representative">
+                <div class="overview-person-role"><?= h(trim((string) ($companyOwner['rol_legal'] ?? '')) ?: 'Representante legal / gerente') ?></div>
+                <?php if (!empty($companyOwner['representante_persona_id'])):
+                    $representative = project_prefixed_record($companyOwner, 'rep_');
+                    foreach (['domicilio', 'celular', 'email'] as $field) {
+                        if ((int) ($companyOwner['snapshot_guardado'] ?? 0) === 1) {
+                            $representative[$field] = $companyOwner[$field . '_rep_snapshot'] ?? '';
+                        }
+                    }
+                ?>
+                  <strong><?= h(person_label($representative)) ?></strong>
+                  <?php if (trim((string) ($representative['num_doc'] ?? '')) !== ''): ?><p><?= h(trim((string) ($representative['tipo_doc'] ?? '') . ' ' . $representative['num_doc'])) ?></p><?php endif; ?>
+                  <?php foreach (['celular' => 'Celular', 'email' => 'Correo', 'domicilio' => 'Domicilio'] as $field => $label): ?>
+                    <?php if (trim((string) ($representative[$field] ?? '')) !== ''): ?><p><?= h($label) ?>: <?= h($representative[$field]) ?></p><?php endif; ?>
+                  <?php endforeach; ?>
+                <?php else: ?><p class="overview-person-meta">Sin representante registrado.</p><?php endif; ?>
+              </div>
+            <?php endif; ?>
           </div>
           <div class="case-person-actions">
             <?php if ($phone !== ''): ?>
