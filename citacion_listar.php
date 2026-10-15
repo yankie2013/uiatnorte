@@ -29,6 +29,26 @@ if ($accidenteId <= 0) {
 }
 
 $error = '';
+$canChangeState = in_array(App\Support\Access::role(), ['admin', 'jefe_emi', 'adjunto'], true)
+    && App\Support\Access::canEdit($accidenteId);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_state') {
+    try {
+        App\Support\Access::checkCsrf();
+        if (!$canChangeState) {
+            throw new RuntimeException('No tienes permiso para cambiar el estado de este expediente.');
+        }
+        $citacionRepository->updateOutcome($accidenteId, (array) ($_POST['citacion_ids'] ?? []), (string) ($_POST['estado'] ?? ''));
+        $query = ['accidente_id' => $accidenteId, 'embed' => $embed ? 1 : 0, 'return_to' => $returnTo, 'estado_guardado' => 1];
+        foreach (['q', 'desde', 'hasta'] as $filter) {
+            if (isset($_GET[$filter])) $query[$filter] = (string) $_GET[$filter];
+        }
+        header('Location: citacion_listar.php?' . http_build_query($query), true, 303);
+        exit;
+    } catch (Throwable $e) {
+        $error = $e->getMessage();
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     $id = (int) ($_POST['id'] ?? 0);
     try {
@@ -80,8 +100,9 @@ foreach ($rows as &$row) {
     $scheduled = !empty($row['fecha'])
         ? new DateTimeImmutable($row['fecha'] . ' ' . ($row['hora'] ?: '23:59:59'), new DateTimeZone('America/Lima'))
         : null;
-    $row['outcome'] = $state === 'Realizado' ? 'realizada'
-        : (($state === 'Cancelado' || ($scheduled !== null && $scheduled < $now)) ? 'no-realizada' : 'pendiente');
+    $row['outcome'] = in_array($row['estado_realizacion'] ?? null, ['realizada', 'no-realizada', 'pendiente'], true)
+        ? $row['estado_realizacion'] : ($state === 'Realizado' ? 'realizada'
+        : (($state === 'Cancelado' || ($scheduled !== null && $scheduled < $now)) ? 'no-realizada' : 'pendiente'));
 }
 unset($row);
 $groups = [];
@@ -114,6 +135,10 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .diligencia-card.estado-pendiente{--outcome-color:#f97316}
 .diligencia-card[class*="estado-"]{border-color:var(--outcome-color);border-left-color:var(--outcome-color)}
 .outcome-label{border-color:var(--outcome-color);color:var(--text);background:var(--card);margin-bottom:6px}
+.citation-state-form{grid-column:1/-1;grid-row:3;min-width:0;margin:0}
+.citation-state-form label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.citation-state-form>div{display:flex;gap:8px;flex-wrap:wrap}
+.citation-state-form select{flex:1;min-width:150px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -155,6 +180,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
     </form>
   </div>
 
+  <?php if (isset($_GET['estado_guardado'])): ?><div class="card" role="status" style="margin-bottom:14px">Estado de la citación actualizado correctamente.</div><?php endif; ?>
   <div class="diligencia-cards">
     <?php if ($rows === []): ?><div class="card empty-citations">No hay citaciones registradas con esos filtros.</div><?php endif; ?>
     <?php foreach ($groups as $group): $first = $group[0];
@@ -171,6 +197,21 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <h2>📋 <?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>
+        <?php if ($canChangeState): ?>
+        <form method="post" class="citation-state-form">
+          <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
+          <input type="hidden" name="action" value="update_state">
+          <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+          <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+          <?php foreach ($group as $participant): ?><input type="hidden" name="citacion_ids[]" value="<?= (int) $participant['id'] ?>"><?php endforeach; ?>
+          <label for="estado-citacion-<?= (int) $first['id'] ?>">Estado de la citación</label>
+          <div><select id="estado-citacion-<?= (int) $first['id'] ?>" name="estado">
+            <?php foreach (['pendiente' => 'Pendiente', 'realizada' => 'Realizada con éxito', 'no-realizada' => 'No realizada'] as $value => $label): ?>
+              <option value="<?= h($value) ?>" <?= $first['outcome'] === $value ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach; ?>
+          </select><button class="btn primary" type="submit">Guardar estado</button></div>
+        </form>
+        <?php endif; ?>
         <span class="pill diligence-count">👥 <?= count($group) ?> citado<?= count($group) === 1 ? '' : 's' ?></span>
         <a class="btn" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
       </header>

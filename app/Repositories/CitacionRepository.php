@@ -176,9 +176,50 @@ final class CitacionRepository
         $st->execute([$id]);
     }
 
+    public function updateOutcome(int $accidenteId, array $ids, string $outcome): void
+    {
+        if (!in_array($outcome, ['realizada', 'no-realizada', 'pendiente'], true)) {
+            throw new \InvalidArgumentException('Estado de citación no válido.');
+        }
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if ($ids === [] || count($ids) > 500 || min($ids) <= 0) {
+            throw new \InvalidArgumentException('Selecciona una tarjeta de citación válida.');
+        }
+        if (!$this->columnExists('citacion', 'estado_realizacion')) {
+            throw new \RuntimeException('Falta actualizar la base de datos: ejecuta php docs/scripts/migrar_citacion_estado.php');
+        }
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) $this->pdo->beginTransaction();
+        try {
+            $st = $this->pdo->prepare("SELECT c.* FROM citacion_activos c WHERE c.accidente_id = ? AND c.id IN ($marks) FOR UPDATE");
+            $st->execute(array_merge([$accidenteId], $ids));
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+            if (count($rows) !== count($ids)) {
+                throw new \RuntimeException('La tarjeta ya no está disponible en este expediente.');
+            }
+            $keys = [];
+            foreach ($rows as $row) {
+                $keys[] = json_encode([$row['fecha'], $row['hora'], \App\Support\CitacionMotivo::texto($row), trim((string) $row['lugar'])]);
+            }
+            if (count(array_unique($keys)) !== 1) {
+                throw new \RuntimeException('Solo se puede cambiar una tarjeta por vez.');
+            }
+            $st = $this->pdo->prepare("UPDATE citacion SET estado_realizacion = ? WHERE accidente_id = ? AND id IN ($marks)");
+            $st->execute(array_merge([$outcome, $accidenteId], $ids));
+            if ($ownsTransaction) $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($ownsTransaction) $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function searchByAccidente(int $accidenteId, array $filters): array
     {
-        $sql = "SELECT c.*, CASE c.fuente
+        $outcomeSelect = $this->columnExists('citacion', 'estado_realizacion')
+            ? '(SELECT base.estado_realizacion FROM citacion base WHERE base.id = c.id)'
+            : 'NULL';
+        $sql = "SELECT c.*, $outcomeSelect AS estado_realizacion, CASE c.fuente
                     WHEN 'INV' THEN (SELECT ip.persona_id FROM involucrados_personas_activos ip WHERE ip.id=c.fuente_id AND ip.accidente_id=c.accidente_id)
                     WHEN 'PNP' THEN (SELECT pi.persona_id FROM policial_interviniente_activos pi WHERE pi.id=c.fuente_id AND pi.accidente_id=c.accidente_id)
                     WHEN 'PRO' THEN (SELECT pv.propietario_persona_id FROM propietario_vehiculo_activos pv WHERE pv.id=c.fuente_id AND pv.accidente_id=c.accidente_id)
