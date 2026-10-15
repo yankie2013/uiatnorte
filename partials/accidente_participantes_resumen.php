@@ -81,6 +81,7 @@
             <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
             <p><?php if (!empty($person['lesion'])): ?><span class="overview-condition <?= h(lesion_chip_class((string) $person['lesion'])) ?>"><?= h($person['lesion']) ?></span> <?php endif; ?><span class="overview-person-meta"><?= h(person_heading_meta($person)) ?></span></p>
+            <?php if ($phone !== '' && $companyOwner === null): ?><p>Celular: <?= h($person['celular']) ?></p><?php endif; ?>
             <?php if ($companyOwner !== null): ?>
               <?php if (!empty($companyOwner['ruc'])): ?><p>RUC <?= h($companyOwner['ruc']) ?></p><?php endif; ?>
               <div class="overview-company-representative">
@@ -98,6 +99,15 @@
                   <?php foreach (['celular' => 'Celular', 'email' => 'Correo', 'domicilio' => 'Domicilio'] as $field => $label): ?>
                     <?php if (trim((string) ($representative[$field] ?? '')) !== ''): ?><p><?= h($label) ?>: <?= h($representative[$field]) ?></p><?php endif; ?>
                   <?php endforeach; ?>
+                  <?php
+                    $representativePhone = preg_replace('/\D+/', '', (string) ($representative['celular'] ?? ''));
+                    if (strlen($representativePhone) === 9) $representativePhone = '51' . $representativePhone;
+                  ?>
+                  <?php if ($representativePhone !== ''): ?>
+                    <div class="case-person-actions" style="margin-top:6px" aria-label="Contacto del representante">
+                      <?= render_whatsapp_message_actions($representativePhone, whatsapp_message_pack($GLOBALS['modalidades'] ?? [], $GLOBALS['A']['fecha_accidente'] ?? null, $GLOBALS['A']['lugar'] ?? null, $GLOBALS['A']['registro_sidpol'] ?? null)) ?>
+                    </div>
+                  <?php endif; ?>
                 <?php else: ?><p class="overview-person-meta">Sin representante registrado.</p><?php endif; ?>
               </div>
             <?php endif; ?>
