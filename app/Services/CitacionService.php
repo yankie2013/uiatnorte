@@ -12,7 +12,7 @@ final class CitacionService
 
     private const CALIDADES = [
         'Efectivo policial', 'Familiar más cercano', 'Investigado', 'Testigo', 'Abogado',
-        'Propietario del vehículo', 'Conductor', 'Pasajero', 'Peatón', 'Relacionado'
+        'Propietario del vehículo', 'Representante legal', 'Conductor', 'Pasajero', 'Peatón', 'Relacionado'
     ];
 
     private const TIPOS = [
@@ -283,7 +283,7 @@ final class CitacionService
 
         return match ($fuente) {
             'PNP' => 'Efectivo policial',
-            'PRO' => 'Propietario del vehículo',
+            'PRO' => $relacion === 'representante legal' ? 'Representante legal' : 'Propietario del vehículo',
             'FAM' => 'Familiar más cercano',
             default => $this->calidadFromRelacion($relacion),
         };

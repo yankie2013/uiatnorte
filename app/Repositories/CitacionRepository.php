@@ -21,18 +21,19 @@ final class CitacionRepository
                  FROM v_accidente_personas_vinculadas WHERE fuente <> 'PRO'
                  UNION ALL
                  SELECT 'PRO', pv.id, pv.accidente_id,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN 'RUC' ELSE p.tipo_doc END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.ruc ELSE p.num_doc END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.razon_social ELSE p.nombres END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN '' ELSE p.apellido_paterno END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN '' ELSE COALESCE(p.apellido_materno, '') END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.domicilio_fiscal
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN COALESCE(rep.tipo_doc, 'RUC') ELSE p.tipo_doc END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN IF(rep.id IS NULL, pv.ruc, rep.num_doc) ELSE p.num_doc END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN IF(rep.id IS NULL, pv.razon_social, rep.nombres) ELSE p.nombres END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN IF(rep.id IS NULL, '', rep.apellido_paterno) ELSE p.apellido_paterno END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN IF(rep.id IS NULL, '', COALESCE(rep.apellido_materno, '')) ELSE COALESCE(p.apellido_materno, '') END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN IF(rep.id IS NULL, pv.domicilio_fiscal, IF(pv.snapshot_guardado = 1, pv.domicilio_rep_snapshot, rep.domicilio))
                              ELSE IF(pv.snapshot_guardado = 1, pv.domicilio_nat_snapshot, p.domicilio) END,
-                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN NULL ELSE p.fecha_nacimiento END,
-                        'Propietario del vehículo',
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN rep.fecha_nacimiento ELSE p.fecha_nacimiento END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' AND rep.id IS NOT NULL
+                             THEN 'Representante legal' ELSE 'Propietario del vehículo' END,
                         CONCAT_WS(' · ', NULLIF(pv.rol_legal, ''),
-                            CASE WHEN pv.tipo_propietario = 'JURIDICA' AND rep.id IS NOT NULL
-                                 THEN CONCAT('Representante: ', CONCAT_WS(' ', rep.nombres, rep.apellido_paterno, rep.apellido_materno)) END)
+                            CASE WHEN pv.tipo_propietario = 'JURIDICA'
+                                 THEN CONCAT('Empresa: ', COALESCE(pv.razon_social, ''), ' · RUC ', COALESCE(pv.ruc, '')) END)
                  FROM propietario_vehiculo_activos pv
                  LEFT JOIN personas p ON p.id = pv.propietario_persona_id
                  LEFT JOIN personas rep ON rep.id = pv.representante_persona_id
