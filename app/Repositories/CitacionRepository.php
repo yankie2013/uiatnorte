@@ -13,13 +13,40 @@ final class CitacionRepository
     {
     }
 
+    private function personasSource(): string
+    {
+        // The legacy view only includes owners linked to a natural person.
+        return "(SELECT fuente, fuente_id, accidente_id, tipo_doc, num_doc, nombres,
+                        apellido_paterno, apellido_materno, domicilio, fecha_nacimiento, relacion, extra
+                 FROM v_accidente_personas_vinculadas WHERE fuente <> 'PRO'
+                 UNION ALL
+                 SELECT 'PRO', pv.id, pv.accidente_id,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN 'RUC' ELSE p.tipo_doc END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.ruc ELSE p.num_doc END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.razon_social ELSE p.nombres END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN '' ELSE p.apellido_paterno END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN '' ELSE COALESCE(p.apellido_materno, '') END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.domicilio_fiscal
+                             ELSE IF(pv.snapshot_guardado = 1, pv.domicilio_nat_snapshot, p.domicilio) END,
+                        CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN NULL ELSE p.fecha_nacimiento END,
+                        'Propietario del vehículo',
+                        CONCAT_WS(' · ', NULLIF(pv.rol_legal, ''),
+                            CASE WHEN pv.tipo_propietario = 'JURIDICA' AND rep.id IS NOT NULL
+                                 THEN CONCAT('Representante: ', CONCAT_WS(' ', rep.nombres, rep.apellido_paterno, rep.apellido_materno)) END)
+                 FROM propietario_vehiculo_activos pv
+                 LEFT JOIN personas p ON p.id = pv.propietario_persona_id
+                 LEFT JOIN personas rep ON rep.id = pv.representante_persona_id
+                 WHERE pv.tipo_propietario = 'JURIDICA' OR p.id IS NOT NULL)";
+    }
+
     public function personasVinculadas(int $accidenteId): array
     {
+        $source = $this->personasSource();
         $sql = "SELECT fuente, fuente_id,
                        CONCAT(COALESCE(nombres,''), ' ', COALESCE(apellido_paterno,''), ' ', COALESCE(apellido_materno,'')) AS nombre,
                        relacion, tipo_doc, num_doc, extra,
                        nombres, apellido_paterno, apellido_materno, domicilio, fecha_nacimiento
-                FROM v_accidente_personas_vinculadas
+                FROM $source vinculadas
                 WHERE accidente_id = ?
                 ORDER BY relacion, apellido_paterno, apellido_materno, nombres";
         $st = $this->pdo->prepare($sql);
@@ -29,7 +56,8 @@ final class CitacionRepository
 
     public function personaVinculada(int $accidenteId, string $fuente, int $fuenteId): ?array
     {
-        $sql = "SELECT * FROM v_accidente_personas_vinculadas
+        $source = $this->personasSource();
+        $sql = "SELECT * FROM $source vinculadas
                 WHERE accidente_id = ? AND fuente = ? AND fuente_id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -63,6 +91,7 @@ final class CitacionRepository
 
     public function createFromView(int $accidenteId, string $fuente, int $fuenteId, array $payload): int
     {
+        $source = $this->personasSource();
         $sql = "INSERT INTO citacion (
                     accidente_id, fuente, fuente_id,
                     persona_nombres, persona_apep, persona_apem,
@@ -77,7 +106,7 @@ final class CitacionRepository
                     CASE WHEN v.fecha_nacimiento IS NULL THEN NULL
                          ELSE TIMESTAMPDIFF(YEAR, v.fecha_nacimiento, ?) END,
                     ?, ?, ?, ?, ?, ?, ?, ?
-                FROM v_accidente_personas_vinculadas v
+                FROM $source v
                 WHERE v.accidente_id = ? AND v.fuente = ? AND v.fuente_id = ?
                 LIMIT 1";
         $st = $this->pdo->prepare($sql);
@@ -222,7 +251,7 @@ final class CitacionRepository
         $sql = "SELECT c.*, $outcomeSelect AS estado_realizacion, CASE c.fuente
                     WHEN 'INV' THEN (SELECT ip.persona_id FROM involucrados_personas_activos ip WHERE ip.id=c.fuente_id AND ip.accidente_id=c.accidente_id)
                     WHEN 'PNP' THEN (SELECT pi.persona_id FROM policial_interviniente_activos pi WHERE pi.id=c.fuente_id AND pi.accidente_id=c.accidente_id)
-                    WHEN 'PRO' THEN (SELECT pv.propietario_persona_id FROM propietario_vehiculo_activos pv WHERE pv.id=c.fuente_id AND pv.accidente_id=c.accidente_id)
+                    WHEN 'PRO' THEN (SELECT CASE WHEN pv.tipo_propietario = 'JURIDICA' THEN pv.representante_persona_id ELSE pv.propietario_persona_id END FROM propietario_vehiculo_activos pv WHERE pv.id=c.fuente_id AND pv.accidente_id=c.accidente_id)
                     WHEN 'FAM' THEN (SELECT ff.familiar_persona_id FROM familiar_fallecido_activos ff WHERE ff.id=c.fuente_id AND ff.accidente_id=c.accidente_id)
                     END AS persona_id, o.numero AS oficio_num, o.anio AS oficio_anio
                 FROM citacion_activos c
