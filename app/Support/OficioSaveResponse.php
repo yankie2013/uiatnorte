@@ -7,7 +7,8 @@ final class OficioSaveResponse
 {
     public static function destination(OficioService $service, int $id, int $caseId, bool $gestion, string $action): string
     {
-        $params = $gestion || $caseId <= 0 ? [] : ['accidente_id'=>$caseId];
+        $caseReturn = !$gestion && $caseId > 0;
+        $params = $caseReturn ? ['accidente_id'=>$caseId, 'tab'=>'oficios'] : [];
         if ($action === 'download') {
             $url = $service->downloadUrlForOficio($id);
             if ($url !== '') {
@@ -21,7 +22,8 @@ final class OficioSaveResponse
                     : 'Oficio guardado. Esta plantilla no tiene una descarga configurada.';
             }
         }
-        return 'oficios_listar.php' . ($params ? '?' . http_build_query($params) : '');
+        $page = $caseReturn ? 'accidente_vista_tabs.php' : 'oficios_listar.php';
+        return $page . ($params ? '?' . http_build_query($params) : '');
     }
 
     public static function redirect(OficioService $service, int $id, int $caseId, bool $gestion, bool $embed, string $action): never

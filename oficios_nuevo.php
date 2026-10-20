@@ -107,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'gestion' => $gestion ? 1 : 0,
         'comisaria_id' => $_POST['comisaria_id'] ?? '',
         'encargado_id' => $_POST['encargado_id'] ?? '',
+        'reniec' => $_POST['reniec'] ?? [],
         'accidente_id' => $_POST['accidente_id'] ?? '',
         'anio_oficio' => $_POST['anio_oficio'] ?? '',
         'numero_oficio' => $_POST['numero_oficio'] ?? '',
@@ -196,7 +197,7 @@ $showVehiculoInicial = (str_contains($asuntoActualMatch, 'peritaje') && str_cont
     || (str_contains($asuntoActualMatch, 'historial') && str_contains($asuntoActualMatch, 'transferenc'))
     || (str_contains($asuntoActualMatch, 'informacion') && str_contains($asuntoActualMatch, 'certificado'))
     || (str_contains($asuntoActualMatch, 'identificacion') && str_contains($asuntoActualMatch, 'vehiculo'));
-$showFallecidoInicial = str_contains($asuntoActualMatch, 'necropsia')
+$showFallecidoInicial = \App\Support\DefuncionReniec::matches($asuntoActualMatch) || str_contains($asuntoActualMatch, 'necropsia')
     || str_contains($asuntoActualMatch, 'autopsia')
     || (str_contains($asuntoActualMatch, 'identificacion') && str_contains($asuntoActualMatch, 'cadaver'));
 $showInformeMedicoInicial = str_contains($asuntoActualMatch, 'informe') && str_contains($asuntoActualMatch, 'medico');
@@ -563,6 +564,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
           <?php endforeach; ?>
         </select>
       </div>
+      <?php require __DIR__ . '/app/Views/oficio_defuncion_reniec.php'; ?>
 
       </div>
     </section>
@@ -835,6 +837,15 @@ async function applyPlantillaPreset(asuntoId) {
     const reuseLatest = item.source === 'latest' && (templateName.includes('necropsia') || templateName.includes('autopsia')
       || (templateName.includes('peritaje') && (templateName.includes('constat') || templateName.includes('dano'))));
     if (motivoTxt) motivoTxt.value = reuseLatest ? stripCamaraRangeLine(item.motivo || '') : defaultAsuntoTexto(catalogItem);
+    const isReniec = templateName.includes('defuncion') && templateName.includes('reniec');
+    if (isReniec) {
+      entidadSel.value = String(item.entidad_id || '');
+      setEntidadTextById(item.entidad_id);
+      if (entidadTextInp) entidadTextInp.setCustomValidity('');
+      closeEntidadSuggestions();
+      await handleEntidadSelectionChange();
+      if (requestSerial !== plantillaRequestSerial || String(asuntoSel.value) !== String(asuntoId)) return;
+    }
     if (reuseLatest) {
       entidadSel.value = String(item.entidad_id || '');
       setEntidadTextById(item.entidad_id);
@@ -985,7 +996,7 @@ function asuntoEsPeritaje() {
 function asuntoEsNecropsia() {
   const text = asuntoTexto();
   const normalized = normalizeText(text);
-  return text.includes('protocolo de necropsia')
+  return (normalized.includes('defuncion') && normalized.includes('reniec')) || text.includes('protocolo de necropsia')
     || text.includes('protocolo de autopsia')
     || text.includes('necropsia')
     || (normalized.includes('identificacion') && normalized.includes('cadaver'));
@@ -1033,6 +1044,7 @@ async function loadPersonasInformeMedico(selected = '') {
   fillSelect(sel, data.items || [], selected, 'Selecciona');
 }
 async function toggleBoxesPorAsunto() {
+  toggleReniecFields();
   const standalone = document.getElementById('case_mode')?.value === 'standalone';
   document.getElementById('vehiculoInvolucradoLabel').textContent = standalone ? 'Placa del vehículo' : 'Vehículo involucrado';
   const vehBox = document.getElementById('vehiculoBox');

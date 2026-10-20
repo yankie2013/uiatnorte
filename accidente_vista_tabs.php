@@ -7510,6 +7510,9 @@ $resumenInterventionRows = [
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
 <?php $userTopbarSection='Vista del expediente'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="page case-overview-layout">
+  <?php if (!empty($_GET['msg']) && is_string($_GET['msg'])): ?>
+    <div role="status" style="grid-column:1/-1;padding:12px;border:1px solid var(--line);border-radius:12px"><?= h($_GET['msg']) ?></div>
+  <?php endif; ?>
   <section class="case-mobile-overview" aria-label="Accidente">
     <div class="case-mobile-overview-heading"><h1><?= h($modsConcat ?: 'Accidente de tránsito') ?></h1><span><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></span></div>
     <p class="case-mobile-overview-place"><?= fmt($A['lugar'] ?? '') ?></p>
@@ -10130,7 +10133,7 @@ $resumenInterventionRows = [
             <div class="tab-pane fade" id="oficios" aria-labelledby="oficios-tab" role="tabpanel">
               <div class="inner-panel tab-panel main-module-panel main-panel-oficios">
                 <div class="module-actions" style="margin-bottom:8px;">
-                  <a class="btn-shell document-new-button js-inline-open" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio" aria-label="Nuevo oficio" href="oficios_nuevo.php?embed=1&accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
+                  <a class="btn-shell document-new-button js-inline-open" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Nuevo oficio" data-presentation="modal" aria-label="Nuevo oficio" href="oficios_nuevo.php?embed=1&accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=oficios') ?>">Nuevo <span aria-hidden="true">+</span></a>
 	                  <label class="module-category-filter">Categoría
 	                    <select class="js-document-category-filter" data-list="oficios">
 	                      <option value="">Todas</option>
@@ -10165,6 +10168,7 @@ $resumenInterventionRows = [
                           . '-DIRNOS-DIRTTSV/DIVPIAT-UIAT-NORTE';
                         $oficioDownloadText = mb_strtolower((string) (($row['asunto_nombre'] ?? '') . ' ' . ($row['detalle'] ?? '') . ' ' . ($row['motivo'] ?? '')), 'UTF-8');
                         $oficioTipo = strtoupper(trim((string) ($row['asunto_tipo'] ?? '')));
+                        $oficioEsDefuncionReniec = \App\Support\DefuncionReniec::matches($oficioDownloadText);
                         $oficioEsCamara = (str_contains($oficioDownloadText, 'camara') || str_contains($oficioDownloadText, 'cámara') || str_contains($oficioDownloadText, 'camaras') || str_contains($oficioDownloadText, 'cámaras')) && (str_contains($oficioDownloadText, 'video') || str_contains($oficioDownloadText, 'vigilancia'));
                         $oficioEsRemitir = $oficioTipo === 'REMITIR' || str_contains($oficioDownloadText, 'remitir diligencia');
                         $oficioEsDosaje = str_contains($oficioDownloadText, 'dosaje et') || str_contains($oficioDownloadText, 'resultado dosaje') || preg_match('/resultado.*dosaje/u', $oficioDownloadText);
@@ -10199,6 +10203,7 @@ $resumenInterventionRows = [
                         <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
                         <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
                         <div class="module-actions">
+                          <?php if ($oficioEsDefuncionReniec): ?><a class="btn-shell btn-docx" href="word_oficio_defuncion_reniec.php?oficio_id=<?= (int) $row['id'] ?>">Descargar defunción</a><?php endif; ?>
                           <?php if ($oficioEsCamara): ?><a class="btn-shell btn-docx" href="word_oficio_camaras.php?oficio_id=<?= (int) $row['id'] ?>">Descargar cámara</a><?php endif; ?>
                           <?php if ($oficioEsRemitir): ?><a class="btn-shell btn-docx" href="oficio_remitir_diligencia.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['accid']) ? '&accidente_id=' . urlencode((string) $row['accid']) : '' ?>">Descargar remitir</a><?php endif; ?>
                           <?php if ($oficioEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar dosaje</a><?php endif; ?>
@@ -10831,6 +10836,7 @@ $resumenInterventionRows = [
       workbenchStates.delete(frame.id);
       if (workbench.classList.contains('modal-workbench')) {
         document.body.classList.remove('modal-workbench-open');
+        workbench.caseOpener?.focus({preventScroll:true});
       }
     }
 
@@ -12333,7 +12339,21 @@ $resumenInterventionRows = [
         const frame = document.getElementById(link.dataset.frame);
         const title = workbench ? workbench.querySelector('strong') : null;
         if (!workbench || !frame) return;
-        if (['documento-recibido-modal', 'oficio-modal'].includes(workbench.id)) {
+        const useModal = link.dataset.presentation === 'modal';
+        if (useModal) {
+          if (!workbench.hidden) {
+            workbench.querySelector('.js-inline-close')?.focus();
+            return;
+          }
+          workbench.parentElement?.classList.remove('has-case-editor');
+          workbench.classList.remove('case-inline-editor');
+          workbench.classList.add('modal-workbench');
+          workbench.setAttribute('role', 'dialog');
+          workbench.setAttribute('aria-modal', 'true');
+          workbench.caseOpener = link;
+          document.body.appendChild(workbench);
+        }
+        if (!useModal && ['documento-recibido-modal', 'oficio-modal'].includes(workbench.id)) {
           if (!workbench.hidden) {
             workbench.querySelector('.js-inline-close')?.focus();
             return;
@@ -12355,6 +12375,7 @@ $resumenInterventionRows = [
         workbench.hidden = false;
         if (workbench.classList.contains('modal-workbench')) {
           document.body.classList.add('modal-workbench-open');
+          workbench.querySelector('.js-inline-close')?.focus({preventScroll:true});
         } else {
           workbench.scrollIntoView({behavior: 'auto', block: 'start'});
           workbench.querySelector('.js-inline-close')?.focus({preventScroll:true});
@@ -13774,5 +13795,15 @@ document.querySelectorAll('.person-contact-trigger').forEach(button => {
 window.addEventListener('scroll', () => document.querySelectorAll('.person-contact-options:popover-open').forEach(menu => menu.hidePopover()), true);
 </script>
 <script src="assets/js/accidente-edit-catalogs.js?v=1" defer></script>
+<?php
+$officeDownloadToken = (string) ($_GET['download_saved'] ?? '');
+$officeDownloadUrl = (string) ($_SESSION['oficio_pending_downloads'][$officeDownloadToken] ?? '');
+if ($officeDownloadUrl !== '') {
+    unset($_SESSION['oficio_pending_downloads'][$officeDownloadToken]);
+    ?>
+    <iframe src="<?= h($officeDownloadUrl) ?>" title="Descarga del oficio guardado" hidden></iframe>
+    <?php
+}
+?>
 </body>
 </html>

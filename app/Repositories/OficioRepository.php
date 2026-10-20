@@ -336,6 +336,10 @@ final class OficioRepository
             } else {
                 $this->update($id, $payload);
             }
+            if (array_key_exists('reniec', $payload) && ($payload['reniec'] !== [] || $this->tableExists('oficio_defuncion_reniec'))) {
+                $this->pdo->prepare('DELETE FROM oficio_defuncion_reniec WHERE oficio_id=?')->execute([$id]);
+                if ($payload['reniec'] !== []) $this->pdo->prepare('INSERT INTO oficio_defuncion_reniec (oficio_id, datos) VALUES (?, ?)')->execute([$id, json_encode($payload['reniec'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+            }
             $this->pdo->commit();
             return $id;
         } catch (\Throwable $error) {
@@ -968,6 +972,14 @@ final class OficioRepository
         if (!\App\Support\Access::admin()) throw new \RuntimeException('Solo el administrador puede eliminar oficios.');
         $st = $this->pdo->prepare('DELETE FROM oficios WHERE id = ? LIMIT 1');
         $st->execute([$id]);
+    }
+
+    public function reniecDatos(int $id): array
+    {
+        if (!$this->tableExists('oficio_defuncion_reniec')) return [];
+        $st = $this->pdo->prepare('SELECT datos FROM oficio_defuncion_reniec WHERE oficio_id=?');
+        $st->execute([$id]);
+        return json_decode((string)($st->fetchColumn() ?: '{}'), true) ?: [];
     }
 
     public function find(int $id): ?array

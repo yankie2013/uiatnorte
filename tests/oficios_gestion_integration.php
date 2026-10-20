@@ -187,6 +187,12 @@ try {
     $destination=App\Support\OficioSaveResponse::destination($service,$recipientId,0,true,'save');
     expect($destination==='oficios_listar.php','Guardar regresa al listado de oficios.');
     expect(App\Support\OficioSaveResponse::destination($service,$id,(int)$case['id'],true,'save')==='oficios_listar.php','Regresar desde Gestión no filtra aunque haya expediente vinculado.');
+    $caseDestination=App\Support\OficioSaveResponse::destination($service,$id,(int)$case['id'],false,'save');
+    expect($caseDestination==='accidente_vista_tabs.php?accidente_id='.(int)$case['id'].'&tab=oficios','Guardar desde expediente retorna a su pestaña Oficios.');
+    $caseDownload=App\Support\OficioSaveResponse::destination($service,$id,(int)$case['id'],false,'download');
+    parse_str((string)parse_url($caseDownload,PHP_URL_QUERY),$caseQuery);
+    expect(str_starts_with($caseDownload,'accidente_vista_tabs.php?') && $caseQuery['tab']==='oficios' && (int)$caseQuery['accidente_id']===(int)$case['id'],'Guardar y descargar conserva el expediente y la pestaña Oficios.');
+    expect(isset($caseQuery['download_saved'],$_SESSION['oficio_pending_downloads'][$caseQuery['download_saved']]),'La descarga queda disponible al retornar al expediente.');
     $generalDownload=App\Support\OficioSaveResponse::destination($service,$recipientId,(int)$case['id'],true,'download');
     expect(!str_contains($generalDownload,'accidente_id='),'Descargar desde Gestión no añade filtro del expediente.');
     $destination=App\Support\OficioSaveResponse::destination($service,$recipientId,0,true,'download');

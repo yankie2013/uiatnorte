@@ -143,6 +143,7 @@ final class OficioService
             $motivo = preg_replace('/^' . preg_quote($label, '/') . ': .*\R?/mu', '', $motivo) ?? $motivo;
         }
         return $manual + [
+            'reniec' => $row ? $this->repository->reniecDatos((int)$row['id']) : [],
             'gestion' => $row['gestion'] ?? 0,
             'comisaria_id' => $row['comisaria_id'] ?? '',
             'encargado_id' => $row === null ? (Auth::user()['id'] ?? '') : ($row['encargado_id'] ?? ''),
@@ -309,6 +310,9 @@ final class OficioService
         ];
 
         $entidadId = (int) ($source['entidad_id_destino'] ?? $asunto['entidad_id'] ?? 0);
+        if (\App\Support\DefuncionReniec::matches($asunto['nombre'] . ' ' . $asunto['detalle'])) {
+            $entidadId = (int) $asunto['entidad_id'];
+        }
         $asuntoInfo = $this->repository->asuntoInfo((int) ($source['asunto_id'] ?? $asuntoId)) ?: $asunto;
         $rules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
 
@@ -750,6 +754,9 @@ final class OficioService
             throw new InvalidArgumentException('Selecciona el vehículo involucrado para este asunto.');
         }
         $asuntoRules = $this->asuntoRules((string) ($asuntoInfo['nombre'] ?? ''), (string) ($asuntoInfo['detalle'] ?? ''));
+        $reniec = \App\Support\DefuncionReniec::matches($asuntoInfo['nombre'] . ' ' . $asuntoInfo['detalle']);
+        $reniecDatos = $reniec ? \App\Support\DefuncionReniec::validate($input['reniec'] ?? []) : [];
+        if ($reniec && ($standalone || $personaInvId === null)) throw new InvalidArgumentException('Selecciona un caso y su persona fallecida para la inscripción RENIEC.');
         if (array_key_exists('asunto_texto', $input)) {
             $motivo = preg_replace('/\s*\R\s*/u', ' ', $motivo) ?? $motivo;
             if ($asuntoRules['requires_camara_range']) {
@@ -839,6 +846,7 @@ final class OficioService
             'asunto_id' => $asuntoId,
             'entidad_nombre_nueva' => $entidadId > 0 ? '' : $entidadNombre,
             'grado_cargo_nombre_nuevo' => $gradoCargoId !== null ? '' : $cargoNombre,
+            'reniec' => $reniecDatos,
             'plantilla_nueva' => $plantillaNueva,
             'tipo' => $tipo,
             'categoria' => $categoria !== '' ? $categoria : null,
@@ -910,7 +918,7 @@ final class OficioService
 
         return [
             'requires_vehicle' => $isPeritaje || $isSunarpHistorial || $isInformacionCertificado || $isIdentificacionVehiculo,
-            'requires_fallecido' => $isNecropsia || $isIdentificacionCadaver,
+            'requires_fallecido' => $isNecropsia || $isIdentificacionCadaver || \App\Support\DefuncionReniec::matches($text),
             'requires_persona_medica' => $isInformeMedico,
             'requires_diligencias' => $isInformacionDiligencias,
             'requires_camara_range' => $isCamara,
@@ -921,6 +929,7 @@ final class OficioService
     {
         $text = $this->normalizeMatchText($nombre . ' ' . $detalle);
         $tipo = strtoupper(trim($tipo));
+        if (\App\Support\DefuncionReniec::matches($text)) return ['key'=>'defuncion_reniec', 'label'=>'Inscripción defunción RENIEC', 'url'=>'word_oficio_defuncion_reniec.php?oficio_id={id}'];
 
         if (str_contains($text, 'camara') && (str_contains($text, 'video') || str_contains($text, 'vigilancia'))) {
             return ['key' => 'camara', 'label' => 'Cámara', 'url' => 'word_oficio_camaras.php?oficio_id={id}'];
