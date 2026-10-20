@@ -124,7 +124,6 @@ try {
     http_response_code(422);
     exit($error->getMessage());
 }
-$stored = $repository->reniecDatos($oficioId);
 unset($morgue['adjuntos']);
 $edad = $oficio['fall_edad'] ?? '';
 if ($edad === '' || $edad === null) {
@@ -148,7 +147,7 @@ $values = $morgue + [
     'firma_cip' => $responsableDocumento['cip'] ?? '',
     'firma_unidad' => $responsableDocumento['unidad'] ?? '',
     'firma_siglas' => $responsableDocumento['siglas'] ?? 'DIVPIAT-UIAT-NORTE',
-    'adjuntos' => !empty($stored['adjuntos']) ? 'Se adjunta: ' . $stored['adjuntos'] : '',
+    'adjuntos' => \App\Support\DefuncionReniec::attachmentsText($morgue),
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?? '',
     'oficio_numero' => $oficio['numero'] ?? '',
     'oficio_anio' => $oficio['anio'] ?? '',

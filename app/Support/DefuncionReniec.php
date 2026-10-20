@@ -13,6 +13,17 @@ final class DefuncionReniec
         'causa_muerte' => 'Causa de la muerte',
         'agente_causante' => 'Agente causante',
     ];
+    public const CERTIFICATE_FIELDS = [
+        'certificado_defuncion_numero' => 'Nro. de certificado de defunción general',
+        'certificado_necropsia_numero' => 'Nro. de certificado de necropsia',
+    ];
+
+    public static function attachmentsText(array $values): string
+    {
+        return 'Se adjunta copias de Certificado de Defunción General N° ' . $values['certificado_defuncion_numero']
+            . ', Certificado de Necropsia N° ' . $values['certificado_necropsia_numero'] . ' y constancia de inhumación.';
+    }
+
     public static function matches(string $text): bool
     {
         $text = strtr(mb_strtolower($text, 'UTF-8'), ['ó'=>'o']);
@@ -22,7 +33,7 @@ final class DefuncionReniec
     {
         if (!is_array($input)) throw new \InvalidArgumentException('Completa los datos de la morgue.');
         $values = [];
-        foreach (self::FIELDS as $key => $label) {
+        foreach (self::FIELDS + self::CERTIFICATE_FIELDS as $key => $label) {
             $value = $input[$key] ?? '';
             if (!is_string($value) || trim($value) === '' || mb_strlen($value) > 4000) throw new \InvalidArgumentException("Completa {$label} según los documentos de la morgue (máximo 4000 caracteres).");
             $values[$key] = trim($value);
