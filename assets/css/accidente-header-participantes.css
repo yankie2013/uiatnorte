@@ -795,8 +795,6 @@ html[data-theme-resolved="dark"] .case-module-sidebar #accTabs > .nav-link.activ
   --unit-accent:#5269a3;--unit-heading:#e5eafa;--unit-detail:#f5f7fd;
   margin-bottom:10px;padding:0;border:1px solid #d6dfef;border-radius:14px;overflow:hidden;
 }
-.participants-overview .participant-overview-unit:nth-of-type(3n + 2) {--unit-accent:#347d79;--unit-heading:#dcf0ec;--unit-detail:#f2faf8}
-.participants-overview .participant-overview-unit:nth-of-type(3n + 3) {--unit-accent:#7e639e;--unit-heading:#eee5f7;--unit-detail:#faf6fd}
 .participants-overview .participant-overview-unit + .participant-overview-unit {padding-top:0;border-top:1px solid #d6dfef}
 .participants-overview .participant-overview-unit > header {
   margin:0;border-radius:0;padding:12px 14px;color:var(--unit-accent);
@@ -899,3 +897,18 @@ html[data-theme-resolved="dark"] .case-registration-block>h3 {color:#b8d4f4;}
 }
 
 .participants-overview .overview-company-representative {margin-top:8px;padding-top:8px;border-top:1px solid currentColor;overflow-wrap:anywhere}
+
+/* Reserve red for deceased participants and green for police. */
+.participants-overview .participant-overview-unit {
+  --unit-heading:color-mix(in srgb,var(--unit-accent) 14%,white);
+  --unit-detail:color-mix(in srgb,var(--unit-accent) 5%,white);
+}
+.participants-overview .participant-overview-unit.is-fatal-unit {--unit-accent:#b54d55;--unit-heading:#f8e1e3;--unit-detail:#fff5f5}
+.participants-overview .participant-overview-person.is-fatal {--role-accent:#b54d55;--role-tint:#f8e1e3;border-left:3px solid #b54d55;background:#fff0f1}
+.participants-overview .overview-add-related {display:inline-flex;align-items:center;padding:4px 9px;border:1px solid currentColor;border-radius:8px;color:inherit;background:rgba(255,255,255,.55);font-size:11px;font-weight:700;text-decoration:none;white-space:normal}
+.participants-overview .overview-add-related:hover {background:rgba(255,255,255,.85)}
+html[data-theme-resolved="dark"] .participants-overview .overview-add-related {background:#ffffff12}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-person.is-fatal {background:#422a34;--role-accent:#ffadb5}
+
+.participants-overview .overview-police-group > header.overview-role-group {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.participants-overview .overview-police-group > header > h3 {margin:0;font:inherit;color:inherit}

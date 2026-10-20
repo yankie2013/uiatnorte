@@ -50,8 +50,21 @@ if ($accidenteId <= 0) {
 
 $error = '';
 $data = $service->defaultData(null, $accidenteId);
+$linkedId = (int) ($_GET['fallecido_inv_id'] ?? 0);
+if ($linkedId > 0) {
+    $linkedContext = $service->formContext($accidenteId);
+    $validLinkedIds = array_map('intval', array_column($linkedContext['fallecidos'], 'inv_id'));
+    if (!in_array($linkedId, $validLinkedIds, true)) {
+        http_response_code(400);
+        exit('El registro seleccionado no pertenece al accidente o no está disponible.');
+    }
+    $data['fallecido_inv_id'] = $linkedId;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = $service->submittedData($_POST, $accidenteId);
+
+    if ($linkedId > 0) $data['fallecido_inv_id'] = $linkedId;
 
     try {
         $service->create($data);
@@ -111,7 +124,8 @@ include __DIR__ . '/sidebar.php';
     <div class="grid">
       <div class="c12 field">
         <label class="label" for="fallecido_inv_id">Fallecido del accidente*</label>
-        <select name="fallecido_inv_id" id="fallecido_inv_id" required>
+        <?php if ($linkedId > 0): ?><input type="hidden" name="fallecido_inv_id" value="<?= (int) $linkedId ?>"><?php endif; ?>
+        <select name="fallecido_inv_id" id="fallecido_inv_id" required <?= $linkedId > 0 ? 'disabled' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($ctx['fallecidos'] as $fallecido): ?>
             <?php $label = trim((string) (($fallecido['apellido_paterno'] ?? '') . ' ' . ($fallecido['apellido_materno'] ?? '') . ' ' . ($fallecido['nombres'] ?? ''))); ?>

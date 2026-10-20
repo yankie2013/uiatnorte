@@ -58,6 +58,17 @@ $returnTo = \App\Support\RegistrationReturn::resolve(
 );
 $error = '';
 $data = $service->defaultData(null, $accidenteId);
+$linkedId = (int) ($_GET['vehiculo_inv_id'] ?? 0);
+if ($linkedId > 0) {
+    $linkedContext = $service->formContext($accidenteId);
+    $validLinkedIds = array_map('intval', array_column($linkedContext['vehiculos'], 'inv_id'));
+    if (!in_array($linkedId, $validLinkedIds, true)) {
+        http_response_code(400);
+        exit('El registro seleccionado no pertenece al accidente o no está disponible.');
+    }
+    $data['vehiculo_inv_id'] = $linkedId;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'accidente_id' => $_POST['accidente_id'] ?? $accidenteId,
@@ -77,6 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'celular_rep' => $_POST['celular_rep'] ?? '',
         'email_rep' => $_POST['email_rep'] ?? '',
     ];
+
+    if ($linkedId > 0) $data['vehiculo_inv_id'] = $linkedId;
 
     try {
         $service->create($data);
@@ -138,7 +151,8 @@ include __DIR__ . '/sidebar.php';
     <div class="grid">
       <div class="c12 field">
         <label class="label" for="vehiculo_inv_id">Vehiculo del accidente*</label>
-        <select name="vehiculo_inv_id" id="vehiculo_inv_id" required>
+        <?php if ($linkedId > 0): ?><input type="hidden" name="vehiculo_inv_id" value="<?= (int) $linkedId ?>"><?php endif; ?>
+        <select name="vehiculo_inv_id" id="vehiculo_inv_id" required <?= $linkedId > 0 ? 'disabled' : '' ?>>
           <option value="">Selecciona</option>
           <?php foreach ($ctx['vehiculos'] as $vehiculo): ?>
             <?php $label = trim((string) (($vehiculo['orden_participacion'] ?? '') !== '' ? $vehiculo['orden_participacion'] . ' - ' : '') . ($vehiculo['placa'] ?? 'SIN PLACA')); ?>

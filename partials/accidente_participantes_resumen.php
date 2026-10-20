@@ -132,6 +132,24 @@
             $lastRoleGroup = $savedGroup;
         }
     };
+    $vehiclesWithOwner = [];
+    foreach ($propietarios as $owner) {
+        $vehiclesWithOwner[(int) ($owner['vehiculo_inv_id'] ?? 0)] = true;
+    }
+    $peopleWithFamily = [];
+    foreach ($familiares as $relative) {
+        $peopleWithFamily[(int) ($relative['fallecido_inv_id'] ?? 0)] = true;
+    }
+    $renderFamilyActions = static function (array $people) use ($accidente_id, $peopleWithFamily): void {
+        $deceased = array_values(array_filter($people, static fn(array $person): bool => needs_occ($person)));
+        foreach ($deceased as $person) {
+            $id = (int) ($person['involucrado_id'] ?? 0);
+            if ($id <= 0 || isset($peopleWithFamily[$id])) continue;
+            $label = '+ Familiar' . (count($people) > 1 ? ' · ' . person_label($person) : '');
+            echo '<a class="overview-add-related" href="familiar_fallecido_nuevo.php?accidente_id=' . (int) $accidente_id . '&amp;fallecido_inv_id=' . $id . '" title="Agregar familiar de ' . h(person_label($person)) . '">' . h($label) . '</a>';
+        }
+    };
+    $unitIndex = 0;
     $seen = []; $ownersSeen = [];
     ?>
     <section class="participants-overview" aria-label="Resumen de todos los participantes">
@@ -171,7 +189,7 @@
         </div>
       </div>
       <?php foreach ($summaryUnits as $unit): ?>
-        <article class="participant-overview-unit">
+        <article class="participant-overview-unit" style="--unit-accent:hsl(<?= 190 + (($unitIndex++ * 47) % 100) ?> 42% 43%);">
           <header><h3><?= h($unit['ut']) ?></h3>
           <?php foreach ($unit['vehiculos'] as $vehicle): ?>
             <?php
@@ -192,8 +210,12 @@
               <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($vehiclePersonTarget) ?>" data-vehicle-only="1" data-vehicle-panel="<?= h($vehiclePanelTarget) ?>">Ver vehículo ↗</button>
             <?php else: ?>
               <a class="case-person-view" href="vehiculo_editar.php?id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=participantes') ?>">Ver vehículo ↗</a>
+            <?php endif; ?>
+            <?php if ((int) ($vehicle['inv_vehiculo_id'] ?? 0) > 0 && !isset($vehiclesWithOwner[(int) $vehicle['inv_vehiculo_id']])): ?>
+              <a class="overview-add-related" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_inv_id=<?= (int) $vehicle['inv_vehiculo_id'] ?>">+ Propietario</a>
             <?php endif; ?></div>
-          <?php endforeach; ?></header>
+          <?php endforeach; ?>
+          <?php $renderFamilyActions($unit['personas']); ?></header>
           <?php if (!$unit['personas']): ?>
             <p class="overview-person-meta">UT registrada. Pendiente de agregar conductor, pasajeros u ocupantes.</p>
           <?php endif; ?>
@@ -215,15 +237,27 @@
         </article>
       <?php endforeach; ?>
       <?php foreach ($personas as $person): if (isset($seen[(int) $person['involucrado_id']])) continue; ?>
-        <article class="participant-overview-unit"><header><h3><?= h(trim((string) ($person['orden_participacion'] ?? '') . ' · ' . (string) ($person['rol_nombre'] ?? 'Participante'), ' ·')) ?></h3></header>
+        <article class="participant-overview-unit<?= needs_occ($person) ? ' is-fatal-unit' : '' ?>"><header><h3><?= h(trim((string) ($person['orden_participacion'] ?? '') . ' · ' . (string) ($person['rol_nombre'] ?? 'Participante'), ' ·')) ?></h3><?php $renderFamilyActions([$person]); ?></header>
         <?php $renderPerson($person, (string) ($person['rol_nombre'] ?? 'Participante'), 'persona-' . (int) $person['involucrado_id']); ?></article>
       <?php endforeach; ?>
       <?php foreach ($propietarios as $owner) { if (isset($ownersSeen[(int) $owner['id']])) continue;
           $renderPerson(project_prefixed_record($owner, 'owner_'), 'Propietario del vehículo · ' . ($owner['placa'] ?? ''), 'propietario-registro-' . (int) $owner['id'], (string) ($owner['razon_social'] ?? ''));
       }
-      if ($policias) echo '<section class="overview-police-group">';
-      foreach ($policias as $person) $renderPerson($person, 'Efectivo policial', 'policia-registro-' . (int) $person['id']);
-      if ($policias) echo '</section>';
+      ?>
+      <section class="overview-police-group">
+        <header class="overview-role-group" data-tone="green">
+          <h3>Efectivos policiales</h3>
+          <?php if (!$policias): ?>
+            <a class="overview-add-related" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">+ Policía</a>
+          <?php endif; ?>
+        </header>
+        <?php
+        $lastRoleGroup = 'Efectivos policiales';
+        foreach ($policias as $person) $renderPerson($person, 'Efectivo policial', 'policia-registro-' . (int) $person['id']);
+        if (!$policias) echo '<p class="overview-person-meta">No hay efectivos policiales registrados.</p>';
+        ?>
+      </section>
+      <?php
       foreach ($familiares as $person) if (!isset($relativesShown[(int) $person['id']])) $renderPerson(project_prefixed_record($person, 'fam_'), 'Familiar · ' . ($person['parentesco'] ?? ''), 'familiar-registro-' . (int) $person['id']);
       foreach ($abogados as $person) if (!isset($lawyersShown[(int) $person['id']])) $renderPerson($person, 'Abogado', 'sidebar-abogado-' . (int) $person['id']);
       if (!$personas && !$summaryUnits && !$propietarios && !$policias && !$familiares && !$abogados) echo '<p>No hay participantes registrados.</p>';
