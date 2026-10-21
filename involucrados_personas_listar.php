@@ -160,7 +160,11 @@ $messages = [
 <body>
 <div class="wrap">
   <div class="toolbar">
-    <a class="btn" href="#" onclick="history.back(); return false;">Volver</a>
+    <?php if ($accidenteId > 0): ?>
+    <a class="btn" href="<?= $base ?>accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>&amp;tab=participantes">Volver al accidente</a>
+    <?php else: ?>
+    <a class="btn" href="<?= $base ?>accidente_listar.php">Volver a accidentes</a>
+    <?php endif; ?>
     <div style="display:flex; gap:8px;">
       <a class="btn primary" href="<?= $base ?>involucrados_personas_nuevo.php<?= $accidenteId ? ('?accidente_id=' . $accidenteId) : '' ?>">Nuevo</a>
       <a class="btn" href="<?= $base ?>index.php">Panel</a>

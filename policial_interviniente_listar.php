@@ -47,7 +47,7 @@ include __DIR__ . '/sidebar.php';
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <?php if ($filtered): ?>
-        <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">Volver al accidente</a>
+        <a class="btn" href="accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>&amp;tab=participantes">Volver al accidente</a>
         <a class="btn" href="policial_interviniente_listar.php">Ver todos</a>
         <a class="btn primary" href="policial_interviniente_nuevo.php?accidente_id=<?= (int) $accidenteId ?>">Nuevo interviniente</a>
       <?php else: ?>

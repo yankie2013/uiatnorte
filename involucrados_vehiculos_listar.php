@@ -230,7 +230,9 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
     </div>
     <div class="actions">
       <!-- NUEVOS BOTONES -->
-      <a class="btn ghost" href="#" onclick="history.back();return false;">← Atrás</a>
+      <?php if ($accidente_id > 0): ?>
+      <a class="btn ghost" href="<?=$base?>accidente_vista_tabs.php?accidente_id=<?= (int) $accidente_id ?>&amp;tab=participantes">Volver al accidente</a>
+      <?php endif; ?>
       <a class="btn ghost" href="<?=$base?>accidente_listar.php">🗂️ Accidentes</a>
       <!-- EXISTENTES -->
       <a class="btn ghost" href="<?=$base?>index.php">🏠 Panel</a>

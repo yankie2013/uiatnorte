@@ -50,7 +50,7 @@ include __DIR__ . '/sidebar.php';
       <div class="small">Accidente ID: <?= (int) $accidenteId ?> - <?= count($rows) ?> registro(s)</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= (int) $accidenteId ?>">Volver al accidente</a>
+      <a class="btn" href="accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>&amp;tab=participantes">Volver al accidente</a>
       <a class="btn primary" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidenteId ?>">Nuevo propietario</a>
     </div>
   </div>
