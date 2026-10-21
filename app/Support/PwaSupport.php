@@ -89,7 +89,9 @@ final class PwaSupport
             $buffer = preg_replace_callback('~<form\b[^>]*>~i', static function ($m) use ($token) {
                 return preg_match('~method\s*=\s*[\\"\']?post~i', $m[0]) ? $m[0] . '<input type="hidden" name="_csrf" value="' . $token . '">' : $m[0];
             }, $buffer);
-            $accessScript = '<meta name="csrf-token" content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
+            $case = (int) ($_GET['accidente_id'] ?? 0);
+            $canDeleteParticipants = $case > 0 && \App\Support\Access::canDeleteCaseRecord($case);
+            $accessScript = '<meta name="can-delete-participants" content="' . ($canDeleteParticipants ? '1' : '0') . '"><meta name="csrf-token content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
             $buffer = preg_replace('~</head>~i', $accessScript . '</head>', $buffer, 1);
         }
 

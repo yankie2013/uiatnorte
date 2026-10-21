@@ -30,7 +30,11 @@
       }
     });
     if(role !== 'admin')document.querySelectorAll('a[href]').forEach(link => {
-      if (/eliminar\.php|delete\.php/.test(link.getAttribute('href'))) link.hidden=true;
+      if (/eliminar\.php|delete\.php/.test(link.getAttribute('href'))) {
+        const path = new URL(link.href, location.href).pathname.split('/').pop();
+        const participant = ['involucrados_personas_eliminar.php','involucrados_vehiculos_eliminar.php','familiar_fallecido_eliminar.php','propietario_vehiculo_eliminar.php','abogado_eliminar.php','policial_interviniente_eliminar.php'].includes(path);
+        link.hidden = !(participant && document.querySelector('meta[name="can-delete-participants"]')?.content === '1');
+      }
     });
     if(role==='adjunto')document.querySelectorAll('a[href*="accidente_nuevo.php"]').forEach(link=>link.hidden=true);
     if(!['admin','jefe_emi','adjunto'].includes(role))document.querySelectorAll('a[href]').forEach(link => {
