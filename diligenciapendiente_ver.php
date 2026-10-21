@@ -30,20 +30,41 @@ $row = $detail['row'];
 $accidenteId = (int) ($row['accidente_id'] ?? 0);
 $message = trim((string) ($_GET['msg'] ?? ''));
 $errors = [];
+$mode = (string) ($_GET['mode'] ?? $_POST['mode'] ?? '');
+if (!in_array($mode, ['oficio', 'citacion'], true)) $mode = '';
+$ctx = $detail['ctx'] ?? ['oficios' => [], 'citaciones' => []];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'resolve') {
     try {
         $data = $service->defaultData($row);
-        $data['oficio_id'] = $_POST['oficio_id'] ?? '';
-        $data['citacion_id'] = $_POST['citacion_id'] ?? [];
+        $data['citacion_id'] = $detail['citacion_ids'];
+        if ($mode !== 'citacion') {
+            $data['oficio_id'] = $_POST['oficio_id'] ?? '';
+            $allowedOficios = array_map('intval', array_column($ctx['oficios'], 'id'));
+            if ((int) $data['oficio_id'] > 0 && !in_array((int) $data['oficio_id'], $allowedOficios, true)) {
+                throw new InvalidArgumentException('El oficio no pertenece a este accidente.');
+            }
+        }
+        if ($mode !== 'oficio') {
+            $data['citacion_id'] = $_POST['citacion_id'] ?? [];
+            $allowedCitaciones = array_map('intval', array_column($ctx['citaciones'], 'id'));
+            if (!is_array($data['citacion_id']) || array_diff(array_map('intval', $data['citacion_id']), $allowedCitaciones)) {
+                throw new InvalidArgumentException('La citación no pertenece a este accidente.');
+            }
+        }
         $data['documento_realizado'] = $_POST['documento_realizado'] ?? ($data['documento_realizado'] ?? '');
         if (!empty($_POST['marcar_realizado'])) {
             $data['estado'] = 'Realizado';
         }
         $service->actualizar($id, $data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"diligencia.saved"},location.origin);</script>';
+            exit;
+        }
         $target = 'diligenciapendiente_ver.php?id=' . urlencode((string) $id)
             . '&embed=' . ($embed ? '1' : '0')
             . '&return_to=' . urlencode($returnTo)
+            . '&mode=' . urlencode($mode)
             . '&msg=' . urlencode('Diligencia vinculada correctamente.');
         header('Location: ' . $target);
         exit;
@@ -123,6 +144,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
     <?php if ($message !== ''): ?><div class="alert success"><?= h($message) ?></div><?php endif; ?>
     <?php foreach ($errors as $error): ?><div class="alert error"><?= h($error) ?></div><?php endforeach; ?>
 
+    <?php if ($mode === ''): ?>
     <div class="grid">
       <div class="panel">
         <div style="margin-bottom:16px;">
@@ -130,6 +152,10 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
           <div><?= !empty($detail['tipo_nombre']) ? ('<span class="badge">' . h($detail['tipo_nombre']) . '</span>') : '<span class="muted">Sin tipo</span>' ?></div>
         </div>
 
+        <div style="margin-bottom:16px;">
+          <span class="label">Acción</span>
+          <div><?= h($row['accion'] ?? '') ?: '<span class="muted">Sin acción</span>' ?></div>
+        </div>
         <div style="margin-bottom:16px;">
           <span class="label">Estado</span>
           <div><?= h($row['estado'] ?? 'Pendiente') ?></div>
@@ -182,33 +208,43 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
       </div>
     </div>
 
+    <?php endif; ?>
     <?php
       $ctx = $detail['ctx'] ?? ['oficios' => [], 'citaciones' => []];
       $selectedCitaciones = array_fill_keys(array_map('intval', $detail['citacion_ids'] ?? []), true);
-      $returnHere = 'diligenciapendiente_ver.php?id=' . (int) $id;
-      $oficioNuevoUrl = 'oficios_nuevo.php?accidente_id=' . (int) $accidenteId . '&return_to=' . urlencode($returnHere);
-      $citacionNuevaUrl = 'citacion_nuevo.php?accidente_id=' . (int) $accidenteId . '&return_to=' . urlencode($returnHere);
+      $returnHere = 'diligenciapendiente_ver.php?id=' . (int) $id . '&embed=' . ($embed ? '1' : '0') . '&mode=' . urlencode($mode);
+      $oficioNuevoUrl = 'oficios_nuevo.php?accidente_id=' . (int) $accidenteId . '&embed=' . ($embed ? '1' : '0') . '&diligencia_id=' . (int) $id . '&return_to=' . urlencode($returnHere);
+      $citacionNuevaUrl = 'citacion_nuevo.php?accidente_id=' . (int) $accidenteId . '&embed=' . ($embed ? '1' : '0') . '&diligencia_id=' . (int) $id . '&return_to=' . urlencode($returnHere);
       $actaVisualUrl = 'acta_visualizacion_form.php?accidente_id=' . (int) $accidenteId;
       $actaEntregaUrl = 'acta_entrega_vehiculo_form.php?accidente_id=' . (int) $accidenteId;
     ?>
+    <?php if ($mode !== ''): ?>
     <section class="resolve-panel">
-      <h2 class="resolve-title">Resolver diligencia</h2>
-      <div class="muted">Crea el documento que corresponda o vincula uno que ya exista. Al guardar puedes marcar esta diligencia como realizada.</div>
+      <h2 class="resolve-title"><?= $mode === 'oficio' ? 'Oficio relacionado' : ($mode === 'citacion' ? 'Citaciones relacionadas' : 'Resolver diligencia') ?></h2>
+      <div class="muted"><?= $mode !== '' ? 'Selecciona un documento de este expediente o crea uno nuevo; quedará vinculado a esta diligencia.' : 'Vincula los documentos y registra el resultado de la diligencia.' ?></div>
 
       <?php if ($accidenteId > 0): ?>
         <div class="quick-actions">
-          <a class="btn primary" href="<?= h($oficioNuevoUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear oficio</a>
-          <a class="btn primary" href="<?= h($citacionNuevaUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear citacion</a>
+          <?php if ($mode !== 'citacion'): ?>
+          <a class="btn primary" href="<?= h($oficioNuevoUrl) ?>" >Crear oficio</a>
+          <?php endif; ?>
+          <?php if ($mode !== 'oficio'): ?>
+          <a class="btn primary" href="<?= h($citacionNuevaUrl) ?>" >Crear citación</a>
+          <?php endif; ?>
+          <?php if ($mode === ''): ?>
           <a class="btn" href="<?= h($actaVisualUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear acta de visualizacion</a>
           <a class="btn" href="<?= h($actaEntregaUrl) ?>" <?= $embed ? 'target="_top"' : '' ?>>Crear acta de entrega</a>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
 
       <form method="post">
         <input type="hidden" name="action" value="resolve">
+        <input type="hidden" name="mode" value="<?= h($mode) ?>">
         <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
         <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
         <div class="form-grid">
+          <?php if ($mode !== 'citacion'): ?>
           <div>
             <label class="label" for="oficio_id">Oficio relacionado</label>
             <select id="oficio_id" name="oficio_id" class="input">
@@ -218,10 +254,14 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
               <?php endforeach; ?>
             </select>
           </div>
+          <?php endif; ?>
+          <?php if ($mode === ''): ?>
           <div>
             <label class="label" for="documento_realizado">Documento realizado / acta</label>
             <input id="documento_realizado" name="documento_realizado" class="input" maxlength="255" value="<?= h($row['documento_realizado'] ?? '') ?>" placeholder="Ej: Acta de visualizacion de video">
           </div>
+          <?php endif; ?>
+          <?php if ($mode !== 'oficio'): ?>
           <div class="field-full">
             <span class="label">Citaciones creadas para este accidente</span>
             <?php if (!empty($ctx['citaciones'])): ?>
@@ -255,17 +295,21 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
               <div class="muted">No hay citaciones registradas para este accidente.</div>
             <?php endif; ?>
           </div>
+          <?php endif; ?>
         </div>
+        <?php if ($mode === ''): ?>
         <label class="checkline">
           <input type="checkbox" name="marcar_realizado" value="1" <?= (string) ($row['estado'] ?? '') === 'Realizado' ? 'checked' : '' ?>>
           <span>Marcar diligencia como realizada al guardar</span>
         </label>
+        <?php endif; ?>
         <div class="actions" style="margin-top:14px;">
           <button type="submit" class="btn primary">Guardar vinculos</button>
           <a class="btn" href="diligenciapendiente_editar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar todo</a>
         </div>
       </form>
     </section>
+    <?php endif; ?>
 
     <div class="actions" style="margin-top:18px;">
       <?php if ($embed): ?>

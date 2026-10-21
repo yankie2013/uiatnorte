@@ -9,12 +9,21 @@ $repo=new ActaVisualizacionRepository($pdo); $service=new ActaVisualizacionServi
 $id=(int)($_GET['id']??$_POST['id']??0); $embed=(int)($_GET['embed']??$_POST['embed']??0)===1;
 $row=$id?$repo->find($id):null; if($id&&!$row){http_response_code(404);exit('Acta no encontrada');}
 $accidenteId=(int)($row['accidente_id']??$_GET['accidente_id']??$_POST['accidente_id']??0); if($accidenteId<=0){http_response_code(400);exit('Falta accidente_id');}
+$diligenciaId = (int) ($_POST['diligencia_id'] ?? $_GET['diligencia_id'] ?? 0);
+if ($diligenciaId > 0) {
+    try { \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, $accidenteId); }
+    catch (Throwable $e) { http_response_code(400); exit('La diligencia no pertenece a este expediente.'); }
+}
 $draftKey='uiat:acta_visualizacion:v1:'.$accidenteId.':'.($id?:'nueva');
 $ctx=$service->context($accidenteId); $error='';
 $selectedParticipants=array_fill_keys(array_map(fn($p)=>$p['fuente'].':'.$p['fuente_id'],$row['participantes']??[]),true);
 $disks=$row['discos']??[];
 if($_SERVER['REQUEST_METHOD']==='POST'){
- try{$id=$service->save($id?:null,$accidenteId,$_POST);$target='accidente_vista_tabs.php?accidente_id='.$accidenteId.'&tab=documentos&subtab=actas';?><!doctype html><meta charset="utf-8"><script>try{localStorage.removeItem(<?=json_encode($draftKey)?>)}catch(e){}<?php if($embed):?>window.parent.postMessage({type:'acta.saved'},'*');<?php else:?>location.replace(<?=json_encode($target)?>);<?php endif?></script><noscript><a href="<?=h($target)?>">Acta guardada. Continuar</a></noscript><?php exit;}catch(Throwable $e){$error=$e->getMessage();$selectedParticipants=array_fill_keys((array)($_POST['participantes']??[]),true);$disks=(array)($_POST['discos']??[]);}
+ try{$id=$service->save($id?:null,$accidenteId,$_POST);if ($diligenciaId > 0) {
+            \App\Support\DiligenciaActas::attach($pdo, $diligenciaId, $accidenteId, 'visualizacion', $id);
+            \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
+        }
+        $target='accidente_vista_tabs.php?accidente_id='.$accidenteId.'&tab=documentos&subtab=actas';?><!doctype html><meta charset="utf-8"><script>try{localStorage.removeItem(<?=json_encode($draftKey)?>)}catch(e){}<?php if($embed):?>window.parent.postMessage({type:'acta.saved'},'*');<?php else:?>location.replace(<?=json_encode($target)?>);<?php endif?></script><noscript><a href="<?=h($target)?>">Acta guardada. Continuar</a></noscript><?php exit;}catch(Throwable $e){$error=$e->getMessage();$selectedParticipants=array_fill_keys((array)($_POST['participantes']??[]),true);$disks=(array)($_POST['discos']??[]);}
 }
 ?>
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Acta de visualizacion</title><style>
@@ -47,9 +56,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 .participant-selection>summary{cursor:pointer;font-weight:800;color:var(--text)}.participant-selection>summary h2{display:inline;font-size:20px;margin:0 0 0 5px}.participant-selection>summary:focus-visible{outline:2px solid var(--blue);outline-offset:5px;border-radius:4px}
 .direct-reception[hidden]{display:none}.direct-reception{padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 </style></head><body>
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!$embed) require_once __DIR__ . '/sidebar.php'; ?>
 <main class="wrap"><div class="panel head"><div><h1 style="margin:0">Acta de visualizacion</h1><div class="muted">Caso #<?= $accidenteId ?> · <?= h($ctx['accident']['registro_sidpol']) ?></div></div><?php if($embed):?><button class="btn" onclick="parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else:?><a class="btn" href="accidente_vista_tabs.php?accidente_id=<?=$accidenteId?>&tab=documentos&subtab=actas">Volver</a><?php endif?></div>
-<?php if($error):?><div class="error"><?=h($error)?></div><?php endif?><div class="draft-bar" role="status"><div class="draft-state" id="draftState">Proteccion de borrador activa</div><div class="draft-actions"><button class="btn draft-save" type="button" id="saveDraftNow">Guardar borrador ahora</button><button class="btn draft-save" type="button" id="discardDraft" hidden>Descartar borrador</button></div></div><form method="post" id="actaForm" novalidate><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="accidente_id" value="<?=$accidenteId?>"><input type="hidden" name="embed" value="<?=$embed?1:0?>">
+<?php if($error):?><div class="error"><?=h($error)?></div><?php endif?><div class="draft-bar" role="status"><div class="draft-state" id="draftState">Proteccion de borrador activa</div><div class="draft-actions"><button class="btn draft-save" type="button" id="saveDraftNow">Guardar borrador ahora</button><button class="btn draft-save" type="button" id="discardDraft" hidden>Descartar borrador</button></div></div><form method="post" id="actaForm" novalidate><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="accidente_id" value="<?=$accidenteId?>"><input type="hidden" name="diligencia_id" value="<?= (int) $diligenciaId ?>"><input type="hidden" name="embed" value="<?=$embed?1:0?>">
 <section class="panel grid"><div><label>Fecha</label><input type="date" name="fecha_visualizacion" value="<?=h($_POST['fecha_visualizacion']??$row['fecha_visualizacion']??date('Y-m-d'))?>" required></div><div><label>Hora de inicio</label><input type="time" name="hora_inicio" value="<?=h(substr((string)($_POST['hora_inicio']??$row['hora_inicio']??date('H:i')),0,5))?>" required></div></section>
 <details class="panel participant-selection" open><summary><h2>👥 Personas consideradas</h2></summary>
 <?php $participantGroups = $repo->participantGroups($accidenteId, $ctx['participants']); ?>

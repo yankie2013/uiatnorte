@@ -20,6 +20,7 @@ if (!function_exists('h')) {
 $service = new OficioService(new OficioRepository($pdo));
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+$diligenciaId = (int) ($_POST['diligencia_id'] ?? $_GET['diligencia_id'] ?? 0);
 $returnLabel = str_contains($returnTo, 'diligenciapendiente_ver.php') ? 'Volver a la diligencia pendiente' : 'Volver a Documentos';
 
 $accidenteIdGet = isset($_GET['accidente_id']) ? (int) $_GET['accidente_id'] : 0;
@@ -27,6 +28,15 @@ $sidpolGet = trim((string) ($_GET['sidpol'] ?? ''));
 $preselectedAccidenteId = $accidenteIdGet > 0 ? $accidenteIdGet : ($sidpolGet !== '' ? ($service->accidenteIdBySidpol($sidpolGet) ?? 0) : 0);
 if ($returnTo === '' && $preselectedAccidenteId > 0) {
     $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $preselectedAccidenteId . '&tab=documentos';
+}
+
+if ($diligenciaId > 0) {
+    try {
+        \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, $preselectedAccidenteId);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        exit(h($e->getMessage()));
+    }
 }
 
 $editingId = defined('UIAT_GESTION_EDIT_ID') ? (int)UIAT_GESTION_EDIT_ID : 0;
@@ -142,11 +152,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($gestion) $data = array_replace($data, $service->gestionAnnualData($editingOficio));
 if ($cameraActa) { $data['anio_oficio'] = (int) date('Y'); $data['oficial_ano_id'] = $ctx['oficial_ano_default']; $data['tipo'] = 'SOLICITAR'; }
     try {
+        if ($diligenciaId > 0) {
+            \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, (int) $data['accidente_id']);
+        }
         if ($editingId > 0) {
             $service->update($editingId, $data);
             $asignado = ['id'=>$editingId, 'numero'=>$data['numero_oficio'], 'anio'=>$data['anio_oficio']];
         } else {
             $asignado = $service->create($data);
+        }
+        if ($diligenciaId > 0) {
+            \App\Support\DiligenciaDocumentLink::attach($pdo, $diligenciaId, (int) $data['accidente_id'], 'oficio', (int) $asignado['id']);
+            \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
         }
         if ($embed && ($_POST['origin'] ?? '') === 'acta_visualizacion') {
             echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"oficio.saved"},location.origin);</script>';
@@ -373,6 +390,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#60a5fa;box-shado
     <input type="hidden" name="origin" value="<?= h($oficioOrigin) ?>">
     <input type="hidden" name="origin" value="<?= h(($_GET['origin'] ?? $_POST['origin'] ?? '') === 'acta_visualizacion' ? 'acta_visualizacion' : '') ?>">
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+    <input type="hidden" name="diligencia_id" value="<?= (int) $diligenciaId ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <?php if ($gestion): ?>
     <input type="hidden" name="gestion" value="1">

@@ -4645,18 +4645,19 @@ $renderDiligenciaCards = static function (array $items): string {
             $contenidoLista = trim((string) preg_replace('/\s+/u', ' ', (string) ($row['contenido'] ?? '')));
             $contenidoLista = $contenidoLista !== '' ? $contenidoLista : 'Sin contenido registrado.';
           ?>
-          <article class="diligencia-list-row">
-            <select class="diligencia-status-select js-quick-diligencia-status <?= $estadoDiligenciaUi === 'Resuelto' ? 'status-resuelto' : 'status-pendiente' ?>" data-diligencia-id="<?= (int) $row['id'] ?>" data-prev="<?= h($estadoDiligenciaUi) ?>" aria-label="Estado de la diligencia">
-              <option value="Pendiente" <?= $estadoDiligenciaUi === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
-              <option value="Resuelto" <?= $estadoDiligenciaUi === 'Resuelto' ? 'selected' : '' ?>>Resuelto</option>
-            </select>
+          <article class="diligencia-list-row<?= $estadoDiligenciaRaw === 'Realizado' ? ' is-completed' : '' ?>">
+            <label class="diligencia-completed">
+              <input type="checkbox" class="js-quick-diligencia-status" aria-label="Marcar diligencia como realizada" data-diligencia-id="<?= (int) $row['id'] ?>" <?= $estadoDiligenciaRaw === 'Realizado' ? 'checked' : '' ?>>
+            </label>
             <div class="diligencia-list-body">
-              <div class="diligencia-list-title"><?= h($tipoDiligencia) ?></div>
+              <div class="diligencia-list-title"><?php if (!empty($row['accion'])): ?><?= h($row['accion']) ?> · <?php endif; ?><?= h($tipoDiligencia) ?></div>
               <div class="diligencia-list-summary"><?= h($contenidoLista) ?></div>
               <?php if (!empty($row['creado_en'])): ?><div class="diligencia-list-date">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></div><?php endif; ?>
             </div>
             <div class="diligencia-list-actions">
-              <a class="btn-shell btn-primary js-inline-open" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Resolver diligencia #<?= (int) $row['id'] ?>">Resolver</a>
+              <?php foreach (\App\Support\DiligenciaDocumentLink::optionsForAction((string) ($row['accion'] ?? '')) as $documentMode => $documentLabel): ?>
+                <a class="btn-shell js-inline-open" href="<?= $documentMode === 'actas' ? 'diligenciapendiente_actas.php' : 'diligenciapendiente_ver.php' ?>?id=<?= (int) $row['id'] ?>&amp;embed=1&amp;mode=<?= h($documentMode) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-presentation="modal" data-title="<?= h($documentLabel) ?> de la diligencia #<?= (int) $row['id'] ?>"><?= h($documentLabel) ?></a>
+              <?php endforeach; ?>
               <a class="btn-shell js-inline-open" href="diligenciapendiente_ver.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Ver diligencia #<?= (int) $row['id'] ?>">Ver</a>
               <a class="btn-shell danger js-inline-open" href="diligenciapendiente_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . ((int) ($row['accidente_id'] ?? 0)))) ?>" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Eliminar diligencia #<?= (int) $row['id'] ?>">Eliminar</a>
             </div>
@@ -6598,6 +6599,7 @@ $resumenInterventionRows = [
   .diligencia-content-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
   .diligencia-content{flex:1 1 420px;margin:0;color:#5f6d82;font-weight:600;font-size:11px;line-height:1.4}
   .diligencia-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  .diligencia-completed{display:flex;align-items:center;gap:8px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer}.diligencia-completed input{width:18px;height:18px;accent-color:#16a34a}
   .diligencia-status-select{min-width:130px;padding:6px 30px 6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#314157;font-size:12px;font-weight:700;line-height:1.1;box-shadow:0 6px 16px rgba(17,24,39,.06)}
   .diligencia-status-select.status-pendiente{border-color:#f0b8b8;background:#fff3f3;color:#b42318}
   .diligencia-status-select.status-resuelto{border-color:#b9e2c5;background:#effcf3;color:#157347}
@@ -6612,6 +6614,7 @@ $resumenInterventionRows = [
   .diligencia-list-row:hover{transform:translateY(-1px);border-color:#c9bdf8;box-shadow:0 11px 25px rgba(79,70,229,.11)}
   .diligencia-list-body{min-width:0;display:grid;grid-template-columns:minmax(125px,185px) minmax(0,1fr) auto;gap:14px;align-items:center}
   .diligencia-list-title{position:relative;padding-left:12px;font-size:12px;font-weight:900;color:#263550;line-height:1.25}
+  .diligencia-list-row.is-completed .diligencia-list-title,.diligencia-list-row.is-completed .diligencia-list-summary{text-decoration:line-through;opacity:.55}
   .diligencia-list-title::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;border-radius:50%;background:#8b5cf6;transform:translateY(-50%);box-shadow:0 0 0 4px rgba(139,92,246,.10)}
   .diligencia-list-summary{margin:0;color:#5e6d83;font-size:11px;font-weight:650;line-height:1.45;white-space:normal;overflow:visible}
   .diligencia-list-date{justify-self:start;width:max-content;max-width:100%;margin:0;padding:4px 7px;border-radius:999px;background:#f3f6fa;color:#7a8799;font-size:9px;font-weight:800;white-space:nowrap}
@@ -10385,7 +10388,7 @@ $resumenInterventionRows = [
           </div>
           <div class="module-actions" style="margin-bottom:8px;">
             <button type="button" class="btn-shell btn-primary js-diligencias-ocr-open" data-accidente-id="<?= (int) $accidente_id ?>">Subir lista por imagen</button>
-            <a class="btn-shell" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>">Nueva diligencia</a>
+            <a class="btn-shell js-inline-open" href="diligenciapendiente_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;embed=1" data-workbench="diligencia-modal" data-frame="diligencia-modal-frame" data-title="Nueva diligencia pendiente" data-presentation="modal">Nueva diligencia</a>
           </div>
           <div class="diligencias-ocr-panel" id="diligencias-ocr-panel" hidden>
             <div class="diligencias-ocr-card">
@@ -12812,62 +12815,32 @@ $resumenInterventionRows = [
       }
     });
 
-    document.querySelectorAll('.js-quick-diligencia-status').forEach((select) => {
-      const paintStatus = () => {
-        const value = String(select.value || '').toLowerCase();
-        select.classList.remove('status-pendiente', 'status-resuelto');
-        if (value === 'resuelto') {
-          select.classList.add('status-resuelto');
-        } else {
-          select.classList.add('status-pendiente');
-        }
-      };
-
-      paintStatus();
-
-      select.addEventListener('change', async () => {
-        const previous = String(select.dataset.prev || 'Pendiente');
-        const nextValue = String(select.value || 'Pendiente');
-        paintStatus();
-        select.disabled = true;
-
+    document.querySelectorAll('.js-quick-diligencia-status').forEach((checkbox) => {
+      checkbox.addEventListener('change', async () => {
+        const previous = !checkbox.checked;
+        const row = checkbox.closest('.diligencia-list-row');
+        row?.classList.toggle('is-completed', checkbox.checked);
+        checkbox.disabled = true;
         try {
           const formData = new FormData();
           formData.append('action', 'save_diligencia_estado_inline');
-          formData.append('diligencia_id', String(select.dataset.diligenciaId || '0'));
-          formData.append('estado', nextValue);
-
+          formData.append('diligencia_id', checkbox.dataset.diligenciaId || '0');
+          formData.append('estado', checkbox.checked ? 'Resuelto' : 'Pendiente');
           const response = await fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
-            }
+            method: 'POST', body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
           });
-
-          let data = null;
-          try {
-            data = await response.json();
-          } catch (error) {
-            data = null;
-          }
-
+          const data = await response.json();
           if (!response.ok || !data || !data.ok) {
-            throw new Error((data && data.message) ? data.message : 'No se pudo actualizar el estado de la diligencia.');
+            throw new Error(data?.message || 'No se pudo actualizar el estado de la diligencia.');
           }
-
-          select.dataset.prev = nextValue;
-          const shell = select.closest('.editable-shell');
-          const hiddenEstado = shell ? shell.querySelector('input[name="estado"]') : null;
-          if (hiddenEstado) {
-            hiddenEstado.value = nextValue === 'Resuelto' ? 'Realizado' : 'Pendiente';
-          }
+          window.location.reload();
         } catch (error) {
-          select.value = previous;
-          paintStatus();
+          checkbox.checked = previous;
+          row?.classList.toggle('is-completed', previous);
           window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado de la diligencia.');
         } finally {
-          select.disabled = false;
+          checkbox.disabled = false;
         }
       });
     });

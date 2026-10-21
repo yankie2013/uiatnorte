@@ -23,6 +23,7 @@ $calendarOwner = CalendarAccess::ownsConnectedCalendar();
 $accidenteId = (int) ($_GET['accidente_id'] ?? 0);
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+$diligenciaId = (int) ($_POST['diligencia_id'] ?? $_GET['diligencia_id'] ?? 0);
 if ($returnTo === '') {
     $returnTo = 'accidente_vista_tabs.php?accidente_id=' . $accidenteId . '&tab=participantes';
 }
@@ -49,6 +50,15 @@ if ($baseCitacionId > 0) {
 $error = '';
 $success = '';
 $newId = null;
+
+if ($diligenciaId > 0) {
+    try {
+        \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, $accidenteId);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        exit(h($e->getMessage()));
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
@@ -93,6 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'last_error' => $calendarError->getMessage(),
             ]);
             $success .= ' (No se pudo crear el evento en Google Calendar: ' . $calendarError->getMessage() . ')';
+        }
+        if ($diligenciaId > 0) {
+            \App\Support\DiligenciaDocumentLink::attach($pdo, $diligenciaId, $accidenteId, 'citacion', (int) $newId);
+            \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
         }
         if ($baseCitacion) {
             header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : '') . '&return_to=' . urlencode($returnTo), true, 303);
@@ -167,6 +181,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
 
   <form method="post" class="card" id="frmCitacion">
     <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+    <input type="hidden" name="diligencia_id" value="<?= (int) $diligenciaId ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <?php if ($baseCitacion): ?>
       <input type="hidden" name="base_citacion_id" value="<?= $baseCitacionId ?>">

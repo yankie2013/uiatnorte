@@ -114,6 +114,7 @@ final class DiligenciaPendienteService
         return [
             'accidente_id' => $row['accidente_id'] ?? '',
             'tipo_diligencia_id' => $row['tipo_diligencia_id'] ?? '',
+            'accion' => $row['accion'] ?? '',
             'contenido' => $row['contenido'] ?? '',
             'estado' => $row['estado'] ?? 'Pendiente',
             'oficio_id' => $row['oficio_id'] ?? '',
@@ -135,6 +136,10 @@ final class DiligenciaPendienteService
             if ($inferredTipo !== null) {
                 $tipoId = (int) $inferredTipo['id'];
             }
+        }
+        $accion = trim((string) ($input['accion'] ?? ''));
+        if (!in_array($accion, ['', 'Solicitar', 'Remitir', 'Citar', 'Realizar'], true)) {
+            $errors[] = 'Acción de diligencia inválida.';
         }
         $estado = trim((string) ($input['estado'] ?? 'Pendiente'));
         $oficioId = (int) ($input['oficio_id'] ?? 0);
@@ -171,6 +176,7 @@ final class DiligenciaPendienteService
             'accidente_id' => $accidenteId > 0 ? $accidenteId : null,
             'tipo_diligencia_id' => $tipoId > 0 ? $tipoId : null,
             'tipo_diligencia' => $tipoNombre,
+            'accion' => $accion !== '' ? $accion : null,
             'contenido' => $contenido !== '' ? $contenido : null,
             'estado' => $estado,
             'oficio_id' => $oficioId > 0 ? $oficioId : null,

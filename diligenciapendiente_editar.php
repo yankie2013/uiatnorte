@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'accidente_id' => $accidenteId,
         'tipo_diligencia_id' => $_POST['tipo_diligencia_id'] ?? '',
+        'accion' => $_POST['accion'] ?? '',
         'contenido' => $_POST['contenido'] ?? '',
         'estado' => $_POST['estado'] ?? 'Pendiente',
         'oficio_id' => $_POST['oficio_id'] ?? '',
@@ -144,6 +145,14 @@ select[multiple] { min-height: 140px; }
     <form method="post" novalidate>
       <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
       <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+      <label for="accion">Acción</label>
+      <select id="accion" name="accion" class="input">
+        <option value="">Selecciona una acción</option>
+        <?php foreach (['Solicitar', 'Remitir', 'Citar', 'Realizar'] as $accion): ?>
+          <option value="<?= h($accion) ?>" <?= ($data['accion'] ?? '') === $accion ? 'selected' : '' ?>><?= h($accion) ?></option>
+        <?php endforeach; ?>
+      </select>
+
       <label for="tipo_diligencia_id">Tipo de diligencia</label>
       <div class="row">
         <div class="grow">

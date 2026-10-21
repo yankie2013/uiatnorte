@@ -40,13 +40,14 @@ final class DiligenciaPendienteRepository
     public function create(array $payload, array $citacionIds): int
     {
         $sql = "INSERT INTO diligencias_pendientes
-            (accidente_id, tipo_diligencia_id, tipo_diligencia, contenido, estado, oficio_id, citacion_id, documento_realizado, documentos_recibidos, creado_en, actualizado_en)
-            VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())";
+            (accidente_id, tipo_diligencia_id, tipo_diligencia, accion, contenido, estado, oficio_id, citacion_id, documento_realizado, documentos_recibidos, creado_en, actualizado_en)
+            VALUES (?,?,?,?,?,?,?,?,?,?,NOW(),NOW())";
         $st = $this->pdo->prepare($sql);
         $st->execute([
             $payload['accidente_id'],
             $payload['tipo_diligencia_id'],
             $payload['tipo_diligencia'],
+            $payload['accion'],
             $payload['contenido'],
             $payload['estado'],
             $payload['oficio_id'],
@@ -65,6 +66,7 @@ final class DiligenciaPendienteRepository
         $sql = "UPDATE diligencias_pendientes
                    SET tipo_diligencia_id = ?,
                        tipo_diligencia = ?,
+                       accion = ?,
                        contenido = ?,
                        estado = ?,
                        oficio_id = ?,
@@ -78,6 +80,7 @@ final class DiligenciaPendienteRepository
         $st->execute([
             $payload['tipo_diligencia_id'],
             $payload['tipo_diligencia'],
+            $payload['accion'],
             $payload['contenido'],
             $payload['estado'],
             $payload['oficio_id'],

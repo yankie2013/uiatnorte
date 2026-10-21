@@ -28,6 +28,11 @@ if ($accidenteId <= 0) {
     exit('Falta accidente_id');
 }
 
+$diligenciaId = (int) ($_POST['diligencia_id'] ?? $_GET['diligencia_id'] ?? 0);
+if ($diligenciaId > 0) {
+    try { \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, $accidenteId); }
+    catch (Throwable $e) { http_response_code(400); exit('La diligencia no pertenece a este expediente.'); }
+}
 $data = $service->defaults($row, $accidenteId);
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -38,7 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $id = $service->create($_POST);
         }
-        if ($embed) {
+        if ($diligenciaId > 0) {
+            \App\Support\DiligenciaActas::attach($pdo, $diligenciaId, $accidenteId, 'entrega', $id);
+            \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
+        }
+                if ($embed) {
             echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"acta.saved"},"*")</script><body style="font:14px system-ui;padding:20px">Acta guardada...</body>';
             exit;
         }
@@ -61,7 +70,7 @@ $ctx = $service->context($accidenteId);
 </style>
 </head>
 <body>
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!$embed) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
   <div class="head">
@@ -72,7 +81,7 @@ $ctx = $service->context($accidenteId);
   <form method="post" class="grid">
     <input type="hidden" name="id" value="<?= $id ?>">
     <input type="hidden" name="accidente_id" value="<?= $accidenteId ?>">
-    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+    <input type="hidden" name="diligencia_id" value="<?= (int) $diligenciaId ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <div class="full">
       <label for="vehicle">Placa de rodaje del vehiculo</label>
       <select id="vehicle" name="involucrado_vehiculo_id" required>

@@ -18,9 +18,14 @@ if (!function_exists('h')) {
 
 $service = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo));
 $errors = [];
+if (empty($_SESSION['tipo_diligencia_delete_token'])) {
+    $_SESSION['tipo_diligencia_delete_token'] = bin2hex(random_bytes(32));
+}
 $success = '';
+$tipoNombre = trim((string) ($_POST['tipo_diligencia_nombre'] ?? ''));
 $createdId = 0;
 $createdIds = [];
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_REQUEST['return_to'] ?? ''));
 if ($returnTo !== '' && (preg_match('~^(?:https?:)?//~i', $returnTo) || preg_match('~^[a-z][a-z0-9+.-]*:~i', $returnTo))) {
     $returnTo = '';
@@ -114,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'accidente_id' => $_POST['accidente_id'] ?? '',
         'tipo_diligencia_id' => $_POST['tipo_diligencia_id'] ?? '',
+        'accion' => $_POST['accion'] ?? '',
         'contenido' => $_POST['contenido'] ?? '',
         'estado' => 'Pendiente',
         'oficio_id' => $_POST['oficio_id'] ?? '',
@@ -123,14 +129,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     try {
+        $pdo->beginTransaction();
+        if ($tipoNombre !== '') {
+            if (mb_strlen($tipoNombre) > 150) {
+                throw new InvalidArgumentException('El tipo de diligencia admite hasta 150 caracteres.');
+            }
+            $findTipo = $pdo->prepare('SELECT id FROM tipo_diligencia WHERE LOWER(nombre) = LOWER(?) LIMIT 1');
+            $findTipo->execute([$tipoNombre]);
+            $tipoId = $findTipo->fetchColumn();
+            if ($tipoId === false) {
+                $insertTipo = $pdo->prepare('INSERT INTO tipo_diligencia (nombre, descripcion, creado_en) VALUES (?, NULL, NOW())');
+                $insertTipo->execute([$tipoNombre]);
+                $tipoId = $pdo->lastInsertId();
+            }
+            $data['tipo_diligencia_id'] = (int) $tipoId;
+        }
         if ($bulkItems !== []) {
-            $pdo->beginTransaction();
             foreach ($bulkItems as $contenido) {
                 $itemData = $data;
                 $itemData['contenido'] = $contenido;
                 $createdIds[] = $service->crear($itemData);
             }
-            $pdo->commit();
             $success = count($createdIds) === 1
                 ? 'Diligencia creada correctamente.'
                 : count($createdIds) . ' diligencias creadas correctamente.';
@@ -140,6 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $createdIds = [$createdId];
             $success = 'Diligencia creada correctamente.';
         }
+        $pdo->commit();
+        $tipoNombre = '';
         $data = $service->defaultData();
         $data['accidente_id'] = (int) ($_POST['accidente_id'] ?? 0);
     } catch (Throwable $e) {
@@ -153,7 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $accidenteId = (int) ($data['accidente_id'] ?: 0);
 $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
 $caseSummaryContext = case_summary_widget_context($pdo, $accidenteId);
-@include __DIR__ . '/sidebar.php';
+if (!$embed) {
+    @include __DIR__ . '/sidebar.php';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -191,6 +214,7 @@ html[data-theme-resolved="dark"] {
     }
 }
 body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+body.is-embed { padding: 14px; }
 .container { max-width: 820px; margin: 0 auto; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 12px 32px rgba(0,0,0,.08); }
 h1 { margin: 0 0 6px; font-size: 1.6rem; }
@@ -240,9 +264,23 @@ select[multiple] { min-height: 130px; }
 .ocr-status { min-height: 18px; margin-top: 10px; font-size: .9rem; color: var(--muted); }
 #diligenciasOcrTextBox { min-height: 160px; }
 @media (max-width: 720px) { body { padding: 14px; } .row { flex-direction: column; align-items: stretch; } }
+.tipo-picker{position:relative}
+.tipo-picker-field{display:flex;align-items:center;position:relative}
+.tipo-picker-field .input{padding-right:42px}
+.tipo-toggle{position:absolute;right:6px;border:0;background:transparent;color:var(--text);padding:8px;cursor:pointer}
+.tipo-options{position:absolute;top:100%;left:0;right:0;z-index:30;max-height:280px;overflow:auto;margin-top:4px;padding:5px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.16)}
+.tipo-options[hidden],.tipo-option[hidden],.tipo-empty[hidden]{display:none}
+.tipo-option{display:flex;align-items:center;border-radius:6px}
+.tipo-option:hover,.tipo-option:focus-within{background:var(--bg)}
+.tipo-select{flex:1;min-width:0;text-align:left;padding:10px;border:0;background:transparent;color:var(--text);font:inherit;cursor:pointer}
+.tipo-select span,.tipo-select small{display:block;overflow-wrap:anywhere}
+.tipo-select small{color:var(--muted);margin-top:3px}
+.tipo-delete{flex:none;margin:0 5px;padding:5px 10px;border:0;border-radius:6px;background:transparent;color:#dc2626;font-size:22px;cursor:pointer}
+.tipo-delete:hover{background:rgba(220,38,38,.1)}
+.tipo-empty{padding:10px}
 </style>
 </head>
-<body>
+<body<?= $embed ? ' class="is-embed"' : '' ?>>
 <div class="container">
   <div class="card">
     <h1>Nueva diligencia pendiente</h1>
@@ -279,64 +317,43 @@ select[multiple] { min-height: 130px; }
 
     <form method="post" novalidate>
       <input type="hidden" name="accidente_id" value="<?= h($data['accidente_id']) ?>">
+      <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
       <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 
-      <label for="tipo_diligencia_id">Tipo de diligencia</label>
-      <div class="row">
-        <div class="grow">
-          <select id="tipo_diligencia_id" name="tipo_diligencia_id" class="input">
-            <option value="">Sin tipo por ahora</option>
-            <?php foreach ($ctx['tipos'] as $tipo): ?>
-              <?php $label = $tipo['nombre'] . (!empty($tipo['descripcion']) ? (' - ' . mb_strimwidth((string) $tipo['descripcion'], 0, 120, '...')) : ''); ?>
-              <option value="<?= h($tipo['id']) ?>" <?= (string) $data['tipo_diligencia_id'] === (string) $tipo['id'] ? 'selected' : '' ?>><?= h($label) ?></option>
-            <?php endforeach; ?>
-          </select>
+      <label for="accion">Acción</label>
+      <select id="accion" name="accion" class="input">
+        <option value="">Selecciona una acción</option>
+        <?php foreach (['Solicitar', 'Remitir', 'Citar', 'Realizar'] as $accion): ?>
+          <option value="<?= h($accion) ?>" <?= ($data['accion'] ?? '') === $accion ? 'selected' : '' ?>><?= h($accion) ?></option>
+        <?php endforeach; ?>
+      </select>
+
+      <label for="tipo_diligencia_nombre">Tipo de diligencia</label>
+      <div class="tipo-picker" id="tipo-picker">
+        <div class="tipo-picker-field">
+          <input id="tipo_diligencia_nombre" name="tipo_diligencia_nombre" class="input" maxlength="150" value="<?= h($tipoNombre) ?>" placeholder="Escribe o selecciona un tipo de diligencia" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tipos-diligencia" aria-describedby="tipo-diligencia-help">
+          <button type="button" class="tipo-toggle" aria-label="Mostrar tipos de diligencia" aria-controls="tipos-diligencia">▾</button>
         </div>
-        <button type="button" class="btn ghost" id="btn-new-tipo">+ Tipo</button>
+        <div id="tipos-diligencia" class="tipo-options" role="listbox" aria-label="Tipos de diligencia" hidden>
+          <?php foreach ($ctx['tipos'] as $tipo): ?>
+            <div class="tipo-option" data-id="<?= (int) $tipo['id'] ?>" data-name="<?= h($tipo['nombre']) ?>">
+              <button type="button" class="tipo-select" role="option" aria-selected="false"><span><?= h($tipo['nombre']) ?></span><?php if (!empty($tipo['descripcion'])): ?><small><?= h($tipo['descripcion']) ?></small><?php endif; ?></button>
+              <button type="button" class="tipo-delete" aria-label="Eliminar tipo <?= h($tipo['nombre']) ?>" title="Eliminar tipo guardado">×</button>
+            </div>
+          <?php endforeach; ?>
+          <div class="help tipo-empty" hidden>No hay coincidencias. Puedes escribir un tipo nuevo.</div>
+        </div>
       </div>
+      <div id="tipo-diligencia-status" class="help" role="status"></div>
+      <div class="help" id="tipo-diligencia-help">Selecciona una sugerencia o escribe un tipo nuevo. Se guardará para reutilizarlo al crear la diligencia.</div>
 
       <label for="contenido">Contenido / observaciones</label>
       <textarea id="contenido" name="contenido" class="input"><?= h($data['contenido']) ?></textarea>
-      <div class="ocr-toolbar">
-        <button type="button" class="btn ghost" id="btn-open-diligencias-ocr">Subir/Pegar imagen con lista</button>
-      </div>
-      <div class="bulk-wrap" id="bulk-wrap">
-        <div class="bulk-head">
-          <div>
-            <div class="bulk-title">Diligencias detectadas</div>
-            <div class="help" id="bulk-count">0 diligencias listas para crear.</div>
-          </div>
-          <button type="button" class="btn ghost" id="btn-clear-bulk">Limpiar</button>
-        </div>
-        <div class="bulk-list" id="bulk-list"></div>
-        <div class="help">Al guardar, se creara una diligencia pendiente por cada item de esta lista usando el tipo seleccionado.</div>
-      </div>
-
-      <label for="oficio_id">Oficio relacionado</label>
-      <select id="oficio_id" name="oficio_id" class="input">
-        <option value="">Sin oficio relacionado</option>
-        <?php foreach ($ctx['oficios'] as $oficio): ?>
-          <option value="<?= h($oficio['id']) ?>" <?= (string) $data['oficio_id'] === (string) $oficio['id'] ? 'selected' : '' ?>><?= h($oficio['label']) ?></option>
-        <?php endforeach; ?>
-      </select>
-
-      <label for="citacion_id">Citaciones relacionadas</label>
-      <select id="citacion_id" name="citacion_id[]" class="input" multiple>
-        <?php foreach ($ctx['citaciones'] as $citacion): ?>
-          <option value="<?= h($citacion['id']) ?>" <?= in_array((int) $citacion['id'], array_map('intval', (array) $data['citacion_id']), true) ? 'selected' : '' ?>><?= h($citacion['label']) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <div class="help">Puedes seleccionar una o varias citaciones.</div>
-
-      <label for="documento_realizado">Documento realizado</label>
-      <input id="documento_realizado" name="documento_realizado" class="input" maxlength="255" value="<?= h($data['documento_realizado']) ?>">
-
-      <label for="documentos_recibidos">Documentos recibidos</label>
-      <textarea id="documentos_recibidos" name="documentos_recibidos" class="input" maxlength="2000"><?= h($data['documentos_recibidos']) ?></textarea>
-      <div class="help">El estado inicial se asigna como <strong>Pendiente</strong>.</div>
-
       <div class="actions">
-        <button type="submit" class="btn primary">Crear diligencia</button>
+        <button type="submit" class="btn primary">Guardar</button>
+        <?php if ($embed): ?>
+          <button type="button" class="btn ghost" onclick="window.parent.postMessage({type:'diligencia.close'}, window.location.origin)">Cancelar</button>
+        <?php else: ?>
         <?php if ($returnTo !== ''): ?>
           <a class="btn ghost" href="<?= h($returnTo) ?>">Volver a documentos</a>
         <?php endif; ?>
@@ -344,370 +361,88 @@ select[multiple] { min-height: 130px; }
         <?php if ($accidenteId > 0): ?>
           <a class="btn ghost" href="Dato_General_accidente.php?accidente_id=<?= h($accidenteId) ?>">Volver al accidente</a>
         <?php endif; ?>
+        <?php endif; ?>
       </div>
     </form>
   </div>
 </div>
 
-<div class="modal-backdrop" id="diligencias-ocr-backdrop" aria-hidden="true">
-  <div class="modal large" role="dialog" aria-modal="true" aria-labelledby="diligencias-ocr-title">
-    <h2 id="diligencias-ocr-title" style="margin-top:0;">Extraer diligencias desde imagen</h2>
-    <div class="modal-scroll">
-      <div class="help">Sube o pega una imagen con una lista numerada o por letras. Luego revisa el texto y aplica la separacion.</div>
-      <input type="file" id="diligenciasOcrImageInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-top:12px;">
-      <div class="paste-zone" id="diligenciasOcrPasteZone" tabindex="0">Pega aqui una imagen con Ctrl+V o Cmd+V</div>
-      <div class="ocr-preview-wrap" id="diligenciasOcrPreviewWrap">
-        <img id="diligenciasOcrPreview" alt="Vista previa OCR">
-      </div>
-      <div class="ocr-status" id="diligenciasOcrStatus"></div>
-      <textarea id="diligenciasOcrTextBox" class="input" rows="8" placeholder="Aqui aparecera el texto detectado. Puedes corregirlo antes de aplicar."></textarea>
-    </div>
-    <div class="modal-actions">
-      <button type="button" class="btn ghost" id="diligenciasOcrCancel">Cancelar</button>
-      <button type="button" class="btn ghost" id="diligenciasOcrProcess">Procesar imagen</button>
-      <button type="button" class="btn primary" id="diligenciasOcrApply" disabled>Aplicar lista</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <h2 id="modal-title" style="margin-top:0;">Nuevo tipo de diligencia</h2>
-    <label for="tipo_nombre">Nombre *</label>
-    <input id="tipo_nombre" class="input" maxlength="150" placeholder="Ej: Toma de declaración">
-    <label for="tipo_descripcion">Descripción</label>
-    <textarea id="tipo_descripcion" class="input" maxlength="800"></textarea>
-    <div id="modal-msg" class="inline-msg"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn ghost" id="modal-cancel">Cancelar</button>
-      <button type="button" class="btn primary" id="modal-save">Crear y usar</button>
-    </div>
-  </div>
-</div>
-
+<?php if ($embed && $success !== ''): ?>
+<script>window.parent.postMessage({type: 'diligencia.saved'}, window.location.origin);</script>
+<?php endif; ?>
 <script>
 (function () {
-  const form = document.querySelector('form[method="post"]');
-  const contenido = document.getElementById('contenido');
-  const bulkWrap = document.getElementById('bulk-wrap');
-  const bulkList = document.getElementById('bulk-list');
-  const bulkCount = document.getElementById('bulk-count');
-  const clearBulkBtn = document.getElementById('btn-clear-bulk');
-  const openOcrBtn = document.getElementById('btn-open-diligencias-ocr');
-  const ocrBackdrop = document.getElementById('diligencias-ocr-backdrop');
-  const ocrImageInput = document.getElementById('diligenciasOcrImageInput');
-  const ocrPasteZone = document.getElementById('diligenciasOcrPasteZone');
-  const ocrPreviewWrap = document.getElementById('diligenciasOcrPreviewWrap');
-  const ocrPreview = document.getElementById('diligenciasOcrPreview');
-  const ocrStatus = document.getElementById('diligenciasOcrStatus');
-  const ocrTextBox = document.getElementById('diligenciasOcrTextBox');
-  const ocrCancel = document.getElementById('diligenciasOcrCancel');
-  const ocrProcess = document.getElementById('diligenciasOcrProcess');
-  const ocrApply = document.getElementById('diligenciasOcrApply');
-  let ocrClipboardFile = null;
-
-  function setOcrStatus(text, ok = null) {
-    ocrStatus.textContent = text || '';
-    ocrStatus.style.color = ok === true ? '#166534' : ok === false ? '#991b1b' : '';
-  }
-
-  function updateBulkState() {
-    const rows = Array.from(bulkList.querySelectorAll('textarea[name="diligencias_bulk[]"]'));
-    const total = rows.filter((item) => item.value.trim() !== '').length;
-    bulkWrap.classList.toggle('is-visible', rows.length > 0);
-    bulkCount.textContent = total === 1 ? '1 diligencia lista para crear.' : `${total} diligencias listas para crear.`;
-  }
-
-  function addBulkRow(value) {
-    const row = document.createElement('div');
-    row.className = 'bulk-row';
-    const textarea = document.createElement('textarea');
-    textarea.className = 'input';
-    textarea.name = 'diligencias_bulk[]';
-    textarea.value = value || '';
-    textarea.addEventListener('input', updateBulkState);
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'btn ghost remove';
-    remove.textContent = 'Quitar';
-    remove.addEventListener('click', () => {
-      row.remove();
-      updateBulkState();
+  const input = document.getElementById('tipo_diligencia_nombre');
+  const picker = document.getElementById('tipo-picker');
+  const list = document.getElementById('tipos-diligencia');
+  const status = document.getElementById('tipo-diligencia-status');
+  const normalize = value => value.trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const rows = () => Array.from(list.querySelectorAll('.tipo-option'));
+  function open() {
+    const query = normalize(input.value);
+    rows().forEach(row => {
+      row.hidden = !normalize(row.textContent).includes(query);
+      row.querySelector('.tipo-select').setAttribute('aria-selected', String(normalize(row.dataset.name) === query));
     });
-    row.appendChild(textarea);
-    row.appendChild(remove);
-    bulkList.appendChild(row);
+    list.querySelector('.tipo-empty').hidden = rows().some(row => !row.hidden);
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
   }
-
-  function setBulkItems(items) {
-    bulkList.innerHTML = '';
-    items.forEach((item) => addBulkRow(item));
-    updateBulkState();
+  function close() {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
   }
-
-  function clearBulkItems() {
-    bulkList.innerHTML = '';
-    updateBulkState();
-  }
-
-  function normalizeOcrText(text) {
-    return String(text || '')
-      .replace(/[“”]/g, '"')
-      .replace(/[‘’]/g, "'")
-      .replace(/\u00a0/g, ' ')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  }
-
-  function splitDiligencias(text) {
-    const normalized = normalizeOcrText(text)
-      .replace(/(?:^|\n)\s*([0-9]{1,3}|[A-Za-z])\s*[\).\:-]\s+/g, '\n@@ITEM@@ ')
-      .replace(/\s+([0-9]{1,3})\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ')
-      .replace(/\s+([A-Za-z])\s*[\).\:-]\s+(?=[A-ZÁÉÍÓÚÑ])/g, '\n@@ITEM@@ ');
-    let items = normalized
-      .split(/\n@@ITEM@@\s*/)
-      .map((item) => item.replace(/^@@ITEM@@\s*/, '').replace(/\s+/g, ' ').trim())
-      .filter(Boolean);
-    if (!items.length && normalized !== '') {
-      items = normalized.split(/\r?\n+/).map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  input.addEventListener('focus', open);
+  input.addEventListener('input', () => { status.textContent = ''; open(); });
+  picker.querySelector('.tipo-toggle').addEventListener('click', () => {
+    if (list.hidden) { input.focus(); open(); } else close();
+  });
+  document.addEventListener('pointerdown', event => { if (!picker.contains(event.target)) close(); });
+  picker.addEventListener('focusout', event => { if (!picker.contains(event.relatedTarget)) close(); });
+  picker.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !list.hidden) { event.preventDefault(); event.stopPropagation(); close(); input.focus(); close(); }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (list.hidden) open();
+      const options = rows().filter(row => !row.hidden).map(row => row.querySelector('.tipo-select'));
+      if (!options.length) return;
+      const index = options.indexOf(document.activeElement);
+      options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length].focus();
     }
-    return items.map((item) => item.replace(/^[0-9]{1,3}\s*[\).\:-]\s*/, '').replace(/^[A-Za-z]\s*[\).\:-]\s*/, '').trim());
-  }
-
-  function openOcrModal() {
-    ocrClipboardFile = null;
-    ocrImageInput.value = '';
-    ocrTextBox.value = '';
-    ocrApply.disabled = true;
-    ocrPreviewWrap.style.display = 'none';
-    ocrPreview.removeAttribute('src');
-    setOcrStatus('Sube una imagen y luego procesa el OCR.');
-    ocrBackdrop.style.display = 'flex';
-    ocrBackdrop.setAttribute('aria-hidden', 'false');
-    setTimeout(() => ocrPasteZone.focus(), 0);
-  }
-
-  function closeOcrModal() {
-    ocrBackdrop.style.display = 'none';
-    ocrBackdrop.setAttribute('aria-hidden', 'true');
-  }
-
-  function loadOcrPreview(file) {
-    if (!file) {
-      ocrPreviewWrap.style.display = 'none';
-      ocrPreview.removeAttribute('src');
+  });
+  list.addEventListener('click', async event => {
+    const button = event.target.closest('button');
+    const row = button?.closest('.tipo-option');
+    if (!row || button.disabled) return;
+    if (button.classList.contains('tipo-select')) {
+      input.value = row.dataset.name;
+      input.focus();
+      close();
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      ocrPreview.src = String(reader.result || '');
-      ocrPreviewWrap.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function setOcrFile(file, label) {
-    ocrClipboardFile = file || null;
-    loadOcrPreview(file || null);
-    if (file) setOcrStatus(`${label} lista. Presiona "Procesar imagen".`);
-  }
-
-  function selectedOcrFile() {
-    return (ocrImageInput.files && ocrImageInput.files[0]) || ocrClipboardFile;
-  }
-
-  function clipboardImage(event) {
-    const items = event.clipboardData?.items || [];
-    for (const item of items) {
-      if (item.kind === 'file' && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) return file;
-      }
-    }
-    return null;
-  }
-
-  async function ensureTesseractLoaded() {
-    if (window.Tesseract) return window.Tesseract;
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('No se pudo cargar el motor OCR.'));
-      document.head.appendChild(script);
-    });
-    if (!window.Tesseract) throw new Error('El motor OCR no quedo disponible.');
-    return window.Tesseract;
-  }
-
-  clearBulkBtn.addEventListener('click', clearBulkItems);
-  openOcrBtn.addEventListener('click', openOcrModal);
-  ocrCancel.addEventListener('click', closeOcrModal);
-  ocrBackdrop.addEventListener('click', (event) => { if (event.target === ocrBackdrop) closeOcrModal(); });
-  ocrImageInput.addEventListener('change', () => {
-    const file = ocrImageInput.files && ocrImageInput.files[0];
-    if (!file) {
-      ocrClipboardFile = null;
-      loadOcrPreview(null);
-      return;
-    }
-    setOcrFile(file, 'Imagen subida');
-  });
-  ocrPasteZone.addEventListener('paste', (event) => {
-    const file = clipboardImage(event);
-    if (!file) return;
-    event.preventDefault();
-    ocrImageInput.value = '';
-    setOcrFile(file, 'Imagen pegada');
-  });
-  document.addEventListener('paste', (event) => {
-    if (ocrBackdrop.getAttribute('aria-hidden') !== 'false') return;
-    const tag = document.activeElement?.tagName || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    const file = clipboardImage(event);
-    if (!file) return;
-    event.preventDefault();
-    ocrImageInput.value = '';
-    setOcrFile(file, 'Imagen pegada');
-  });
-  ocrProcess.addEventListener('click', async () => {
-    const file = selectedOcrFile();
-    if (!file) {
-      setOcrStatus('Selecciona o pega una imagen primero.', false);
-      return;
-    }
-    ocrProcess.disabled = true;
-    ocrApply.disabled = true;
-    ocrTextBox.value = '';
+    button.disabled = true;
+    status.textContent = 'Eliminando tipo guardado…';
     try {
-      const Tesseract = await ensureTesseractLoaded();
-      const result = await Tesseract.recognize(file, 'spa', {
-        logger: (message) => {
-          if (!message.status) return;
-          const progress = typeof message.progress === 'number' ? ` ${Math.round(message.progress * 100)}%` : '';
-          setOcrStatus(`${message.status}${progress}`);
-        }
+      const response = await fetch('tipo_diligencia_eliminar_ajax.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: row.dataset.id, token: <?= json_encode($_SESSION['tipo_diligencia_delete_token']) ?>})
       });
-      const text = normalizeOcrText(result?.data?.text || '');
-      if (!text) throw new Error('No se pudo extraer texto de la imagen.');
-      ocrTextBox.value = text;
-      ocrApply.disabled = false;
-      setOcrStatus('Texto extraido. Revisa y aplica la lista.', true);
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'No se pudo eliminar el tipo.');
+      if (normalize(input.value) === normalize(row.dataset.name)) input.value = '';
+      row.remove();
+      status.textContent = 'Tipo eliminado de las sugerencias.';
+      input.focus();
+      open();
     } catch (error) {
-      setOcrStatus(error.message || 'No se pudo procesar la imagen.', false);
+      status.textContent = error.message || 'No se pudo eliminar el tipo.';
     } finally {
-      ocrProcess.disabled = false;
+      button.disabled = false;
     }
   });
-  ocrTextBox.addEventListener('input', () => {
-    ocrApply.disabled = ocrTextBox.value.trim() === '';
-  });
-  ocrApply.addEventListener('click', () => {
-    const items = splitDiligencias(ocrTextBox.value);
-    if (!items.length) {
-      setOcrStatus('No se encontraron diligencias separadas por numero o letra.', false);
-      return;
-    }
-    setBulkItems(items);
-    if (contenido.value.trim() === '') {
-      contenido.value = items[0] || '';
-    }
-    closeOcrModal();
-  });
-  form.addEventListener('submit', () => {
-    Array.from(bulkList.querySelectorAll('textarea[name="diligencias_bulk[]"]')).forEach((item) => {
-      if (item.value.trim() === '') item.disabled = true;
-    });
-  });
-  updateBulkState();
 })();
 
-(function () {
-  const backdrop = document.getElementById('modal-backdrop');
-  const openBtn = document.getElementById('btn-new-tipo');
-  const cancelBtn = document.getElementById('modal-cancel');
-  const saveBtn = document.getElementById('modal-save');
-  const nombreInput = document.getElementById('tipo_nombre');
-  const descripcionInput = document.getElementById('tipo_descripcion');
-  const msg = document.getElementById('modal-msg');
-  const select = document.getElementById('tipo_diligencia_id');
-
-  function setMessage(text, kind) {
-    msg.textContent = text;
-    msg.className = 'inline-msg ' + kind;
-  }
-
-  function openModal() {
-    msg.className = 'inline-msg';
-    msg.textContent = '';
-    nombreInput.value = '';
-    descripcionInput.value = '';
-    backdrop.style.display = 'flex';
-    backdrop.setAttribute('aria-hidden', 'false');
-    nombreInput.focus();
-  }
-
-  function closeModal() {
-    backdrop.style.display = 'none';
-    backdrop.setAttribute('aria-hidden', 'true');
-  }
-
-  openBtn.addEventListener('click', openModal);
-  cancelBtn.addEventListener('click', closeModal);
-  backdrop.addEventListener('click', function (event) {
-    if (event.target === backdrop) {
-      closeModal();
-    }
-  });
-
-  saveBtn.addEventListener('click', function () {
-    const payload = {
-      nombre: nombreInput.value.trim(),
-      descripcion: descripcionInput.value.trim()
-    };
-
-    if (!payload.nombre) {
-      setMessage('El nombre es obligatorio.', 'error');
-      nombreInput.focus();
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Creando...';
-
-    fetch('tipo_diligencia_crear_ajax.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify(payload)
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (!json || !json.ok) {
-          throw new Error(json && json.error ? json.error : 'No se pudo crear el tipo.');
-        }
-
-        const option = document.createElement('option');
-        option.value = String(json.id);
-        option.textContent = json.nombre + (json.descripcion ? ' - ' + String(json.descripcion).substring(0, 120) : '');
-        select.appendChild(option);
-        select.value = String(json.id);
-        setMessage('Tipo creado correctamente.', 'ok');
-        setTimeout(closeModal, 700);
-      })
-      .catch((error) => {
-        setMessage(error.message || 'No se pudo crear el tipo.', 'error');
-      })
-      .finally(() => {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Crear y usar';
-      });
-  });
-})();
 </script>
 </body>
 </html>

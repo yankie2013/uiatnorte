@@ -44,6 +44,11 @@ if ($id > 0 && !$row) { http_response_code(404); exit('Acta no encontrada.'); }
 $accidenteId = $row ? (int) $row['accidente_id'] : (int) ($_GET['accidente_id'] ?? $_POST['accidente_id'] ?? 0);
 if ($accidenteId <= 0) { http_response_code(400); exit('Falta accidente_id.'); }
 Access::requireInvestigationCase($accidenteId);
+$diligenciaId = (int) ($_POST['diligencia_id'] ?? $_GET['diligencia_id'] ?? 0);
+if ($diligenciaId > 0) {
+    try { \App\Support\DiligenciaDocumentLink::validate($pdo, $diligenciaId, $accidenteId); }
+    catch (Throwable $e) { http_response_code(400); exit('La diligencia no pertenece a este expediente.'); }
+}
 $accident = $repo->accident($accidenteId);
 if (!$accident) { http_response_code(404); exit('Accidente no encontrado.'); }
 $instructor = current_user() ?? [];
@@ -67,7 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $data = ActaRecepcionVideoService::validated($data);
         $id = $repo->save($id > 0 ? $id : null, $accidenteId, $data, Access::id());
-        if ($embed) {
+        if ($diligenciaId > 0) {
+            \App\Support\DiligenciaActas::attach($pdo, $diligenciaId, $accidenteId, 'recepcion', $id);
+            \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
+        }
+                if ($embed) {
             echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"acta.saved"},"*")</script><p>Acta guardada. <a href="acta_recepcion_video_descargar.php?id=' . $id . '">Descargar Word</a></p>';
             exit;
         }
@@ -94,7 +103,7 @@ header('Content-Type: text/html; charset=utf-8');
 <div class="panel head"><div><h1 style="margin:0 0 4px;font-size:22px"><?= $id ? 'Editar' : 'Nueva' ?> acta de recepción de video</h1><span class="muted">Accidente #<?= $accidenteId ?></span></div><div class="actions"><?php if ($id): ?><a class="btn" href="acta_recepcion_video_descargar.php?id=<?= $id ?>">Descargar Word</a><?php endif; ?><?php if ($embed): ?><button class="btn" type="button" onclick="parent.postMessage({type:'acta.close'},'*')">Cerrar</button><?php else: ?><a class="btn" href="accidente_vista_tabs.php?accidente_id=<?= $accidenteId ?>&tab=documentos&subtab=actas">Volver</a><?php endif; ?></div></div>
 <?php if ($error !== ''): ?><div class="error"><?= arv_h($error) ?></div><?php endif; ?>
 <form method="post">
-<input type="hidden" name="_csrf" value="<?= arv_h(Access::csrf()) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="accidente_id" value="<?= $accidenteId ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+<input type="hidden" name="_csrf" value="<?= arv_h(Access::csrf()) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="accidente_id" value="<?= $accidenteId ?>"><input type="hidden" name="diligencia_id" value="<?= (int) $diligenciaId ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
 <section class="panel"><h2>Datos de la diligencia</h2><div class="grid">
 <?php arv_field('fecha_acta', 'Fecha del acta', $data, 'date', true); arv_field('hora_inicio', 'Hora de inicio', $data, 'time', true); arv_field('hora_fin', 'Hora de culminación', $data, 'time', true); arv_district_select($data); arv_field('unidad', 'Oficina o unidad policial', $data, 'text', true); arv_field('instructor_grado', 'Grado del instructor', $data); arv_field('instructor_nombre', 'Instructor', $data, 'text', true); ?>
 </div></section>
