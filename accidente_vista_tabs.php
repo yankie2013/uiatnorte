@@ -2069,7 +2069,7 @@ function render_summary_abogado_block(array $abogados): string
     foreach ($abogados as $index => $abogado) {
         $text = abogado_narrative_text($abogado);
         $html .= '<div class="manifestation-story-item">';
-        $html .= '<h4 class="manifestation-story-title">' . h(($index + 1) . ') Abogado defensor') . '</h4>';
+        $html .= '<h4 class="manifestation-story-title">' . h(($index + 1) . ') Abogado defensor · ' . (!empty($abogado['es_actual']) ? '✅' : 'Anterior')) . '</h4>';
         $html .= '<div class="manifestation-story-line">';
         $html .= '<p class="manifestation-story-text">' . h($text) . '</p>';
         $html .= '<button type="button" class="copy-name-btn copy-inline-btn js-copy-name" data-copy-text="' . h($text) . '" aria-label="Copiar abogado" title="Copiar abogado">⧉</button>';
@@ -4392,6 +4392,8 @@ $familiares = safe_query_all(
 $abogados = safe_query_all(
     $pdo,
     "SELECT a.*,
+            (a.id = (SELECT MAX(actual.id) FROM abogados_activos actual
+                       WHERE actual.accidente_id = a.accidente_id AND actual.persona_id = a.persona_id)) AS es_actual,
             TRIM(CONCAT(COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''), ', ', COALESCE(pr.nombres,''))) AS persona_rep_nom,
             COALESCE(prr.roles, '') AS condicion_representado
        FROM abogados_activos a
@@ -8545,6 +8547,7 @@ $resumenInterventionRows = [
                           <p><?= h((string) (($row['persona_rep_nom'] ?? '') !== '' ? $row['persona_rep_nom'] : 'Sin persona representada')) ?></p>
                         </div>
                         <div class="summary-chipline">
+                          <span class="chip-simple"><?= !empty($row['es_actual']) ? '✅' : 'Anterior' ?></span>
                           <span class="chip-simple"><?= h((string) (($row['colegiatura'] ?? '') !== '' ? $row['colegiatura'] : 'Sin colegiatura')) ?></span>
                           <span class="chip-simple"><?= h((string) (($row['registro'] ?? '') !== '' ? $row['registro'] : 'Sin registro')) ?></span>
                           <button type="button" class="module-toggle-btn js-card-toggle" aria-expanded="false" aria-label="Mostrar detalle" title="Mostrar detalle">+</button>
@@ -10070,6 +10073,7 @@ $resumenInterventionRows = [
                       <h4>
                         <span class="module-title-copy">
                           <span><?= h($nombreAbogado !== '' ? $nombreAbogado : 'Sin nombre') ?></span>
+                          <span class="chip-simple"><?= !empty($row['es_actual']) ? '✅' : 'Anterior' ?></span>
                           <?php if ($nombreAbogado !== ''): ?><button type="button" class="copy-name-btn js-copy-name" data-copy-text="<?= h($nombreAbogado) ?>" aria-label="Copiar nombre" title="Copiar nombre">Copiar</button><?php endif; ?>
                           <?php if ($abogadoWa !== ''): ?>
                             <span class="person-quick-actions">
@@ -10542,21 +10546,6 @@ $resumenInterventionRows = [
                     </div>
                   <?php endif; ?>
                   <div class="analysis-upload">
-                    <form class="analysis-upload-form js-analysis-upload-form" data-preview-target="analysis-danos-preview">
-                      <input type="hidden" name="action" value="save_analysis_images">
-                      <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
-                      <input type="hidden" name="section" value="danos">
-                      <div>
-                        <label for="analysis-danos-photo">Suba aqui la foto de los daños</label>
-                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-danos-photo" type="file" name="images[]" accept="image/*,.heic,.heif" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['danos'])) ?>" data-preview-target="analysis-danos-preview" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>
-                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['danos']) ?>/5. Admite JPG, PNG, WEBP, GIF y HEIC.</p>
-                      </div>
-                      <div class="analysis-upload-status" data-upload-message></div>
-                      <div class="action-row">
-                        <button type="submit" class="btn-shell" <?= count($analysisMediaBySection['danos']) >= 5 ? 'disabled' : '' ?>>Guardar imágenes</button>
-                      </div>
-                    </form>
-                    <div class="analysis-preview" id="analysis-danos-preview" hidden></div>
                     <?php if ($analysisMediaBySection['danos'] !== []): ?>
                       <div class="analysis-inline-slider js-analysis-inline-slider">
                         <div class="analysis-inline-stage">
@@ -10614,21 +10603,6 @@ $resumenInterventionRows = [
                     </div>
                   <?php endif; ?>
                   <div class="analysis-upload">
-                    <form class="analysis-upload-form js-analysis-upload-form" data-preview-target="analysis-lesiones-preview">
-                      <input type="hidden" name="action" value="save_analysis_images">
-                      <input type="hidden" name="accidente_id" value="<?= (int) $accidente_id ?>">
-                      <input type="hidden" name="section" value="lesiones">
-                      <div>
-                        <label for="analysis-lesiones-photo">Suba aqui la foto de las lesiones</label>
-                        <input class="analysis-upload-input js-analysis-image-input" id="analysis-lesiones-photo" type="file" name="images[]" accept="image/*,.heic,.heif" multiple data-max-files="<?= max(0, 5 - count($analysisMediaBySection['lesiones'])) ?>" data-preview-target="analysis-lesiones-preview" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>
-                        <p class="analysis-upload-hint">Máximo 5 imágenes. Guardadas: <?= count($analysisMediaBySection['lesiones']) ?>/5. Admite JPG, PNG, WEBP, GIF y HEIC.</p>
-                      </div>
-                      <div class="analysis-upload-status" data-upload-message></div>
-                      <div class="action-row">
-                        <button type="submit" class="btn-shell" <?= count($analysisMediaBySection['lesiones']) >= 5 ? 'disabled' : '' ?>>Guardar imágenes</button>
-                      </div>
-                    </form>
-                    <div class="analysis-preview" id="analysis-lesiones-preview" hidden></div>
                     <?php if ($analysisMediaBySection['lesiones'] !== []): ?>
                       <div class="analysis-inline-slider js-analysis-inline-slider">
                         <div class="analysis-inline-stage">

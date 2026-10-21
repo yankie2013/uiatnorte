@@ -107,7 +107,7 @@ include __DIR__ . '/sidebar.php';
           ?>
           <tr>
             <td>#<?= (int) $row['id'] ?></td>
-            <td><strong><?= h($nombre !== '' ? $nombre : 'Sin nombre') ?></strong></td>
+            <td><strong><?= h($nombre !== '' ? $nombre : 'Sin nombre') ?></strong> <span class="pill"><?= !empty($row['es_actual']) ? '✅' : 'Anterior' ?></span></td>
             <td><?= h((string) ($row['colegiatura'] ?? '')) ?></td>
             <td><?= h((string) (($row['persona_rep_nom'] ?? '') !== '' ? $row['persona_rep_nom'] : 'Sin persona asociada')) ?></td>
             <td><span class="pill"><?= h((string) (($row['condicion_representado'] ?? '') !== '' ? $row['condicion_representado'] : 'Sin condicion')) ?></span></td>

@@ -85,6 +85,8 @@ final class AbogadoRepository
         $ownersTable = $this->activeTable('propietario_vehiculo');
         $familyTable = $this->activeTable('familiar_fallecido');
         $sql = "SELECT a.*,
+                       (a.id = (SELECT MAX(actual.id) FROM {$abogadosTable} actual
+                                  WHERE actual.accidente_id = a.accidente_id AND actual.persona_id = a.persona_id)) AS es_actual,
                        TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
                 FROM {$abogadosTable} a
@@ -131,6 +133,8 @@ final class AbogadoRepository
         $ownersTable = $this->activeTable('propietario_vehiculo');
         $familyTable = $this->activeTable('familiar_fallecido');
         $sql = "SELECT a.*,
+                       (a.id = (SELECT MAX(actual.id) FROM {$abogadosTable} actual
+                                  WHERE actual.accidente_id = a.accidente_id AND actual.persona_id = a.persona_id)) AS es_actual,
                        TRIM(CONCAT(COALESCE(pr.nombres,''), ' ', COALESCE(pr.apellido_paterno,''), ' ', COALESCE(pr.apellido_materno,''))) AS persona_rep_nom,
                        COALESCE(prr.roles, '') AS condicion_representado
                 FROM {$abogadosTable} a

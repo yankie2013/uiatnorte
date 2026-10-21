@@ -80,6 +80,7 @@
           <div class="overview-person-info">
             <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
+            <?php if ($roleGroup === 'Abogados'): ?><span class="overview-condition"><?= !empty($person['es_actual']) ? '✅' : 'Anterior' ?></span><?php endif; ?>
             <p><?php if (!empty($person['lesion'])): ?><span class="overview-condition <?= h(lesion_chip_class((string) $person['lesion'])) ?>"><?= h($person['lesion']) ?></span> <?php endif; ?><span class="overview-person-meta"><?= h(person_heading_meta($person)) ?></span></p>
             <?php if ($phone !== '' && $companyOwner === null): ?><p>Celular: <?= h($person['celular']) ?></p><?php endif; ?>
             <?php if ($companyOwner !== null): ?>

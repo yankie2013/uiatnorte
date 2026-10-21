@@ -453,14 +453,15 @@ if (!$isEmbed) {
 <div class="wrap">
   <div class="topbar">
     <div>
-      <h1 class="title">Descargo vehicular</h1>
-      <div class="muted">Selecciona accidente, tipo, condicion y placa para generar el Word con la unidad correcta.</div>
+      <h1 class="title"><?= $isEmbed ? 'Componentes Informe' : 'Descargo vehicular' ?></h1>
+      <div class="muted"><?= $isEmbed ? 'Descarga los componentes del informe del expediente.' : 'Selecciona accidente, tipo, condicion y placa para generar el Word con la unidad correcta.' ?></div>
     </div>
     <?php if (!$isEmbed): ?>
       <a class="btn" href="javascript:history.back()">Volver</a>
     <?php endif; ?>
   </div>
 
+  <?php if (!$isEmbed): ?>
   <form class="card" method="get">
     <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
     <div class="grid">
@@ -494,6 +495,7 @@ if (!$isEmbed) {
       <button class="btn primary" type="submit">Buscar placas</button>
     </div>
   </form>
+  <?php endif; ?>
 
   <?php if ($accidenteId > 0): ?>
     <div class="card">
