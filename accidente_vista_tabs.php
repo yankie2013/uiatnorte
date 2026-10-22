@@ -800,7 +800,7 @@ function whatsapp_message_pack(array $modalidades, ?string $fechaAccidente, ?str
 
     return [
         'saludo' => $greeting . ', a cargo de la investigación por el ' . $context . '.',
-        'citacion' => $greeting . '. Se le comunica que se le está remitiendo la citación policial correspondiente para su concurrencia a la diligencia programada, respecto al ' . $context . '. Motivo: diligencias de investigación del accidente en mención. Sírvase revisar el documento adjunto/remitido y confirmar recepción.',
+        'citacion' => \App\Support\CitacionWhatsApp::message($greeting, ['fecha_accidente' => $fechaAccidente, 'lugar' => $lugarAccidente, 'registro_sidpol' => $sidpol], implode(', ', $modalidades)),
         'meet' => $greeting . '. Se le comunica que la manifestación se realizará de manera virtual mediante Google Meet, respecto al ' . $context . '. Motivo: recepción de manifestación como parte de las diligencias de investigación. Enlace Google Meet: {meet_link}. Sírvase ingresar puntualmente y tener a la mano su documento de identidad.',
     ];
 }
@@ -13158,7 +13158,7 @@ $resumenInterventionRows = [
         const cleanedLink = meetLink.trim();
         if (cleanedLink === '') return;
 
-        const message = template.replace('{meet_link}', cleanedLink);
+        const message = window.refreshWhatsAppGreeting(template.replace('{meet_link}', cleanedLink));
         const whatsappUrl = phone
           ? `https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(message)}`
           : `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -13752,5 +13752,6 @@ if ($officeDownloadUrl !== '') {
     <?php
 }
 ?>
+<script src="assets/js/citacion_whatsapp.js"></script>
 </body>
 </html>

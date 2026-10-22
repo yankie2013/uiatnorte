@@ -412,6 +412,9 @@ $values = [
     'fecha_notificacion' => (string) ($_POST['fecha_notificacion'] ?? date('Y-m-d')),
 ];
 
+$cardCitacionIds = array_values(array_unique(array_filter(array_map('intval', (array) ($_GET['citacion_ids'] ?? $_POST['card_citacion_ids'] ?? [])), static fn(int $id): bool => $id > 0)));
+$cardCitacionIds = array_slice($cardCitacionIds, 0, 500);
+$cardCondition = $cardCitacionIds ? ' OR id IN (' . implode(',', array_fill(0, count($cardCitacionIds), '?')) . ')' : '';
 $citacionStmt = $pdo->prepare("
     SELECT id,
            persona_nombres,
@@ -431,10 +434,11 @@ $citacionStmt = $pdo->prepare("
                 fecha = CURDATE()
                 AND COALESCE(NULLIF(hora, ''), '23:59:59') >= CURTIME()
             )
+            $cardCondition
           )
     ORDER BY fecha ASC, hora ASC, orden_citacion ASC, id ASC
 ");
-$citacionStmt->execute([$accidenteId]);
+$citacionStmt->execute(array_merge([$accidenteId], $cardCitacionIds));
 $citacionesVigentes = $citacionStmt->fetchAll(PDO::FETCH_ASSOC);
 $citacionesMap = [];
 foreach ($citacionesVigentes as $citacion) {
@@ -444,7 +448,7 @@ foreach ($citacionesVigentes as $citacion) {
 $requestedCitacionId = (int) ($_GET['citacion_id'] ?? 0);
 $citacionesSeleccionadas = isset($_POST['citacion_ids']) && is_array($_POST['citacion_ids'])
     ? array_map('intval', $_POST['citacion_ids'])
-    : ($requestedCitacionId > 0 ? [$requestedCitacionId] : array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $citacionesVigentes));
+    : ($cardCitacionIds ?: ($requestedCitacionId > 0 ? [$requestedCitacionId] : array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $citacionesVigentes)));
 $citacionesSeleccionadas = array_values(array_filter(array_unique($citacionesSeleccionadas), static fn (int $id): bool => $id > 0));
 
 $errors = [];
@@ -818,8 +822,9 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
     </div>
   </div>
 
-  <form class="card" method="post">
+  <form class="card" method="post" id="notification-form">
     <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
+    <?php foreach ($cardCitacionIds as $cardCitacionId): ?><input type="hidden" name="card_citacion_ids[]" value="<?= $cardCitacionId ?>"><?php endforeach; ?>
     <input type="hidden" name="abogado_id" value="<?= (int) $abogadoId ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 
@@ -879,7 +884,7 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
               </label>
             <?php endforeach; ?>
           </div>
-          <div class="muted" style="margin-top:8px;">Se listan solo citaciones vigentes del accidente. Se consideran vigentes si, a la fecha y hora actual, aun no han vencido.</div>
+          <div class="muted" style="margin-top:8px;">Se listan las citaciones vigentes y las seleccionadas desde el card del expediente.</div>
           <div class="muted" style="margin-top:6px;">Marcadores sugeridos para la plantilla: `citacion1_motivo`, `citacion1_lugar`, `citacion1_fecha`, `citacion1_hora`, `citacion1_persona`, `citacion1_en_calidad`, y asi sucesivamente. Tambien puedes usar bloque repetible `citaciones` o `diligencias`.</div>
         <?php endif; ?>
       </div>
@@ -891,5 +896,49 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
     </div>
   </form>
 </div>
+<script>
+const notificationForm = document.getElementById('notification-form');
+notificationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = notificationForm.querySelector('button[type="submit"]');
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generando…';
+    let errorBox = document.getElementById('notification-error');
+    if (errorBox) errorBox.remove();
+    try {
+        const response = await fetch(notificationForm.action || window.location.href, {
+            method: 'POST', body: new FormData(notificationForm), credentials: 'same-origin'
+        });
+        if (!response.ok || !(response.headers.get('Content-Type') || '').includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+            const html = await response.text();
+            const page = new DOMParser().parseFromString(html, 'text/html');
+            throw new Error(page.querySelector('.error')?.textContent.trim() || 'No se pudo generar el documento. Revisa los datos e intenta nuevamente.');
+        }
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        const disposition = response.headers.get('Content-Disposition') || '';
+        link.download = disposition.match(/filename="([^"]+)"/)?.[1] || 'Notificacion_Abogado.docx';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        button.textContent = 'Documento creado';
+        setTimeout(() => {
+            window.location.assign(<?= json_encode('citacion_listar.php?accidente_id=' . $accidenteId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+        }, 500);
+    } catch (error) {
+        errorBox = document.createElement('div');
+        errorBox.id = 'notification-error';
+        errorBox.className = 'error';
+        errorBox.setAttribute('role', 'alert');
+        errorBox.textContent = error.message;
+        notificationForm.prepend(errorBox);
+        button.disabled = false;
+        button.textContent = originalLabel;
+    }
+});
+</script>
 </body>
 </html>

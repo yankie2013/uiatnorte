@@ -122,7 +122,7 @@ final class Access
         $user = self::actor();
         $grade = preg_replace('/[.\s]+/u', ' ', trim((string)($user['grado'] ?? ''))) ?? '';
         $name = trim((string)($user['nombre'] ?? 'Personal policial'));
-        return 'Hola, le saluda '.trim($grade.' '.$name);
+        return CitacionWhatsApp::salutation().', le saluda '.trim($grade.' '.$name);
     }
     public static function requestGuard(): void {
         if(PHP_SAPI==='cli')return;

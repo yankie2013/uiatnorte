@@ -71,6 +71,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
 $rows = $service->listado($accidenteId, []);
 $lawyers = (new App\Repositories\AbogadoRepository($pdo))->listByAccidente($accidenteId);
+$contactPhones = [];
+$personIds = array_values(array_unique(array_filter(array_column($rows, 'persona_id'))));
+if ($personIds) {
+    $contactStmt = $pdo->prepare('SELECT id, celular FROM personas WHERE id IN (' . implode(',', array_fill(0, count($personIds), '?')) . ')');
+    $contactStmt->execute($personIds);
+    $contactPhones = $contactStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+}
+$accidentStmt = $pdo->prepare('SELECT fecha_accidente, lugar, registro_sidpol FROM accidentes_activos WHERE id = ?');
+$accidentStmt->execute([$accidenteId]);
+$accidentContext = $accidentStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$modality = (new App\Repositories\DocumentoPlantillaRepository($pdo))->accidenteModalidad($accidenteId);
+$waMessage = App\Support\CitacionWhatsApp::message(App\Support\Access::greeting($accidenteId), $accidentContext, $modality);
 // Resolve outcomes from linked diligencias, including installations without citacion_ids.
 $linkedStates = [];
 $st = $pdo->prepare('SELECT * FROM diligencias_pendientes_activos WHERE accidente_id = ? ORDER BY actualizado_en DESC, id DESC');
@@ -193,6 +205,22 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .calendar-sync-chip{display:inline-flex;align-items:center;flex:0 0 auto;padding:2px 6px;border-radius:999px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:700;line-height:1.3;letter-spacing:.03em}
 @media(prefers-color-scheme:dark){.calendar-sync-chip{background:#143426;border-color:#256443;color:#86efac}}
 .lawyer-notified{font-size:11px;font-weight:600;color:#15803d;white-space:nowrap}
+/* Acciones compactas junto al nombre del citado. */
+.citacion-person{grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:8px;row-gap:0}
+.citacion-person-info{display:contents}
+.citacion-person-name{grid-column:1;grid-row:1;min-width:0;gap:5px;flex-wrap:nowrap;align-self:center}
+.citacion-person-name strong{min-width:0;overflow-wrap:anywhere;font-size:12px}
+.citacion-person-meta{grid-column:1/-1;grid-row:2}
+.citacion-actions{grid-column:2;grid-row:1;align-self:center}
+.citacion-actions .stack-actions{gap:5px;flex-wrap:nowrap;align-items:center}
+.citacion-actions .btn{display:inline-flex;justify-content:center;align-items:center;width:28px;height:28px;min-height:28px;padding:0;border:1px solid var(--border);border-radius:7px;font-size:13px;line-height:1;background:var(--card);box-sizing:border-box;flex:0 0 28px}
+.citacion-actions .btn.danger{margin:0;font-size:12px;border-color:var(--border)}
+.citacion-actions .stack-actions form{margin:0;line-height:0}
+.citacion-actions .btn:hover{transform:none;border-color:var(--primary)}
+.citacion-actions .btn.danger:hover{border-color:var(--danger)}
+.citacion-actions .muted{font-size:10px;max-width:85px}
+.citacion-actions .btn.whatsapp{color:#178248;border-color:#9fe0b7;background:#f0fff5}
+.citacion-actions .btn.whatsapp:hover{background:#dcfce7;border-color:#25d366}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -261,10 +289,10 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           </div>
           <div class="citacion-actions">
               <div class="stack-actions">
-                <a class="btn" href="citacion_leer.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>">Ver</a>
-                <a class="btn" href="citacion_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>">Editar</a>
-                <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">DOCX</a>
-                <?php if ($pdfDisponible): ?><a class="btn" href="citacion_diligencia_pdf.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener">PDF</a><?php endif; ?>
+                <a class="btn whatsapp whatsapp-citacion" href="<?= h(App\Support\CitacionWhatsApp::link((string) ($contactPhones[(int) ($row['persona_id'] ?? 0)] ?? ''), $waMessage)) ?>" target="_blank" rel="noopener" title="Notificar citación por WhatsApp (CIT)" aria-label="Notificar citación por WhatsApp"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.88 11.88 0 0 0 12.06 0C5.47 0 .11 5.36.11 11.95c0 2.1.55 4.15 1.6 5.96L0 24l6.26-1.64a11.93 11.93 0 0 0 5.8 1.48h.01C18.65 23.84 24 18.48 24 11.9c0-3.19-1.24-6.19-3.48-8.42ZM12.07 21.82a9.9 9.9 0 0 1-5.05-1.38l-.36-.21-3.71.97.99-3.61-.24-.37a9.86 9.86 0 0 1-1.52-5.27c0-5.47 4.45-9.92 9.92-9.92a9.86 9.86 0 0 1 7.02 2.91 9.86 9.86 0 0 1 2.9 7.02c0 5.47-4.45 9.92-9.95 9.92Zm5.44-7.43c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.47-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35Z"/></svg></a>
+                <a class="btn" href="citacion_leer.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>" title="Ver citación" aria-label="Ver citación">👁️</a>
+                <a class="btn" href="citacion_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>" title="Editar citación" aria-label="Editar citación">✏️</a>
+                <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener" title="Descargar Word" aria-label="Descargar Word">⬇️</a>
                 <?php if ($calendarEventId !== '' && !$calendarOwner): ?>
                   <span class="muted">Evento en calendario de otro usuario</span>
                 <?php else: ?>
@@ -273,7 +301,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                   <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
                   <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>
                   <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
-                  <button class="btn danger" type="submit">Eliminar</button>
+                  <button class="btn danger" type="submit" title="Eliminar citación" aria-label="Eliminar citación">X</button>
                 </form>
                 <?php endif; ?>
               </div>
@@ -282,14 +310,13 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
         <?php endforeach; ?>
       </div>
       <?php
-        $personIds = array_filter(array_column($group, 'persona_id'));
-        $groupLawyers = array_filter($lawyers, static fn($lawyer) => in_array($lawyer['persona_id'], $personIds));
+        $groupLawyers = array_filter($lawyers, static fn($lawyer) => !empty($lawyer['es_actual']));
       ?>
       <?php if ($groupLawyers): ?>
-      <div class="diligencia-lawyers"><h3>⚖️ Abogados vinculados a los citados</h3>
+      <div class="diligencia-lawyers"><h3>⚖️ Abogados del expediente</h3>
         <?php foreach ($groupLawyers as $lawyer): ?>
           <?php
-            $lawyerCitations = array_values(array_filter($group, static fn($citation) => (int) ($citation['persona_id'] ?? 0) === (int) $lawyer['persona_id']));
+            $lawyerCitations = $group;
             $lawyerNotified = $lawyerCitations !== [];
             foreach ($lawyerCitations as $citation) {
                 $notification = $lawyerNotifications[(int) $lawyer['id']][(int) $citation['id']] ?? null;
@@ -299,8 +326,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
             }
           ?>
           <div class="diligencia-lawyer"><div><strong><?= h(trim($lawyer['nombres'].' '.$lawyer['apellido_paterno'].' '.$lawyer['apellido_materno'])) ?></strong><p>Representa a <?= h($lawyer['persona_rep_nom']) ?><?= $lawyer['registro'] ? ' · '.h($lawyer['registro']) : '' ?></p></div>
-            <?php if ($lawyerNotified): ?><span class="lawyer-notified" title="Documento de notificación generado">✅ Abogado notificado</span><?php endif; ?>
-            <a class="btn" href="marcador_abogado.php?citacion_id=<?= (int) ($lawyerCitations[0]['id'] ?? $first['id']) ?>&abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">Notificar a abogado</a>
+            <?php if ($lawyerNotified): ?><span class="lawyer-notified" title="Documento de notificación generado">✅ Abogado notificado</span><?php else: ?>
+            <a class="btn" href="marcador_abogado.php?<?= h(http_build_query(['citacion_ids' => array_column($group, 'id')])) ?>&abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">Notificar a abogado</a>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
       </div>
@@ -309,5 +337,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
     <?php endforeach; ?>
   </div>
 </div>
+<script src="assets/js/citacion_whatsapp.js"></script>
 </body>
 </html>

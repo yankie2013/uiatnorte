@@ -83,3 +83,5 @@ if (\App\Support\Access::admin()) {
 </div>
 <link rel="stylesheet" href="assets/css/user_topbar.css?v=<?= filemtime(__DIR__ . '/assets/css/user_topbar.css') ?>">
 <script src="assets/js/sidebar.js?v=<?= filemtime(__DIR__ . '/assets/js/sidebar.js') ?>" defer></script>
+
+<script src="assets/js/citacion_whatsapp.js?v=<?= filemtime(__DIR__ . '/assets/js/citacion_whatsapp.js') ?>" defer></script>
