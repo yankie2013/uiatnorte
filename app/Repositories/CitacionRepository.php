@@ -208,7 +208,7 @@ final class CitacionRepository
 
     public function updateOutcome(int $accidenteId, array $ids, string $outcome): void
     {
-        if (!in_array($outcome, ['realizada', 'no-realizada', 'pendiente'], true)) {
+        if (!in_array($outcome, ['realizada', 'suspendida', 'reprogramada', 'no-realizada', 'pendiente'], true)) {
             throw new \InvalidArgumentException('Estado de citación no válido.');
         }
         $ids = array_values(array_unique(array_map('intval', $ids)));

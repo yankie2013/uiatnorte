@@ -86,13 +86,19 @@ foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $diligencia) {
         }
     }
 }
+$notificationStmt = $pdo->prepare('SELECT n.* FROM citacion_notificacion_abogado n JOIN citacion_activos c ON c.id = n.citacion_id WHERE c.accidente_id = ?');
+$notificationStmt->execute([$accidenteId]);
+$lawyerNotifications = [];
+foreach ($notificationStmt->fetchAll(PDO::FETCH_ASSOC) as $notification) {
+    $lawyerNotifications[(int) $notification['abogado_id']][(int) $notification['citacion_id']] = $notification;
+}
 $now = new DateTimeImmutable('now', new DateTimeZone('America/Lima'));
 foreach ($rows as &$row) {
     $state = $linkedStates[(int) $row['id']] ?? 'Pendiente';
     $scheduled = !empty($row['fecha'])
         ? new DateTimeImmutable($row['fecha'] . ' ' . ($row['hora'] ?: '23:59:59'), new DateTimeZone('America/Lima'))
         : null;
-    $row['outcome'] = in_array($row['estado_realizacion'] ?? null, ['realizada', 'no-realizada', 'pendiente'], true)
+    $row['outcome'] = in_array($row['estado_realizacion'] ?? null, ['realizada', 'suspendida', 'reprogramada', 'no-realizada', 'pendiente'], true)
         ? $row['estado_realizacion'] : ($state === 'Realizado' ? 'realizada'
         : (($state === 'Cancelado' || ($scheduled !== null && $scheduled < $now)) ? 'no-realizada' : 'pendiente'));
 }
@@ -134,25 +140,25 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 
 /* Tarjetas de agenda: jerarquía clara y acciones alineadas. */
 .toolbar{margin-bottom:20px;gap:16px}
-.diligencia-cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px}
+.diligencia-cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),520px));gap:18px}
 .diligencia-card[class*="estado-"]{border:1px solid var(--border);border-radius:18px;box-shadow:0 4px 20px #0f172a06;background:var(--card)}
-.diligencia-header{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:18px;align-items:start;padding:24px;background:var(--card);color:var(--text)}
+.diligencia-header{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:start;padding:18px;background:var(--card);color:var(--text)}
 .diligencia-header .diligencia-date{grid-column:1;grid-row:1;min-width:0;padding:10px 6px;border-radius:12px;background:#eef4ff;box-shadow:none;color:#245a86}
 .diligencia-header .diligencia-date>div{flex-direction:column;gap:4px}
 .diligencia-header .diligencia-date strong{font-size:30px;letter-spacing:-1px}
 .diligencia-header .diligencia-date span{font-size:10px}
 .diligencia-header .diligencia-date b{font-size:10px;margin-top:6px;letter-spacing:.12em}
 .diligencia-header .diligencia-heading{grid-column:2;grid-row:1}
-.diligencia-header .diligencia-heading h2{font-size:17px;line-height:1.4;margin:10px 0 8px;letter-spacing:-.2px}
-.diligencia-header .diligencia-heading p{font-size:12px;line-height:1.7;color:var(--muted)}
+.diligencia-header .diligencia-heading h2{font-size:15px;line-height:1.4;margin:7px 0 5px;letter-spacing:-.2px}
+.diligencia-header .diligencia-heading p{font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
 .diligencia-time{font-size:12px;padding:4px 9px;background:#eef4ff;color:#245a86}
-.diligencia-header .add-participant{grid-column:3;grid-row:1;justify-self:end;white-space:nowrap;font-size:12px;padding:9px 12px;background:transparent;color:var(--primary);border-color:var(--border);border-radius:9px}
-.diligencia-header .citation-state-form{grid-column:1/-1;grid-row:2;margin:2px 0 0;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.diligencia-header .add-participant{grid-column:2;grid-row:2;justify-self:start;white-space:nowrap;font-size:11px;padding:7px 10px;background:transparent;color:var(--primary);border-color:var(--border);border-radius:9px}
+.diligencia-header .citation-state-form{grid-column:1/-1;grid-row:3;margin:2px 0 0;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .citation-state-form label{font-size:11px;color:var(--muted);margin:0;font-weight:600}
-.citation-state-form>div{gap:8px;flex:1;max-width:340px}
+.citation-state-form>div{gap:6px;flex:1;max-width:290px}
 .citation-state-form select{min-width:120px;font-size:12px;padding:8px 10px}
 .citation-state-form .btn{font-size:11px;padding:8px 12px;border-radius:8px}
-.citacion-person{padding:20px 24px;gap:16px}
+.citacion-person{padding:16px 18px;gap:12px}
 .citacion-person-name{gap:8px}
 .citacion-person-name strong{font-size:14px;line-height:1.5}
 .citacion-person-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -160,20 +166,33 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .citacion-actions .stack-actions{gap:7px}
 .citacion-actions .btn{font-size:11px;padding:7px 11px;border-radius:8px;min-height:32px}
 .citacion-actions .btn.danger{margin-left:auto;border-color:transparent}
-.diligencia-lawyers{padding:16px 24px;background:transparent}
+.diligencia-lawyers{padding:14px 18px;background:transparent}
 .diligencia-lawyers h3{font-size:12px;margin:0 0 10px}
 @media(max-width:640px){
- .diligencia-header{grid-template-columns:58px minmax(0,1fr);padding:20px;gap:16px}
- .diligencia-header .add-participant{grid-column:2;grid-row:1;align-self:center}
- .diligencia-header .diligencia-heading{grid-column:1/-1;grid-row:2}
- .diligencia-header .citation-state-form{grid-row:3}
- .citation-state-form>div{max-width:none}
- .citacion-person{padding:20px}
+ .diligencia-header{padding:16px;gap:12px}
+ .citation-state-form>div{max-width:none;flex-basis:100%}
+ .citacion-person{padding:16px}
 }
 @media(prefers-color-scheme:dark){
  .diligencia-header .diligencia-date,.diligencia-time{background:#203950;color:#d4e7fa}
  .citacion-person-meta .pill{background:#203950;color:#d4e7fa}
 }
+/* Estado compacto en la parte superior de cada tarjeta. */
+.diligencia-header .citation-state-form,.citation-state-chip{margin:0;padding:0;border:0;display:block;flex:0 0 auto}
+.citation-state-form label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.citation-state-form>div{display:flex;max-width:none}
+.citation-state-form select,.citation-state-chip{width:auto;min-width:0;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:700;border:1px solid var(--chip-border);background:var(--chip-bg);color:var(--chip-text);cursor:pointer}
+.diligencia-card{--chip-bg:#fff7ed;--chip-border:#fed7aa;--chip-text:#9a3412}
+.estado-realizada{--chip-bg:#f0fdf4;--chip-border:#bbf7d0;--chip-text:#166534}
+.estado-suspendida,.estado-no-realizada{--chip-bg:#fef2f2;--chip-border:#fecaca;--chip-text:#991b1b}
+.estado-reprogramada{--chip-bg:#eff6ff;--chip-border:#bfdbfe;--chip-text:#1e40af}
+.citation-topline{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap}
+.citation-topline .diligencia-time{white-space:nowrap;flex:0 0 auto}
+.diligencia-header .diligencia-date,.diligencia-header .diligencia-heading{grid-row:1}
+.diligencia-header .add-participant{grid-row:2}
+.calendar-sync-chip{display:inline-flex;align-items:center;flex:0 0 auto;padding:2px 6px;border-radius:999px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:700;line-height:1.3;letter-spacing:.03em}
+@media(prefers-color-scheme:dark){.calendar-sync-chip{background:#143426;border-color:#256443;color:#86efac}}
+.lawyer-notified{font-size:11px;font-weight:600;color:#15803d;white-space:nowrap}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -204,10 +223,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <div><strong><?= $stamp ? date('d',$stamp) : '—' ?></strong><span><?= $stamp ? date('Y',$stamp) : '' ?></span></div>
           <b><?= $stamp ? $months[(int)date('n',$stamp)-1] : 'Sin fecha' ?></b>
         </div>
-        <div class="diligencia-heading"><span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
-          <h2><?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
-          <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
-        </div>
+        <div class="diligencia-heading"><div class="citation-topline"><span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
         <?php if ($canChangeState): ?>
         <form method="post" class="citation-state-form">
           <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
@@ -216,13 +232,19 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
           <?php foreach ($group as $participant): ?><input type="hidden" name="citacion_ids[]" value="<?= (int) $participant['id'] ?>"><?php endforeach; ?>
           <label for="estado-citacion-<?= (int) $first['id'] ?>">Estado de la citación</label>
-          <div><select id="estado-citacion-<?= (int) $first['id'] ?>" name="estado">
-            <?php foreach (['pendiente' => 'Pendiente', 'realizada' => 'Realizada con éxito', 'no-realizada' => 'No realizada'] as $value => $label): ?>
+          <div><select aria-label="Estado de la citación" onchange="this.form.requestSubmit()" id="estado-citacion-<?= (int) $first['id'] ?>" name="estado">
+            <?php foreach (['pendiente' => 'Pendiente', 'realizada' => 'Realizada', 'suspendida' => 'Suspendida', 'reprogramada' => 'Reprogramada'] + ($first['outcome'] === 'no-realizada' ? ['no-realizada' => 'No realizada'] : []) as $value => $label): ?>
               <option value="<?= h($value) ?>" <?= $first['outcome'] === $value ? 'selected' : '' ?>><?= h($label) ?></option>
             <?php endforeach; ?>
-          </select><button class="btn primary" type="submit">Guardar estado</button></div>
+          </select><noscript><button class="btn primary" type="submit">Guardar</button></noscript></div>
         </form>
+        <?php else: ?>
+        <span class="citation-state-chip"><?= h(['pendiente' => 'Pendiente', 'realizada' => 'Realizada', 'suspendida' => 'Suspendida', 'reprogramada' => 'Reprogramada', 'no-realizada' => 'No realizada'][$first['outcome']]) ?></span>
         <?php endif; ?>
+        </div>
+          <h2><?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
+          <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
+        </div>
         <a class="btn add-participant" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
       </header>
       <div class="diligencia-participants">
@@ -234,7 +256,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           ?>
 
         <section class="citacion-person">
-          <div class="citacion-person-info"><div class="citacion-person-name">👤 <strong><?= h($nombre ?: 'Sin nombre') ?></strong></div>
+          <div class="citacion-person-info"><div class="citacion-person-name">👤 <strong><?= h($nombre ?: 'Sin nombre') ?></strong><?php if ($calendarEventId !== '' && ($row['google_calendar_sync_status'] ?? '') === 'sincronizado'): ?><span class="calendar-sync-chip" title="Sincronizado con Google Calendar" aria-label="Sincronizado con Google Calendar">SYNC</span><?php endif; ?></div>
             <p class="citacion-person-meta"><span><?= h($documento ?: 'Sin documento') ?></span><span class="pill"><?= h($row['en_calidad'] ?? '') ?></span></p>
           </div>
           <div class="citacion-actions">
@@ -266,8 +288,19 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       <?php if ($groupLawyers): ?>
       <div class="diligencia-lawyers"><h3>⚖️ Abogados vinculados a los citados</h3>
         <?php foreach ($groupLawyers as $lawyer): ?>
+          <?php
+            $lawyerCitations = array_values(array_filter($group, static fn($citation) => (int) ($citation['persona_id'] ?? 0) === (int) $lawyer['persona_id']));
+            $lawyerNotified = $lawyerCitations !== [];
+            foreach ($lawyerCitations as $citation) {
+                $notification = $lawyerNotifications[(int) $lawyer['id']][(int) $citation['id']] ?? null;
+                if (!$notification || !hash_equals($notification['contenido_hash'], App\Support\CitacionNotificacion::hash($citation))) {
+                    $lawyerNotified = false;
+                }
+            }
+          ?>
           <div class="diligencia-lawyer"><div><strong><?= h(trim($lawyer['nombres'].' '.$lawyer['apellido_paterno'].' '.$lawyer['apellido_materno'])) ?></strong><p>Representa a <?= h($lawyer['persona_rep_nom']) ?><?= $lawyer['registro'] ? ' · '.h($lawyer['registro']) : '' ?></p></div>
-            <a class="btn" href="marcador_abogado.php?abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">📄 Notificación</a>
+            <?php if ($lawyerNotified): ?><span class="lawyer-notified" title="Documento de notificación generado">✅ Abogado notificado</span><?php endif; ?>
+            <a class="btn" href="marcador_abogado.php?citacion_id=<?= (int) ($lawyerCitations[0]['id'] ?? $first['id']) ?>&abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">Notificar a abogado</a>
           </div>
         <?php endforeach; ?>
       </div>

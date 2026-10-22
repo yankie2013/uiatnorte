@@ -16,7 +16,7 @@ try {
     $row = $pdo->query('SELECT * FROM citacion_activos ORDER BY id DESC LIMIT 1')->fetch();
     checkState((bool) $row, 'Se requiere una citación.');
     $repo = new CitacionRepository($pdo);
-    foreach (['realizada', 'no-realizada', 'pendiente'] as $state) {
+    foreach (['realizada', 'suspendida', 'reprogramada', 'no-realizada', 'pendiente'] as $state) {
         $repo->updateOutcome((int) $row['accidente_id'], [(int) $row['id']], $state);
         $rows = $repo->searchByAccidente((int) $row['accidente_id'], []);
         $match = array_values(array_filter($rows, fn($r) => (int) $r['id'] === (int) $row['id']));
@@ -28,7 +28,7 @@ try {
         catch (InvalidArgumentException|RuntimeException $e) { $rejected = true; }
         checkState($rejected, 'Debe rechazar estados inválidos y citaciones de otro expediente.');
     }
-    echo "PASS: tres estados persistidos, lectura desde listado y rechazo de estado/expediente inválido.\n";
+    echo "PASS: cinco estados persistidos, lectura desde listado y rechazo de estado/expediente inválido.\n";
 } finally {
     $pdo->rollBack();
     $_SESSION = $before;

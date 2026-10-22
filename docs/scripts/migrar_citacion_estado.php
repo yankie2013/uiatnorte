@@ -5,6 +5,9 @@ require dirname(__DIR__, 2) . '/bootstrap/app.php';
 $pdo = App\Database\Database::connection();
 $st = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'citacion' AND COLUMN_NAME = 'estado_realizacion'");
 if (!(int) $st->fetchColumn()) {
-    $pdo->exec("ALTER TABLE citacion ADD COLUMN estado_realizacion ENUM('pendiente','realizada','no-realizada') NULL DEFAULT NULL");
+    $pdo->exec("ALTER TABLE citacion ADD COLUMN estado_realizacion ENUM('pendiente','realizada','no-realizada','suspendida','reprogramada') NULL DEFAULT NULL");
+}
+else {
+    $pdo->exec("ALTER TABLE citacion MODIFY COLUMN estado_realizacion ENUM('pendiente','realizada','no-realizada','suspendida','reprogramada') NULL DEFAULT NULL");
 }
 echo "Estado de citaciones disponible.\n";

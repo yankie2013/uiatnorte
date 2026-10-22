@@ -441,13 +441,15 @@ foreach ($citacionesVigentes as $citacion) {
     $citacionesMap[(int) $citacion['id']] = $citacion;
 }
 
+$requestedCitacionId = (int) ($_GET['citacion_id'] ?? 0);
 $citacionesSeleccionadas = isset($_POST['citacion_ids']) && is_array($_POST['citacion_ids'])
     ? array_map('intval', $_POST['citacion_ids'])
-    : array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $citacionesVigentes);
+    : ($requestedCitacionId > 0 ? [$requestedCitacionId] : array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $citacionesVigentes));
 $citacionesSeleccionadas = array_values(array_filter(array_unique($citacionesSeleccionadas), static fn (int $id): bool => $id > 0));
 
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    App\Support\Access::checkCsrf();
     $values['fecha_notificacion'] = trim((string) ($_POST['fecha_notificacion'] ?? ''));
 
     if ($values['fecha_notificacion'] === '' || strtotime($values['fecha_notificacion']) === false) {
@@ -672,6 +674,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $filename = 'Notificacion_Abogado_' . $abogadoId . '_' . slug_filename((string) ($row['apellido_paterno'] ?? '')) . '_' . date('Ymd_His') . '.docx';
 
+        if (!is_file($docxFile) || filesize($docxFile) === 0) {
+            throw new RuntimeException('No se pudo generar el documento de notificación.');
+        }
+        $notificationStmt = $pdo->prepare('INSERT INTO citacion_notificacion_abogado
+            (citacion_id, abogado_id, contenido_hash, documento_nombre, fecha_notificacion)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE contenido_hash = VALUES(contenido_hash), documento_nombre = VALUES(documento_nombre), fecha_notificacion = VALUES(fecha_notificacion), creado_en = CURRENT_TIMESTAMP');
+        $pdo->beginTransaction();
+        try {
+            foreach ($citacionesElegidas as $citacion) {
+                $notificationStmt->execute([(int) $citacion['id'], $abogadoId, App\Support\CitacionNotificacion::hash($citacion), $filename, $values['fecha_notificacion']]);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            @unlink($docxFile);
+            throw $e;
+        }
+
         while (ob_get_level()) {
             ob_end_clean();
         }
@@ -798,6 +819,7 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
   </div>
 
   <form class="card" method="post">
+    <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
     <input type="hidden" name="abogado_id" value="<?= (int) $abogadoId ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 
