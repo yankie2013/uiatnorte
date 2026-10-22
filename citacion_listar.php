@@ -39,9 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         }
         $citacionRepository->updateOutcome($accidenteId, (array) ($_POST['citacion_ids'] ?? []), (string) ($_POST['estado'] ?? ''));
         $query = ['accidente_id' => $accidenteId, 'embed' => $embed ? 1 : 0, 'return_to' => $returnTo, 'estado_guardado' => 1];
-        foreach (['q', 'desde', 'hasta'] as $filter) {
-            if (isset($_GET[$filter])) $query[$filter] = (string) $_GET[$filter];
-        }
         header('Location: citacion_listar.php?' . http_build_query($query), true, 303);
         exit;
     } catch (Throwable $e) {
@@ -72,12 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     }
 }
 
-$filters = [
-    'q' => trim((string) ($_GET['q'] ?? '')),
-    'desde' => trim((string) ($_GET['desde'] ?? '')),
-    'hasta' => trim((string) ($_GET['hasta'] ?? '')),
-];
-$rows = $service->listado($accidenteId, $filters);
+$rows = $service->listado($accidenteId, []);
 $lawyers = (new App\Repositories\AbogadoRepository($pdo))->listByAccidente($accidenteId);
 // Resolve outcomes from linked diligencias, including installations without citacion_ids.
 $linkedStates = [];
@@ -139,6 +131,49 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .citation-state-form label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text)}
 .citation-state-form>div{display:flex;gap:8px;flex-wrap:wrap}
 .citation-state-form select{flex:1;min-width:150px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
+
+/* Tarjetas de agenda: jerarquía clara y acciones alineadas. */
+.toolbar{margin-bottom:20px;gap:16px}
+.diligencia-cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px}
+.diligencia-card[class*="estado-"]{border:1px solid var(--border);border-radius:18px;box-shadow:0 4px 20px #0f172a06;background:var(--card)}
+.diligencia-header{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:18px;align-items:start;padding:24px;background:var(--card);color:var(--text)}
+.diligencia-header .diligencia-date{grid-column:1;grid-row:1;min-width:0;padding:10px 6px;border-radius:12px;background:#eef4ff;box-shadow:none;color:#245a86}
+.diligencia-header .diligencia-date>div{flex-direction:column;gap:4px}
+.diligencia-header .diligencia-date strong{font-size:30px;letter-spacing:-1px}
+.diligencia-header .diligencia-date span{font-size:10px}
+.diligencia-header .diligencia-date b{font-size:10px;margin-top:6px;letter-spacing:.12em}
+.diligencia-header .diligencia-heading{grid-column:2;grid-row:1}
+.diligencia-header .diligencia-heading h2{font-size:17px;line-height:1.4;margin:10px 0 8px;letter-spacing:-.2px}
+.diligencia-header .diligencia-heading p{font-size:12px;line-height:1.7;color:var(--muted)}
+.diligencia-time{font-size:12px;padding:4px 9px;background:#eef4ff;color:#245a86}
+.diligencia-header .add-participant{grid-column:3;grid-row:1;justify-self:end;white-space:nowrap;font-size:12px;padding:9px 12px;background:transparent;color:var(--primary);border-color:var(--border);border-radius:9px}
+.diligencia-header .citation-state-form{grid-column:1/-1;grid-row:2;margin:2px 0 0;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.citation-state-form label{font-size:11px;color:var(--muted);margin:0;font-weight:600}
+.citation-state-form>div{gap:8px;flex:1;max-width:340px}
+.citation-state-form select{min-width:120px;font-size:12px;padding:8px 10px}
+.citation-state-form .btn{font-size:11px;padding:8px 12px;border-radius:8px}
+.citacion-person{padding:20px 24px;gap:16px}
+.citacion-person-name{gap:8px}
+.citacion-person-name strong{font-size:14px;line-height:1.5}
+.citacion-person-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.citacion-person-meta .pill{font-size:10px;padding:3px 8px;background:#f4f6fa;border-color:transparent;color:#52647e}
+.citacion-actions .stack-actions{gap:7px}
+.citacion-actions .btn{font-size:11px;padding:7px 11px;border-radius:8px;min-height:32px}
+.citacion-actions .btn.danger{margin-left:auto;border-color:transparent}
+.diligencia-lawyers{padding:16px 24px;background:transparent}
+.diligencia-lawyers h3{font-size:12px;margin:0 0 10px}
+@media(max-width:640px){
+ .diligencia-header{grid-template-columns:58px minmax(0,1fr);padding:20px;gap:16px}
+ .diligencia-header .add-participant{grid-column:2;grid-row:1;align-self:center}
+ .diligencia-header .diligencia-heading{grid-column:1/-1;grid-row:2}
+ .diligencia-header .citation-state-form{grid-row:3}
+ .citation-state-form>div{max-width:none}
+ .citacion-person{padding:20px}
+}
+@media(prefers-color-scheme:dark){
+ .diligencia-header .diligencia-date,.diligencia-time{background:#203950;color:#d4e7fa}
+ .citacion-person-meta .pill{background:#203950;color:#d4e7fa}
+}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -156,33 +191,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
-  <div class="card" style="margin-bottom:14px;">
-    <form method="get" class="grid">
-      <input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>">
-      <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
-      <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>
-      <div class="c3">
-        <label class="small">Buscar</label>
-        <input name="q" value="<?= h($filters['q']) ?>" placeholder="Nombre, documento, lugar, motivo">
-      </div>
-      <div class="c2">
-        <label class="small">Desde</label>
-        <input type="date" name="desde" value="<?= h($filters['desde']) ?>">
-      </div>
-      <div class="c2">
-        <label class="small">Hasta</label>
-        <input type="date" name="hasta" value="<?= h($filters['hasta']) ?>">
-      </div>
-      <div class="c3" style="display:flex;align-items:end;gap:8px;">
-        <button class="btn" type="submit">Filtrar</button>
-        <a class="btn" href="citacion_listar.php?accidente_id=<?= (int) $accidenteId ?><?= $embed ? '&embed=1' : '' ?><?= $returnTo !== '' ? '&return_to=' . urlencode($returnTo) : '' ?>">Limpiar</a>
-      </div>
-    </form>
-  </div>
-
   <?php if (isset($_GET['estado_guardado'])): ?><div class="card" role="status" style="margin-bottom:14px">Estado de la citación actualizado correctamente.</div><?php endif; ?>
   <div class="diligencia-cards">
-    <?php if ($rows === []): ?><div class="card empty-citations">No hay citaciones registradas con esos filtros.</div><?php endif; ?>
+    <?php if ($rows === []): ?><div class="card empty-citations">No hay citaciones registradas.</div><?php endif; ?>
     <?php foreach ($groups as $group): $first = $group[0];
       $stamp = !empty($first['fecha']) ? strtotime($first['fecha']) : false;
       $months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SET','OCT','NOV','DIC'];
@@ -193,8 +204,8 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <div><strong><?= $stamp ? date('d',$stamp) : '—' ?></strong><span><?= $stamp ? date('Y',$stamp) : '' ?></span></div>
           <b><?= $stamp ? $months[(int)date('n',$stamp)-1] : 'Sin fecha' ?></b>
         </div>
-        <div class="diligencia-heading"><span class="pill outcome-label"><?= h(['realizada' => 'Realizada con éxito', 'no-realizada' => 'No realizada', 'pendiente' => 'Pendiente'][$first['outcome']]) ?></span> <span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
-          <h2>📋 <?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
+        <div class="diligencia-heading"><span class="diligencia-time">◷ <?= h(substr((string)($first['hora'] ?? ''),0,5) ?: 'Sin hora') ?></span>
+          <h2><?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>
         <?php if ($canChangeState): ?>
@@ -212,47 +223,19 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           </select><button class="btn primary" type="submit">Guardar estado</button></div>
         </form>
         <?php endif; ?>
-        <span class="pill diligence-count">👥 <?= count($group) ?> citado<?= count($group) === 1 ? '' : 's' ?></span>
-        <a class="btn" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
+        <a class="btn add-participant" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
       </header>
       <div class="diligencia-participants">
         <?php foreach ($group as $row): ?>
           <?php
             $nombre = trim((string) (($row['persona_nombres'] ?? '') . ' ' . ($row['persona_apep'] ?? '') . ' ' . ($row['persona_apem'] ?? '')));
             $documento = trim((string) (($row['persona_doc_tipo'] ?? '') . ' ' . ($row['persona_doc_num'] ?? '')));
-            $oficio = (!empty($row['oficio_num']) && !empty($row['oficio_anio']))
-                ? ((string) $row['oficio_num'] . '/' . (string) $row['oficio_anio'])
-                : 'Sin oficio';
-            $calendarEventLink = trim((string) ($row['google_calendar_event_link'] ?? ''));
             $calendarEventId = trim((string) ($row['google_calendar_event_id'] ?? ''));
-            $syncStatus = trim((string) ($row['google_calendar_sync_status'] ?? ''));
-            $syncClass = 'sync-off';
-            $syncLabel = 'No sincronizada';
-            if ($calendarEventId !== '' && $syncStatus !== 'error') {
-                $syncClass = 'sync-ok';
-                $syncLabel = 'Sincronizada';
-            } elseif ($syncStatus === 'error') {
-                $syncClass = 'sync-error';
-                $syncLabel = 'Error de sincronización';
-            }
           ?>
 
         <section class="citacion-person">
-          <div class="citacion-person-info"><div class="citacion-person-name">👤 <strong><?= h($nombre ?: 'Sin nombre') ?></strong><span class="pill"><?= h($row['en_calidad'] ?? '') ?></span></div>
-            <p><?= h($documento ?: 'Sin documento') ?> · Citación #<?= (int)$row['id'] ?> · Orden <?= (int)($row['orden_citacion'] ?? 0) ?></p>
-            <p>📄 <?= h($oficio) ?></p>
-          </div>
-          <div class="citacion-sync"><div class="small">Google Calendar</div>
-              <span class="pill <?= h($syncClass) ?>"><?= h($syncLabel) ?></span>
-              <?php if (!empty($row['google_calendar_synced_at'])): ?>
-                <div class="small">Sync: <?= h((string) $row['google_calendar_synced_at']) ?></div>
-              <?php endif; ?>
-              <?php if ($syncStatus === 'error' && !empty($row['google_calendar_last_error'])): ?>
-                <div class="small" style="color:var(--danger);"><?= h((string) $row['google_calendar_last_error']) ?></div>
-              <?php endif; ?>
-              <?php if ($calendarOwner && $calendarEventLink !== ''): ?>
-                <div class="small"><a href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a></div>
-              <?php endif; ?>
+          <div class="citacion-person-info"><div class="citacion-person-name">👤 <strong><?= h($nombre ?: 'Sin nombre') ?></strong></div>
+            <p class="citacion-person-meta"><span><?= h($documento ?: 'Sin documento') ?></span><span class="pill"><?= h($row['en_calidad'] ?? '') ?></span></p>
           </div>
           <div class="citacion-actions">
               <div class="stack-actions">
@@ -280,14 +263,15 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
         $personIds = array_filter(array_column($group, 'persona_id'));
         $groupLawyers = array_filter($lawyers, static fn($lawyer) => in_array($lawyer['persona_id'], $personIds));
       ?>
+      <?php if ($groupLawyers): ?>
       <div class="diligencia-lawyers"><h3>⚖️ Abogados vinculados a los citados</h3>
-        <?php if (!$groupLawyers): ?><p class="muted">Sin abogados vinculados registrados.</p><?php endif; ?>
         <?php foreach ($groupLawyers as $lawyer): ?>
           <div class="diligencia-lawyer"><div><strong><?= h(trim($lawyer['nombres'].' '.$lawyer['apellido_paterno'].' '.$lawyer['apellido_materno'])) ?></strong><p>Representa a <?= h($lawyer['persona_rep_nom']) ?><?= $lawyer['registro'] ? ' · '.h($lawyer['registro']) : '' ?></p></div>
             <a class="btn" href="marcador_abogado.php?abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">📄 Notificación</a>
           </div>
         <?php endforeach; ?>
       </div>
+      <?php endif; ?>
     </article>
     <?php endforeach; ?>
   </div>
