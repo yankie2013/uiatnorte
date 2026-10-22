@@ -91,7 +91,7 @@ final class PwaSupport
             }, $buffer);
             $case = (int) ($_GET['accidente_id'] ?? 0);
             $canDeleteParticipants = $case > 0 && \App\Support\Access::canDeleteCaseRecord($case);
-            $accessScript = '<meta name="can-delete-participants" content="' . ($canDeleteParticipants ? '1' : '0') . '"><meta name="csrf-token content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
+            $accessScript = '<meta name="can-delete-participants" content="' . ($canDeleteParticipants ? '1' : '0') . '"><meta name="csrf-token" content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
             $buffer = preg_replace('~</head>~i', $accessScript . '</head>', $buffer, 1);
         }
 

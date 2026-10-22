@@ -165,7 +165,14 @@ final class Access
         if(preg_match('/^(tmp_|test_|.*_diag\.php|.*_debug\.php)/',$script) && !self::admin()) {header('Location: index.php', true, 303);exit;}
         $post=($_SERVER['REQUEST_METHOD']??'GET')==='POST';
         if($post) {
-            try {self::checkCsrf();} catch(\Throwable $e){http_response_code(419);exit($e->getMessage());}
+            try {self::checkCsrf();} catch(\Throwable $e){
+                http_response_code(419);
+                if (strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest') {
+                    header('Content-Type: application/json; charset=utf-8');
+                    exit(json_encode(['ok' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
+                }
+                exit($e->getMessage());
+            }
         }
         if($deleting && !$post && $script!=='accidente_eliminar.php' && !$pendingTaskDeletion) {
             echo '<!doctype html><html lang="es"><meta charset="utf-8"><title>Confirmar eliminación</title><body><h1>Eliminar registro</h1><p>Confirme la eliminación del registro. El historial conservará el registro eliminado.</p><form method="post">';

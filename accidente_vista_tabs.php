@@ -12798,12 +12798,20 @@ $resumenInterventionRows = [
         try {
           const formData = new FormData();
           formData.append('action', 'save_diligencia_estado_inline');
+          formData.append('_csrf', document.querySelector('meta[name="csrf-token"]')?.content || '');
           formData.append('diligencia_id', checkbox.dataset.diligenciaId || '0');
           formData.append('estado', checkbox.checked ? 'Resuelto' : 'Pendiente');
           const response = await fetch(window.location.href, {
             method: 'POST', body: formData,
             headers: {'X-Requested-With': 'XMLHttpRequest'}
           });
+          const contentType = response.headers.get('Content-Type') || '';
+          if (!contentType.includes('application/json')) {
+            if ([401, 419].includes(response.status)) {
+              throw new Error('La sesión del formulario venció. Recarga la página e intenta nuevamente.');
+            }
+            throw new Error('No se pudo actualizar la diligencia. Recarga la página e intenta nuevamente.');
+          }
           const data = await response.json();
           if (!response.ok || !data || !data.ok) {
             throw new Error(data?.message || 'No se pudo actualizar el estado de la diligencia.');
