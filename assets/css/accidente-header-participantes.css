@@ -853,7 +853,7 @@ html[data-theme-resolved="dark"] .case-overview-layout .case-facts-topline .sidp
     box-shadow:0 10px 22px -18px rgba(28,55,88,.4);
   }
   .case-overview-layout > .case-module-sidebar {
-    position:sticky;top:var(--case-sticky-offset,12px);z-index:20;
+    position:sticky;top:var(--case-sticky-offset,12px);z-index:20;align-self:start;
     max-height:calc(100dvh - var(--case-sticky-offset,12px) - 12px);
     box-sizing:border-box;overflow-y:auto;overflow-x:hidden;
     scrollbar-width:thin;scrollbar-color:#afc5df transparent;
@@ -912,3 +912,23 @@ html[data-theme-resolved="dark"] .participants-overview .participant-overview-pe
 
 .participants-overview .overview-police-group > header.overview-role-group {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .participants-overview .overview-police-group > header > h3 {margin:0;font:inherit;color:inherit}
+
+/* El acceso a Participantes permanece visible al desplazar el menú del caso. */
+@media screen and (min-width:901px) {
+  .case-overview-layout > .case-module-sidebar {overflow:visible}
+  .case-module-sidebar > #accTabs {
+    min-height:0;flex-shrink:1;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:thin;scrollbar-color:#afc5df transparent;
+  }
+  .case-module-sidebar > .case-participants-disclosure {
+    flex-shrink:0;max-height:calc((100dvh - var(--case-sticky-offset,12px) - 24px) * .6);
+    overflow-y:auto;scrollbar-width:thin;
+  }
+  .case-module-sidebar .case-participants-disclosure > summary {
+    position:sticky;top:0;z-index:2;
+    background:linear-gradient(115deg,#dde6fb,#f7f9ff);
+  }
+  html[data-theme-resolved="dark"] .case-module-sidebar .case-participants-disclosure > summary {
+    background:linear-gradient(115deg,#283a58,#21334b);
+  }
+}
