@@ -32,6 +32,7 @@
     event.preventDefault();
     event.stopPropagation();
     details.open = !details.open;
+    showParticipants();
   });
   details.append(summary, people);
   sidebar.append(details, tabs);
@@ -157,10 +158,22 @@
   const requestedTrigger = requestedTabId ? document.getElementById(requestedTabId + '-tab') : null;
   activateModuleTab(requestedTrigger || tabs.querySelector('.nav-link.active'));
   syncMobileScreen();
-  summary.addEventListener('click', (event) => {
-    event.preventDefault();
+  function showParticipants() {
+    // Citaciones y las listas embebidas ocultan el resumen dentro de esta pestaña.
+    // Al volver desde el menú lateral hay que restaurar también ese estado interno.
+    const content = document.getElementById('case-participants-content');
+    if (content) content.hidden = false;
+    for (const id of ['case-citations-panel', 'case-participant-list-panel']) {
+      const panel = document.getElementById(id);
+      if (panel) panel.hidden = true;
+    }
+    document.querySelector('.js-citations-panel')?.setAttribute('aria-expanded', 'false');
     participantPane?.classList.add('show-participants-overview');
     activateModuleTab(participantTab);
+  }
+  summary.addEventListener('click', (event) => {
+    event.preventDefault();
+    showParticipants();
   });
   document.addEventListener('click', (event) => {
     if (event.target.closest('.js-sidebar-view-person')) participantPane?.classList.remove('show-participants-overview');
