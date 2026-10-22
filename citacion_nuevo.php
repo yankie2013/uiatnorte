@@ -108,6 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \App\Support\DiligenciaDocumentLink::attach($pdo, $diligenciaId, $accidenteId, 'citacion', (int) $newId);
             \App\Support\DiligenciaDocumentLink::finish($diligenciaId, $embed);
         }
+        if ($embed && (int) ($_GET['modal'] ?? $_POST['modal'] ?? 0) === 1) {
+            echo '<!doctype html><html lang="es"><meta charset="utf-8"><p>Citación registrada correctamente.</p><script>window.parent.postMessage(' . json_encode(['type' => 'citacion.saved', 'id' => $newId], JSON_HEX_TAG | JSON_HEX_AMP) . ', window.location.origin);</script></html>';
+            exit;
+        }
         if ($baseCitacion) {
             header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : '') . '&return_to=' . urlencode($returnTo), true, 303);
             exit;
@@ -217,8 +221,6 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1020px;margin:24px
 
       <div class="c3"><label>Fecha*</label><input type="date" name="fecha" value="<?= h($data['fecha'] ?: $hoy) ?>" required></div>
       <div class="c3"><label>Hora*</label><input type="time" name="hora" value="<?= h($data['hora'] ?: '09:00') ?>" required></div>
-      <div class="c3"><label>Orden de citación</label><input type="number" name="orden_citacion" value="<?= h((string) $data['orden_citacion']) ?>" min="1"></div>
-      <div class="c3"><label>Oficio que ordena</label><input type="number" name="oficio_id" value="<?= h((string) $data['oficio_id']) ?>" placeholder="ID de oficio"></div>
 
       <div class="c12">
         <label>Lugar*</label>

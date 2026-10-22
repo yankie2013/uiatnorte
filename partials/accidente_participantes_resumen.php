@@ -158,15 +158,15 @@
         <div class="case-new-actions">
           <button class="btn-shell btn-nuevo case-new-trigger case-command-button js-case-new-trigger" type="button" aria-expanded="false" aria-controls="case-new-menu">NUEVO</button>
           <div class="case-new-menu" id="case-new-menu" hidden>
-            <a class="case-new-item" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👤</span><span>Persona involucrada<small>Ver listado de personas</small></span></a>
-            <a class="case-new-item" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🚘</span><span>Vehículo involucrado<small>Ver listado de vehículos</small></span></a>
-            <a class="case-new-item" href="familiar_fallecido_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👥</span><span>Familiar<small>Ver listado de familiares</small></span></a>
-            <a class="case-new-item" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🔑</span><span>Propietario<small>Ver listado de propietarios</small></span></a>
-            <a class="case-new-item" href="abogado_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">⚖️</span><span>Abogado<small>Ver listado de abogados</small></span></a>
-            <a class="case-new-item" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Ver listado de efectivos</small></span></a>
+            <a class="case-new-item js-participant-list" href="involucrados_personas_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👤</span><span>Persona involucrada<small>Ver listado de personas</small></span></a>
+            <a class="case-new-item js-participant-list" href="involucrados_vehiculos_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🚘</span><span>Vehículo involucrado<small>Ver listado de vehículos</small></span></a>
+            <a class="case-new-item js-participant-list" href="familiar_fallecido_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👥</span><span>Familiar<small>Ver listado de familiares</small></span></a>
+            <a class="case-new-item js-participant-list" href="propietario_vehiculo_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">🔑</span><span>Propietario<small>Ver listado de propietarios</small></span></a>
+            <a class="case-new-item js-participant-list" href="abogado_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">⚖️</span><span>Abogado<small>Ver listado de abogados</small></span></a>
+            <a class="case-new-item js-participant-list" href="policial_interviniente_listar.php?accidente_id=<?= (int) $accidente_id ?>"><span class="case-new-icon" aria-hidden="true">👮</span><span>Efectivo policial<small>Ver listado de efectivos</small></span></a>
           </div>
         </div>
-        <a class="btn-shell btn-citacion case-command-button" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4 M17 3v4 M3 11h18 M8 15h3 M8 18h6"/></svg></span>CITACIONES</a>
+        <a class="btn-shell btn-citacion case-command-button js-citations-panel" href="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes') ?>"><span class="case-command-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4 M17 3v4 M3 11h18 M8 15h3 M8 18h6"/></svg></span>CITACIONES</a>
         <div class="case-manifest-actions">
           <button class="btn-shell case-manifest-trigger case-command-button js-case-manifest-trigger" type="button" aria-expanded="false" aria-controls="case-manifest-menu"><span class="case-command-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H5v18h14V11 M9 15l1-4 9-9 3 3-9 9-4 1 M8 18h7"/></svg></span>MANIFESTACIÓN</button>
           <div class="case-new-menu case-manifest-menu" id="case-manifest-menu" hidden>
@@ -189,6 +189,15 @@
           </div>
         </div>
       </div>
+      <section id="case-citations-panel" hidden aria-label="Citaciones del expediente">
+        <button type="button" class="btn-shell" id="case-citations-back">← Participantes</button>
+        <iframe id="case-citations-frame" title="Listado de citaciones" data-src="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&amp;embed=1" style="width:100%;min-height:500px;border:0;margin-top:14px"></iframe>
+      </section>
+      <section id="case-participant-list-panel" hidden aria-label="Listado de participantes">
+        <div style="display:flex;align-items:center;gap:12px"><button type="button" class="btn-shell" id="case-participant-list-back">← Participantes</button><strong id="case-participant-list-title"></strong></div>
+        <iframe id="case-participant-list-frame" title="Listado de participantes" style="width:100%;min-height:500px;border:0;margin-top:12px"></iframe>
+      </section>
+      <div id="case-participants-content">
       <?php foreach ($summaryUnits as $unit): ?>
         <article class="participant-overview-unit" style="--unit-accent:hsl(<?= 190 + (($unitIndex++ * 47) % 100) ?> 42% 43%);">
           <header><h3><?= h($unit['ut']) ?></h3>
@@ -263,5 +272,6 @@
       foreach ($abogados as $person) if (!isset($lawyersShown[(int) $person['id']])) $renderPerson($person, 'Abogado', 'sidebar-abogado-' . (int) $person['id']);
       if (!$personas && !$summaryUnits && !$propietarios && !$policias && !$familiares && !$abogados) echo '<p>No hay participantes registrados.</p>';
       ?>
+      </div>
     </section>
 <?php })(); ?>

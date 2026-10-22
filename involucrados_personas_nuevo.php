@@ -116,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])) {
       'email' => ipost('email',''),
     ]);
 
+    \App\Support\CaseParticipantEmbed::saved();
     $postReturnTo = safe_return_to(ipost('return_to', ''), 'accidente_vista_tabs.php?accidente_id='.$result['accidente_id']);
     if($result['next']===1 && !$guidedEmbed) header('Location: involucrados_personas_nuevo.php?ok=1&accidente_id='.$result['accidente_id'].($guidedEmbed?'&guided_embed=1':'').'&return_to='.urlencode($postReturnTo));
     else header('Location: '.$postReturnTo);
@@ -232,6 +233,10 @@ body.guided-embed{background:#f3f8f6;color:#203f38;margin:0;padding:0!important;
 html[data-theme-resolved="dark"] .person-form-block{background:#172334;border-color:#40516b}
 html[data-theme-resolved="dark"] #formIP input,html[data-theme-resolved="dark"] #formIP select,html[data-theme-resolved="dark"] #formIP textarea,html[data-theme-resolved="dark"] #formIP details{background:#1e2b40;color:#e5edf7;border-color:#536783}
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<script src="assets/js/participant-embed.js" defer></script>
+<?php endif; ?>
 </head>
 <body class="<?= $guidedEmbed ? 'guided-embed' : '' ?>">
 <?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?>
@@ -241,7 +246,7 @@ html[data-theme-resolved="dark"] #formIP input,html[data-theme-resolved="dark"] 
 <a href="guardia_registro.php?accidente_id=<?= $draftId ?>&amp;paso=personas">Volver al registro guiado</a></div>
 <?php endif ?>
 
-<?php if (!$guidedEmbed) require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!$guidedEmbed && !\App\Support\CaseParticipantEmbed::active()) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
   <h1 class="title">Nuevo involucrado – Persona</h1>

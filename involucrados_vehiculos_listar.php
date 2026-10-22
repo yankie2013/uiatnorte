@@ -11,7 +11,7 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
 
 // incluir el sidebar (archivo en la misma carpeta uiatnorte)
-include __DIR__ . '/sidebar.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.php';
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function g($k,$d=null){ return isset($_GET[$k]) ? trim($_GET[$k]) : $d; }
 function placa_visible($placa){
@@ -219,6 +219,10 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
 .modal-body{ padding:0; }
 #vehiculoFrame{ width:100%; height: 72vh; border:0; display:block; }
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<script src="assets/js/participant-embed.js" defer></script>
+<?php endif; ?>
 </head>
 <body>
 <div class="wrap">
@@ -242,6 +246,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
   <?php if($ok): ?><div class="ok">Guardado correctamente.</div><?php endif; ?>
 
   <?php if($msg === 'eliminado'): ?><div class="ok">Involucrado eliminado correctamente.</div><?php endif; ?>
+  <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
   <form class="card" method="get">
     <div class="grid">
       <div class="field">
@@ -272,6 +277,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
       <a class="btn" href="<?=$base?>involucrados_vehiculos_listar.php">Limpiar</a>
     </div>
   </form>
+  <?php endif; ?>
 
   <div class="card table-wrap">
     <table>

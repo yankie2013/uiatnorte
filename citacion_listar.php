@@ -319,18 +319,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
       <div class="diligencia-lawyers"><h3>⚖️ Abogados del expediente</h3>
         <?php foreach ($groupLawyers as $lawyer): ?>
           <?php
-            $lawyerCitations = $group;
-            $lawyerNotified = $lawyerCitations !== [];
-            foreach ($lawyerCitations as $citation) {
-                $notification = $lawyerNotifications[(int) $lawyer['id']][(int) $citation['id']] ?? null;
-                if (!$notification || !hash_equals($notification['contenido_hash'], App\Support\CitacionNotificacion::hash($citation))) {
-                    $lawyerNotified = false;
-                }
-            }
+            $lawyerCitations = App\Support\CitacionNotificacion::forLawyer($group, (int) $lawyer['persona_id']);
+            $lawyerNotified = App\Support\CitacionNotificacion::isNotified($lawyerCitations, $lawyerNotifications[(int) $lawyer['id']] ?? []);
           ?>
           <div class="diligencia-lawyer"><div><strong><?= h(trim($lawyer['nombres'].' '.$lawyer['apellido_paterno'].' '.$lawyer['apellido_materno'])) ?></strong><p>Representa a <?= h($lawyer['persona_rep_nom']) ?><?= $lawyer['registro'] ? ' · '.h($lawyer['registro']) : '' ?></p></div>
             <?php if ($lawyerNotified): ?><span class="lawyer-notified" title="Documento de notificación generado">✅ Abogado notificado</span><?php else: ?>
-            <a class="btn" href="marcador_abogado.php?<?= h(http_build_query(['citacion_ids' => array_column($group, 'id')])) ?>&abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">Notificar a abogado</a>
+            <a class="btn" href="marcador_abogado.php?<?= h(http_build_query(['citacion_ids' => array_column($lawyerCitations, 'id')])) ?>&abogado_id=<?= (int)$lawyer['id'] ?>&return_to=<?= urlencode('citacion_listar.php?accidente_id='.$accidenteId) ?>">Notificar a abogado</a>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>

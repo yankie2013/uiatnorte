@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->create($data);
+        \App\Support\CaseParticipantEmbed::saved();
         header('Location: ' . $returnTo, true, 303);
         exit;
     } catch (Throwable $e) {
@@ -54,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $ctx = $service->formContext($accidenteId);
-include __DIR__ . '/sidebar.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -67,6 +68,10 @@ include __DIR__ . '/sidebar.php';
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#38bdf8;--danger:#fecaca}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1040px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(2,132,199,.12);color:var(--primary);border:1px solid rgba(2,132,199,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c6{grid-column:span 6}.c4{grid-column:span 4}.field{display:flex;flex-direction:column;gap:6px}.label{font-size:12px;color:var(--muted);font-weight:700}input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text)}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}.role{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px;color:var(--muted);margin-top:6px}.header-card{margin-bottom:14px}@media(max-width:820px){.c6,.c4{grid-column:span 12}}
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<script src="assets/js/participant-embed.js" defer></script>
+<?php endif; ?>
 </head>
 <body>
 <div class="wrap">

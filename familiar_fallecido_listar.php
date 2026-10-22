@@ -28,7 +28,7 @@ $rows = $service->listado($accidenteId);
 $ctx = $service->formContext($accidenteId);
 $returnTo = $_SERVER['REQUEST_URI'] ?? ('familiar_fallecido_listar.php?accidente_id=' . $accidenteId);
 
-include __DIR__ . '/sidebar.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -41,6 +41,10 @@ include __DIR__ . '/sidebar.php';
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#f87171;--danger:#fecaca;--ok:#bbf7d0}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1240px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(220,38,38,.12);color:var(--primary);border:1px solid rgba(220,38,38,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.btn.danger{color:var(--danger)}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin-bottom:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:16px;background:var(--card)}table{width:100%;border-collapse:collapse;min-width:1120px}th,td{padding:12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:rgba(148,163,184,.08)}tbody tr:hover{background:rgba(220,38,38,.05)}.stack-actions{display:flex;gap:8px;flex-wrap:wrap}
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<script src="assets/js/participant-embed.js" defer></script>
+<?php endif; ?>
 </head>
 <body>
 <div class="wrap">

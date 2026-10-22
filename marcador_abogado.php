@@ -788,40 +788,6 @@ input[type="date"],input[type="time"],input[type="text"],select{width:100%;borde
     <div class="error"><?= h(implode(' ', $errors)) ?></div>
   <?php endif; ?>
 
-  <div class="card" style="margin-bottom:14px;">
-    <div class="pill" style="margin-bottom:14px;">Datos preconfigurados</div>
-    <div class="grid">
-      <div class="c6 field">
-        <div class="label">Abogado</div>
-        <div class="value"><?= h($abogadoNombre !== '' ? $abogadoNombre : 'Sin nombre') ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Colegiatura / registro</div>
-        <div class="value"><?= h(trim((string) (($row['colegiatura'] ?? 'Sin colegiatura') . (($row['registro'] ?? '') !== '' ? ' · Registro ' . $row['registro'] : '')))) ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Representa a</div>
-        <div class="value"><?= h($representado !== '' ? $representado : 'Sin persona asociada') ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Condicion representada</div>
-        <div class="value"><?= h($condicionRepresentado !== '' ? $condicionRepresentado : 'Sin condicion') ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Tipo de representacion</div>
-        <div class="value"><?= h($representacion['descripcion']) ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Accidente</div>
-        <div class="value"><?= h(trim((string) (($accidente['sidpol_text'] ?? '') . ' · ' . ($accidente['fecha_accidente'] ?? '') . ' · ' . ($accidente['lugar'] ?? '')))) ?></div>
-      </div>
-      <div class="c6 field">
-        <div class="label">Modalidad / fiscalia</div>
-        <div class="value"><?= h(trim((string) (($modalidad !== '' ? $modalidad : 'Sin modalidad') . (!empty($accidente['fiscalia_nombre']) ? ' · ' . $accidente['fiscalia_nombre'] : '')))) ?></div>
-      </div>
-    </div>
-  </div>
-
   <form class="card" method="post" id="notification-form">
     <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
     <?php foreach ($cardCitacionIds as $cardCitacionId): ?><input type="hidden" name="card_citacion_ids[]" value="<?= $cardCitacionId ?>"><?php endforeach; ?>

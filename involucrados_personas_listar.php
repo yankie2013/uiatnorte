@@ -7,7 +7,7 @@ header('Content-Type: text/html; charset=utf-8');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec("SET NAMES utf8mb4");
 
-include __DIR__ . '/sidebar.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.php';
 
 function h($s)
 {
@@ -156,6 +156,10 @@ $messages = [
   .stack-actions{display:flex; gap:8px; flex-wrap:wrap}
   .muted{opacity:.85; color:var(--muted)}
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<script src="assets/js/participant-embed.js" defer></script>
+<?php endif; ?>
 </head>
 <body>
 <div class="wrap">
@@ -177,6 +181,7 @@ $messages = [
   <?php if ($ok !== ''): ?><div class="ok"><?= h($messages[$ok] ?? 'Operacion realizada correctamente.') ?></div><?php endif; ?>
   <?php if ($msg === 'eliminado'): ?><div class="ok">Involucrado eliminado correctamente.</div><?php endif; ?>
 
+  <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
   <form class="card" method="get">
     <div class="grid">
       <div>
@@ -207,6 +212,7 @@ $messages = [
       <a class="btn" href="<?= $base ?>involucrados_personas_listar.php">Limpiar</a>
     </div>
   </form>
+  <?php endif; ?>
 
   <div class="card" style="margin-top:12px">
     <table>

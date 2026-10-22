@@ -13753,5 +13753,15 @@ if ($officeDownloadUrl !== '') {
 }
 ?>
 <script src="assets/js/citacion_whatsapp.js"></script>
+<dialog id="case-citation-dialog" aria-labelledby="case-citation-dialog-title" style="width:min(1000px,94vw);max-height:92vh;padding:16px;border:1px solid #d7deea;border-radius:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><strong id="case-citation-dialog-title">Nueva citación</strong><button type="button" class="btn-shell" id="case-citation-close">Cerrar</button></div>
+  <iframe id="case-citation-create-frame" title="Nueva citación" style="width:100%;height:75vh;border:0"></iframe>
+</dialog>
+<script src="assets/js/case-citations.js"></script>
+<dialog id="case-participant-dialog" aria-labelledby="case-participant-dialog-title" style="width:min(1050px,94vw);max-height:92vh;padding:16px;border:1px solid #d7deea;border-radius:16px">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><strong id="case-participant-dialog-title">Nuevo registro</strong><button type="button" class="btn-shell" id="case-participant-dialog-close">Cerrar</button></div>
+<iframe id="case-participant-create-frame" title="Nuevo participante" style="width:100%;height:75vh;border:0"></iframe>
+</dialog>
+<script src="assets/js/case-participants.js"></script>
 </body>
 </html>
