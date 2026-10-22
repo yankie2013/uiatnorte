@@ -64,6 +64,7 @@ final class Access
     }
     public static function requireEdit(int $case): void { if(!self::canEdit($case)) throw new RuntimeException('Solo el responsable o un adjunto con colaboración activa puede editar este expediente.'); }
     public const PARTICIPANT_DELETE_TABLES = [
+        'citacion_listar.php' => 'citacion',
         'involucrados_personas_eliminar.php' => 'involucrados_personas',
         'involucrados_vehiculos_eliminar.php' => 'involucrados_vehiculos',
         'familiar_fallecido_eliminar.php' => 'familiar_fallecido',

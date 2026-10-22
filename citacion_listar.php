@@ -49,14 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     $id = (int) ($_POST['id'] ?? 0);
     try {
+        App\Support\Access::checkCsrf();
+        if (!App\Support\Access::canDeleteCaseRecord($accidenteId)) {
+            throw new RuntimeException('Solo el administrador o el JEFE EMI encargado del expediente puede eliminar esta citación.');
+        }
         if ($id > 0) {
             $citacion = $service->detail($id);
             if ($citacion !== null) {
-                $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
-                if ($eventId !== '' && !$calendarOwner) {
-                    throw new RuntimeException('Esta citación está vinculada al calendario de otro usuario; solo su propietario puede eliminarla.');
+                if ((int) $citacion['accidente_id'] !== $accidenteId) {
+                    throw new RuntimeException('La citación no pertenece a este expediente.');
                 }
-                if ($eventId !== '') {
+                $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
+                if ($eventId !== '' && $calendarOwner) {
                     gc_eliminar_evento_citacion($eventId);
                 }
             }
@@ -293,10 +297,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
                 <a class="btn" href="citacion_leer.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>" title="Ver citación" aria-label="Ver citación">👁️</a>
                 <a class="btn" href="citacion_editar.php?id=<?= (int) $row['id'] ?>&return=<?= urlencode('citacion_listar.php?accidente_id=' . $accidenteId) ?>" title="Editar citación" aria-label="Editar citación">✏️</a>
                 <a class="btn" href="citacion_diligencia.php?citacion_id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener" title="Descargar Word" aria-label="Descargar Word">⬇️</a>
-                <?php if ($calendarEventId !== '' && !$calendarOwner): ?>
-                  <span class="muted">Evento en calendario de otro usuario</span>
-                <?php else: ?>
-                <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
+                <?php if (App\Support\Access::canDeleteCaseRecord($accidenteId)): ?>
+                <form method="post" onsubmit="return confirm('Eliminar esta citacion<?= $calendarEventId !== '' && $calendarOwner ? ' y tambien su evento en Google Calendar' : '' ?>?');" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
                   <input type="hidden" name="action" value="delete">
                   <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
                   <?php if ($returnTo !== ''): ?><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><?php endif; ?>

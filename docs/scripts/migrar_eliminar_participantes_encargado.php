@@ -2,7 +2,7 @@
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require __DIR__ . '/../../db.php';
-// Solo modifica permisos de los seis tipos de participantes; conserva auditoría.
+// Solo modifica permisos de participantes y citaciones; conserva auditoría.
 $tables = array_values(\App\Support\Access::PARTICIPANT_DELETE_TABLES);
 $owner = "EXISTS(SELECT 1 FROM accidentes a JOIN usuarios u ON u.id=@actor_id AND u.activo=1 AND u.rol='jefe_emi' WHERE a.id=OLD.accidente_id AND a.eliminado_en IS NULL AND a.responsable_id=u.id)";
 $definitions = [];
@@ -20,4 +20,4 @@ foreach ($definitions as $name => [$original, $updated]) {
     try { $pdo->exec($updated); }
     catch (Throwable $e) { $pdo->exec($original); throw $e; }
 }
-echo "Permisos de eliminación de participantes actualizados. Auditoría conservada.\n";
+echo "Permisos de eliminación de participantes y citaciones actualizados. Auditoría conservada.\n";
