@@ -53,18 +53,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
         if (!App\Support\Access::canDeleteCaseRecord($accidenteId)) {
             throw new RuntimeException('Solo el administrador o el JEFE EMI encargado del expediente puede eliminar esta citación.');
         }
-        if ($id > 0) {
-            $citacion = $service->detail($id);
-            if ($citacion !== null) {
-                if ((int) $citacion['accidente_id'] !== $accidenteId) {
-                    throw new RuntimeException('La citación no pertenece a este expediente.');
-                }
-                $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
-                if ($eventId !== '' && $calendarOwner) {
-                    gc_eliminar_evento_citacion($eventId);
-                }
+        $ids = array_values(array_unique(array_map('intval', (array) ($_POST['citacion_ids'] ?? [$id]))));
+        if (!$ids || min($ids) <= 0 || count($ids) > 500) {
+            throw new RuntimeException('Selecciona una citación válida.');
+        }
+        $events = [];
+        foreach ($ids as $deleteId) {
+            $citacion = $service->detail($deleteId);
+            if ($citacion === null || (int) $citacion['accidente_id'] !== $accidenteId) {
+                throw new RuntimeException('La citación no pertenece a este expediente o ya no existe.');
             }
-            $service->delete($id, $accidenteId);
+            $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
+            if ($eventId !== '') {
+                if (!$calendarOwner) {
+                    throw new RuntimeException('Solo el propietario del calendario puede eliminar esta citación y su evento vinculado.');
+                }
+                $events[$eventId] = true;
+            }
+        }
+        // Completar la eliminación remota antes de quitar los registros locales.
+        foreach (array_keys($events) as $eventId) {
+            gc_eliminar_evento_citacion($eventId);
+        }
+        $pdo->beginTransaction();
+        try {
+            foreach ($ids as $deleteId) $service->delete($deleteId, $accidenteId);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
         }
         header('Location: citacion_listar.php?accidente_id=' . $accidenteId . ($embed ? '&embed=1' : '') . ($returnTo !== '' ? '&return_to=' . urlencode($returnTo) : ''));
         exit;
@@ -225,6 +242,29 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
 .citacion-actions .muted{font-size:10px;max-width:85px}
 .citacion-actions .btn.whatsapp{color:#178248;border-color:#9fe0b7;background:#f0fff5}
 .citacion-actions .btn.whatsapp:hover{background:#dcfce7;border-color:#25d366}
+/* Tres tarjetas por fila en el panel del expediente. */
+.diligencia-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.diligencia-header{grid-template-columns:40px minmax(0,1fr);padding:11px;gap:8px}
+.diligencia-header .diligencia-date{padding:7px 3px}
+.diligencia-header .diligencia-date strong{font-size:24px}
+.diligencia-header .diligencia-heading h2{font-size:12px;line-height:1.3}
+.diligencia-header .diligencia-heading p{font-size:10.5px;line-height:1.4}
+.diligencia-time{font-size:10px;padding:3px 6px}
+.citation-topline{flex-wrap:wrap;gap:4px}
+.diligencia-header .add-participant{font-size:10px;padding:6px}
+.delete-citation-card{grid-column:1/-1;margin:0}
+.delete-citation-card .btn{font-size:10px;padding:5px 8px}
+.citacion-person{padding:10px;grid-template-columns:minmax(0,1fr);gap:6px}
+.citacion-person-name strong{font-size:11px}
+.citacion-actions{grid-column:1;grid-row:3;justify-self:end}
+.citacion-person-info p{font-size:10.5px;margin:4px 0 0}
+.diligencia-lawyers{padding:10px}
+.diligencia-lawyers h3,.diligencia-lawyer strong{font-size:11px}
+.diligencia-lawyer p{font-size:10px;overflow-wrap:anywhere}
+.diligencia-lawyer{gap:6px;padding:5px 0}
+.diligencia-lawyer .btn{font-size:10px;padding:6px}
+@media(max-width:650px){.diligencia-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.diligencia-cards{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -278,6 +318,16 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
           <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
         </div>
         <a class="btn add-participant" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
+        <?php if (App\Support\Access::canDeleteCaseRecord($accidenteId)): ?>
+        <form method="post" class="delete-citation-card" onsubmit="return confirm('¿Eliminar esta tarjeta con todas sus citaciones y sus eventos vinculados en Google Calendar?');">
+          <input type="hidden" name="_csrf" value="<?= h(App\Support\Access::csrf()) ?>">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
+          <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+          <?php foreach ($group as $participant): ?><input type="hidden" name="citacion_ids[]" value="<?= (int) $participant['id'] ?>"><?php endforeach; ?>
+          <button class="btn danger" type="submit" title="Eliminar tarjeta y eventos de Google Calendar">Eliminar evento</button>
+        </form>
+        <?php endif; ?>
       </header>
       <div class="diligencia-participants">
         <?php foreach ($group as $row): ?>

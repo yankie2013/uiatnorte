@@ -72,6 +72,7 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') === 'delete') {
     $deleteId = (int) ($_POST['id'] ?? 0);
     try {
+        Access::checkCsrf();
         $citacion = $service->detail($deleteId);
         if ($citacion === null) {
             throw new RuntimeException('La citación ya no existe.');
@@ -80,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') =
             throw new RuntimeException('La citación no pertenece al accidente actual.');
         }
 
+        if (!Access::canDeleteCaseRecord((int) $citacion['accidente_id'])) {
+            throw new RuntimeException('No tienes permiso para eliminar esta citación.');
+        }
         $eventId = trim((string) ($citacion['google_calendar_event_id'] ?? ''));
         if ($eventId !== '' && !$calendarOwner) {
             throw new RuntimeException('Esta citación está vinculada al calendario de otro usuario; solo su propietario puede eliminarla.');
@@ -235,6 +239,12 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
 .agenda-sub{font-size:13px;line-height:1.35;color:var(--muted)}
 .agenda-actions{display:flex;gap:8px;flex-wrap:wrap}
 .agenda-empty{padding:14px;border:1px dashed var(--border);border-radius:14px;color:var(--muted);font-size:13px}
+.agenda-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+.agenda-item{min-width:0;padding:10px;gap:6px;overflow-wrap:anywhere}
+.agenda-title{font-size:12px}.agenda-sub{font-size:11px}.agenda-chip{font-size:10px;padding:3px 6px}
+.agenda-actions{gap:5px}.agenda-actions .btn{font-size:10px;padding:6px 8px}
+@media(max-width:700px){.agenda-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.agenda-list{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -320,8 +330,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
               <a class="btn" href="<?= h($citacionUrl) ?>">Ver citación</a>
               <?php if (!empty($row['accidente_id'])): ?><a class="btn" href="<?= h($casoUrl) ?>">Ir al caso</a><?php endif; ?>
               <?php if ($calendarOwner && $calendarEventLink !== ''): ?><a class="btn" href="<?= h($calendarEventLink) ?>" target="_blank" rel="noopener">Ver evento</a><?php endif; ?>
-              <?php if ($calendarEventId !== '' && !$calendarOwner): ?><span class="muted">Evento en calendario de otro usuario</span><?php else: ?>
+              <?php if ($calendarEventId !== '' && !$calendarOwner): ?><span class="muted">Evento en calendario de otro usuario</span><?php elseif (Access::canDeleteCaseRecord((int) $row['accidente_id'])): ?>
               <form method="post" onsubmit="return confirm('¿Eliminar esta citación<?= $calendarEventId !== '' ? ' y también su evento en Google Calendar' : '' ?>?');" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<?= h(Access::csrf()) ?>">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= (int) ($row['id'] ?? 0) ?>">
                 <?php if ($accidenteId > 0): ?><input type="hidden" name="accidente_id" value="<?= (int) $accidenteId ?>"><?php endif; ?>

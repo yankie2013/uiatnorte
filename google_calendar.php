@@ -128,5 +128,12 @@ function gc_eliminar_evento_citacion(string $eventId): void
 
     $client = gc_get_client();
     $service = new Google_Service_Calendar($client);
-    $service->events->delete(GCAL_CITACIONES_ID, $eventId);
+    try {
+        $service->events->delete(GCAL_CITACIONES_ID, $eventId);
+    } catch (Google_Service_Exception $e) {
+        // Permitir reintentos si el evento ya fue eliminado en Google Calendar.
+        if (!in_array((int) $e->getCode(), [404, 410], true)) {
+            throw $e;
+        }
+    }
 }
