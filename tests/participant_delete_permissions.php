@@ -16,6 +16,17 @@ try {
         $case = Access::participantDeletionCase($script, (int)$fixture['id']);
         $assert($case === (int)$fixture['accidente_id'], 'Resolver el expediente desde el registro.');
         $assert(Access::canDeleteCaseRecord($case), 'Responsable autorizado.');
+        if ($script === 'citacion_listar.php') {
+            $groupCase = Access::participantDeletionCase($script, 0, [(int) $fixture['id']]);
+            $assert($groupCase === $case && Access::canDeleteCaseRecord($groupCase), 'Jefe responsable puede eliminar la tarjeta completa sin ID individual.');
+            $assert(Access::participantDeletionCase($script, 0, [0]) === 0, 'Rechazar IDs inválidos.');
+            $assert(Access::participantDeletionCase($script, 0, [(int) $fixture['id'], PHP_INT_MAX]) === 0, 'Rechazar tarjetas con registros inexistentes.');
+            $other = $pdo->prepare('SELECT id FROM citacion WHERE accidente_id <> ? LIMIT 1');
+            $other->execute([$case]);
+            if ($otherId = $other->fetchColumn()) {
+                $assert(Access::participantDeletionCase($script, 0, [(int) $fixture['id'], (int) $otherId]) === 0, 'Rechazar citaciones de distintos expedientes.');
+            }
+        }
         $_SESSION['user']['rol']='adjunto';
         $assert(!Access::canDeleteCaseRecord($case), 'Adjunto bloqueado.');
         $_SESSION['user']=['id'=>0,'rol'=>'jefe_emi'];

@@ -65,6 +65,7 @@ final class Access
     public static function requireEdit(int $case): void { if(!self::canEdit($case)) throw new RuntimeException('Solo el responsable o un adjunto con colaboración activa puede editar este expediente.'); }
     public const PARTICIPANT_DELETE_TABLES = [
         'citacion_listar.php' => 'citacion',
+        'citacion_rapida.php' => 'citacion',
         'involucrados_personas_eliminar.php' => 'involucrados_personas',
         'involucrados_vehiculos_eliminar.php' => 'involucrados_vehiculos',
         'familiar_fallecido_eliminar.php' => 'familiar_fallecido',
@@ -72,8 +73,19 @@ final class Access
         'abogado_eliminar.php' => 'abogados',
         'policial_interviniente_eliminar.php' => 'policial_interviniente',
     ];
-    public static function participantDeletionCase(string $script, int $id): int {
+    public static function participantDeletionCase(string $script, int $id, array $citationIds = []): int {
         $table = self::PARTICIPANT_DELETE_TABLES[$script] ?? null;
+        if ($script === 'citacion_listar.php' && $citationIds !== []) {
+            $ids = array_values(array_unique(array_map('intval', $citationIds)));
+            if (count($ids) > 500 || min($ids) <= 0) return 0;
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $s = Database::connection()->prepare("SELECT id, accidente_id FROM citacion WHERE id IN ($marks)");
+            $s->execute($ids);
+            $rows = $s->fetchAll(PDO::FETCH_ASSOC);
+            $cases = array_unique(array_column($rows, 'accidente_id'));
+            // Resolver desde los registros, nunca desde el expediente enviado por el cliente.
+            return count($rows) === count($ids) && count($cases) === 1 ? (int) reset($cases) : 0;
+        }
         if ($table === null || $id <= 0) return 0;
         $s = Database::connection()->prepare("SELECT accidente_id FROM `$table` WHERE id=?");
         $s->execute([$id]);
@@ -157,7 +169,7 @@ final class Access
             if (!self::canDeletePendingTask((int) $task->fetchColumn())) { http_response_code(403); exit('Solo el encargado del expediente puede eliminar esta tarea pendiente.'); }
         }
         $participantDeletion = $deleting && isset(self::PARTICIPANT_DELETE_TABLES[$script]);
-        if ($participantDeletion && !self::canDeleteCaseRecord(self::participantDeletionCase($script, (int) ($_GET['id'] ?? $_POST['id'] ?? 0)))) {
+        if ($participantDeletion && !self::canDeleteCaseRecord(self::participantDeletionCase($script, (int) ($_GET['id'] ?? $_POST['id'] ?? 0), (array) ($_POST['citacion_ids'] ?? [])))) {
             http_response_code(403); exit('Solo el administrador o el JEFE EMI encargado del expediente puede eliminar este registro.');
         }
         if($deleting && !self::admin() && !$pendingTaskDeletion && !$participantDeletion) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
