@@ -43,6 +43,30 @@ function gc_get_client() {
     return $client;
 }
 
+/** Construye un rango RFC3339 a partir de horas del formulario o de MySQL. */
+function gc_rango_evento_citacion(string $fecha, string $hora, int $duracion): array
+{
+    $fecha = trim($fecha);
+    $hora = trim($hora);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D', $fecha)
+        || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/D', $hora)) {
+        throw new InvalidArgumentException('Fecha u hora inválida para el evento.');
+    }
+    if ($duracion <= 0) {
+        throw new InvalidArgumentException('La duración del evento debe ser mayor a cero.');
+    }
+    $format = strlen($hora) === 5 ? '!Y-m-d H:i' : '!Y-m-d H:i:s';
+    $start = DateTimeImmutable::createFromFormat($format, $fecha . ' ' . $hora, new DateTimeZone('America/Lima'));
+    $errors = DateTimeImmutable::getLastErrors();
+    if ($start === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+        throw new InvalidArgumentException('Fecha u hora inválida para el evento.');
+    }
+    return [
+        'start' => $start->format(DateTimeInterface::RFC3339),
+        'end' => $start->modify('+' . $duracion . ' minutes')->format(DateTimeInterface::RFC3339),
+    ];
+}
+
 /**
  * Crea un evento de citación en Google Calendar.
  *
@@ -62,12 +86,7 @@ function gc_crear_evento_citacion_detalle(array $opts): array {
         throw new InvalidArgumentException('Faltan fecha u hora para el evento.');
     }
 
-    // Construir inicio y fin
-    // Fecha: Y-m-d, Hora: H:i → 2025-11-15T09:00:00
-    $startDateTime = $fecha . 'T' . $hora . ':00';
-    $startTs = strtotime($fecha . ' ' . $hora);
-    $endTs   = $startTs + $duracion * 60;
-    $endDateTime = date('Y-m-d\TH:i:s', $endTs);
+    $rango = gc_rango_evento_citacion((string) $fecha, (string) $hora, $duracion);
 
     $client  = gc_get_client();
     $service = new Google_Service_Calendar($client);
@@ -77,11 +96,11 @@ function gc_crear_evento_citacion_detalle(array $opts): array {
         'location'    => $lugar,
         'description' => $descripcion,
         'start' => [
-            'dateTime' => $startDateTime,
+            'dateTime' => $rango['start'],
             'timeZone' => 'America/Lima',
         ],
         'end' => [
-            'dateTime' => $endDateTime,
+            'dateTime' => $rango['end'],
             'timeZone' => 'America/Lima',
         ],
     ]);
