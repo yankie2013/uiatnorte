@@ -1,6 +1,12 @@
 <?php
 use App\Support\Access;
 $topbarUser=Access::actor();
+$topbarSearchUrl='accidente_listar.php?'.http_build_query([
+    'ver_todos'=>'1', 'estado'=>'todos', 'anio'=>'',
+    'q'=>'', 'desde'=>'', 'hasta'=>'', 'distrito'=>'', 'comisaria_id'=>'',
+    'persona'=>'', 'vehiculo'=>'', 'registro_sidpol'=>'', 'nro_informe_policial'=>'',
+    'tipo_registro'=>'', 'favoritos'=>'0',
+]);
 $topbarName=trim((string)($topbarUser['nombre']??'Usuario'));
 $topbarRole=Access::ROLES[(string)($topbarUser['rol']??'')]??'Personal autorizado';
 $topbarInitial=function_exists('mb_substr')?mb_strtoupper(mb_substr($topbarName,0,1,'UTF-8'),'UTF-8'):strtoupper(substr($topbarName,0,1));
@@ -20,7 +26,7 @@ $topbarBreadcrumbs=$userTopbarBreadcrumbs??[
     <?php endforeach; ?>
   </nav>
   <div class="uiat-user-topbar-right">
-    <a class="uiat-user-search" href="gestion_expedientes.php" aria-label="Buscar expediente">
+    <a class="uiat-user-search" href="<?= $topbarEscape($topbarSearchUrl) ?>" aria-label="Buscar expediente">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Buscar expediente</span>
     </a>
     <details class="uiat-user-menu">
