@@ -1703,6 +1703,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </div>
   <?php endif; ?>
 
+  <div id="accident-filter-results">
   <?php if (!$districtSelected && $favoritos !== '1' && $verTodos !== '1'): ?>
   <section class="card browse-panel district-browser-home" aria-label="Seleccionar distrito">
     <div class="district-sidebar" aria-label="Distritos">
@@ -2114,6 +2115,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
     </main>
   </div>
   <?php endif; ?>
+  </div>
 </div>
 
 <script>
@@ -2279,17 +2281,53 @@ document.querySelectorAll('.select-folder').forEach((select) => {
   setAdvancedOpen(false);
 
   let submitTimer = null;
-  const submitNow = () => form.submit();
-  const submitSoon = () => {
+  let controller;
+  let revision = 0;
+  const status = document.createElement('div');
+  status.className = 'small';
+  status.setAttribute('role', 'status');
+  form.append(status);
+  const invalidate = () => {
     clearTimeout(submitTimer);
-    submitTimer = setTimeout(submitNow, 450);
+    controller?.abort();
+    revision++;
   };
-
-  form.querySelectorAll('input[type="text"]').forEach(input=>{
+  const submitNow = async () => {
+    invalidate();
+    const current = revision;
+    controller = new AbortController();
+    const url = new URL(form.action || location.href);
+    url.search = new URLSearchParams(new FormData(form)).toString();
+    status.textContent = 'Filtrando…';
+    try {
+      const response = await fetch(url, {signal: controller.signal});
+      if (!response.ok) throw new Error();
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const results = doc.getElementById('accident-filter-results');
+      if (!results) throw new Error();
+      if (current !== revision) return;
+      document.querySelector('.estado-menu')?.remove();
+      document.getElementById('accident-filter-results').replaceWith(results);
+      initAccidentResults();
+      history.replaceState(null, '', url);
+      status.textContent = '';
+    } catch (error) {
+      if (error.name !== 'AbortError' && current === revision) {
+        status.textContent = 'No se pudo filtrar. Intenta nuevamente.';
+      }
+    }
+  };
+  const submitSoon = (event) => {
+    invalidate();
+    if (!event.isComposing) submitTimer = setTimeout(submitNow, 300);
+  };
+  form.addEventListener('submit', event => { event.preventDefault(); submitNow(); });
+  form.querySelectorAll('input:not([type="hidden"])').forEach(input => {
     input.addEventListener('input', submitSoon);
+    input.addEventListener('compositionstart', invalidate);
+    input.addEventListener('compositionend', submitSoon);
   });
-
-  form.querySelectorAll('select').forEach(select=>{
+  form.querySelectorAll('select').forEach(select => {
     select.addEventListener('change', submitNow);
   });
 
@@ -2317,6 +2355,13 @@ document.querySelectorAll('.select-folder').forEach((select) => {
   });
 })();
 
+let accidentResultsController;
+function initAccidentResults() {
+  accidentResultsController?.abort();
+  accidentResultsController = new AbortController();
+  document.querySelectorAll('.select-folder').forEach(select => {
+    select.dataset.lastValue = select.value || '';
+  });
 // Toda la tarjeta abre el detalle, excepto cuando se usa uno de sus controles.
 (function(){
   const interactiveSelector = 'a, button, select, input, form, label, .estado-badge, .acc-actions-menu';
@@ -2367,11 +2412,11 @@ document.querySelectorAll('.select-folder').forEach((select) => {
   document.addEventListener('click', (e)=>{
     if (e.target.closest('.acc-top-actions')) return;
     closeAll();
-  });
+  }, {signal: accidentResultsController.signal});
   document.addEventListener('keydown', (e)=>{
     if (e.key !== 'Escape') return;
     closeAll();
-  });
+  }, {signal: accidentResultsController.signal});
 })();
 
 // MenÃº estilo badge para cambiar estado
@@ -2407,7 +2452,7 @@ document.querySelectorAll('.select-folder').forEach((select) => {
 
       document.body.appendChild(m);
       abierto = m;
-      setTimeout(()=>document.addEventListener('click', onClickFuera),0);
+      setTimeout(()=>{ if (!accidentResultsController.signal.aborted) document.addEventListener('click', onClickFuera, {signal: accidentResultsController.signal}); },0);
 
       [...m.querySelectorAll('.opt')].forEach(opt=>{
         if (opt.dataset.val === actual) opt.style.boxShadow = '0 0 0 2px rgba(99,102,241,.35)';
@@ -2684,6 +2729,9 @@ document.querySelectorAll('.col-folder .prio-btn').forEach(btn=>{
   }
 
 })();
+}
+initAccidentResults();
+
 </script>
 <script>
 (() => {
