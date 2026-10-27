@@ -1,5 +1,5 @@
 // Bump this name whenever the app shell/service-worker caching strategy changes.
-const STATIC_CACHE = "uiat-static-v5";
+const STATIC_CACHE = "uiat-static-v6";
 const PUBLIC_PAGES_CACHE = "uiat-public-pages-v1";
 const ACTIVE_CACHES = [STATIC_CACHE, PUBLIC_PAGES_CACHE];
 const STATIC_ASSETS = [
@@ -81,6 +81,11 @@ self.addEventListener("fetch", (event) => {
   }
 
   const url = new URL(request.url);
+  // API responses must never enter CacheStorage, regardless of request destination.
+  if (/\/api\//i.test(url.pathname)) {
+    return;
+  }
+
   if (url.origin !== self.location.origin) {
     return;
   }

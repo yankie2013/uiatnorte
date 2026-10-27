@@ -18,13 +18,15 @@ final class LoginService
     public static function beginSession(array $user): void
     {
         session_regenerate_id(true);
-        unset($_SESSION['user'],$_SESSION['id'],$_SESSION['rol'],$_SESSION['password_setup']);
+        unset($_SESSION['user'],$_SESSION['id'],$_SESSION['rol'],$_SESSION['password_setup'],$_SESSION['api_authenticated_at'],$_SESSION['api_last_seen']);
         if((int)$user['must_change_password']) {
             $_SESSION['password_setup']=['id'=>(int)$user['id'],'credential'=>hash('sha256',$user['pass_hash']),'expires'=>time()+900];
             return;
         }
         $_SESSION['user']=array_intersect_key($user,array_flip(['id','nombre','grado','unidad','email','rol','auth_version']));
         $_SESSION['id']=(int)$user['id'];$_SESSION['rol']=$user['rol'];
+        $_SESSION['api_authenticated_at'] = time();
+        $_SESSION['api_last_seen'] = time();
     }
     public static function pendingSetup(): ?array
     {
