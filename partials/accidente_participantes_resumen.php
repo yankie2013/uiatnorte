@@ -225,6 +225,20 @@
               <a class="overview-add-related" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_inv_id=<?= (int) $vehicle['inv_vehiculo_id'] ?>">+ Propietario</a>
             <?php endif; ?></div>
           <?php endforeach; ?>
+          <?php
+          $unitDrivers = array_values(array_filter($unit['personas'], 'is_conductor'));
+          ?>
+          <span class="overview-unit-drivers">
+            <?php if ($unitDrivers): ?>
+              <span><?= count($unitDrivers) === 1 ? 'Conductor:' : 'Conductores:' ?></span>
+              <?php foreach ($unitDrivers as $driverIndex => $driver): ?>
+                <?php $driverAge = trim((string) ($driver['edad'] ?? '')); ?>
+                <?= $driverIndex > 0 ? ' · ' : '' ?><strong><?= h(person_label($driver)) ?> (<?= h($driverAge !== '' ? $driverAge . ' años' : 'edad no registrada') ?>)</strong>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <span>Conductor no registrado</span>
+            <?php endif; ?>
+          </span>
           <?php $renderFamilyActions($unit['personas']); ?></header>
           <?php if (!$unit['personas']): ?>
             <p class="overview-person-meta">UT registrada. Pendiente de agregar conductor, pasajeros u ocupantes.</p>

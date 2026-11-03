@@ -390,6 +390,10 @@ html[data-theme-resolved="dark"] .participant-overview-person p {color:#b0c3da}
 .participants-overview .participant-overview-person.is-fatal strong {color:#bc2923}
 .participants-overview .participant-overview-person p {margin:2px 0 0;font-size:10px;line-height:1.35;font-weight:600}
 .participants-overview .case-person-actions {gap:5px;flex-wrap:wrap}
+.participants-overview .overview-unit-drivers {display:flex;align-items:baseline;flex-wrap:wrap;gap:4px;min-width:0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+@media screen and (max-width:760px) {
+  .case-overview-layout .participants-overview .participant-overview-unit > header > .overview-unit-drivers {grid-column:1 / -1}
+}
 .participants-overview .case-person-view,.participants-overview .btn-shell {margin:0;padding:3px 7px;font-size:10px;min-height:0;white-space:nowrap;box-shadow:none}
 html[data-theme-resolved="dark"] #participantes > .participants-overview {background:#17283a}
 html[data-theme-resolved="dark"] .participants-overview .participant-overview-unit,html[data-theme-resolved="dark"] .participants-overview .participant-overview-unit > header {background:transparent}
