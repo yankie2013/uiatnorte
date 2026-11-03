@@ -1,0 +1,17 @@
+UPDATE personas SET nombres='José Miguel',apellido_paterno='Fuente',apellido_materno='Peña' WHERE id=1;
+UPDATE personas SET nombres='José Miguel',apellido_paterno='Fuente',apellido_materno='Ajeno' WHERE id=2;
+UPDATE personas SET nombres='Mario',apellido_paterno='Bravo',apellido_materno='Ensayo' WHERE id=3;
+UPDATE personas SET nombres='Lucía',apellido_paterno='Delta',apellido_materno='Ensayo' WHERE id=4;
+INSERT INTO personas(id,nombres,apellido_paterno,apellido_materno,num_doc) VALUES(5,'Alonso','Fuente','Pérez','NO LEER'),(6,'Ana','O''Connor','Test','NO LEER');
+INSERT INTO accidentes(id,sidpol,registro_sidpol,fecha_accidente,estado,lugar,responsable_id,cod_dep,cod_prov,cod_dist,comisaria_id) VALUES(4,'FIC-004','TEST-004','2000-01-02','Pendiente','Ficticio',10,'99','98','96',2),(5,'FIC-005','TEST-005','2000-01-03','Pendiente','Ficticio',10,'99','98','97',1);
+UPDATE accidentes SET cod_dep='99',cod_prov='98',cod_dist='97',comisaria_id=1 WHERE id IN (2,3);
+INSERT INTO comisarias VALUES(2,'Comisaría Las Flores');
+INSERT INTO ubigeo_distrito VALUES('99','98','96','Distrito Del Ensayo'),('99','97','97','Distrito Cruzado');
+INSERT INTO involucrados_personas(id,accidente_id,persona_id,rol_id) VALUES(6,4,5,1),(7,5,6,1),(8,1,1,1);
+INSERT INTO vehiculos(id,placa) VALUES(301,'XYZ-123'),(302,'OCULTO-001');
+INSERT INTO involucrados_vehiculos VALUES(41,4,301,NULL),(51,5,301,NULL),(42,1,302,'2000-01-01');
+ALTER TABLE involucrados_personas ADD COLUMN eliminado_en DATETIME;
+INSERT INTO personas(id,nombres,apellido_paterno) VALUES(7,'Persona','Revocada');
+INSERT INTO involucrados_personas(id,accidente_id,persona_id,rol_id,eliminado_en) VALUES(9,1,7,1,'2000-01-01');
+DROP VIEW involucrados_personas_activos;
+CREATE VIEW involucrados_personas_activos AS SELECT ip.* FROM involucrados_personas ip JOIN accidentes_activos a ON a.id=ip.accidente_id WHERE ip.eliminado_en IS NULL;

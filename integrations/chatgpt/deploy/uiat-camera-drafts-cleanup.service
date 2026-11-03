@@ -1,0 +1,14 @@
+[Unit]
+Description=Retirar borradores temporales caducados de UIAT
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+UMask=0077
+ExecStart=/usr/bin/php /opt/uiat-chatgpt-connector/deploy/purge-camera-drafts.php --limpiar
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/uiat-chatgpt-connector/borradores
+InaccessiblePaths=/var/www/uiatnorte /etc/uiat-chatgpt-connector /var/lib/uiat-chatgpt-connector/oauth.sqlite /var/lib/uiat-chatgpt-connector/audit.jsonl

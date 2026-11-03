@@ -1,0 +1,13 @@
+{
+    "name": "uiat/oauth-local-prototype",
+    "require": {
+        "league/oauth2-server": "^9",
+        "nyholm/psr7": "^1",
+        "nyholm/psr7-server": "^1"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3.6"
+        }
+    }
+}

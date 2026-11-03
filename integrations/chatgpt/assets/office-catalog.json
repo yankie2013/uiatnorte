@@ -1,0 +1,313 @@
+[
+  {
+    "tipo": "camaras",
+    "nombre": "Solicitud de grabaciones de cámaras",
+    "alias": [
+      "cámaras",
+      "videovigilancia"
+    ],
+    "plantilla": "oficio_camaras.docx",
+    "sha256_original": "c15bfb577f89edf8977cb12555e708fdd336e55691ae7754b5f0f6f61d1bcaa0",
+    "marcadores": [
+      "accidente_consecuencia",
+      "accidente_fecha_abrev",
+      "accidente_lugar",
+      "accidente_modalidad",
+      "accidente_referencia",
+      "entidad_nombre",
+      "fiscalia_nombre",
+      "nombre_oficial_ano",
+      "oficio_anio",
+      "oficio_asunto",
+      "oficio_fecha",
+      "oficio_grado_cargo",
+      "oficio_numero",
+      "oficio_persona_destino",
+      "oficio_rango_desde",
+      "oficio_rango_hasta"
+    ],
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ]
+  },
+  {
+    "tipo": "peritaje",
+    "nombre": "Solicitud de peritaje vehicular",
+    "alias": [
+      "peritaje",
+      "constatación de daños"
+    ],
+    "plantilla": "oficio_peritaje.docx",
+    "recursos_graficos": 4,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "69f908c2cdbebbfd4d685c9d8deb3b5399e951777d1bf66fd494bdecc9e2ec26",
+    "campos": [
+      "accidente_distrito",
+      "accidente_fecha",
+      "accidente_hora",
+      "accidente_lugar",
+      "accidente_modalidades",
+      "conductor_nombre",
+      "destino_entidad",
+      "destino_grado_cargo",
+      "destino_persona",
+      "destino_subentidad",
+      "localidad_emision",
+      "nombre_ano",
+      "oficio_asunto",
+      "oficio_fecha",
+      "oficio_titulo",
+      "propietario_nombre",
+      "veh_anio",
+      "veh_carroceria",
+      "veh_categoria",
+      "veh_color",
+      "veh_marca",
+      "veh_modelo",
+      "veh_placa"
+    ]
+  },
+  {
+    "tipo": "protocolo_necropsia",
+    "nombre": "Solicitud de protocolo de necropsia",
+    "alias": [
+      "protocolo de necropsia",
+      "necropsia"
+    ],
+    "plantilla": "oficio_protocolo.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "3961d9fdb6f7f0814496e238b9cefa079b65db281fbc528a22113d58806cd87e",
+    "campos": [
+      "constancia_adjuntos",
+      "entidad_nombre",
+      "fallecido_apellidos",
+      "fallecido_edad",
+      "fallecido_nombres",
+      "fecha_informe_pericial",
+      "fecha_internamiento",
+      "fiscalia_nombre",
+      "localidad_emision",
+      "nombre_oficial_ano",
+      "numero_pericial",
+      "oficio_anio",
+      "oficio_fecha",
+      "oficio_grado_cargo",
+      "oficio_numero",
+      "oficio_persona_destino",
+      "referencia_disposicion_fiscal"
+    ]
+  },
+  {
+    "tipo": "remitir_informe_policial",
+    "nombre": "Remisión de informe policial",
+    "alias": [
+      "remitir informe policial",
+      "remisión de informe"
+    ],
+    "plantilla": "oficio_remitir_diligencia.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "0f4daded95f2cde8a02895f9a162e622cdbb50d34c11eeb93ecbd367b104c405",
+    "campos": [
+      "anio",
+      "cuerpo_remision",
+      "entidad_destino",
+      "folios",
+      "grado_cargo",
+      "localidad_emision",
+      "motivo",
+      "nombre_oficial_ano",
+      "numero",
+      "oficio_fecha",
+      "persona_destino",
+      "referencia_texto"
+    ]
+  },
+  {
+    "tipo": "remitir_diligencias",
+    "nombre": "Remisión de diligencias",
+    "alias": [
+      "remitir diligencias",
+      "remisión de diligencias"
+    ],
+    "plantilla": "oficio_remitir_diligencia.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "0f4daded95f2cde8a02895f9a162e622cdbb50d34c11eeb93ecbd367b104c405",
+    "campos": [
+      "anio",
+      "cuerpo_remision",
+      "entidad_destino",
+      "folios",
+      "grado_cargo",
+      "localidad_emision",
+      "motivo",
+      "nombre_oficial_ano",
+      "numero",
+      "oficio_fecha",
+      "persona_destino",
+      "referencia_texto"
+    ]
+  },
+  {
+    "tipo": "solicitar_diligencias_comisaria",
+    "nombre": "Solicitud de información de diligencias a comisaría",
+    "alias": [
+      "solicitar diligencias",
+      "información de diligencias"
+    ],
+    "plantilla": "oficio_informacion_diligencias_comisaria.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "ceb32b96cd5d69fc5fdf13bedbbfc0aef543f2f882114b8f836e785f34b1acf3",
+    "campos": [
+      "accidente_fecha_abrev",
+      "accidente_lugar_completo",
+      "accidente_modalidades",
+      "accidente_sidpol",
+      "cuerpo_solicitud_diligencias",
+      "grado_cargo_nombre",
+      "localidad_emision",
+      "nombre_oficial_ano",
+      "oficio_anio",
+      "oficio_entidad_nombre",
+      "oficio_fecha",
+      "oficio_numero"
+    ]
+  },
+  {
+    "tipo": "informe_medico",
+    "nombre": "Solicitud de informe médico",
+    "alias": [
+      "informe médico",
+      "historia clínica"
+    ],
+    "plantilla": "oficio_informe_medico.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "4bf3bfe9087c881aa0bb6d9f3fc78bb1ea454f16b5f5a60230c93720faf1f69b",
+    "campos": [
+      "accidente_fecha_abrev",
+      "accidente_hora",
+      "accidente_modalidades",
+      "fiscalia_nombre",
+      "localidad_emision",
+      "nombre_oficial_ano",
+      "oficio_entidad_nombre",
+      "oficio_fecha",
+      "oficio_grado_cargo",
+      "oficio_numero_completo",
+      "oficio_persona_destino",
+      "persona_nombre_completo",
+      "persona_num_doc",
+      "referencia_texto"
+    ]
+  },
+  {
+    "tipo": "certificado_uper",
+    "nombre": "Solicitud de información de certificado UPER",
+    "alias": [
+      "certificado UPER"
+    ],
+    "plantilla": "oficio_informacion_certificado_uper.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "e3d635518bfb703ad35e92a4c9d5b5334ccab710f3ebb3dc35783ab0f3a32d83",
+    "campos": [
+      "accidente_consecuencia",
+      "accidente_fecha_abrev",
+      "accidente_hora",
+      "accidente_lugar_completo",
+      "accidente_modalidades",
+      "comisaria_nombre",
+      "localidad_emision",
+      "nombre_oficial_ano",
+      "oficio_anio",
+      "oficio_entidad_nombre",
+      "oficio_fecha",
+      "oficio_grado_cargo",
+      "oficio_numero",
+      "oficio_persona_destino",
+      "veh_placa",
+      "veh_tipo"
+    ]
+  },
+  {
+    "tipo": "historial_sunarp",
+    "nombre": "Solicitud de historial de transferencias SUNARP",
+    "alias": [
+      "historial SUNARP",
+      "transferencias vehiculares"
+    ],
+    "plantilla": "oficio_sunarp_historial_transferencias.docx",
+    "recursos_graficos": 5,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "72a2195fe99d1ad583621247a90985d8d3ba59aa4e3317ca3b53f09e4382cc7f",
+    "campos": [
+      "cuerpo_sunarp",
+      "localidad_emision",
+      "nombre_oficial_ano",
+      "oficio_anio",
+      "oficio_fecha",
+      "oficio_numero",
+      "veh_placa"
+    ]
+  },
+  {
+    "tipo": "defuncion_reniec",
+    "nombre": "Inscripción de defunción ante RENIEC",
+    "alias": [
+      "defunción RENIEC"
+    ],
+    "plantilla": "oficio_defuncion_reniec.docx",
+    "recursos_graficos": 4,
+    "pies": [
+      "word/footer1.xml"
+    ],
+    "sha256": "806818e244346519e3a4ae5191774f5969f3a06aa395713d299333c880bb9240",
+    "campos": [
+      "adjuntos",
+      "agente_causante",
+      "causa_muerte",
+      "entidad_nombre",
+      "fallecido_apellidos",
+      "fallecido_documento",
+      "fallecido_edad",
+      "fallecido_estado_civil",
+      "fallecido_nacimiento_fecha",
+      "fallecido_nacimiento_lugar",
+      "fallecido_nacionalidad",
+      "fallecido_nombres",
+      "fallecido_sexo",
+      "fecha_fallecimiento",
+      "hora_fallecimiento",
+      "localidad_emision",
+      "lugar_fallecimiento",
+      "motivo",
+      "nombre_madre",
+      "nombre_oficial_ano",
+      "nombre_padre",
+      "oficio_anio",
+      "oficio_fecha",
+      "oficio_numero"
+    ]
+  }
+]

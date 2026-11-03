@@ -1,0 +1,8 @@
+[Unit]
+Description=Limpiar cada cinco minutos los borradores temporales de UIAT
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Unit=uiat-camera-drafts-cleanup.service
+[Install]
+WantedBy=timers.target
