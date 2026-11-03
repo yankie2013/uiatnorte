@@ -27,3 +27,28 @@
 # Sistema / editores
 Thumbs.db
 .DS_Store
+
+# Reconstruibles y privados (sin eliminar copias locales)
+/vendor/
+**/vendor/
+**/node_modules/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.jsonl
+__pycache__/
+*.py[cod]
+/documentos_generados/*
+!/documentos_generados/.gitkeep
+/storage/cache/
+**/~$*
+*.backup_*
+*.bak
+/docs/sql/uiatnorte_dev.sql
