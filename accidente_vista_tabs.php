@@ -4652,8 +4652,8 @@ $renderDiligenciaCards = static function (array $items): string {
               <input type="checkbox" class="js-quick-diligencia-status" aria-label="Marcar diligencia como realizada" data-diligencia-id="<?= (int) $row['id'] ?>" <?= $estadoDiligenciaRaw === 'Realizado' ? 'checked' : '' ?>>
             </label>
             <div class="diligencia-list-body">
-              <div class="diligencia-list-title"><?php if (!empty($row['accion'])): ?><?= h($row['accion']) ?> · <?php endif; ?><?= h($tipoDiligencia) ?></div>
-              <div class="diligencia-list-summary"><?= h($contenidoLista) ?></div>
+              <div class="diligencia-list-title"><?= h(trim((string) ($row['accion'] ?? '')) ?: 'Sin acción registrada') ?></div>
+              <div class="diligencia-list-summary"><?= h($tipoDiligencia . ' · ' . $contenidoLista) ?></div>
               <?php if (!empty($row['creado_en'])): ?><div class="diligencia-list-date">Creada: <?= h(fecha_hora_simple($row['creado_en'])) ?></div><?php endif; ?>
             </div>
             <div class="diligencia-list-actions">
