@@ -914,6 +914,15 @@ html[data-theme-resolved="dark"] .case-registration-block>h3 {color:#b8d4f4;}
 html[data-theme-resolved="dark"] .participants-overview .overview-add-related {background:#ffffff12}
 html[data-theme-resolved="dark"] .participants-overview .participant-overview-person.is-fatal {background:#422a34;--role-accent:#ffadb5}
 
+/* Los testigos mantienen su identificación amarilla en cualquier posición. */
+.participants-overview .participant-overview-unit.is-witness-unit {--unit-accent:#89620c;--unit-heading:#fff1b8;--unit-detail:#fffbed}
+.case-overview-layout .participants-overview .participant-overview-unit.is-witness-unit > header {background:var(--unit-heading);color:var(--unit-accent)}
+.case-overview-layout .participants-overview .participant-overview-person.is-witness {--role-accent:#89620c;--role-tint:#fff1b8;background:#fffbed;border-left:3px solid #c99a18}
+.participants-overview .participant-overview-person.is-witness strong {color:#89620c}
+html[data-theme-resolved="dark"] .case-overview-layout .participants-overview .participant-overview-unit.is-witness-unit > header {background:#55451d;color:#ffe08a}
+html[data-theme-resolved="dark"] .case-overview-layout .participants-overview .participant-overview-person.is-witness {--role-accent:#ffe08a;--role-tint:#55451d;background:#352e1c}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-person.is-witness strong {color:#ffe08a}
+
 .participants-overview .overview-police-group > header.overview-role-group {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .participants-overview .overview-police-group > header > h3 {margin:0;font:inherit;color:inherit}
 

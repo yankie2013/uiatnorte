@@ -11,6 +11,7 @@
             str_contains($roleKey, 'pasajero') => 'Pasajeros',
             str_contains($roleKey, 'propietario') => 'Propietario',
             str_contains($roleKey, 'peat') => 'Peatones',
+            str_contains($roleKey, 'testig') => 'Testigos',
             str_contains($roleKey, 'policial') => 'Efectivos policiales',
             str_contains($roleKey, 'familiar') => 'Familiares',
             str_contains($roleKey, 'abogado') => 'Abogados',
@@ -18,7 +19,7 @@
         };
         $roleTone = match ($roleGroup) {
             'Conductor' => 'blue', 'Ocupantes', 'Pasajeros' => 'teal',
-            'Propietario' => 'amber', 'Familiares' => 'violet',
+            'Propietario', 'Testigos' => 'amber', 'Familiares' => 'violet',
             'Abogados' => 'indigo', 'Efectivos policiales' => 'green',
             default => 'blue',
         };
@@ -75,7 +76,7 @@
         $phone = preg_replace('/\D+/', '', (string) ($person['celular'] ?? ''));
         if (strlen($phone) === 9) $phone = '51' . $phone;
         ?>
-        <div class="participant-overview-person<?= needs_occ($person) ? ' is-fatal' : '' ?>" data-tone="<?= h($roleTone) ?>">
+        <div class="participant-overview-person<?= needs_occ($person) ? ' is-fatal' : '' ?><?= $roleGroup === 'Testigos' ? ' is-witness' : '' ?>" data-tone="<?= h($roleTone) ?>">
           <span class="overview-person-icon" aria-hidden="true"><span class="overview-legacy-icon"><?= needs_occ($person) ? '💀' : h($roleIcon) ?></span><svg class="overview-modern-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?= h($mobileIconPath) ?>"/></svg></span>
           <div class="overview-person-info">
             <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
@@ -261,7 +262,13 @@
         </article>
       <?php endforeach; ?>
       <?php foreach ($personas as $person): if (isset($seen[(int) $person['involucrado_id']])) continue; ?>
-        <article class="participant-overview-unit<?= needs_occ($person) ? ' is-fatal-unit' : '' ?>"><header><h3><?= h(trim((string) ($person['orden_participacion'] ?? '') . ' · ' . (string) ($person['rol_nombre'] ?? 'Participante'), ' ·')) ?></h3><?php $renderFamilyActions([$person]); ?></header>
+        <?php
+        $isWitness = str_contains(role_key($person), 'testig');
+        $personAge = trim((string) ($person['edad'] ?? ''));
+        ?>
+        <article class="participant-overview-unit<?= needs_occ($person) ? ' is-fatal-unit' : '' ?><?= $isWitness ? ' is-witness-unit' : '' ?>"><header><h3><?= h(trim((string) ($person['orden_participacion'] ?? '') . ' · ' . (string) ($person['rol_nombre'] ?? 'Participante'), ' ·')) ?></h3>
+          <span class="overview-unit-drivers overview-participant-name"><strong><?= h(person_label($person)) ?> (<?= h($personAge !== '' ? $personAge . ' años' : 'edad no registrada') ?>)</strong></span>
+          <?php $renderFamilyActions([$person]); ?></header>
         <?php $renderPerson($person, (string) ($person['rol_nombre'] ?? 'Participante'), 'persona-' . (int) $person['involucrado_id']); ?></article>
       <?php endforeach; ?>
       <?php foreach ($propietarios as $owner) { if (isset($ownersSeen[(int) $owner['id']])) continue;
