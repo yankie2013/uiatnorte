@@ -1,0 +1,27 @@
+.gestion .search-results {padding:22px;background:transparent;border:0;box-shadow:none}
+.search-results-heading,.search-case-heading,.search-participants-heading {display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.search-results-heading {justify-content:space-between;margin-bottom:16px}
+.search-results-heading h2 {margin:0;font-size:19px}
+.search-results-heading>span,.search-participants-heading>span {font-size:12px;color:var(--muted)}
+.search-case {padding:22px;margin-bottom:18px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 6px 20px #24433408;overflow-wrap:anywhere}
+.search-case-heading {padding-bottom:18px;border-bottom:1px solid var(--line)}
+.search-case-heading>div {margin-right:auto}
+.search-field-label,.search-case-facts dt {display:block;font-size:10px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.search-case h3 {margin:2px 0 0;font-size:22px;line-height:1.25}
+.search-case h3 a {text-decoration:none}
+.search-case-status {font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;background:#e7f1ed;color:#28594c}
+.search-case-facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;margin:20px 0;padding:0}
+.search-case-facts>div {min-width:0}
+.search-case-facts dd {margin:4px 0 0;font-size:13px;font-weight:650}
+.search-participants-heading {margin:0 0 10px}
+.search-participants-heading h4 {margin:0;font-size:14px}
+.search-participants {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;list-style:none;padding:0;margin:0}
+.search-participants li {display:flex;align-items:flex-start;flex-direction:column;gap:5px;background:#f5f8f6;border:1px solid #e1ebe5;border-radius:10px;padding:12px;min-width:0}
+.search-person-role {font-size:10px;font-weight:750;color:#426b5d;text-transform:uppercase;letter-spacing:.04em}
+.search-participants strong {font-size:13px;line-height:1.4}
+.search-person-vehicle {font-size:11px;color:#526b65}
+.search-vehicles {display:flex;align-items:center;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.search-vehicle-chip {border:1px solid #d5e3dd;border-radius:6px;background:#f5f8f6;padding:4px 8px;font-size:11px;font-weight:650}
+.search-empty {font-size:13px;color:var(--muted);margin:10px 0}
+@media(min-width:1100px) {.search-case-facts {grid-template-columns:1fr 1.5fr 1.3fr 1.3fr}.search-participants {grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px) {.gestion .search-results{padding:0}.search-case{padding:16px}.search-case-facts,.search-participants{grid-template-columns:minmax(0,1fr)}.search-case-heading .button{padding:8px 12px;font-size:12px}}

@@ -24,7 +24,7 @@ if($id && ($_GET['modal']??'')==='1') {
     require __DIR__.'/app/Views/expedientes/card.php';
     exit;
 }
-Page::start($archiveRole && $id ? 'Ficha de archivo' : 'Buscador general', '',
+Page::start($archiveRole && $id ? 'Ficha de archivo' : 'Buscador general', 'assets/css/gestion-busqueda.css?v=' . filemtime(__DIR__.'/assets/css/gestion-busqueda.css'),
     $archiveRole && $id ? AccidentNavigation::breadcrumbs($archiveListUrl, 'Expediente #'.$id) : null
 );Page::notice($error,true);
 if($id) {
@@ -55,11 +55,9 @@ if($oficio!==''){
  $where.=" AND EXISTS(SELECT 1 FROM $oficiosTable o WHERE o.accidente_id=a.id AND o.numero=?";$params[]=(int)$match[1];if(isset($match[2])){$where.=' AND o.anio=?';$params[]=(int)$match[2];}$where.=')';
 }
 $page=max(1,(int)($_GET['pagina']??1));$offset=($page-1)*50;
-$s=$pdo->prepare("SELECT a.*,u.nombre responsable,u.grado responsable_grado FROM accidentes a LEFT JOIN usuarios u ON u.id=a.responsable_id WHERE $where ORDER BY a.id DESC LIMIT 51 OFFSET $offset");$s->execute($params);$rows=$s->fetchAll();$more=count($rows)>50;$rows=array_slice($rows,0,50);
-echo '<section><div class="table-scroll"><table><thead><tr><th>Expediente</th><th>Lugar</th><th>Responsable</th><th>Estado</th><th></th></tr></thead><tbody>';
-foreach($rows as $row){$case=(int)$row['id'];$href='gestion_expedientes.php?id='.$case;echo '<tr><td><a class="js-case-modal-trigger" data-case-id="'.$case.'" href="'.$href.'">#'.$case.' · '.Page::escape($row['registro_sidpol']).'</a></td><td>'.Page::escape($row['lugar']).'</td><td>'.Page::escape(responsible_label($row['responsable'],$row['responsable_grado'])).'</td><td>'.Page::escape($row['estado']).'</td><td><a class="js-case-modal-trigger" data-case-id="'.$case.'" href="'.$href.'">Ver gestión</a></td></tr>';}
-if(!$rows)echo '<tr><td colspan="5">No hay expedientes para esta búsqueda.</td></tr>';echo '</tbody></table></div><div class="actions">';
-$query=['q'=>$q,'oficio'=>$oficio,'filtro'=>$filter];if($page>1)echo '<a href="?'.Page::escape(http_build_query($query+['pagina'=>$page-1])).'">Anterior</a>';if($more)echo '<a href="?'.Page::escape(http_build_query($query+['pagina'=>$page+1])).'">Siguiente</a>';echo '</div></section>';
+$s=$pdo->prepare("SELECT a.*,u.nombre responsable,u.grado responsable_grado,c.nombre jurisdiccion FROM accidentes a LEFT JOIN usuarios u ON u.id=a.responsable_id LEFT JOIN comisarias c ON c.id=a.comisaria_id WHERE $where ORDER BY a.id DESC LIMIT 51 OFFSET $offset");$s->execute($params);$rows=$s->fetchAll();$more=count($rows)>50;$rows=array_slice($rows,0,50);
+$resultDetails=\App\Support\GeneralSearchResultDetails::load($pdo,array_column($rows,'id'));
+require __DIR__.'/partials/gestion_busqueda_resultados.php';
 ?>
 <div class="case-modal-backdrop" id="case-modal" hidden aria-hidden="true"><div class="case-modal-dialog" role="dialog" aria-modal="true" aria-label="Detalle del expediente" tabindex="-1"><div class="case-modal-loading" role="status">Cargando expediente…</div></div></div>
 <script>
