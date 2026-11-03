@@ -121,7 +121,7 @@ echo session_id();session_write_close();
             child.update(REDIRECT_STATUS='200', GATEWAY_INTERFACE='CGI/1.1', SERVER_PROTOCOL='HTTP/1.1', REQUEST_METHOD=self.command,
                          SCRIPT_FILENAME=str(root/path.lstrip('/')), SCRIPT_NAME=path, QUERY_STRING=query, REQUEST_URI=self.path,
                          DOCUMENT_ROOT=str(root), HTTPS='on', SERVER_NAME='localhost', SERVER_PORT=str(self.server.server_port), REMOTE_ADDR='127.0.0.1')
-            for header in ('Cookie','Sec-Fetch-Site','X-Forwarded-Proto'):
+            for header in ('Cookie','Sec-Fetch-Site','X-Forwarded-Proto','X-Forwarded-For'):
                 child['HTTP_'+header.upper().replace('-','_')] = self.headers.get(header,'')
             data=self.rfile.read(int(self.headers.get('Content-Length','0')))
             child.update(CONTENT_TYPE=self.headers.get('Content-Type',''),CONTENT_LENGTH=str(len(data)))
@@ -245,6 +245,15 @@ echo session_id();session_write_close();
         assert response.status==302
         request('consultar_diligencias','expediente_id=1',email_sid)
         print('Formulario real: CSRF y contraseña inválidos rechazados; login por CIP/correo, rotación de sesión y acceso API correctos.')
+        # Anonymous admission is bounded before authentication and PDO.
+        import hashlib,hmac,socket,time
+        rate_key=hmac.new(env['FIXTURE_PASSWORD'].encode(),socket.inet_pton(socket.AF_INET,'127.0.0.1'),hashlib.sha256).hexdigest()
+        ingress=private/'request-rate.json'
+        ingress.write_text(json.dumps({'window':int(time.time())//60,'counts':{rate_key:300}}))
+        request('buscar_expedientes','q=FIC',expected=429,extra={'X-Forwarded-For':'192.0.2.123'})
+        ingress.write_text('INVALID')
+        request('buscar_expedientes','q=FIC',expected=503)
+        ingress.unlink()
         records=[json.loads(line) for line in (private/'audit.jsonl').read_text().splitlines()]
         assert len(records)==checks
         assert all(set(r)=={'fecha','solicitud','usuario_id','endpoint','estado'} for r in records)

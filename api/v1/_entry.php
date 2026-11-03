@@ -6,6 +6,7 @@ ini_set('display_errors', '0');
 
 use App\Api\ApiError;
 use App\Api\ReadApi;
+use App\Api\RequestLimiter;
 use App\Support\Auth;
 
 header('Content-Type: application/json; charset=utf-8');
@@ -32,6 +33,12 @@ try {
         || !is_writable($dir) || (fileperms($dir) & 0077)) throw new RuntimeException('Private directory unavailable');
     $audit = fopen($dir . '/audit.jsonl', 'ab');
     if (!$audit || !chmod($dir . '/audit.jsonl', 0600)) throw new RuntimeException('Audit unavailable');
+    // Count every enabled API request, including anonymous requests and invalid methods.
+    // REMOTE_ADDR is supplied by the server; forwarded client headers are ignored.
+    if (!RequestLimiter::consume($dir, (string)($_SERVER['REMOTE_ADDR'] ?? ''), (string)getenv('UIAT_READ_API_PASSWORD'))) {
+        header('Retry-After: 60');
+        throw new ApiError(429, 'Límite de solicitudes alcanzado.');
+    }
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
         header('Allow: GET');
         throw new ApiError(405, 'Solo se admite GET.');
