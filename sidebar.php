@@ -26,7 +26,8 @@ $sidebarIcons = [
 $sidebarSvg = static fn($icon) => '<svg viewBox="0 0 24 24" aria-hidden="true">' . $sidebarIcons[$icon] . '</svg>';
 $sidebarGroups = [
     'ESPACIO DE TRABAJO' => [
-        ['grid', 'Resumen general', 'index.php', $sidebarPath === 'index.php'],
+        ['grid', 'Inicio', 'index.php', $sidebarPath === 'index.php'],
+        ['grid', 'Resumen general', 'dashboard.php', $sidebarPath === 'dashboard.php'],
         ['folder', 'Accidentes', 'accidente_listar.php', in_array($sidebarPath, ['guardia_historial.php','accidente_listar.php','accidente_nuevo.php','accidente_editar.php','accidente_creado.php'], true)],
         ['map', 'Mapa de accidentes', 'accidente_mapa.php', $sidebarPath === 'accidente_mapa.php'],
         ['calendar', \App\Support\CalendarAccess::ownsConnectedCalendar() ? 'Google Calendar' : 'Agenda de citaciones', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],

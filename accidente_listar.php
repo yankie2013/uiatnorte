@@ -380,7 +380,7 @@ $currentFilters = [
   'ver_todos' => $verTodos,
 ];
 
-if ($hasIncomingFilters) {
+if ($hasIncomingFilters && empty($welcomeHome)) {
   $_SESSION['accidente_listar_ultimo_filtro'] = array_filter(
     $currentFilters,
     static fn($value): bool => trim((string)$value) !== ''
@@ -406,6 +406,18 @@ foreach ($pdo->query($sqlComisariasDistrito)->fetchAll(PDO::FETCH_ASSOC) as $com
   $distritoNombre = trim((string)($comisariaDistrito['distrito'] ?? ''));
   if ($distritoNombre === '') continue;
   $comisariasPorDistrito[$distritoNombre][] = $comisariaDistrito;
+}
+// Home accepts partial station names while the user types; the listing keeps its ID filter.
+$welcomeStationIds = null;
+if (!empty($welcomeHome) && $welcomeHasSearch && $welcomeSearch['criterion'] === 'comisaria_id') {
+  $welcomeStationIds = [];
+  foreach ($comisarias as $station) {
+    if ($comisaria_id === (string)$station['id'] || str_contains(lower_u((string)$station['nombre']), lower_u($comisaria_id))) {
+      $welcomeStationIds[] = (int)$station['id'];
+    }
+  }
+  $comisaria_id = count($welcomeStationIds) === 1 ? (string)$welcomeStationIds[0] : '';
+  $_GET['comisaria_id'] = $comisaria_id;
 }
 $districtSelected = false;
 if ($distrito !== '') {
@@ -435,7 +447,7 @@ foreach (array_keys($comisariasPorDistrito) as $districtIndex => $districtName) 
   }
 }
 $listContextUrl = AccidentNavigation::listUrl('accidente_listar.php?' . http_build_query($_GET)) ?? 'accidente_listar.php';
-$userTopbarBreadcrumbs = AccidentNavigation::breadcrumbs($listContextUrl);
+$userTopbarBreadcrumbs = !empty($welcomeHome) ? [['label'=>'Inicio', 'url'=>null]] : AccidentNavigation::breadcrumbs($listContextUrl);
 $caseLink = $isGuardia
   ? static fn(int $id, array $extra = []): string => 'guardia_registro.php?accidente_id='.$id.'&paso=datos'
   : ($isArchivo
@@ -517,7 +529,10 @@ if($hasta!==''){
   $sql .= " AND a.fecha_accidente<=?";
   $params[]=$hasta;
 }
-if($comisaria_id!==''){
+if ($welcomeStationIds !== null) {
+  $sql .= $welcomeStationIds ? ' AND a.comisaria_id IN (' . implode(',', array_fill(0, count($welcomeStationIds), '?')) . ')' : ' AND 1 = 0';
+  $params = array_merge($params, $welcomeStationIds);
+} elseif($comisaria_id!==''){
   $sql .= " AND a.comisaria_id=?";
   $params[]=$comisaria_id;
 }
@@ -599,18 +614,40 @@ $lastOpenedOrder = ($estadoFiltro !== 'todos' && !$hasIncomingFilters && !$resto
 $folderOrder = $estadoFiltro === 'todos' && $orden !== 'folder_asc'
   ? $manualFolderOrder . ', '
   : '';
-if ($orden === 'abiertos_desc') {
-  $sql .= " ORDER BY " . ($recentOpenedIds !== [] ? "FIELD(a.id, " . implode(',', $recentOpenedIds) . ")" : 'a.id DESC') . " LIMIT 6";
-} elseif ($orden === 'registrados_desc') {
-  $sql .= " ORDER BY a.id DESC LIMIT 200";
+$welcomeTotal = 0;
+$welcomePages = 1;
+if (!empty($welcomeHome)) {
+  $rows = [];
+  if ($welcomeHasSearch) {
+    try {
+      $countStatement = $pdo->prepare('SELECT COUNT(*) FROM (' . $sql . ') welcome_matches');
+      $countStatement->execute($params);
+      $welcomeTotal = (int)$countStatement->fetchColumn();
+      $welcomePages = max(1, (int)ceil($welcomeTotal / 12));
+      $welcomeSearch['page'] = min($welcomeSearch['page'], $welcomePages);
+      $offset = ($welcomeSearch['page'] - 1) * 12;
+      $st = $pdo->prepare($sql . " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 12 OFFSET " . $offset);
+      $st->execute($params);
+      $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      error_log('Welcome search failed: ' . $e->getMessage());
+      $welcomeSearch['error'] = 'No pudimos consultar los expedientes. Intenta buscar nuevamente.';
+    }
+  }
 } else {
-  $sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
-}
-$rows = [];
-if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
-  $st=$pdo->prepare($sql);
-  $st->execute($params);
-  $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+  if ($orden === 'abiertos_desc') {
+    $sql .= " ORDER BY " . ($recentOpenedIds !== [] ? "FIELD(a.id, " . implode(',', $recentOpenedIds) . ")" : 'a.id DESC') . " LIMIT 6";
+  } elseif ($orden === 'registrados_desc') {
+    $sql .= " ORDER BY a.id DESC LIMIT 200";
+  } else {
+    $sql .= " ORDER BY {$lastOpenedOrder}{$folderOrder}COALESCE(a.priority, 0) DESC, $orderBy LIMIT 200";
+  }
+  $rows = [];
+  if ($stationSelected || $favoritos === '1' || $verTodos === '1') {
+    $st=$pdo->prepare($sql);
+    $st->execute($params);
+    $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+  }
 }
 $occupiedFolders = ($isGuardia || $isArchivo) ? [] : occupied_folder_map($pdo);
 $guardiaRecords = [];
@@ -746,7 +783,7 @@ if ($accidenteIds !== []) {
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="assets/css/user_topbar.css">
-<title>Accidentes | UIAT Norte</title>
+<title><?= !empty($welcomeHome) ? 'Inicio' : 'Accidentes' ?> | UIAT Norte</title>
 <style>
 /* ===== Variables de esta vista, atadas al tema global ===== */
 html{
@@ -1590,10 +1627,12 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   .station-browser .browse-back{min-height:44px;font-size:12px}
 }
 </style>
+<?php if (!empty($welcomeHome)): ?><link rel="stylesheet" href="assets/css/welcome.css?v=<?= filemtime(__DIR__.'/assets/css/welcome.css') ?>"><?php endif; ?>
 </head>
-<body>
-<?php include __DIR__ . '/sidebar.php'; $userTopbarSection='Lista de accidentes'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
+<body class="<?= !empty($welcomeHome) ? 'welcome-home' : '' ?>">
+<?php include __DIR__ . '/sidebar.php'; $userTopbarSection=!empty($welcomeHome) ? 'Inicio' : 'Lista de accidentes'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="wrap">
+  <?php if (!empty($welcomeHome)): require __DIR__.'/app/Views/welcome.php'; else: ?>
   <div class="title">
     <h1 style="margin:0">Accidentes</h1>
     <nav class="toolbar" aria-label="Acciones">
@@ -1703,7 +1742,9 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </div>
   <?php endif; ?>
 
-  <div id="accident-filter-results">
+  <?php endif; ?>
+  <div id="accident-filter-results"<?= !empty($welcomeHome) && !$welcomeHasSearch ? ' hidden' : '' ?>>
+  <?php if (!empty($welcomeHome) && $welcomeHasSearch && $welcomeSearch['error'] === ''): ?><div class="welcome-results-heading"><h2>Resultados de tu búsqueda</h2><span><?= $welcomeTotal ?> <?= $welcomeTotal === 1 ? 'expediente' : 'expedientes' ?></span></div><?php endif; ?>
   <?php if (!$districtSelected && $favoritos !== '1' && $verTodos !== '1'): ?>
   <section class="card browse-panel district-browser-home" aria-label="Seleccionar distrito">
     <div class="district-sidebar" aria-label="Distritos">
@@ -1760,7 +1801,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
     </div>
   </section>
 
-  <?php elseif ($districtSelected && !$stationSelected): ?>
+  <?php elseif ($districtSelected && !$stationSelected && empty($welcomeHome)): ?>
   <section class="card browse-panel station-browser" aria-label="Seleccionar distrito y comisaría" style="--district-hue:<?= (int)($selectedDistrictHue ?? 220) ?>" data-close-url="accidente_listar.php">
     <a class="btn browse-back" href="accidente_listar.php">← Cerrar distrito</a>
     <div class="mobile-station-heading"><strong><?=h($distrito)?></strong><span>Selecciona una comisaría para ver sus registros</span></div>
@@ -1817,7 +1858,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   <div class="card">
     <div class="acc-card-list <?= $selectedDistrictHue !== null ? 'has-district-color' : '' ?>" id="cards-list" role="list" aria-label="Lista de accidentes"<?= $selectedDistrictHue !== null ? ' style="--district-hue:' . (int)$selectedDistrictHue . '"' : '' ?>>
       <?php if (!$rows): ?>
-        <div class="empty">Sin resultados</div>
+        <div class="empty"><?php if (!empty($welcomeHome)): ?><?= $welcomeSearch['error'] !== '' ? 'La búsqueda no está disponible en este momento.' : 'No encontramos expedientes con ese dato. Prueba otra búsqueda o cambia de criterio.' ?><?php else: ?>Sin resultados<?php endif; ?></div>
       <?php else: foreach($rows as $i=>$r):
           $estado = $r['estado'] ?: 'Pendiente';
           $cls = ($estado==='Resuelto') ? 'estado-resuelto'
@@ -2118,6 +2159,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </div>
 </div>
 
+<?php if (!empty($welcomeHome)): ?><div id="welcome-pagination"><?php require __DIR__.'/app/Views/welcome_pagination.php'; ?></div><script src="assets/js/welcome.js?v=<?= filemtime(__DIR__.'/assets/js/welcome.js') ?>" defer></script><?php endif; ?>
 <script>
 const stationBrowser = document.querySelector('.station-browser[data-close-url]');
 if (stationBrowser) {
