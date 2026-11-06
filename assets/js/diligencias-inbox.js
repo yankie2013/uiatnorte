@@ -7,6 +7,8 @@
   const listPane = document.querySelector('.inbox-list-pane');
   const detailPane = document.querySelector('.inbox-detail-pane');
   const status = document.getElementById('inbox-status');
+  const stateFilters = document.querySelector('.inbox-state-filters');
+  let activeState = stateFilters?.dataset.currentState || new URL(location.href).searchParams.get('estado') || '';
   const mobile = () => window.matchMedia('(max-width:800px)').matches;
   let selectedId = Number(layout.dataset.selectedId) || 0;
   let revision = 0;
@@ -34,8 +36,9 @@
     if (form) url.search = new URLSearchParams(new FormData(form)).toString();
     else {
       const current = new URL(location.href);
-      for (const key of ['q', 'estado']) if (current.searchParams.has(key)) url.searchParams.set(key, current.searchParams.get(key));
+      for (const key of ['q']) if (current.searchParams.has(key)) url.searchParams.set(key, current.searchParams.get(key));
     }
+    if (!form) url.searchParams.set('estado', activeState);
     return url;
   };
   const syncUrl = page => {
@@ -85,6 +88,16 @@
       if (typeof data.listHtml !== 'string' || typeof data.detailHtml !== 'string') throw new Error('Respuesta de búsqueda inválida.');
       list.innerHTML = data.listHtml; detail.innerHTML = data.detailHtml;
       markSelected(data.selectedId);
+      if (stateFilters && data.counts) {
+        activeState = data.state ?? activeState;
+        stateFilters.dataset.currentState = activeState;
+        stateFilters.querySelectorAll('[data-inbox-state]').forEach(link => {
+          const state = link.dataset.inboxState;
+          link.classList.toggle('is-active', state === activeState);
+          if (state === activeState) link.setAttribute('aria-current','true'); else link.removeAttribute('aria-current');
+          link.querySelector('[data-state-count]').textContent = state === '' ? Object.values(data.counts).reduce((a,b) => a + Number(b),0) : data.counts[state] || 0;
+        });
+      }
       layout.classList.remove('show-detail');
       listPane.scrollTop = 0; detailPane.scrollTop = 0;
       list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -94,6 +107,14 @@
       announce(`${data.total} ${data.total === 1 ? 'diligencia' : 'diligencias'}.`);
     });
   };
+  stateFilters?.addEventListener('click', event => {
+    const link = event.target.closest('[data-inbox-state]');
+    if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    activeState = link.dataset.inboxState;
+    if (form) form.querySelector('[name="estado"]').value = activeState;
+    loadList();
+  });
   const dialog = document.getElementById('inbox-task-dialog');
   const frame = document.getElementById('inbox-task-frame');
   const modalStatus = document.getElementById('inbox-modal-status');

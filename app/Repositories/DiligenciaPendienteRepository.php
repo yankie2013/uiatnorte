@@ -8,6 +8,8 @@ use PDO;
 final class DiligenciaPendienteRepository
 {
     private array $columnCache = [];
+    private ?string $effectiveState = null;
+    private function stateExpression(): string { return $this->effectiveState ??= (new \App\Support\DiligenciaEstado($this->pdo))->expression(); }
 
     public function __construct(private PDO $pdo)
     {
@@ -31,7 +33,7 @@ final class DiligenciaPendienteRepository
 
     public function find(int $id): ?array
     {
-        $st = $this->pdo->prepare('SELECT * FROM diligencias_pendientes_activos WHERE id = ? LIMIT 1');
+        $st = $this->pdo->prepare('SELECT dp.*, dp.estado AS estado_registrado, '.$this->stateExpression().' AS estado FROM diligencias_pendientes_activos dp WHERE dp.id = ? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -117,7 +119,7 @@ final class DiligenciaPendienteRepository
         $params = [];
 
         if (!empty($filters['estado'])) {
-            $where[] = 'dp.estado = ?';
+            $where[] = '('.$this->stateExpression().') = ?';
             $params[] = $filters['estado'];
         }
 
@@ -159,7 +161,7 @@ final class DiligenciaPendienteRepository
         $countSt->execute($params);
         $total = (int) $countSt->fetchColumn();
 
-        $sql = "SELECT dp.*, td.nombre AS tipo_nombre, td.descripcion AS tipo_descripcion
+        $sql = "SELECT dp.*, dp.estado AS estado_registrado, ".$this->stateExpression()." AS estado, td.nombre AS tipo_nombre, td.descripcion AS tipo_descripcion
                 FROM diligencias_pendientes_activos dp
                 LEFT JOIN tipo_diligencia td ON td.id = dp.tipo_diligencia_id
                 WHERE {$whereSql}

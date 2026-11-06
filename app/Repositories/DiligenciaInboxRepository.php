@@ -9,7 +9,9 @@ use RuntimeException;
 /** Read-only work queue. Assignment always comes from the linked case, never the task's author. */
 final class DiligenciaInboxRepository
 {
-    public const STATES = ['Pendiente', 'En proceso'];
+    public const STATES = ['Pendiente', 'En proceso', 'Realizado'];
+    private ?string $effectiveState = null;
+    private function stateExpression(): string { return $this->effectiveState ??= (new \App\Support\DiligenciaEstado($this->pdo))->expression(); }
     public const PAGE_SIZE = 20;
     public function __construct(private PDO $pdo) {}
 
@@ -26,11 +28,12 @@ final class DiligenciaInboxRepository
             LEFT JOIN tipo_diligencia td ON td.id=dp.tipo_diligencia_id
             LEFT JOIN comisarias c ON c.id=a.comisaria_id
             LEFT JOIN ubigeo_distrito district ON district.cod_dep=a.cod_dep AND district.cod_prov=a.cod_prov AND district.cod_dist=a.cod_dist";
-        $where = " WHERE (" . Access::workspacePredicate('a') . ") AND dp.estado IN ('Pendiente','En proceso')";
+        $effective = $this->stateExpression();
+        $where = " WHERE (" . Access::workspacePredicate('a') . ") AND ($effective) IN ('Pendiente','En proceso','Realizado')";
         $params = [];
         if ($state !== '') {
             if (!in_array($state, self::STATES, true)) throw new \InvalidArgumentException('Estado de búsqueda inválido.');
-            $where .= ' AND dp.estado=?'; $params[] = $state;
+            $where .= ' AND ('.$effective.')=?'; $params[] = $state;
         }
         if ($q !== '') {
             $where .= " AND (td.nombre LIKE ? OR dp.contenido LIKE ? OR a.registro_sidpol LIKE ? OR CAST(a.id AS CHAR) = ?
@@ -47,7 +50,7 @@ final class DiligenciaInboxRepository
 
     private function columns(): string
     {
-        return "SELECT dp.id,dp.accidente_id,dp.estado,dp.contenido,td.nombre tipo_nombre,
+        return "SELECT dp.id,dp.accidente_id,".$this->stateExpression()." AS estado,dp.contenido,td.nombre tipo_nombre,
             a.registro_sidpol,a.lugar,a.fecha_accidente,c.nombre comisaria,district.nombre distrito";
     }
 
@@ -57,6 +60,16 @@ final class DiligenciaInboxRepository
         $statement = $this->pdo->prepare($this->columns().$from.$where.' AND dp.id=?');
         $statement->execute([...$params,$id]);
         return $statement->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function counts(string $q = ''): array
+    {
+        [$from,$where,$params] = $this->query($q);
+        $statement = $this->pdo->prepare('SELECT effective_state, COUNT(*) total FROM (SELECT '.$this->stateExpression().' AS effective_state'.$from.$where.') grouped_tasks GROUP BY effective_state');
+        $statement->execute($params);
+        $counts = array_fill_keys(self::STATES,0);
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) $counts[$row['effective_state']] = (int)$row['total'];
+        return $counts;
     }
 
     public function search(string $q, string $state, int $page = 1, int $selectedId = 0, bool $locate = false): array
@@ -76,6 +89,7 @@ final class DiligenciaInboxRepository
         $statement->execute($params); $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
         $selected = $rows[0] ?? null;
         foreach ($rows as $row) if ((int)$row['id'] === $selectedId) { $selected = $row; break; }
-        return compact('rows','total','page','pages','selected');
+        $counts = $this->counts($q);
+        return compact('rows','total','page','pages','selected','counts');
     }
 }

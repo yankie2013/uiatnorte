@@ -34,7 +34,7 @@ $count=0;
 $check=static function(bool $condition,string $message)use(&$count):void{$count++;if(!$condition)throw new RuntimeException($message);};
 $_SESSION['user']=['id'=>1,'rol'=>'jefe_emi'];
 $r=$repo->search('','');
-$check($r['total']===48,'Both pending states across all assigned cases');
+$check($r['total']===49,'Both pending states across all assigned cases');
 $check(count($r['rows'])===20 && (int)$r['selected']['id']===144,'First selection and stable order');
 $all=[];for($page=1;$page<=$r['pages'];$page++)$all=array_merge($all,$repo->search('','',$page)['rows']);
 $ids=array_column($all,'id');
@@ -42,10 +42,10 @@ $check(count($ids)===count(array_unique($ids)),'No duplicates between pages');
 $check(count(array_unique(array_column($all,'accidente_id')))===2,'Multiple cases in same inbox');
 $check($repo->find(1)!==null,'Task created by another user on own case must be included');
 $check($repo->find(4)===null,'Foreign case cannot be read through manipulated task ID');
-$check($repo->find(5)===null && $repo->find(6)===null && $repo->find(7)===null,'Completed, canceled and deleted cases excluded');
+$check($repo->find(5)!==null && $repo->find(6)===null && $repo->find(7)===null,'Completed included; canceled and deleted cases excluded');
 foreach(['Rojas','ABC','SID-A','101','Independencia','Comisaría Uno','Medir vía'] as $q){
  $matches=$repo->search($q,'');
- $expected=$q==='Medir vía'?1:2;
+ $expected=$q==='Medir vía'?1:3;
  $check($matches['total']===$expected,'Search and deduplication: '.$q);
 }
 $check($repo->search('','En proceso')['total']===1,'State count');
@@ -59,14 +59,14 @@ $check($repo->search('','',1,4,true)['selected']['accidente_id']!==103,'Foreign 
 $_SESSION['user']=['id'=>2,'rol'=>'jefe_emi'];
 $check($repo->search('','')['total']===1 && $repo->find(1)===null && $repo->find(4)!==null,'Second JEFE EMI isolated from first');
 $_SESSION['user']=['id'=>3,'rol'=>'admin'];
-$check($repo->search('','')['total']===49,'Admin keeps existing full scope');
+$check($repo->search('','')['total']===50,'Admin keeps existing full scope');
 foreach(['adjunto','secretaria','administracion','guardia','viewer','editor'] as $role){
  $_SESSION['user']=['id'=>1,'rol'=>$role];$blocked=false;
  try{$repo->search('','');}catch(RuntimeException $e){$blocked=true;}
  $check($blocked,'No new access granted to '.$role);
 }
 $_SESSION['user']=['id'=>1,'rol'=>'jefe_emi'];$blocked=false;
-try{$repo->search('','Realizado');}catch(InvalidArgumentException $e){$blocked=true;}
+try{$repo->search('','Cancelado');}catch(InvalidArgumentException $e){$blocked=true;}
 $check($blocked,'Invalid inbox state rejected');
 $property->setValue(null,null);unset($_SESSION['user']);
 echo "PASS: $count checks, two JEFE EMI, assignment, filters, counts, duplicates, selection and permissions.\n";

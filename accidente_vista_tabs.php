@@ -4613,9 +4613,10 @@ $googleMapsCoords = $mapPoint !== null
     ? number_format((float) $mapPoint['lat'], 6, '.', '') . ', ' . number_format((float) $mapPoint['lng'], 6, '.', '')
     : '';
 
+$diligenciaEstadoSql = (new \App\Support\DiligenciaEstado($pdo))->expression();
 $diligencias = safe_query_all(
     $pdo,
-    "SELECT dp.*,
+    "SELECT dp.*, {$diligenciaEstadoSql} AS estado,
             td.nombre AS tipo_nombre
        FROM diligencias_pendientes_activos dp
   LEFT JOIN tipo_diligencia td ON td.id = dp.tipo_diligencia_id

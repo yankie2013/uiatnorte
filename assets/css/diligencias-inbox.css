@@ -34,3 +34,20 @@
 #inbox-task-frame{display:block;border:0;width:100%;height:min(720px,calc(92dvh - 74px));background:#f5f8f4}
 #inbox-task-frame[hidden],#inbox-modal-status[hidden]{display:none}
 @media(max-width:700px){.inbox-task-dialog{width:calc(100vw - 16px);border-radius:12px}.inbox-modal-header{padding:12px}.inbox-modal-header h2{font-size:16px}}
+
+/* State badges and filters share red/orange/green meaning. */
+.inbox-state.pending{color:#9e292d;background:#fde5e5}
+.inbox-state.in-process{color:#91500d;background:#fff0d7}
+.inbox-state.completed{color:#22653b;background:#e0f2e5}
+.inbox-state-filters{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:4px 0 18px}
+.gestion .inbox-state-filter{display:inline-flex;align-items:center;gap:12px;padding:9px 14px;border:1px solid #d8e3db;border-radius:30px;background:#ffffffb8;text-decoration:none;font-size:12px;font-weight:650;color:#52695a}
+.inbox-state-filter b{font-size:11px;padding:2px 7px;border-radius:20px;background:#00000008}
+.gestion .inbox-state-filter.pending{color:#a53035;border-color:#edc5c6}
+.gestion .inbox-state-filter.in-process{color:#965516;border-color:#e9d1ad}
+.gestion .inbox-state-filter.completed{color:#286d42;border-color:#bfdcc8}
+.gestion .inbox-state-filter.pending.is-active{background:#fbe1e2;border-color:#c74a51}
+.gestion .inbox-state-filter.in-process.is-active{background:#ffebcc;border-color:#d38a39}
+.gestion .inbox-state-filter.completed.is-active{background:#daf0e1;border-color:#4a9864}
+.gestion .inbox-state-filter.all.is-active{background:#e6eee5;border-color:#74977b;color:#234a31}
+.inbox-state-filter:focus-visible{outline:3px solid #a28b48;outline-offset:3px}
+@media(max-width:700px){.inbox-state-filters{gap:7px;margin-bottom:14px}.gestion .inbox-state-filter{font-size:11px;padding:8px 11px;gap:7px}}

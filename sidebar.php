@@ -34,7 +34,7 @@ $sidebarGroups = [
     ],
 ];
 if (in_array(\App\Support\Access::role(), ['jefe_emi','admin'], true)) {
-    $sidebarGroups['ESPACIO DE TRABAJO'][] = ['book', 'Diligencias pendientes', 'diligencias_pendientes.php', $sidebarPath === 'diligencias_pendientes.php'];
+    $sidebarGroups['ESPACIO DE TRABAJO'][] = ['book', 'Diligencias', 'diligencias_pendientes.php', $sidebarPath === 'diligencias_pendientes.php'];
 }
 $sidebarGroups['GESTIÓN'] = [
     ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],

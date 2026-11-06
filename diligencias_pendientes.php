@@ -22,7 +22,7 @@ $render = static function(string $view, array $variables): string {
     try { require __DIR__.'/app/Views/diligencias_inbox/'.$view.'.php'; return (string)ob_get_contents(); }
     finally { ob_end_clean(); }
 };
-$error = ''; $q = ''; $state = ''; $result = ['rows'=>[],'total'=>0,'page'=>1,'pages'=>1,'selected'=>null];
+$error = ''; $q = ''; $state = ''; $result = ['rows'=>[],'total'=>0,'page'=>1,'pages'=>1,'selected'=>null,'counts'=>array_fill_keys(DiligenciaInboxRepository::STATES,0)];
 $selected = null; $detailHtml = ''; $listHtml = '';
 try {
     foreach (['q','estado','page','seleccion','id','fragment','locate'] as $key) {
@@ -49,7 +49,7 @@ try {
     $listHtml = $render('list',compact('result','selected','q','state'));
     if ($fragment==='list') {
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['listHtml'=>$listHtml,'detailHtml'=>$detailHtml,'selectedId'=>(int)($selected['id']??0),'total'=>$result['total'],'page'=>$result['page']],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+        echo json_encode(['listHtml'=>$listHtml,'detailHtml'=>$detailHtml,'selectedId'=>(int)($selected['id']??0),'total'=>$result['total'],'page'=>$result['page'],'counts'=>$result['counts'],'state'=>$state],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
         exit;
     }
 } catch (Throwable $e) {
@@ -58,8 +58,16 @@ try {
     else { http_response_code(500); error_log('Diligence inbox read failed: '.$e->getMessage()); $error='No pudimos cargar las diligencias. Intenta nuevamente.'; }
     if ($fragment!=='') { header('Content-Type: application/json; charset=utf-8'); echo json_encode(['error'=>$error],JSON_UNESCAPED_UNICODE); exit; }
 }
-Page::start('Diligencias pendientes','assets/css/diligencias-inbox.css?v='.filemtime(__DIR__.'/assets/css/diligencias-inbox.css'),null,true,$result['total'].' '.($result['total']===1?'diligencia':'diligencias'));
+Page::start('Diligencias','assets/css/diligencias-inbox.css?v='.filemtime(__DIR__.'/assets/css/diligencias-inbox.css'),null,true,$result['total'].' '.($result['total']===1?'diligencia':'diligencias'));
 ?>
+<nav class="inbox-state-filters" aria-label="Filtrar diligencias por estado" data-current-state="<?= Page::escape($state) ?>">
+<?php foreach ([''=>'Todas','Pendiente'=>'Pendientes','En proceso'=>'En proceso','Realizado'=>'Realizadas'] as $value=>$label):
+    $count = $value==='' ? array_sum($result['counts']) : $result['counts'][$value];
+    $stateClass = [''=>'all','Pendiente'=>'pending','En proceso'=>'in-process','Realizado'=>'completed'][$value];
+?>
+<a class="inbox-state-filter <?= $stateClass ?> <?= $state===$value?'is-active':'' ?>" href="?<?= Page::escape(http_build_query(['q'=>$q,'estado'=>$value])) ?>" data-inbox-state="<?= Page::escape($value) ?>" <?= $state===$value?'aria-current="true"':'' ?>><span><?= Page::escape($label) ?></span><b data-state-count><?= $count ?></b></a>
+<?php endforeach; ?>
+</nav>
 <p id="inbox-status" role="status" aria-live="polite"><?= Page::escape($error) ?></p>
 <?php if ($error): ?><a class="inbox-retry" href="diligencias_pendientes.php">Volver a intentar</a><?php endif; ?>
 <div class="inbox-layout" data-selected-id="<?= (int)($selected['id']??0) ?>">
@@ -70,7 +78,7 @@ Page::start('Diligencias pendientes','assets/css/diligencias-inbox.css?v='.filem
   <div class="inbox-list-pane" aria-label="Lista de diligencias" tabindex="0"><div id="inbox-list"><?= $listHtml ?></div></div>
 </div>
 <dialog id="inbox-task-dialog" class="inbox-task-dialog" aria-labelledby="inbox-modal-title">
-  <header class="inbox-modal-header"><h2 id="inbox-modal-title">Consulta de diligencia pendiente</h2><button type="button" class="inbox-modal-close" aria-label="Cerrar consulta">×</button></header>
+  <header class="inbox-modal-header"><h2 id="inbox-modal-title">Consulta de diligencia</h2><button type="button" class="inbox-modal-close" aria-label="Cerrar consulta">×</button></header>
   <p id="inbox-modal-status" role="status">Cargando diligencia…</p>
   <iframe id="inbox-task-frame" title="Consulta de la diligencia seleccionada" hidden></iframe>
 </dialog>
