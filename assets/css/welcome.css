@@ -29,3 +29,24 @@ html[data-theme-resolved="dark"] .welcome-results-heading>span,html[data-theme-r
 .welcome-home #accident-filter-results{scroll-margin-top:var(--welcome-results-top,310px)}
 @media(max-width:1000px){.welcome-workspace{padding-left:20px;padding-right:20px}}
 @media(max-width:700px){.welcome-workspace{padding:6px 4px 2px;border-radius:0 0 12px 12px}.welcome-workspace .welcome-question{margin:10px 0 16px;font-size:18px}.welcome-workspace.is-stuck{background:rgba(246,247,241,.97)}}
+
+.welcome-hero[hidden]{display:none}
+.welcome-home.welcome-search-active .wrap{padding-top:0;overflow-anchor:none}
+.welcome-search-active .welcome-workspace{padding-top:0}
+
+/* Keep cards in their own viewport, below the search rather than behind it. */
+.welcome-home.welcome-search-active .wrap{display:flex;flex-direction:column;box-sizing:border-box;height:calc(100dvh - var(--welcome-sticky-top,62px));max-width:1700px;width:100%;min-width:0;padding-bottom:12px}
+.welcome-search-active .welcome-sticky-sentinel{display:none}
+.welcome-search-active .welcome-workspace{position:relative;top:auto;flex:0 0 auto;max-width:100%;padding:8px 24px 4px;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.welcome-search-active .welcome-workspace .welcome-question{font-size:18px;margin:4px 0 12px}
+.welcome-search-active .welcome-criteria{margin-bottom:10px}
+.welcome-search-active .welcome-criteria span{padding:7px 12px;font-size:11px}
+.welcome-search-active .welcome-searchbar{padding:5px 6px 5px 18px;box-shadow:0 2px 8px #243e3208}
+.welcome-search-active .welcome-searchbar input{padding:9px 0}
+.welcome-search-active .welcome-searchbar button{padding:11px 20px}
+.welcome-search-active .welcome-search-footer{margin:8px 9px}
+.welcome-search-active .welcome-results-scroll{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
+.welcome-search-active #accident-filter-results{box-sizing:border-box;width:100%;max-width:1360px;padding-top:12px;scroll-margin-top:0}
+.welcome-search-active .welcome-results-heading{margin-bottom:14px}
+.welcome-search-active .welcome-results-heading h2{font-size:17px}
+@media(max-width:700px){.welcome-home.welcome-search-active .wrap{padding-left:8px;padding-right:8px;padding-bottom:8px}.welcome-search-active .welcome-workspace{padding:6px 4px 2px}.welcome-search-active .welcome-workspace .welcome-question{font-size:16px;margin-bottom:10px}.welcome-search-active .welcome-criteria span{padding:7px 9px;font-size:10px}.welcome-search-active .welcome-searchbar button{padding:10px 14px}}

@@ -250,7 +250,7 @@ include __DIR__ . '/sidebar.php';
         <label>Lesión</label>
         <select name="lesion" id="lesion">
           <?php foreach($lesiones_opts as $opt): ?>
-            <option value="<?=$opt?>" <?=($inv['lesion']===$opt?'selected':'')?> ><?=$opt==='Herido'?'Lesionado o herido':$opt?></option>
+            <option value="<?=$opt?>" <?=($inv['lesion']===$opt?'selected':'')?> ><?=$opt==='Herido'?'Lesionado o herido':($opt==='Fallecido'?'Fallecido u occiso':$opt)?></option>
           <?php endforeach; ?>
         </select>
       </div>

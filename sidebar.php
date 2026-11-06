@@ -33,6 +33,9 @@ $sidebarGroups = [
         ['calendar', \App\Support\CalendarAccess::ownsConnectedCalendar() ? 'Google Calendar' : 'Agenda de citaciones', 'citacion_rapida.php?' . http_build_query($sidebarCalendarParams), in_array($sidebarPath, ['citacion_rapida.php','google_calendar.php'], true)],
     ],
 ];
+if (in_array(\App\Support\Access::role(), ['jefe_emi','admin'], true)) {
+    $sidebarGroups['ESPACIO DE TRABAJO'][] = ['book', 'Diligencias pendientes', 'diligencias_pendientes.php', $sidebarPath === 'diligencias_pendientes.php'];
+}
 $sidebarGroups['GESTIÓN'] = [
     ['file', 'Oficios', 'oficios_listar.php', str_starts_with($sidebarPath, 'oficios_')],
     ['folder', 'Buscador general', 'gestion_expedientes.php', $sidebarPath === 'gestion_expedientes.php'],

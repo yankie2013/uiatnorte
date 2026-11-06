@@ -349,7 +349,7 @@ html[data-theme-resolved="dark"] #formIP input,html[data-theme-resolved="dark"] 
       </div>
       <div>
         <label>Lesión</label>
-        <select name="lesion" id="lesion"><?php foreach($lesiones as $l): ?><option value="<?=$l?>"><?=$l==='Herido'?'Lesionado o herido':$l?></option><?php endforeach; ?></select>
+        <select name="lesion" id="lesion"><?php foreach($lesiones as $l): ?><option value="<?=$l?>"><?=$l==='Herido'?'Lesionado o herido':($l==='Fallecido'?'Fallecido u occiso':$l)?></option><?php endforeach; ?></select>
       </div>
     </div>
 

@@ -1629,7 +1629,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
 </style>
 <?php if (!empty($welcomeHome)): ?><link rel="stylesheet" href="assets/css/welcome.css?v=<?= filemtime(__DIR__.'/assets/css/welcome.css') ?>"><?php endif; ?>
 </head>
-<body class="<?= !empty($welcomeHome) ? 'welcome-home' : '' ?>">
+<body class="<?= !empty($welcomeHome) ? 'welcome-home' . ($welcomeHasSearch ? ' welcome-search-active' : '') : '' ?>">
 <?php include __DIR__ . '/sidebar.php'; $userTopbarSection=!empty($welcomeHome) ? 'Inicio' : 'Lista de accidentes'; include __DIR__ . '/app/Views/user_topbar.php'; ?>
 <div class="wrap">
   <?php if (!empty($welcomeHome)): require __DIR__.'/app/Views/welcome.php'; else: ?>
@@ -1743,6 +1743,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   <?php endif; ?>
 
   <?php endif; ?>
+  <?php if (!empty($welcomeHome)): ?><div class="welcome-results-scroll" role="region" aria-label="Resultados de búsqueda" tabindex="0"><?php endif; ?>
   <div id="accident-filter-results"<?= !empty($welcomeHome) && !$welcomeHasSearch ? ' hidden' : '' ?>>
   <?php if (!empty($welcomeHome) && $welcomeHasSearch && $welcomeSearch['error'] === ''): ?><div class="welcome-results-heading"><h2>Resultados de tu búsqueda</h2><span><?= $welcomeTotal ?> <?= $welcomeTotal === 1 ? 'expediente' : 'expedientes' ?></span></div><?php endif; ?>
   <?php if (!$districtSelected && $favoritos !== '1' && $verTodos !== '1'): ?>
@@ -2157,9 +2158,10 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
   </div>
   <?php endif; ?>
   </div>
+  <?php if (!empty($welcomeHome)): ?><div id="welcome-pagination"><?php require __DIR__.'/app/Views/welcome_pagination.php'; ?></div></div><?php endif; ?>
 </div>
 
-<?php if (!empty($welcomeHome)): ?><div id="welcome-pagination"><?php require __DIR__.'/app/Views/welcome_pagination.php'; ?></div><script src="assets/js/welcome.js?v=<?= filemtime(__DIR__.'/assets/js/welcome.js') ?>" defer></script><?php endif; ?>
+<?php if (!empty($welcomeHome)): ?><script src="assets/js/welcome.js?v=<?= filemtime(__DIR__.'/assets/js/welcome.js') ?>" defer></script><?php endif; ?>
 <script>
 const stationBrowser = document.querySelector('.station-browser[data-close-url]');
 if (stationBrowser) {

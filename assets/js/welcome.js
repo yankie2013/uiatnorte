@@ -10,6 +10,15 @@
   let revision = 0;
   let composing = false;
   const currentInput = () => form.querySelector('[name="valor"]:not(:disabled)');
+  const greeting = document.querySelector('.welcome-hero');
+  const syncSearchLayout = (resetScroll = false) => {
+    const active = currentInput().value.trim() !== '';
+    const entering = active && !document.body.classList.contains('welcome-search-active');
+    if (greeting) greeting.hidden = active;
+    document.body.classList.toggle('welcome-search-active', active);
+    if (entering && resetScroll && window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  syncSearchLayout();
   const announce = message => {
     status.textContent = message;
     status.hidden = !message;
@@ -35,6 +44,7 @@
   const clear = () => {
     invalidate();
     fields.forEach(field => { field.querySelector('input').value = ''; });
+    syncSearchLayout();
     hideResults();
     form.querySelector('.welcome-error')?.remove();
     if (shortcuts) shortcuts.hidden = false;
@@ -47,6 +57,7 @@
   const search = async (url = searchUrl(), pagination = false) => {
     invalidate();
     if (!currentInput().value.trim()) { clear(); return; }
+    syncSearchLayout(true);
     const requestRevision = revision;
     controller = new AbortController();
     form.setAttribute('aria-busy', 'true');
@@ -73,7 +84,11 @@
       if (typeof initAccidentResults === 'function') initAccidentResults();
       history.replaceState(null, '', url);
       announce(results.querySelector('.welcome-results-heading > span')?.textContent.trim() || 'Búsqueda completada.');
-      if (pagination) results.scrollIntoView({ block: 'start' });
+      if (pagination) {
+        const scroller = document.querySelector('.welcome-results-scroll');
+        if (scroller) scroller.scrollTop = 0;
+        else results.scrollIntoView({ block: 'start' });
+      }
     } catch (error) {
       if (requestRevision !== revision || error.name === 'AbortError') return;
       hideResults();
@@ -83,6 +98,7 @@
     }
   };
   const schedule = () => {
+    syncSearchLayout(true);
     invalidate();
     hideResults();
     form.querySelector('.welcome-error')?.remove();

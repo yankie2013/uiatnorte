@@ -95,7 +95,7 @@ final class InvolucradoPersonaService
         $personaId = (int) ($input['persona_id'] ?? 0);
         $rolId = (int) ($input['rol_id'] ?? 0);
         $vehiculoId = ($input['vehiculo_id'] ?? '') === '' ? null : (int) $input['vehiculo_id'];
-        $lesion = trim((string) ($input['lesion'] ?? 'Ileso')) ?: 'Ileso';
+        $lesion = \App\Support\CondicionPersona::normalizar($input['lesion'] ?? 'Ileso') ?? 'Ileso';
         $observaciones = trim((string) ($input['observaciones'] ?? '')) ?: null;
         $next = (int) ($input['next'] ?? 0);
         $ordenIn = strtoupper(trim((string) ($input['orden_persona'] ?? '')));
@@ -137,7 +137,7 @@ final class InvolucradoPersonaService
         $personaId = (int) ($input['persona_id'] ?? 0);
         $rolId = (int) ($input['rol_id'] ?? 0);
         $vehiculoId = ($input['vehiculo_id'] ?? '') === '' ? null : (int) $input['vehiculo_id'];
-        $lesion = trim((string) ($input['lesion'] ?? '')) ?: null;
+        $lesion = \App\Support\CondicionPersona::normalizar($input['lesion'] ?? null);
         $observaciones = trim((string) ($input['observaciones'] ?? '')) ?: null;
         $ordenIn = strtoupper(trim((string) ($input['orden_persona'] ?? '')));
         $dni = preg_replace('/\D/', '', (string) ($input['dni'] ?? '')) ?? '';

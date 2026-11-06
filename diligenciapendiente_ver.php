@@ -19,6 +19,12 @@ $service = new DiligenciaPendienteService(new DiligenciaPendienteRepository($pdo
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $returnTo = trim((string) ($_GET['return_to'] ?? $_POST['return_to'] ?? ''));
+// A JEFE EMI follows this route from the inbox; authorize using the linked case, not the creator.
+if (\App\Support\Access::role() === 'jefe_emi') {
+    $taskCase = $pdo->prepare('SELECT accidente_id FROM diligencias_pendientes_activos WHERE id=?');
+    $taskCase->execute([$id]);
+    \App\Support\Access::requireWorkspaceCase((int)$taskCase->fetchColumn());
+}
 $detail = $id > 0 ? $service->detalle($id) : null;
 
 if ($id <= 0 || $detail === null) {
@@ -153,7 +159,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
         </div>
 
         <div style="margin-bottom:16px;">
-          <span class="label">Acción</span>
+          <span class="label">Motivo / acción</span>
           <div><?= h($row['accion'] ?? '') ?: '<span class="muted">Sin acción</span>' ?></div>
         </div>
         <div style="margin-bottom:16px;">
@@ -209,6 +215,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
     </div>
 
     <?php endif; ?>
+    <?php if ($mode === '') require __DIR__.'/app/Views/diligencias/action_options.php'; ?>
     <?php
       $ctx = $detail['ctx'] ?? ['oficios' => [], 'citaciones' => []];
       $selectedCitaciones = array_fill_keys(array_map('intval', $detail['citacion_ids'] ?? []), true);
@@ -220,7 +227,8 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
     ?>
     <?php if ($mode !== ''): ?>
     <section class="resolve-panel">
-      <h2 class="resolve-title"><?= $mode === 'oficio' ? 'Oficio relacionado' : ($mode === 'citacion' ? 'Citaciones relacionadas' : 'Resolver diligencia') ?></h2>
+      <a class="btn" href="<?= h('diligenciapendiente_ver.php?'.http_build_query(['id'=>(int)$id,'embed'=>$embed?1:0,'return_to'=>$returnTo])) ?>">← Volver a la diligencia</a>
+      <h2 class="resolve-title" style="margin-top:14px"><?= $mode === 'oficio' ? 'Oficio relacionado' : ($mode === 'citacion' ? 'Citaciones relacionadas' : 'Resolver diligencia') ?></h2>
       <div class="muted"><?= $mode !== '' ? 'Selecciona un documento de este expediente o crea uno nuevo; quedará vinculado a esta diligencia.' : 'Vincula los documentos y registra el resultado de la diligencia.' ?></div>
 
       <?php if ($accidenteId > 0): ?>

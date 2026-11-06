@@ -7,7 +7,7 @@ sort($welcomeDistricts, SORT_NATURAL | SORT_FLAG_CASE);
 $welcomeCriterion = $welcomeSearch['criterion'];
 $welcomePlaceholders = ['persona'=>'Busca un expediente por nombres o apellidos…', 'vehiculo'=>'Ingresa una placa vehicular…', 'distrito'=>'Selecciona o busca un distrito…', 'comisaria_id'=>'Selecciona o busca una comisaría…'];
 ?>
-<main class="welcome-hero" aria-labelledby="welcome-title">
+<main class="welcome-hero" aria-labelledby="welcome-title" <?= $welcomeHasSearch ? 'hidden' : '' ?>>
   <div class="welcome-content">
     <h1 id="welcome-title">Bienvenido, <span><?= h($welcomeShortName) ?></span></h1>
   </div>

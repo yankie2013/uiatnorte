@@ -1,0 +1,24 @@
+const {JSDOM}=require('jsdom');
+const {readFileSync}=require('node:fs');
+const {join}=require('node:path');
+const assert=require('node:assert/strict');
+const dom=new JSDOM(`<p id="inbox-status"></p><div class="inbox-layout" data-selected-id="1"><aside class="inbox-detail-pane"><button class="inbox-mobile-back"></button><div id="inbox-detail"></div></aside><div class="inbox-list-pane"><div id="inbox-list"><a href="?seleccion=2" data-task-id="2">Diligencia</a></div></div></div><dialog id="inbox-task-dialog"><h2 id="inbox-modal-title"></h2><button class="inbox-modal-close">Cerrar</button><p id="inbox-modal-status"></p><iframe id="inbox-task-frame" hidden></iframe></dialog>`,{url:'http://localhost/uiatnorte/diligencias_pendientes.php',runScripts:'outside-only'});
+const w=dom.window,d=w.document,dialog=d.querySelector('dialog'),frame=d.querySelector('iframe');
+w.matchMedia=()=>({matches:false});
+dialog.showModal=function(){this.setAttribute('open','');};
+dialog.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
+const calls=[];w.fetch=(url,options)=>new Promise(resolve=>calls.push({url:new URL(url),resolve}));
+w.eval(readFileSync(join(__dirname,'../assets/js/diligencias-inbox.js'),'utf8'));
+const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
+const resolve=i=>calls[i].resolve({ok:true,redirected:false,json:async()=>({selectedId:2,detailHtml:'Expediente correcto'})});
+(async()=>{
+ d.querySelector('[data-task-id]').dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true,button:0}));resolve(0);await pause();
+ assert.equal(dialog.open,true);assert.equal(d.getElementById('inbox-detail').textContent,'Expediente correcto');
+ const url=new URL(frame.src);assert.equal(url.pathname,'/uiatnorte/diligenciapendiente_ver.php');assert.equal(url.searchParams.get('id'),'2');assert.equal(url.searchParams.get('embed'),'1');
+ frame.dispatchEvent(new w.Event('load'));assert.equal(frame.hidden,false);
+ w.dispatchEvent(new w.MessageEvent('message',{origin:'http://wrong.example',source:frame.contentWindow,data:{type:'diligencia.close'}}));assert.equal(dialog.open,true);
+ w.dispatchEvent(new w.MessageEvent('message',{origin:w.location.origin,source:frame.contentWindow,data:{type:'diligencia.close'}}));assert.equal(dialog.open,false);assert.equal(frame.hasAttribute('src'),false);
+ d.querySelector('[data-task-id]').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));resolve(1);await pause();assert.equal(dialog.open,true);
+ d.querySelector('.inbox-modal-close').click();assert.equal(dialog.open,false);
+ dom.window.close();console.log('PASS: click and Enter open embedded consultation; close, iframe cleanup and message origin checks.');
+})().catch(error=>{dom.window.close();console.error(error);process.exitCode=1;});
