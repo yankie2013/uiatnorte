@@ -123,9 +123,62 @@ select[multiple] { min-height: 140px; }
 .inline-msg.ok { display: block; background: var(--success-bg); color: var(--success); }
 .inline-msg.error { display: block; background: var(--danger-bg); color: var(--danger); }
 @media (max-width: 720px) { body { padding: 14px; } .row { flex-direction: column; align-items: stretch; } }
+/* Glass labels match the consultation; values keep their normal weight. */
+body{font-size:13px;line-height:1.45}
+label:not(.citation-option),.citation-picker-heading{display:table;max-width:100%;margin:12px 0 7px;padding:4px 8px;border:1px solid rgba(111,158,130,.25);border-radius:7px;background:linear-gradient(145deg,rgba(232,245,237,.82),rgba(202,226,212,.55));color:#24543f;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 3px rgba(36,84,63,.04);backdrop-filter:blur(12px) saturate(130%);-webkit-backdrop-filter:blur(12px) saturate(130%)}
+h1{font-size:21px;line-height:1.3}
+.input,textarea,select{font:400 13px/1.5 "Segoe UI",sans-serif;padding:9px 10px}
+.btn{font:600 12px/1.4 "Segoe UI",sans-serif;padding:10px 13px}
+.row .grow{min-width:0}
+.help{font-size:11px}
+@media(max-width:720px){
+ body,body.is-embed{padding:10px;font-size:13px;-webkit-text-size-adjust:100%}
+ .card{padding:14px;border-radius:12px;box-shadow:none}
+ h1{font-size:18px;margin-bottom:4px}
+ .sub{font-size:11px;margin-bottom:12px}
+ .row{flex-direction:row;align-items:center;gap:7px}
+ .row .btn{flex-shrink:0;padding:10px}
+ .input,textarea,select{font-size:14px;min-height:40px;border-radius:9px}
+ textarea{min-height:100px;line-height:1.5}
+ select[multiple]{min-height:110px}
+ .actions{gap:8px;margin-top:14px}
+ .actions .btn{min-height:40px}
+ .modal-backdrop{padding:12px}
+ .modal{box-sizing:border-box;max-height:90dvh;overflow-y:auto;padding:14px}
+ .modal h2{font-size:17px}
+}
+/* Screen-specific overrides for the shared mobile rules injected by PWA support. */
+@media(max-width:760px){
+ body.diligencia-edit{padding:6px!important;font-size:12px}
+ body.diligencia-edit>.container{margin-top:0!important;padding:0!important}
+ .diligencia-edit .card{padding:12px;border-radius:10px;box-shadow:none}
+ .diligencia-edit h1{font-size:17px!important;line-height:1.3!important;margin:0 0 10px}
+ .diligencia-edit.is-embed .sub{display:none}
+ .diligencia-edit label:not(.citation-option),.diligencia-edit .citation-picker-heading{font-size:10px;margin:9px 0 5px;padding:3px 7px;letter-spacing:.025em}
+ .diligencia-edit .input{font-size:13px!important;font-family:"Segoe UI",sans-serif;padding:7px 9px!important;border-radius:8px;line-height:1.4!important}
+ .diligencia-edit :is(input.input,select.input):not([multiple]){height:36px!important;min-height:36px!important}
+ .diligencia-edit select.input:not([multiple]){padding-right:28px!important;background-position:right 8px center!important;background-size:13px 13px!important}
+ .diligencia-edit textarea.input{min-height:90px;font-size:13px!important;line-height:1.5!important}
+ .diligencia-edit select[multiple]{min-height:90px;font-size:12px!important}
+ .diligencia-edit form .row{display:flex;flex-direction:row;flex-wrap:nowrap!important;gap:6px}
+ .diligencia-edit form .row>.grow{flex:1 1 0!important;min-width:0!important}
+ .diligencia-edit form .row>.btn{flex:0 0 auto!important;width:auto;padding:7px 10px;font-size:11px;min-height:36px}
+ .diligencia-edit .actions .btn{font-size:12px;padding:9px 12px;min-height:38px}
+ .diligencia-edit .help{font-size:10px;margin-top:4px}
+}
+.citation-options{display:grid;gap:7px;max-height:260px;overflow-y:auto;padding:1px;overscroll-behavior:contain}
+label.citation-option{display:flex;align-items:flex-start;gap:9px;margin:0;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-weight:400;cursor:pointer}
+.citation-option:has(input:checked){border-color:#73ab90;background:rgba(115,171,144,.1)}
+.citation-option:focus-within{outline:2px solid #24543f;outline-offset:1px}
+.citation-option input[type=checkbox]{flex:0 0 17px;width:17px;height:17px;min-height:17px;margin:2px 0 0;accent-color:#24543f}
+.citation-option-content{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
+.citation-option-content strong{font-size:12px;font-weight:700}
+.citation-option-content>span:first-of-type{color:#327353;font-weight:600}
+.citation-option-content small{font-size:10px;color:var(--muted)}
+@media(max-width:760px){.citation-options{max-height:230px}.diligencia-edit label.citation-option{padding:9px;letter-spacing:normal;text-transform:none;box-shadow:none;backdrop-filter:none}.citation-option-content{font-size:11px}}
 </style>
 </head>
-<body class="<?= $embed ? 'is-embed' : '' ?>">
+<body class="diligencia-edit <?= $embed ? 'is-embed' : '' ?>">
 <div class="container">
   <div class="card">
     <h1>Editar diligencia #<?= h($id) ?></h1>
@@ -185,13 +238,28 @@ select[multiple] { min-height: 140px; }
         <?php endforeach; ?>
       </select>
 
-      <label for="citacion_id">Citaciones relacionadas</label>
-      <select id="citacion_id" name="citacion_id[]" class="input" multiple>
-        <?php foreach ($ctx['citaciones'] as $citacion): ?>
-          <option value="<?= h($citacion['id']) ?>" <?= in_array((int) $citacion['id'], array_map('intval', (array) $data['citacion_id']), true) ? 'selected' : '' ?>><?= h($citacion['label']) ?></option>
+      <div class="citation-picker" role="group" aria-labelledby="citation-picker-title">
+        <div class="citation-picker-heading" id="citation-picker-title">Citaciones relacionadas</div>
+        <div class="citation-options">
+        <?php foreach ($ctx['citaciones'] as $citacion):
+            $citationId = (int) $citacion['id'];
+            $citationName = trim(implode(' ', array_filter([$citacion['persona_nombres'] ?? '', $citacion['persona_apep'] ?? '', $citacion['persona_apem'] ?? ''])));
+            $citationType = trim((string) ($citacion['tipo_diligencia'] ?? '')) ?: (trim((string) ($citacion['texto'] ?? '')) ?: 'Tipo no registrado');
+            $citationDate = trim((string) ($citacion['fecha'] ?? ''));
+            $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $citationDate);
+            $citationDate = $parsedDate && $parsedDate->format('Y-m-d') === $citationDate ? $parsedDate->format('d/m/Y') : 'Sin fecha';
+            $citationTime = trim((string) ($citacion['hora'] ?? ''));
+            if (preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/', $citationTime)) $citationDate .= ' · ' . substr($citationTime, 0, 5);
+        ?>
+          <label class="citation-option" for="citation-<?= $citationId ?>">
+            <input type="checkbox" id="citation-<?= $citationId ?>" name="citacion_id[]" value="<?= $citationId ?>" <?= in_array($citationId, array_map('intval', (array) $data['citacion_id']), true) ? 'checked' : '' ?>>
+            <span class="citation-option-content"><strong><?= h($citationType) ?></strong><span><?= h($citationDate) ?></span><span><?= h($citationName ?: 'Persona no registrada') ?></span><small>Citación <?= h(trim((string) ($citacion['numero'] ?? '')) ?: '#' . $citationId) ?></small></span>
+          </label>
         <?php endforeach; ?>
-      </select>
-      <div class="help">Puedes relacionar una o varias citaciones para esta diligencia.</div>
+        <?php if (!$ctx['citaciones']): ?><p class="help">Este expediente no tiene citaciones disponibles.</p><?php endif; ?>
+        </div>
+        <div class="help">Marca las citaciones que deseas vincular a esta diligencia.</div>
+      </div>
 
       <label for="documento_realizado">Documento realizado</label>
       <input id="documento_realizado" name="documento_realizado" class="input" maxlength="255" value="<?= h($data['documento_realizado']) ?>">

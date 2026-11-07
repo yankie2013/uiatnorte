@@ -17,6 +17,7 @@
   let lastAction;
   let savingState = false;
   const announce = (message, error = false) => {
+    status.classList.toggle('is-selection-notice', !error && message === 'Expediente actualizado.');
     status.textContent = message;
     status.classList.toggle('is-error', error);
     if (error) {
@@ -101,6 +102,7 @@
           link.querySelector('[data-state-count]').textContent = state === '' ? Object.values(data.counts).reduce((a,b) => a + Number(b),0) : data.counts[state] || 0;
         });
       }
+      closeCase();
       layout.classList.remove('show-detail');
       listPane.scrollTop = preserveScroll ? previousScroll : 0; detailPane.scrollTop = 0;
       if (!preserveScroll) list.querySelector('[data-task-id].is-selected')?.scrollIntoView({ block: 'nearest' });
@@ -119,6 +121,28 @@
     if (form) form.querySelector('[name="estado"]').value = activeState;
     loadList();
   });
+  // Move the existing card into a dialog on mobile, keeping a single detail DOM.
+  const caseDialog = document.createElement('dialog');
+  caseDialog.className = 'inbox-case-dialog';
+  caseDialog.setAttribute('aria-labelledby', 'inbox-case-dialog-title');
+  caseDialog.innerHTML = '<header class="inbox-modal-header"><h2 id="inbox-case-dialog-title">Expediente vinculado</h2><button type="button" class="inbox-modal-close" aria-label="Cerrar expediente">×</button></header><div class="inbox-case-dialog-body inbox-detail-pane"></div>';
+  layout.parentElement.append(caseDialog);
+  const caseDialogBody = caseDialog.querySelector('.inbox-case-dialog-body');
+  const closeCase = () => { if (caseDialog.open) caseDialog.close(); };
+  caseDialog.querySelector('button').addEventListener('click', closeCase);
+  caseDialog.addEventListener('click', event => {
+    const box = caseDialog.getBoundingClientRect();
+    if (event.target === caseDialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) closeCase();
+  });
+  caseDialog.addEventListener('close', () => {
+    detailPane.append(detail);
+    list.querySelector('[data-task-id].is-selected')?.focus({preventScroll:true});
+  });
+  const openCase = () => {
+    caseDialogBody.append(detail);
+    caseDialogBody.scrollTop = 0;
+    if (!caseDialog.open) caseDialog.showModal();
+  };
   const dialog = document.getElementById('inbox-task-dialog');
   const frame = document.getElementById('inbox-task-frame');
   const modalStatus = document.getElementById('inbox-modal-status');
@@ -130,7 +154,7 @@
     modalStatus.hidden = false;
     modalStatus.textContent = 'Cargando diligencia…';
     frame.hidden = true;
-    document.getElementById('inbox-modal-title').textContent = `Consulta de diligencia #${id}`;
+    document.getElementById('inbox-modal-title').textContent = 'Consulta de diligencia';
     const url = new URL('diligenciapendiente_ver.php', location.href);
     url.searchParams.set('id', String(id));
     url.searchParams.set('embed', '1');
@@ -160,6 +184,7 @@
     });
     addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== frame.contentWindow || !dialog.open) return;
+      if (event.data?.type === 'diligencia.statusUpdated') { loadList(); return; }
       if (event.data?.type === 'diligencia.close') { closeModal(); return; }
       if (['diligencia.saved', 'diligencia.deleted', 'acta.saved', 'acta.deleted'].includes(event.data?.type)) {
         closeModal(); loadList();
@@ -178,7 +203,7 @@
       detailPane.scrollTop = 0;
       syncUrl(); announce('Expediente actualizado.');
       if (consultationOpened) return;
-      if (mobile()) { layout.classList.add('show-detail'); detail.focus(); }
+      if (mobile()) openCase();
     });
   };
   const saveState = async control => {
@@ -271,6 +296,7 @@
   });
   }
   const measure = () => {
+    if (!mobile()) closeCase();
     if (stateFilters) listPane.style.setProperty('--inbox-filters-height', `${stateFilters.getBoundingClientRect().height + 12}px`);
     if (!mobile()) layout.style.setProperty('--inbox-height', `${Math.max(280, window.innerHeight - layout.getBoundingClientRect().top - 20)}px`);
   };

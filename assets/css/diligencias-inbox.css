@@ -87,3 +87,53 @@
 .inbox-detail-pane .case-card-facts{padding-bottom:15px}
 .inbox-detail-pane .case-card-section h3{font-size:10px}
 @media(max-width:800px){.gestion:has(.inbox-layout)>header h1{font-size:22px}.inbox-list-pane>.inbox-state-filters{padding-top:2px}.gestion .inbox-state-filter{font-size:10px;padding:7px 10px}.inbox-layout{gap:14px}}
+
+/* On phones the linked case opens over the list rather than replacing it. */
+.inbox-case-dialog{width:min(560px,calc(100vw - 24px));max-height:88dvh;padding:0;border:1px solid #d5e1d8;border-radius:18px;background:#f2f6f3;color:#233e33;box-shadow:0 20px 70px #142a3655;overflow:hidden}
+.inbox-case-dialog::backdrop{background:#14282080;backdrop-filter:blur(4px)}
+.inbox-case-dialog[open]{display:flex;flex-direction:column}
+.inbox-case-dialog .inbox-modal-header{flex:0 0 auto}
+.inbox-case-dialog .inbox-case-dialog-body{display:block;position:static;width:100%;height:auto;min-height:0;max-height:none;padding:12px;overflow-y:auto;overscroll-behavior:contain}
+.inbox-case-dialog #inbox-detail{outline:none}
+.inbox-case-dialog .case-detail-card{margin:0}
+
+@media(max-width:700px){
+ .inbox-task-dialog{box-sizing:border-box;width:calc(100vw - 16px);max-width:none;height:92dvh;max-height:92dvh;margin:auto;padding:0;overflow:hidden;border-radius:16px}
+ .inbox-task-dialog[open]{display:flex;flex-direction:column}
+ .gestion .inbox-task-dialog>.inbox-modal-header{padding:8px 10px 8px 14px;gap:8px;flex:0 0 auto;min-height:58px}
+ .gestion .inbox-task-dialog .inbox-modal-header h2{font-size:14px;line-height:1.35;letter-spacing:-.02em;overflow-wrap:anywhere}
+ .gestion .inbox-task-dialog .inbox-modal-close{display:flex;align-items:center;justify-content:center;flex:0 0 40px;width:40px;height:40px;min-height:40px;padding:0;border-radius:12px;font-size:24px;background:#edf3ec;color:#284e38;box-shadow:none}
+ .inbox-task-dialog #inbox-task-frame{flex:1 1 auto;min-height:0;height:100%;width:100%}
+ .inbox-task-dialog #inbox-modal-status{font-size:12px;padding:12px 14px}
+}
+
+@media(max-width:800px){
+ .gestion:has(.inbox-layout){margin-top:0;padding-top:8px}
+ .gestion:has(.inbox-layout)>header{margin-bottom:10px;gap:12px}
+ .gestion:has(.inbox-layout)>header h1{margin:0;line-height:1.2}
+ #inbox-status:empty{display:none}
+ /* Keep the selection announcement accessible without taking mobile space. */
+ #inbox-status.is-selection-notice{position:absolute;width:1px;height:1px;min-height:0;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+/* Denser mobile inbox while keeping the controls easy to tap. */
+@media(max-width:800px){
+ .gestion .inbox-list-pane>.inbox-state-filters{gap:6px;margin-bottom:8px;padding-bottom:6px}
+ .gestion .inbox-state-filter{min-height:34px;padding:6px 9px;gap:6px;font-size:10px;line-height:1.3}
+ .gestion .inbox-state-filter b{font-size:9px;padding:2px 5px;line-height:1.3}
+ .gestion .inbox-task-list{gap:8px}
+ .gestion .inbox-task{padding:11px 12px;gap:8px;border-radius:11px;border-left-width:3px}
+ .gestion .inbox-task-top{align-items:flex-start;gap:10px}
+ .gestion .inbox-task-top>strong{min-width:0;flex:1;font-size:12px;line-height:1.4}
+ .gestion .inbox-task-title{font-size:12px;font-weight:650;overflow-wrap:anywhere;text-underline-offset:2px}
+ .gestion .inbox-task-description{font-size:11px;line-height:1.5;font-weight:400}
+ .gestion .inbox-task select.inbox-state-select{box-sizing:border-box;appearance:none;-webkit-appearance:none;min-height:34px;height:34px;width:104px;max-width:104px;margin:0;padding:6px 22px 6px 9px;font:650 10px/1.3 system-ui,sans-serif;border-radius:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='m1 1 4 4 4-4' fill='none' stroke='%235c7067' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:10px 6px}
+}
+
+/* Override the shared mobile form sizing for this compact status chip only. */
+@media(max-width:800px){
+ .gestion .inbox-task select.inbox-state-select{width:94px;max-width:94px!important;height:28px!important;min-height:28px!important;padding:4px 20px 4px 8px!important;font-size:10px!important;line-height:1.2!important;border-radius:15px;background-position:right 7px center;background-size:9px 5px}
+}
+
+/* Strong consultation heading, without changing field values. */
+.gestion .inbox-task-dialog .inbox-modal-header h2{font-weight:800}
