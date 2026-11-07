@@ -2,7 +2,7 @@
 require __DIR__.'/auth.php';
 require_login();
 require __DIR__.'/db.php';
-include __DIR__ . '/_boton_volver.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/_boton_volver.php';
 // DEBUG temporal (quítalo en prod)
 ini_set('display_errors',1); ini_set('display_startup_errors',1); error_reporting(E_ALL);
 
@@ -35,10 +35,12 @@ $accidentes = $pdo->query("
 $sql = "
 SELECT iv.id, iv.accidente_id, iv.vehiculo_id, iv.tipo, iv.observaciones,
        a.fecha_accidente, a.lugar,
-       v.placa, v.color, v.anio
+       v.placa, v.color, v.anio, cv.codigo AS categoria_codigo, tv.nombre AS vehiculo_tipo_nombre
 FROM involucrados_vehiculos_activos iv
 JOIN accidentes_activos a ON a.id = iv.accidente_id
 JOIN vehiculos  v ON v.id = iv.vehiculo_id
+LEFT JOIN categoria_vehiculos cv ON cv.id = v.categoria_id
+LEFT JOIN tipos_vehiculo tv ON tv.id = v.tipo_id
 WHERE 1=1
 ";
 $params = [];
@@ -58,7 +60,7 @@ $st = $pdo->prepare($sql); $st->execute($params);
 $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
 // helper URL base y return
-$base = rtrim(dirname($_SERVER['PHP_SELF']),'/').'/';
+$base = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/') . '/';
 $currentUrl = $_SERVER['REQUEST_URI'] ?? ($base.'involucrados_vehiculos_listar.php');
 $returnParam = urlencode($currentUrl);
 ?>
@@ -218,19 +220,53 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
 }
 .modal-body{ padding:0; }
 #vehiculoFrame{ width:100%; height: 72vh; border:0; display:block; }
+  .vehicle-embedded{height:auto;min-width:0}
+  html:has(.vehicle-embedded){height:auto}
+  .vehicle-embedded *{box-sizing:border-box}
+  .vehicle-embedded .heading-actions{width:100%;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .vehicle-embedded .title{font-size:20px}
+  .vehicle-embedded .btn.new-vehicle{font-size:13px;padding:9px 14px;border-radius:12px;box-shadow:0 4px 12px rgba(37,99,235,.18)}
+  .vehicle-embedded .new-vehicle-icon{width:22px;height:22px;font-size:20px}
+  .vehicle-list-tools{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:20px 0 16px}
+  .vehicle-list-tools label{display:grid;gap:7px;font-size:12px;font-weight:700;width:min(100%,380px)}
+  #vehicle-search{width:100%;min-width:0;border:1px solid var(--stroke);border-radius:12px;padding:11px 14px;background:var(--card);color:var(--text);font:inherit;font-size:13px}
+  #vehicle-count{color:var(--muted);font-size:12px;white-space:nowrap;padding-bottom:12px}
+  .vehicle-list{display:grid;gap:9px}
+  .vehicle-item{min-width:0;border:1px solid var(--stroke);border-radius:13px;padding:11px 14px;background:linear-gradient(120deg,rgba(79,140,255,.07),transparent 70%),var(--card);box-shadow:0 4px 14px rgba(15,23,42,.04);transition:border-color .18s,box-shadow .18s}
+  .vehicle-item:hover{border-color:rgba(79,140,255,.45);box-shadow:0 6px 18px rgba(37,99,235,.09)}
+  .vehicle-item-main{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .vehicle-symbol{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:rgba(79,140,255,.12);font-size:20px}
+  .vehicle-identity{flex:1;min-width:120px;overflow-wrap:anywhere}
+  .vehicle-eyebrow{display:none;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .vehicle-identity h2{font-size:18px;letter-spacing:.04em;margin:0 0 3px;color:var(--text)}
+  .vehicle-identity p{margin:0;color:var(--muted);font-size:12px}
+  .vehicle-type{padding:6px 11px;border-radius:20px;border:1px solid rgba(79,140,255,.24);background:rgba(79,140,255,.1);font-size:12px;font-weight:700;max-width:100%;overflow-wrap:anywhere}
+  .vehicle-item-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid var(--stroke)}
+  .vehicle-item-actions .btn{padding:6px 9px;font-size:11px}
+  .vehicle-item-actions .vehicle-remove{margin-left:auto;color:#c94251;border-color:rgba(201,66,81,.18)}
+  .vehicle-notes{margin-top:8px;font-size:13px}
+  .vehicle-notes summary{cursor:pointer;color:var(--muted);padding:6px 0;font-weight:600}
+  .vehicle-notes p{white-space:normal;overflow-wrap:anywhere;line-height:1.6;margin:8px 0}
+  .vehicle-empty{padding:30px 18px;text-align:center;border:1px dashed var(--stroke);border-radius:16px;background:var(--card)}
+  .vehicle-empty p{color:var(--muted);font-size:13px;line-height:1.6}
+  .vehicle-embedded [hidden]{display:none!important}
+  .vehicle-embedded :is(a,button,input,summary):focus-visible{outline:3px solid #60a5fa;outline-offset:3px}
+  @media(max-width:480px){.vehicle-list-tools{align-items:stretch;flex-direction:column;gap:8px}.vehicle-item{padding:10px 12px}.vehicle-item-actions .vehicle-remove{margin-left:0}.vehicle-type{margin-left:46px}}
+  @media(prefers-reduced-motion:reduce){.vehicle-embedded .btn,.vehicle-item{transition:none}.vehicle-embedded .btn:hover{transform:none}}
 </style>
 <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
-<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar > .actions{display:none!important}
+</style>
 <script src="assets/js/participant-embed.js" defer></script>
 <?php endif; ?>
 </head>
-<body>
+<body class="<?= \App\Support\CaseParticipantEmbed::active() ? 'vehicle-embedded' : '' ?>">
 <div class="wrap">
 
   <div class="topbar">
     <div class="heading-actions">
       <div class="title">Involucrados – Vehículos</div>
-      <a class="btn new-vehicle" href="<?=$base?>involucrados_vehiculos_nuevo.php<?=($accidente_id?('?accidente_id='.$accidente_id):'')?>"><span class="new-vehicle-icon" aria-hidden="true">+</span> Nuevo</a>
+      <a class="btn new-vehicle" href="<?=$base?>involucrados_vehiculos_nuevo.php<?=($accidente_id?('?accidente_id='.$accidente_id):'')?>"><span class="new-vehicle-icon" aria-hidden="true">+</span> Agregar vehículo</a>
     </div>
     <div class="actions">
       <!-- NUEVOS BOTONES -->
@@ -279,12 +315,43 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
   </form>
   <?php endif; ?>
 
+  <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+  <div class="vehicle-list" role="list">
+    <?php foreach ($rows as $r): ?>
+    <article class="vehicle-item" role="listitem" data-search="<?= h(placa_visible($r['placa']).' '.$r['color'].' '.$r['anio'].' '.$r['tipo'].' '.$r['observaciones']) ?>">
+      <div class="vehicle-item-main">
+        <span class="vehicle-symbol" aria-hidden="true">🚘</span>
+        <div class="vehicle-identity">
+          <span class="vehicle-eyebrow">Placa del vehículo</span>
+          <h2><?= h(placa_visible($r['placa'])) ?></h2>
+          <p><?= h(implode(' · ', array_filter([$r['categoria_codigo'], $r['vehiculo_tipo_nombre'], $r['color'], $r['anio']]))) ?: 'Datos del vehículo sin registrar' ?></p>
+        </div>
+        <span class="vehicle-type"><?= h($r['tipo'] ?: 'Sin tipo registrado') ?></span>
+      </div>
+      <?php if (trim((string)$r['observaciones']) !== ''): ?>
+      <details class="vehicle-notes"><summary>Observaciones</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details>
+      <?php endif; ?>
+      <div class="vehicle-item-actions">
+        <a class="btn small" data-participant-edit href="<?= $base ?>vehiculo_editar.php?id=<?= (int)$r['vehiculo_id'] ?>&amp;return_to=<?= $returnParam ?>">Editar vehículo</a>
+        <a class="btn small" data-participant-edit href="<?= $base ?>involucrados_vehiculos_editar.php?id=<?= (int)$r['id'] ?>&amp;return=<?= $returnParam ?>">Editar participación</a>
+        <a class="btn small vehicle-remove" href="<?= $base ?>involucrados_vehiculos_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= $returnParam ?>" onclick="return confirm('¿Eliminar este vehículo del expediente?');">Eliminar</a>
+      </div>
+    </article>
+    <?php endforeach; ?>
+  </div>
+  <div class="vehicle-empty" id="vehicle-empty" <?= $rows ? 'hidden' : '' ?>>
+    <strong><?= $rows ? 'No hay coincidencias' : 'Aún no hay vehículos registrados' ?></strong>
+    <p><?= $rows ? 'Prueba con otra placa, color o tipo.' : 'Usa «Agregar vehículo» para registrar el primero en este expediente.' ?></p>
+  </div>
+  <?php else: ?>
   <div class="card table-wrap">
     <table>
       <thead>
         <tr>
+          <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
           <th style="width:72px">ID</th>
           <th>Accidente</th>
+          <?php endif; ?>
           <th>Vehículo</th>
           <th class="td-hide-sm">Tipo</th>
           <th class="td-hide-sm">Obs.</th>
@@ -293,14 +360,16 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
       </thead>
       <tbody>
         <?php if(!$rows): ?>
-          <tr><td colspan="6" class="muted">Sin registros.</td></tr>
+          <tr><td colspan="<?= \App\Support\CaseParticipantEmbed::active() ? 4 : 6 ?>" class="muted">Sin registros.</td></tr>
         <?php else: foreach($rows as $r): ?>
           <tr>
+            <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
             <td>#<?=h($r['id'])?></td>
             <td>
               <div><strong>#<?=h($r['accidente_id'])?></strong> · <?=h(date('Y-m-d H:i', strtotime($r['fecha_accidente'])))?></div>
               <div class="muted"><?=h($r['lugar'])?></div>
             </td>
+            <?php endif; ?>
             <td>
               <div><strong><?=h(placa_visible($r['placa']))?></strong></div>
               <?php if($r['color']||$r['anio']): ?>
@@ -323,6 +392,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
     </table>
   </div>
 
+  <?php endif; ?>
 <dialog id="vehiculoModal">
   <div class="modal-head">
     <div>Editar vehículo</div>

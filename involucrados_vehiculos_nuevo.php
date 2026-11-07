@@ -173,7 +173,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && iget('ajax')===null) {
   .plate-search-controls input{ flex:0 1 260px; min-width:0; width:260px; max-width:100%; box-sizing:border-box; }
   .plate-search-controls .btn{ flex:0 0 auto; white-space:nowrap; }
   #formIV{ --field-label:#a9caff; --field-bg:#172233; --field-border:#526580; --field-ink:#f1f5f9; --field-placeholder:#a5b4c8; }
-  #formIV label{ color:var(--field-label); font-weight:800; margin-bottom:8px; }
+  #formIV label{
+    display:table; max-width:100%; box-sizing:border-box;
+    color:var(--field-label); font-weight:800; line-height:1.35;
+    margin:0 0 7px 0; padding:4px 10px; border-radius:10px;
+    background:linear-gradient(135deg,rgba(148,185,240,.18),rgba(148,185,240,.06));
+    border:1px solid rgba(148,185,240,.28);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 6px rgba(15,23,42,.05);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  }
+  @media (prefers-color-scheme: light){
+    #formIV label{
+      background:linear-gradient(135deg,rgba(225,237,255,.8),rgba(255,255,255,.55));
+      border-color:rgba(156,182,222,.4);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 6px rgba(30,58,112,.06);
+    }
+  }
   #formIV select, #formIV input[type="text"], #formIV input[type="number"], #formIV textarea{
     background:var(--field-bg); border-color:var(--field-border); color:var(--field-ink);
     box-shadow:inset 0 1px 2px rgba(15,23,42,.04);
@@ -530,7 +545,7 @@ body.modal-open{ overflow: hidden !important; }
     <input type="hidden" name="next" id="next" value="0">
 
     <div class="accident-search-fields">
-      <?php if ($guidedEmbed): ?>
+      <?php if ($guidedEmbed || (\App\Support\CaseParticipantEmbed::active() && $accidente_id > 0)): ?>
         <input type="hidden" name="accidente_id" id="accidente_id" value="<?= (int)$accidente_id ?>">
       <?php else: ?>
       <div>

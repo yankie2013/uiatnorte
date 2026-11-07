@@ -186,6 +186,15 @@ if (window.parent && window.parent !== window) {
   .vehicle-modal [hidden]{display:none!important}
   .vehicle-modal form.grid{gap:14px}
   @media(min-width:641px){.vehicle-modal form.grid>.col-3,.vehicle-modal form.grid>.col-4{grid-column:span 4}}
+  .plate-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  form.grid .plate-controls > #placa{flex:0 1 260px;width:260px!important;max-width:100%;box-sizing:border-box}
+  .plate-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .plate-actions .btn{white-space:nowrap}
+  form.grid #sin_placa{width:auto!important;flex:0 0 auto}
+  @media(min-width:641px){
+    form.grid > .vehicle-kind-field,
+    .vehicle-modal form.grid > .vehicle-kind-field{grid-column:span 6}
+  }
 </style>
 </head>
 <body class="<?= $isEmbed ? 'vehicle-modal' : '' ?>">
@@ -206,24 +215,26 @@ if (window.parent && window.parent !== window) {
     <input type="hidden" name="return_to" value="<?= h((string) ($_POST['return_to'] ?? $_GET['return_to'] ?? '')) ?>">
     <input type="hidden" name="accidente_id" value="<?= $registrationCaseId ?>">
         <!-- Placa + acciones -->
-        <div class="col-3">
+        <div class="col-12 plate-header">
           <label for="placa">Placa</label>
+          <div class="plate-controls">
           <input id="placa" name="placa" value="<?=h($old['placa'])?>" <?= !in_array(strtolower((string) $old['sin_placa']), ['1','on','true','si','sí'], true) ? 'required' : '' ?> maxlength="12" placeholder="ABC-123">
-          <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:600;">
-            <input type="checkbox" id="sin_placa" name="sin_placa" value="1" <?= in_array(strtolower((string) $old['sin_placa']), ['1','on','true','si','sí'], true) ? 'checked' : '' ?> style="width:auto;">
-            Registrar como fugado sin placa
-          </label>
-          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+          <div class="plate-actions">
             <button type="button" class="btn small" id="btnCheckPlaca">Verificar</button>
             <button type="button" class="btn small" id="btnAbrirSeeker">Consultar Seeker</button>
             <button type="submit" class="btn small">Guardar</button>
             <button type="button" class="btn small" id="btnPegarJson" <?= $isEmbed ? 'hidden' : '' ?>>Pegar JSON</button>
             <button type="button" class="btn small" id="btnSubirImagen" <?= $isEmbed ? 'hidden' : '' ?>>Subir/Pegar Imagen</button>
           </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:600;">
+            <input type="checkbox" id="sin_placa" name="sin_placa" value="1" <?= in_array(strtolower((string) $old['sin_placa']), ['1','on','true','si','sí'], true) ? 'checked' : '' ?> style="width:auto;">
+            Registrar como fugado sin placa
+          </label>
           <div id="placaStatus" style="margin-top:6px; font-size:12px; opacity:.9;"></div>
         </div>
 
-        <div class="col-4">
+        <div class="col-4 vehicle-kind-field">
           <label for="tipo_id">Tipo</label>
           <div class="row">
             <select name="tipo_id" id="tipo_id" required style="flex:1;">
@@ -234,7 +245,7 @@ if (window.parent && window.parent !== window) {
         </div>
 
         <!-- Categoría / Tipo / Carrocería -->
-        <div class="col-4">
+        <div class="col-4 vehicle-kind-field">
           <label for="categoria_id">Categoría</label>
           <div class="category-select"><select name="categoria_id" id="categoria_id">
             <option value="">(Selecciona)</option>

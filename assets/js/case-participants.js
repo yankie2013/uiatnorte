@@ -16,15 +16,16 @@
         listUrl = url.href;
         frame.src = listUrl;
         panel.hidden = false; content.hidden = true; citations.hidden = true;
-        document.getElementById('case-participant-list-title').textContent = link.querySelector('span:last-child')?.firstChild.textContent || 'Participantes';
         document.getElementById('case-new-menu').hidden = true;
         document.querySelector('.js-case-new-trigger')?.setAttribute('aria-expanded', 'false');
     }));
-    document.getElementById('case-participant-list-back').addEventListener('click', () => { panel.hidden = true; content.hidden = false; });
     document.querySelector('.js-citations-panel')?.addEventListener('click', () => { panel.hidden = true; });
     document.getElementById('case-citations-back')?.addEventListener('click', () => { panel.hidden = true; });
     document.getElementById('case-participant-dialog-close').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('close', () => { createFrame.src = 'about:blank'; });
+    dialog.addEventListener('close', () => {
+        createFrame.src = 'about:blank';
+        if (listUrl) frame.src = listUrl;
+    });
     let observer;
     frame.addEventListener('load', () => {
         let doc;
@@ -38,11 +39,12 @@
             if (!link) return;
             const url = new URL(link.href);
             if (url.origin !== location.origin) return;
-            if (stems.some(stem => page(url) === stem + '_nuevo.php')) {
+            if (stems.some(stem => page(url) === stem + '_nuevo.php') || link.hasAttribute('data-participant-edit')) {
                 event.preventDefault();
                 url.searchParams.set('case_embed', '1');
                 createFrame.src = url.href;
                 document.getElementById('case-participant-dialog-title').textContent = link.textContent.trim() || 'Nuevo registro';
+                createFrame.title = link.textContent.trim() || 'Nuevo registro';
                 dialog.showModal();
             } else if (stems.some(stem => page(url) === stem + '_listar.php')) {
                 event.preventDefault(); url.searchParams.set('case_embed', '1'); frame.src = url.href;
@@ -52,9 +54,7 @@
         });
     });
     window.addEventListener('message', event => {
-        if (event.origin !== location.origin || event.source !== createFrame.contentWindow || event.data?.type !== 'participant.saved') return;
-        dialog.close(); frame.src = listUrl;
-        // Al regresar al resumen, carga también sus participantes y contadores actualizados.
-        document.getElementById('case-participant-list-back').onclick = () => location.reload();
+        if (event.origin !== location.origin || event.source !== createFrame.contentWindow) return;
+        if (['participant.saved', 'participant.cancel'].includes(event.data?.type)) dialog.close();
     });
 })();

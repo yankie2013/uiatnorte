@@ -106,7 +106,7 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
-$base = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
+$base = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/') . '/';
 $returnTo = $_SERVER['REQUEST_URI'] ?? ($base . 'involucrados_personas_listar.php');
 
 $messages = [
@@ -164,12 +164,14 @@ $messages = [
 <body>
 <div class="wrap">
   <div class="toolbar">
+    <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
     <?php if ($accidenteId > 0): ?>
     <a class="btn" href="<?= $base ?>accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>&amp;tab=participantes">Volver al accidente</a>
     <?php else: ?>
     <a class="btn" href="<?= $base ?>accidente_listar.php">Volver a accidentes</a>
     <?php endif; ?>
-    <div style="display:flex; gap:8px;">
+    <?php endif; ?>
+    <div style="display:flex; gap:8px; margin-left:auto;">
       <a class="btn primary" href="<?= $base ?>involucrados_personas_nuevo.php<?= $accidenteId ? ('?accidente_id=' . $accidenteId) : '' ?>">Nuevo</a>
       <a class="btn" href="<?= $base ?>index.php">Panel</a>
     </div>

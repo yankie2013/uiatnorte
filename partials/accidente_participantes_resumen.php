@@ -195,37 +195,13 @@
         <iframe id="case-citations-frame" title="Listado de citaciones" data-src="citacion_listar.php?accidente_id=<?= (int) $accidente_id ?>&amp;embed=1" style="width:100%;min-height:500px;border:0;margin-top:14px"></iframe>
       </section>
       <section id="case-participant-list-panel" hidden aria-label="Listado de participantes">
-        <div style="display:flex;align-items:center;gap:12px"><button type="button" class="btn-shell" id="case-participant-list-back">← Participantes</button><strong id="case-participant-list-title"></strong></div>
         <iframe id="case-participant-list-frame" title="Listado de participantes" style="width:100%;min-height:500px;border:0;margin-top:12px"></iframe>
       </section>
       <div id="case-participants-content">
       <?php foreach ($summaryUnits as $unit): ?>
         <article class="participant-overview-unit" style="--unit-accent:hsl(<?= 190 + (($unitIndex++ * 47) % 100) ?> 42% 43%);">
-          <header><h3><?= h($unit['ut']) ?></h3>
-          <?php foreach ($unit['vehiculos'] as $vehicle): ?>
-            <?php
-            $vehiclePersonTarget = '';
-            $vehiclePanelTarget = '';
-            foreach ($unit['personas'] as $candidate) {
-                if (!is_conductor($candidate) || empty($candidate['veh_id'])) continue;
-                $combined = es_participacion_combinada($candidate['veh_participacion'] ?? null) && count($unit['vehiculos']) > 1;
-                if (!$combined && (int) $candidate['veh_id'] !== (int) ($vehicle['veh_id'] ?? 0)) continue;
-                $vehiclePersonTarget = 'persona-' . (int) $candidate['involucrado_id'];
-                $vehiclePanelTarget = '#person-pane-' . (int) $candidate['involucrado_id'] . '-vehiculo';
-                if ($combined) $vehiclePanelTarget .= '-' . (string) ($vehicle['veh_numero'] ?? '');
-                break;
-            }
-            ?>
-            <div class="case-person-actions"><strong><span class="vehicle-label-prefix">Vehículo de placa </span><?= h($vehicle['veh_placa'] ?: 'Sin placa registrada') ?></strong>
-            <?php if ($vehiclePersonTarget !== ''): ?>
-              <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($vehiclePersonTarget) ?>" data-vehicle-only="1" data-vehicle-panel="<?= h($vehiclePanelTarget) ?>">Ver vehículo ↗</button>
-            <?php else: ?>
-              <a class="case-person-view" href="vehiculo_editar.php?id=<?= (int) ($vehicle['veh_id'] ?? 0) ?>&return_to=<?= urlencode('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=participantes') ?>">Ver vehículo ↗</a>
-            <?php endif; ?>
-            <?php if ((int) ($vehicle['inv_vehiculo_id'] ?? 0) > 0 && !isset($vehiclesWithOwner[(int) $vehicle['inv_vehiculo_id']])): ?>
-              <a class="overview-add-related" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_inv_id=<?= (int) $vehicle['inv_vehiculo_id'] ?>">+ Propietario</a>
-            <?php endif; ?></div>
-          <?php endforeach; ?>
+          <header class="overview-unit-heading"><h3><?= h($unit['ut']) ?></h3>
+
           <?php
           $unitDrivers = array_values(array_filter($unit['personas'], 'is_conductor'));
           ?>
@@ -241,8 +217,20 @@
             <?php endif; ?>
           </span>
           <?php $renderFamilyActions($unit['personas']); ?></header>
+          <?php foreach ($unit['vehiculos'] as $vehicle): ?>
+            <div class="overview-unit-vehicle">
+              <span class="overview-vehicle-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 1.5-4h11L19 10M4 10h16v8H4zM7 18v2m10-2v2M7 13h1m8 0h1M9 16h6"/></svg></span>
+              <div class="overview-unit-vehicle-info">
+                <div class="overview-vehicle-identity">
+                  <strong><?= h($vehicle['veh_placa'] ?: 'Sin placa registrada') ?></strong>
+                <span class="overview-unit-vehicle-type"><?= h(trim((string) ($vehicle['veh_tipo'] ?? '')) ?: 'Tipo no registrado') ?></span>
+                </div>
+              </div>
+              <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="expediente-vehiculo-<?= (int) $vehicle['inv_vehiculo_id'] ?>" data-vehicle-only="1">Ver vehículo <span aria-hidden="true">↗</span></button>
+            </div>
+          <?php endforeach; ?>
           <?php if (!$unit['personas']): ?>
-            <p class="overview-person-meta">UT registrada. Pendiente de agregar conductor, pasajeros u ocupantes.</p>
+            <p class="overview-person-meta overview-unit-pending"><span aria-hidden="true">◷</span> Pendiente de registrar conductor, pasajeros u ocupantes.</p>
           <?php endif; ?>
           <?php
           $lastRoleGroup = '';

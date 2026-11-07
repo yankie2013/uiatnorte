@@ -4758,7 +4758,7 @@ $renderVehiculoSubtabs = static function (
     $documentoVehiculoId = (int) ($documentoVehiculo['id'] ?? 0);
     $involucradoVehiculoId = (int) ($vehiculoRecord['inv_vehiculo_id'] ?? 0);
     $vehiculoNumero = trim((string) ($vehiculoRecord['veh_numero'] ?? ''));
-    $vehiculoTitulo = $vehiculoNumero !== '' ? 'Vehículo ' . $vehiculoNumero : 'Vehículo vinculado al conductor';
+    $vehiculoTitulo = $vehiculoNumero !== '' ? 'Vehículo ' . $vehiculoNumero : 'Vehículo del expediente';
     $returnToEncoded = urlencode($returnTo);
 
     ob_start();
@@ -8933,6 +8933,9 @@ $resumenInterventionRows = [
             ];
           ?>
           <div class="tabs-header participant-tabs nav nav-tabs flex-nowrap" id="participantes-tabs" role="tablist">
+            <?php foreach ($summaryUnits as $vehicleUnit): foreach ($vehicleUnit['vehiculos'] as $caseVehicle): ?>
+              <button class="nav-link" hidden data-bs-toggle="tab" data-bs-target="#expediente-vehiculo-<?= (int) $caseVehicle['inv_vehiculo_id'] ?>" type="button" role="tab"><?= h($caseVehicle['veh_placa']) ?></button>
+            <?php endforeach; endforeach; ?>
             <?php $participantTabIndex = 0; ?>
             <?php foreach ($personas as $persona): ?>
               <?php $tabId = 'persona-' . (int) $persona['involucrado_id']; ?>
@@ -8952,6 +8955,29 @@ $resumenInterventionRows = [
           </div>
 
           <div class="tab-content mt-2">
+            <?php foreach ($summaryUnits as $vehicleUnit): foreach ($vehicleUnit['vehiculos'] as $caseVehicle):
+              $caseVehicleId = (int) $caseVehicle['inv_vehiculo_id'];
+              $caseVehiclePrefix = 'expediente-vehiculo-' . $caseVehicleId;
+              $caseVehicleReturn = 'accidente_vista_tabs.php?accidente_id=' . (int) $accidente_id . '&tab=participantes';
+              $caseVehicle['accidente_id'] = (int) $accidente_id;
+            ?>
+              <div class="tab-pane fade" id="<?= h($caseVehiclePrefix) ?>" role="tabpanel">
+                <div class="inner-panel">
+                  <h3>Vehículo <?= h(vehiculo_placa_visible($caseVehicle['veh_placa'] ?? '')) ?></h3>
+                  <?= $renderVehiculoSubtabs(
+                      $caseVehicle,
+                      $docVehiculoPorInvolucrado[$caseVehicleId] ?? null,
+                      (int) ($docVehiculoCantidadPorInvolucrado[$caseVehicleId] ?? 0),
+                      $caseVehiclePrefix,
+                      'vehiculo-documento-modal',
+                      'vehiculo-documento-modal-frame',
+                      $caseVehicleReturn,
+                      $vehiculoFields,
+                      $docVehiculoSections
+                  ) ?>
+                </div>
+              </div>
+            <?php endforeach; endforeach; ?>
             <?php $participantPaneIndex = 0; ?>
       <?php foreach ($personas as $persona): ?>
         <?php
@@ -12964,7 +12990,8 @@ $resumenInterventionRows = [
           }
 
           if (vehicleOnly && target) {
-            const vehicleFirstSubtab = target.querySelector('.inner-tabs > [data-bs-toggle="tab"]');
+            const vehicleFirstSubtab = target.querySelector('.inner-tabs > [data-bs-target$="-resumen"]')
+              || target.querySelector('.inner-tabs > [data-bs-toggle="tab"]');
             if (vehicleFirstSubtab && !vehicleFirstSubtab.classList.contains('active')) {
               bootstrap.Tab.getOrCreateInstance(vehicleFirstSubtab).show();
             }
@@ -13771,6 +13798,6 @@ if ($officeDownloadUrl !== '') {
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><strong id="case-participant-dialog-title">Nuevo registro</strong><button type="button" class="btn-shell" id="case-participant-dialog-close">Cerrar</button></div>
 <iframe id="case-participant-create-frame" title="Nuevo participante" style="width:100%;height:75vh;border:0"></iframe>
 </dialog>
-<script src="assets/js/case-participants.js"></script>
+<script src="assets/js/case-participants.js?v=<?= filemtime(__DIR__ . '/assets/js/case-participants.js') ?>"></script>
 </body>
 </html>

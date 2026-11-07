@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $vehiculoService->actualizar($id, $_POST);
+        \App\Support\CaseParticipantEmbed::saved();
         header('Location: ' . $returnTo . (str_contains($returnTo, '?') ? '&' : '?') . 'msg=editado');
         exit;
     } catch (InvalidArgumentException $e) {
@@ -107,9 +108,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .modal .help{ font-size:12px; color: rgba(var(--g-muted),1) }
   .hidden{ display:none }
 </style>
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap{display:block!important;max-width:none!important;min-height:0!important;margin:0!important;padding:16px!important}.hdr{display:none!important}</style>
+<script src="assets/js/participant-embed.js?v=<?= filemtime(__DIR__ . '/assets/js/participant-embed.js') ?>" defer></script>
+<?php endif; ?>
 </head>
 <body>
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php if (!\App\Support\CaseParticipantEmbed::active()) require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="wrap">
   <div class="card">
@@ -221,7 +226,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="col-12 row" style="justify-content:flex-end;">
-          <a class="btn sec" href="<?= h($returnTo) ?>">Cancelar</a>
+          <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+          <button type="button" class="btn" onclick="parent.postMessage({type:'participant.cancel'}, location.origin)">Cancelar</button>
+          <?php else: ?>
+<a class="btn sec" data-participant-cancel href="<?= h($returnTo) ?>">Cancelar</a>
+          <?php endif; ?>
           <button class="btn" type="submit">Guardar cambios</button>
         </div>
       </form>
