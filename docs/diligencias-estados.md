@@ -1,6 +1,6 @@
 # Estado efectivo de diligencias
 
-La bandeja **Diligencias** muestra Todas, Pendientes (rojo), En proceso (naranja) y Realizadas (verde). La URL anterior se conserva para no romper enlaces. Cada filtro y su contador usa el mismo estado calculado y el alcance del expediente asignado al JEFE EMI.
+La bandeja **Diligencias** muestra únicamente Pendiente (rojo), En proceso (amarillo) y Realizadas (verde), encima del listado de la columna derecha. Al entrar sin filtro se selecciona Pendiente. La URL anterior se conserva para no romper enlaces. Cada filtro y su contador usa el mismo estado calculado y el alcance del expediente asignado al JEFE EMI.
 
 `App\Support\DiligenciaEstado` calcula el estado al leer, sin migraciones ni actualizaciones masivas:
 
@@ -16,3 +16,9 @@ La bandeja **Diligencias** muestra Todas, Pendientes (rojo), En proceso (naranja
 La lectura se aplica a la bandeja, al repositorio usado por la consulta modal y al listado dentro del expediente. Los datos almacenados conservan el enum existente. Las respuestas o cambios de citación posteriores se reflejan en la próxima consulta, incluso para diligencias antiguas.
 
 Esta mejora no implementa generación automática de diligencias ni confirmación de cargos de remisión; esos cambios requieren su propia integración.
+
+## Cambio desde el chip de estado
+
+El selector de cada fila guarda el estado mediante POST con token CSRF y comprueba tanto el alcance de la bandeja como el permiso de edición del expediente. La operación es transaccional y refresca lista, contadores y colores conservando el filtro activo. Si la diligencia pasa a otro estado, deja de aparecer en el filtro anterior.
+
+Los documentos siguen determinando el estado efectivo: si el estado solicitado contradice esa evidencia, se rechaza el cambio y se conserva el valor anterior, indicando el motivo. No se muestra una confirmación de guardado si el cambio no pudo persistirse.

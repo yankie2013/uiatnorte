@@ -6,7 +6,7 @@ use App\Support\Access;
 use PDO;
 use RuntimeException;
 
-/** Read-only work queue. Assignment always comes from the linked case, never the task's author. */
+/** Permission-scoped work queue. Assignment always comes from the linked case, never the task's author. */
 final class DiligenciaInboxRepository
 {
     public const STATES = ['Pendiente', 'En proceso', 'Realizado'];
@@ -60,6 +60,39 @@ final class DiligenciaInboxRepository
         $statement = $this->pdo->prepare($this->columns().$from.$where.' AND dp.id=?');
         $statement->execute([...$params,$id]);
         return $statement->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function changeState(int $id, string $state): array
+    {
+        if (!self::allowed()) throw new RuntimeException('No tienes acceso a esta bandeja.',403);
+        if (!in_array($state,self::STATES,true)) throw new \InvalidArgumentException('Estado inválido.');
+        $ownsTransaction = !$this->pdo->inTransaction();
+        $savepoint = 'task_status_'.bin2hex(random_bytes(4));
+        if ($ownsTransaction) $this->pdo->beginTransaction();
+        else $this->pdo->exec('SAVEPOINT '.$savepoint);
+        try {
+            $lock = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql' ? ' FOR UPDATE' : '';
+            $check = $this->pdo->prepare('SELECT dp.accidente_id FROM diligencias_pendientes_activos dp JOIN accidentes_activos a ON a.id=dp.accidente_id WHERE dp.id=? AND ('.Access::workspacePredicate('a').')'.$lock);
+            $check->execute([$id]);
+            $caseId = (int)$check->fetchColumn();
+            if (!$caseId) throw new RuntimeException('Diligencia no disponible.',404);
+            if (!Access::canEdit($caseId)) throw new RuntimeException('No tienes permiso para modificar esta diligencia.',403);
+            $statement = $this->pdo->prepare('UPDATE diligencias_pendientes SET estado=?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?');
+            $statement->execute([$state,$id]);
+            $row = $this->find($id);
+            if (!$row || $row['estado']!==$state) {
+                throw new RuntimeException('Los documentos vinculados determinan el estado '.($row['estado']??'actual').'. Revisa esos documentos antes de cambiarlo.',409);
+            }
+            if ($ownsTransaction) $this->pdo->commit();
+            else $this->pdo->exec('RELEASE SAVEPOINT '.$savepoint);
+            return $row;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                if ($ownsTransaction) $this->pdo->rollBack();
+                else { $this->pdo->exec('ROLLBACK TO SAVEPOINT '.$savepoint); $this->pdo->exec('RELEASE SAVEPOINT '.$savepoint); }
+            }
+            throw $e;
+        }
     }
 
     public function counts(string $q = ''): array

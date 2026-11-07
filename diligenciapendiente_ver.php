@@ -128,6 +128,11 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
 .resolve-panel{margin-top:18px;border:1px solid var(--border);border-radius:16px;padding:18px;background:rgba(29,78,216,.035)}.resolve-title{margin:0 0 4px;font-size:1.05rem}.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field-full{grid-column:1/-1}.input,select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--text)}.pick-list{display:grid;gap:8px;max-height:290px;overflow:auto;padding-right:4px}.pick-card{display:flex;align-items:flex-start;gap:9px;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card)}.pick-card input{margin-top:4px}.pick-card strong{display:block}.pick-card small{display:block;color:var(--muted);line-height:1.35;margin-top:3px}.checkline{display:flex;gap:8px;align-items:center;margin-top:10px}.checkline input{width:auto}
 @media (max-width: 900px){body{padding:14px}.grid{grid-template-columns:1fr}}
 @media (max-width: 720px){.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}}
+.diligencia-state{display:inline-block;padding:6px 12px;border-radius:999px;font-weight:700;font-size:.9rem;line-height:1.4}
+.diligencia-state.pending{background:#fde5e5;color:#9e292d}
+.diligencia-state.in-process{background:#fff3b0;color:#705900}
+.diligencia-state.completed{background:#e0f2e5;color:#22653b}
+.diligencia-state.cancelled{background:#e8ecf0;color:#4b5563}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -164,7 +169,7 @@ body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:"S
         </div>
         <div style="margin-bottom:16px;">
           <span class="label">Estado</span>
-          <div><?= h($row['estado'] ?? 'Pendiente') ?></div>
+          <div><span class="diligencia-state <?= ['Pendiente'=>'pending','En proceso'=>'in-process','Realizado'=>'completed','Cancelado'=>'cancelled'][$row['estado'] ?? 'Pendiente'] ?? 'pending' ?>"><?= h($row['estado'] ?? 'Pendiente') ?></span></div>
         </div>
 
         <div style="margin-bottom:16px;">

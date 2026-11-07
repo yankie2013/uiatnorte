@@ -370,17 +370,17 @@ if (!$guidedEmbed) include __DIR__ . '/sidebar.php';
 <title>Nuevo Accidente | UIAT Norte</title>
 <link rel="stylesheet" href="assets/accidente.css?v=<?= (int) filemtime(__DIR__ . '/assets/accidente.css') ?>">
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/css/accidente-nuevo.css?v=<?= (int) filemtime(__DIR__ . '/assets/css/accidente-nuevo.css') ?>">
 <?php if($guidedEmbed): ?><style>body{padding:0!important;background:white}.wrap{margin:0!important;padding:0!important;max-width:none!important}.title{display:none}.form-block{box-shadow:none}</style><?php endif; ?>
 </head>
-<body>
+<body class="accident-create">
 <?php if (\App\Support\Access::role()==='guardia' && !$guidedEmbed): ?><div style="max-width:1100px;margin:24px auto;padding:20px;background:#e2f3ee;border-radius:16px"><strong>1 · Datos del accidente → 2 · Vehículos → 3 · Personas → 4 · Entrega</strong><p>Completa los datos conocidos. Al guardar continuarás con los vehículos y las personas involucradas.</p></div><?php endif ?>
 <div class="wrap">
   <div class="title">
-    <h1>Registrar Accidente <span class="badge">Nuevo</span></h1>
+    <h1>Nuevo expediente</h1>
     <nav class="toolbar">
       <a class="btn" href="index.php">Inicio</a>
       <a class="btn" href="accidente_listar.php">Listar</a>
-      <a class="btn primary" href="accidente_nuevo.php">+ Nuevo</a>
     </nav>
   </div>
 
@@ -593,7 +593,7 @@ if (!$guidedEmbed) include __DIR__ . '/sidebar.php';
 
       <div class="col-12 rowflex accident-form-actions">
         <a class="btn" href="accidente_listar.php">Cancelar</a>
-        <button class="btn primary" type="submit">Guardar</button>
+        <button class="btn primary" type="submit">Guardar expediente</button>
       </div>
     </form>
   </div>

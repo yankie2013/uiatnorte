@@ -1,0 +1,25 @@
+const {JSDOM}=require('jsdom');
+const {readFileSync}=require('node:fs');const {join}=require('node:path');const assert=require('node:assert/strict');
+const task=id=>`<article class="inbox-task is-selected" data-task-id="${id}" tabindex="0"><a href="?id=${id}" data-task-open>Tipo</a><select data-task-status data-prev-state="Pendiente"><option>Pendiente</option><option>En proceso</option><option value="Realizado">Realizada</option></select></article>`;
+const dom=new JSDOM(`<main class="gestion"><header><h1>Diligencias</h1><span class="page-title-suffix">1 diligencia</span></header><nav class="inbox-state-filters" data-current-state="Pendiente"><a href="?estado=" data-inbox-state=""><b data-state-count>1</b></a><a href="?estado=Pendiente" data-inbox-state="Pendiente"><b data-state-count>1</b></a><a href="?estado=En+proceso" data-inbox-state="En proceso"><b data-state-count>0</b></a></nav><p id="inbox-status"></p><div class="inbox-layout" data-selected-id="1" data-csrf="test-token"><aside class="inbox-detail-pane"><button class="inbox-mobile-back"></button><div id="inbox-detail"></div></aside><div class="inbox-list-pane"><div id="inbox-list">${task(1)}</div></div></div></main>`,{url:'http://localhost/uiatnorte/diligencias_pendientes.php?estado=Pendiente',runScripts:'outside-only'});
+const w=dom.window,d=w.document;w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=function(){};
+const calls=[];w.fetch=(url,options)=>new Promise(resolve=>calls.push({url:new URL(url),options,resolve}));
+w.eval(readFileSync(join(__dirname,'../assets/js/diligencias-inbox.js'),'utf8'));
+const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
+const reply=(i,data,ok=true)=>calls[i].resolve({ok,redirected:false,json:async()=>data});
+(async()=>{
+ let control=d.querySelector('[data-task-status]');
+ control.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true,button:0}));
+ control.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'ArrowDown'}));assert.equal(calls.length,0,'Chip must not select a row or open a modal');
+ control.value='En proceso';control.dispatchEvent(new w.Event('change',{bubbles:true}));
+ assert.equal(calls[0].options.method,'POST');assert.equal(calls[0].options.body.get('_csrf'),'test-token');assert.equal(calls[0].options.body.get('id'),'1');assert.equal(calls[0].options.body.get('estado'),'En proceso');assert.equal(control.disabled,true);
+ reply(0,{ok:true,id:1,estado:'En proceso'});await pause();
+ assert.equal(calls[1].url.searchParams.get('estado'),'Pendiente','Keep current state filter after saving');
+ reply(1,{listHtml:'Sin pendientes',detailHtml:'Sin selección',selectedId:0,total:0,page:1,state:'Pendiente',counts:{Pendiente:0,'En proceso':1,Realizado:0}});await pause();
+ assert.equal(d.querySelector('[data-task-status]'),null,'Moved task disappears from pending filter');assert.equal(d.querySelector('.page-title-suffix').textContent,'0 diligencias');assert.match(d.getElementById('inbox-status').textContent,/Estado guardado/);assert.equal(d.querySelector('.inbox-layout').dataset.savingState,undefined);
+ d.querySelector('[data-inbox-state=""]').click();reply(2,{listHtml:task(2),detailHtml:'Caso',selectedId:2,total:1,page:1,state:'',counts:{Pendiente:1,'En proceso':0,Realizado:0}});await pause();
+ control=d.querySelector('[data-task-status]');control.value='Realizado';control.dispatchEvent(new w.Event('change',{bubbles:true}));
+ reply(3,{ok:false,error:'No tienes permiso para modificar esta diligencia.'},false);await pause();
+ assert.equal(control.value,'Pendiente','Rejected save restores previous state');assert.equal(control.disabled,false);assert.match(d.getElementById('inbox-status').textContent,/No tienes permiso/);assert.equal(calls.length,4,'Failed save must not report success or refresh as if saved');
+ dom.window.close();console.log('PASS: chip editing, POST/CSRF, filter/count refresh, moved rows and failed-save rollback.');
+})().catch(error=>{dom.window.close();console.error(error);process.exitCode=1;});

@@ -14,8 +14,25 @@ if (!DiligenciaInboxRepository::allowed()) {
     if ($fragment !== '') { header('Content-Type: application/json; charset=utf-8'); exit(json_encode(['error'=>'No tienes acceso a esta bandeja.'],JSON_UNESCAPED_UNICODE)); }
     exit('Esta bandeja está disponible para el JEFE EMI y el administrador.');
 }
-if (($_SERVER['REQUEST_METHOD']??'GET') !== 'GET') { http_response_code(405); header('Allow: GET'); exit('Esta pantalla es de consulta.'); }
 $repository = new DiligenciaInboxRepository($pdo);
+if (($_SERVER['REQUEST_METHOD']??'GET') === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        try { \App\Support\Access::checkCsrf(); } catch (Throwable $e) { http_response_code(419); throw $e; }
+        if (($_POST['action']??'') !== 'update_status' || !is_string($_POST['estado']??null) || !is_string($_POST['id']??null)) throw new InvalidArgumentException('Solicitud inválida.');
+        $taskId = filter_var($_POST['id'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]) ?: 0;
+        $updated = $repository->changeState($taskId,$_POST['estado']);
+        echo json_encode(['ok'=>true,'id'=>(int)$updated['id'],'estado'=>$updated['estado']],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    } catch (Throwable $e) {
+        if ($e instanceof InvalidArgumentException) http_response_code(422);
+        elseif (in_array($e->getCode(),[403,404,409],true)) http_response_code($e->getCode());
+        elseif (http_response_code()!==419) { http_response_code(500); error_log('Diligence status save failed: '.$e->getMessage()); }
+        $safe = http_response_code()===500 ? 'No pudimos guardar el estado. Intenta nuevamente.' : $e->getMessage();
+        echo json_encode(['ok'=>false,'error'=>$safe],JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+if (($_SERVER['REQUEST_METHOD']??'GET') !== 'GET') { http_response_code(405); header('Allow: GET, POST'); exit('Método no permitido.'); }
 $render = static function(string $view, array $variables): string {
     extract($variables, EXTR_SKIP);
     ob_start();
@@ -29,7 +46,7 @@ try {
         if (isset($_GET[$key]) && !is_string($_GET[$key])) throw new InvalidArgumentException('Filtro inválido.');
     }
     $q = trim($_GET['q']??'');
-    $state = trim($_GET['estado']??'');
+    $state = trim($_GET['estado']??'Pendiente') ?: 'Pendiente';
     if (strlen($q)>200 || ($state!=='' && !in_array($state,DiligenciaInboxRepository::STATES,true))) throw new InvalidArgumentException('Revisa el texto y el estado de búsqueda.');
     if ($fragment==='detail') {
         $taskId = filter_var($_GET['id']??'',FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]) ?: 0;
@@ -60,22 +77,24 @@ try {
 }
 Page::start('Diligencias','assets/css/diligencias-inbox.css?v='.filemtime(__DIR__.'/assets/css/diligencias-inbox.css'),null,true,$result['total'].' '.($result['total']===1?'diligencia':'diligencias'));
 ?>
-<nav class="inbox-state-filters" aria-label="Filtrar diligencias por estado" data-current-state="<?= Page::escape($state) ?>">
-<?php foreach ([''=>'Todas','Pendiente'=>'Pendientes','En proceso'=>'En proceso','Realizado'=>'Realizadas'] as $value=>$label):
-    $count = $value==='' ? array_sum($result['counts']) : $result['counts'][$value];
-    $stateClass = [''=>'all','Pendiente'=>'pending','En proceso'=>'in-process','Realizado'=>'completed'][$value];
-?>
-<a class="inbox-state-filter <?= $stateClass ?> <?= $state===$value?'is-active':'' ?>" href="?<?= Page::escape(http_build_query(['q'=>$q,'estado'=>$value])) ?>" data-inbox-state="<?= Page::escape($value) ?>" <?= $state===$value?'aria-current="true"':'' ?>><span><?= Page::escape($label) ?></span><b data-state-count><?= $count ?></b></a>
-<?php endforeach; ?>
-</nav>
+
 <p id="inbox-status" role="status" aria-live="polite"><?= Page::escape($error) ?></p>
 <?php if ($error): ?><a class="inbox-retry" href="diligencias_pendientes.php">Volver a intentar</a><?php endif; ?>
-<div class="inbox-layout" data-selected-id="<?= (int)($selected['id']??0) ?>">
+<div class="inbox-layout" data-csrf="<?= Page::escape(\App\Support\Access::csrf()) ?>" data-selected-id="<?= (int)($selected['id']??0) ?>">
   <aside class="inbox-detail-pane" aria-label="Expediente de la diligencia seleccionada">
     <button class="inbox-mobile-back" type="button">← Volver a la lista</button>
     <div id="inbox-detail" tabindex="-1"><?= $detailHtml ?></div>
   </aside>
-  <div class="inbox-list-pane" aria-label="Lista de diligencias" tabindex="0"><div id="inbox-list"><?= $listHtml ?></div></div>
+  <div class="inbox-list-pane" aria-label="Lista de diligencias" tabindex="0">
+<nav class="inbox-state-filters" aria-label="Filtrar diligencias por estado" data-current-state="<?= Page::escape($state) ?>">
+<?php foreach (['Pendiente'=>'Pendiente','En proceso'=>'En proceso','Realizado'=>'Realizadas'] as $value=>$label):
+    $count = $result['counts'][$value];
+    $stateClass = ['Pendiente'=>'pending','En proceso'=>'in-process','Realizado'=>'completed'][$value];
+?>
+<a class="inbox-state-filter <?= $stateClass ?> <?= $state===$value?'is-active':'' ?>" href="?<?= Page::escape(http_build_query(['q'=>$q,'estado'=>$value])) ?>" data-inbox-state="<?= Page::escape($value) ?>" <?= $state===$value?'aria-current="true"':'' ?>><span><?= Page::escape($label) ?></span><b data-state-count><?= $count ?></b></a>
+<?php endforeach; ?>
+</nav>
+<div id="inbox-list"><?= $listHtml ?></div></div>
 </div>
 <dialog id="inbox-task-dialog" class="inbox-task-dialog" aria-labelledby="inbox-modal-title">
   <header class="inbox-modal-header"><h2 id="inbox-modal-title">Consulta de diligencia</h2><button type="button" class="inbox-modal-close" aria-label="Cerrar consulta">×</button></header>

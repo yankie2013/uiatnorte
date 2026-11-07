@@ -7,6 +7,9 @@ sort($welcomeDistricts, SORT_NATURAL | SORT_FLAG_CASE);
 $welcomeCriterion = $welcomeSearch['criterion'];
 $welcomePlaceholders = ['persona'=>'Busca un expediente por nombres o apellidos…', 'vehiculo'=>'Ingresa una placa vehicular…', 'distrito'=>'Selecciona o busca un distrito…', 'comisaria_id'=>'Selecciona o busca una comisaría…'];
 ?>
+<?php if (!$isArchivo): ?>
+<div class="welcome-actions"><a class="welcome-new-case" href="accidente_nuevo.php"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 11v6m-3-3h6"/></svg><span>Nuevo Expediente</span></a></div>
+<?php endif; ?>
 <main class="welcome-hero" aria-labelledby="welcome-title" <?= $welcomeHasSearch ? 'hidden' : '' ?>>
   <div class="welcome-content">
     <h1 id="welcome-title">Bienvenido, <span><?= h($welcomeShortName) ?></span></h1>
@@ -34,4 +37,4 @@ $welcomePlaceholders = ['persona'=>'Busca un expediente por nombres o apellidos�
       <?php if ($welcomeSearch['error'] !== ''): ?><p class="welcome-error" role="alert"><?= h($welcomeSearch['error']) ?></p><?php elseif ($welcomeSearch['submitted'] && !$welcomeHasSearch): ?><p class="welcome-error" role="status">Ingresa un dato para buscar un expediente.</p><?php endif; ?>
     </form>
 </section>
-    <nav class="welcome-shortcuts" <?= $welcomeHasSearch ? 'hidden' : '' ?> aria-label="Accesos rápidos"><a href="accidente_listar.php">Mis expedientes <span aria-hidden="true">↗</span></a><a href="dashboard.php">Resumen general <span aria-hidden="true">↗</span></a><?php if (!$isArchivo): ?><a href="accidente_nuevo.php">Registrar accidente <span aria-hidden="true">＋</span></a><?php endif; ?></nav>
+    <nav class="welcome-shortcuts" <?= $welcomeHasSearch ? 'hidden' : '' ?> aria-label="Accesos rápidos"><a href="accidente_listar.php">Mis expedientes <span aria-hidden="true">↗</span></a><a href="dashboard.php">Resumen general <span aria-hidden="true">↗</span></a></nav>

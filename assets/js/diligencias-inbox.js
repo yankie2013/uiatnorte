@@ -15,6 +15,7 @@
   let controller;
   let timer;
   let lastAction;
+  let savingState = false;
   const announce = (message, error = false) => {
     status.textContent = message;
     status.classList.toggle('is-error', error);
@@ -61,6 +62,7 @@
       if (requestRevision !== revision) return;
       if (!response.ok) throw new Error(data.error || 'No pudimos cargar la información.');
       apply(data);
+      return true;
     } catch (error) {
       if (requestRevision !== revision || error.name === 'AbortError') return;
       announce(error instanceof SyntaxError ? 'No pudimos leer la respuesta. Intenta nuevamente.' : (error.message === 'Failed to fetch' ? 'No pudimos conectar. Intenta nuevamente.' : error.message), true);
@@ -74,12 +76,13 @@
     list.querySelectorAll('[data-task-id]').forEach(row => {
       const active = Number(row.dataset.taskId) === selectedId;
       row.classList.toggle('is-selected', active);
-      row.setAttribute('aria-selected', String(active));
+      if (active) row.setAttribute('aria-current','true'); else row.removeAttribute('aria-current');
       row.tabIndex = active ? 0 : -1;
     });
   };
-  const loadList = (page = 1, locate = true) => {
-    lastAction = () => loadList(page, locate);
+  const loadList = (page = 1, locate = true, preserveScroll = false) => {
+    const previousScroll = listPane.scrollTop;
+    lastAction = () => loadList(page, locate, preserveScroll);
     const url = urlFor();
     url.searchParams.set('fragment', 'list'); url.searchParams.set('page', String(page));
     url.searchParams.set('seleccion', String(selectedId));
@@ -99,8 +102,8 @@
         });
       }
       layout.classList.remove('show-detail');
-      listPane.scrollTop = 0; detailPane.scrollTop = 0;
-      list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+      listPane.scrollTop = preserveScroll ? previousScroll : 0; detailPane.scrollTop = 0;
+      if (!preserveScroll) list.querySelector('[data-task-id].is-selected')?.scrollIntoView({ block: 'nearest' });
       syncUrl(data.page);
       const counter = document.querySelector('.gestion > header .page-title-suffix');
       if (counter) counter.textContent = `${data.total} ${data.total === 1 ? 'diligencia' : 'diligencias'}`;
@@ -109,6 +112,7 @@
   };
   stateFilters?.addEventListener('click', event => {
     const link = event.target.closest('[data-inbox-state]');
+    if (savingState) { event.preventDefault(); return; }
     if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     activeState = link.dataset.inboxState;
@@ -144,7 +148,7 @@
     dialog.addEventListener('close', () => {
       frame.removeAttribute('src');
       frame.hidden = true;
-      list.querySelector('[aria-selected="true"]')?.focus();
+      list.querySelector('[data-task-id].is-selected')?.focus();
     });
     frame.addEventListener('load', () => {
       if (!dialog.open || !frame.getAttribute('src')) return;
@@ -177,17 +181,64 @@
       if (mobile()) { layout.classList.add('show-detail'); detail.focus(); }
     });
   };
+  const saveState = async control => {
+    if (savingState) return;
+    const row = control.closest('[data-task-id]');
+    const previous = control.dataset.prevState;
+    const value = control.value;
+    if (!row || value === previous) return;
+    invalidate();
+    savingState = true;
+    layout.dataset.savingState = 'true';
+    control.disabled = true;
+    announce('Guardando estado…');
+    try {
+      const url = new URL(form?.action || 'diligencias_pendientes.php', location.href);
+      url.searchParams.set('fragment','status');
+      const response = await fetch(url, {
+        method: 'POST', credentials: 'same-origin', headers: {'X-Requested-With':'XMLHttpRequest'},
+        body: new URLSearchParams({action:'update_status', id:row.dataset.taskId, estado:value, _csrf:layout.dataset.csrf || ''})
+      });
+      if (response.redirected && new URL(response.url).pathname.endsWith('/login.php')) { location.assign(response.url); return; }
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || data.message || 'No pudimos guardar el estado.');
+      control.dataset.prevState = data.estado;
+      control.classList.remove('pending','in-process','completed');
+      control.classList.add({'Pendiente':'pending','En proceso':'in-process','Realizado':'completed'}[data.estado]);
+      selectedId = Number(data.id);
+      const page = Number(new URL(location.href).searchParams.get('page')) || 1;
+      const refreshed = await loadList(page, true, true);
+      if (refreshed) announce('Estado guardado.');
+    } catch (error) {
+      control.value = previous;
+      announce(error instanceof SyntaxError ? 'No pudimos leer la respuesta al guardar.' : error.message, true);
+      lastAction = () => { control.value = value; saveState(control); };
+    } finally {
+      savingState = false;
+      delete layout.dataset.savingState;
+      control.disabled = false;
+    }
+  };
+  list.addEventListener('change', event => {
+    if (event.target.matches('[data-task-status]')) saveState(event.target);
+  });
   list.addEventListener('click', event => {
+    if (event.target.closest('[data-task-status]')) return;
+    if (savingState) { event.preventDefault(); return; }
     const row = event.target.closest('[data-task-id]');
     const page = event.target.closest('[data-page]');
     if ((!row && !page) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     if (page) loadList(Number(page.dataset.page), false);
-    else select(Number(row.dataset.taskId), true);
+    else select(Number(row.dataset.taskId), Boolean(event.target.closest('[data-task-open]')));
   });
   list.addEventListener('keydown', event => {
+    if (event.target.closest('[data-task-status]') || savingState) return;
     const row = event.target.closest('[data-task-id]');
     if (!row) return;
+    if (event.target.closest('[data-task-open]') && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault(); select(Number(row.dataset.taskId), true); return;
+    }
     const rows = Array.from(list.querySelectorAll('[data-task-id]'));
     const index = rows.indexOf(row);
     let next;
@@ -197,11 +248,11 @@
     if (event.key === 'End') next = rows[rows.length - 1];
     if (event.key === 'Enter' || event.key === ' ') next = row;
     if (!next) return;
-    event.preventDefault(); next.focus(); select(Number(next.dataset.taskId), event.key === 'Enter' || event.key === ' ');
+    event.preventDefault(); next.focus(); select(Number(next.dataset.taskId));
   });
   const backToList = () => {
     layout.classList.remove('show-detail');
-    list.querySelector('[aria-selected="true"]')?.focus();
+    list.querySelector('[data-task-id].is-selected')?.focus();
   };
   document.querySelector('.inbox-mobile-back').addEventListener('click', backToList);
   detailPane.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); backToList(); } });
@@ -220,9 +271,14 @@
   });
   }
   const measure = () => {
+    if (stateFilters) listPane.style.setProperty('--inbox-filters-height', `${stateFilters.getBoundingClientRect().height + 12}px`);
     if (!mobile()) layout.style.setProperty('--inbox-height', `${Math.max(280, window.innerHeight - layout.getBoundingClientRect().top - 20)}px`);
   };
   addEventListener('resize', measure);
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(measure).observe(document.querySelector('.gestion') || layout);
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.querySelector('.gestion') || layout);
+    if (stateFilters) observer.observe(stateFilters);
+  }
   measure();
 })();
