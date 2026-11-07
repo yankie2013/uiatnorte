@@ -981,3 +981,39 @@ html[data-theme-resolved="dark"] .participants-overview .overview-unit-vehicle-i
 html[data-theme-resolved="dark"] .participants-overview .overview-unit-vehicle > .case-person-view {background:#29465e;border-color:#426680;color:#c0e4f8;box-shadow:none}
 @media(max-width:480px){.participants-overview .overview-unit-vehicle{padding:11px;gap:10px;flex-wrap:wrap}.participants-overview .overview-unit-vehicle-info{flex:1 1 calc(100% - 60px)}.participants-overview .overview-unit-vehicle > .case-person-view{margin-left:50px}.overview-vehicle-identity{gap:4px 8px}}
 @media(prefers-reduced-motion:reduce){.participants-overview .overview-unit-vehicle,.participants-overview .overview-unit-vehicle > .case-person-view{transition:none}}
+/* Rounded person tiles, matching the vehicle bubbles inside each disclosure. */
+.participants-overview .overview-person-group-heading{display:none}
+.participants-overview .overview-linked-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin:10px 0}
+.participants-overview .overview-linked-row>.participant-overview-person{flex:1 1 310px;max-width:560px}
+.participants-overview .overview-linked-row>.overview-related-people{flex:1 1 280px;max-width:520px}
+.participants-overview .overview-related-people:has([data-tone]){display:grid;gap:10px;background:transparent;border:0;padding:0;margin:0;box-shadow:none}
+.participants-overview .participant-overview-person,
+.participants-overview .overview-linked-row .participant-overview-person,
+.participants-overview .overview-related-people .participant-overview-person{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:start;gap:8px 12px;width:100%;max-width:560px;box-sizing:border-box;margin:10px 0;padding:13px 15px;border:1px solid #dce7f0;border-radius:18px;background:linear-gradient(120deg,#ffffffef,#f7faffdf);box-shadow:inset 0 1px 0 #fff,0 3px 12px #294e720a}
+.participants-overview .overview-linked-row .participant-overview-person{margin:0}
+.participants-overview .participant-overview-person>.overview-person-icon{display:grid;place-items:center;grid-column:1;width:38px;height:38px;padding:0;border:1px solid color-mix(in srgb,var(--role-accent,#52758b) 18%,transparent);border-radius:12px;background:var(--role-tint,#e6efff);font-size:20px;box-shadow:inset 0 1px 0 #ffffffbf}
+.participants-overview .participant-overview-person>.overview-person-info{grid-column:2;min-width:0;overflow-wrap:anywhere}
+.participants-overview .overview-person-role-glass{display:table;margin:0 0 6px;padding:3px 8px;border:1px solid color-mix(in srgb,var(--role-accent,#52758b) 20%,transparent);border-radius:7px;background:color-mix(in srgb,var(--role-tint,#e6efff) 65%,transparent);color:var(--role-accent,#365d85);font-size:10px;font-weight:750;line-height:1.4;box-shadow:inset 0 1px 0 #ffffffbd}
+.participants-overview .participant-overview-person strong{font-size:12px;line-height:1.45}
+.participants-overview .participant-overview-person p{font-size:10px;line-height:1.5;margin:4px 0 0}
+.participants-overview .participant-overview-person>.case-person-actions{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:2px 0 0}
+.participants-overview .participant-overview-person .case-person-view{padding:5px 9px;border-radius:10px;font-size:10px;min-height:28px}
+html[data-theme-resolved="dark"] .participants-overview .participant-overview-person{background:linear-gradient(120deg,#22364b,#1d2e43);border-color:#3b5069;box-shadow:inset 0 1px 0 #ffffff0a}
+html[data-theme-resolved="dark"] .participants-overview .overview-related-people:has([data-tone]){background:transparent}
+@media(max-width:600px){.participants-overview .overview-linked-row{gap:9px}.participants-overview .participant-overview-person,.participants-overview .overview-linked-row .participant-overview-person,.participants-overview .overview-related-people .participant-overview-person{max-width:100%;padding:11px;gap:7px 9px;grid-template-columns:32px minmax(0,1fr);border-radius:15px}.participants-overview .participant-overview-person>.overview-person-icon{width:32px;height:32px;font-size:17px}.participants-overview .overview-linked-row>.overview-related-people{max-width:100%}}
+
+/* Compact participant bubbles: size follows content instead of filling the row. */
+.participants-overview .overview-linked-row{gap:10px;margin:7px 0}
+.participants-overview .overview-linked-row>.participant-overview-person{flex:0 1 420px;max-width:420px}
+.participants-overview .overview-linked-row>.overview-related-people{flex:0 1 390px;max-width:390px}
+.participants-overview .participant-overview-person,
+.participants-overview .overview-linked-row .participant-overview-person,
+.participants-overview .overview-related-people .participant-overview-person{max-width:420px;padding:10px 12px;grid-template-columns:30px minmax(0,1fr);gap:5px 9px;border-radius:14px;margin:7px 0}
+.participants-overview .overview-linked-row .participant-overview-person{margin:0}
+.participants-overview .participant-overview-person>.overview-person-icon{width:30px;height:30px;font-size:16px;border-radius:9px}
+.participants-overview .overview-person-role-glass{font-size:9px;padding:2px 6px;margin-bottom:4px;border-radius:6px}
+.participants-overview .participant-overview-person strong{font-size:11px;line-height:1.35}
+.participants-overview .participant-overview-person p{font-size:9px;line-height:1.4;margin-top:3px}
+.participants-overview .participant-overview-person .case-person-view{font-size:9px;padding:4px 8px;min-height:25px;border-radius:9px}
+.participants-overview .participant-overview-person>.case-person-actions{gap:5px;margin-top:1px}
+@media(max-width:600px){.participants-overview .overview-linked-row>.participant-overview-person,.participants-overview .overview-linked-row>.overview-related-people{flex-basis:100%;max-width:100%}.participants-overview .participant-overview-person,.participants-overview .overview-linked-row .participant-overview-person,.participants-overview .overview-related-people .participant-overview-person{max-width:100%;padding:9px 10px}}

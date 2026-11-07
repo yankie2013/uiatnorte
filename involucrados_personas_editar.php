@@ -80,7 +80,7 @@ foreach($roles as $r){
 }
 
 $vehiculos = $repo->vehiculosPorAccidente($accidente_id);
-$accidentes = $repo->accidentes();
+
 
 $err=''; $ok='';
 if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])){
@@ -103,6 +103,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_GET['ajax'])){
       'celular' => p('celular',''),
       'email' => p('email',''),
     ]);
+    \App\Support\CaseParticipantEmbed::saved();
     header('Location: ' . $returnTo . (str_contains($returnTo, '?') ? '&' : '?') . 'ok=updated');
     exit;
   }catch(Throwable $e){
@@ -134,7 +135,7 @@ $requiereVehInicial = (int)($roles_req_map[(int)$inv['rol_id']] ?? 0);
 $rolNombreInicial = $roles_name_map[(int)$inv['rol_id']] ?? '';
 
 // incluir el sidebar (archivo en la misma carpeta uiatnorte)
-include __DIR__ . '/sidebar.php';
+if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -150,16 +151,18 @@ include __DIR__ . '/sidebar.php';
   .chip a{color:inherit; text-decoration:none}
   .mut{color:#fbbf24}
 </style>
+<link rel="stylesheet" href="assets/css/participacion-persona-editar.css?v=<?= filemtime(__DIR__.'/assets/css/participacion-persona-editar.css') ?>">
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?><script src="assets/js/participant-embed.js" defer></script><?php endif; ?>
 </head>
-<body>
+<body class="participation-edit <?= \App\Support\CaseParticipantEmbed::active() ? 'is-embedded' : '' ?>">
 <div class="wrap">
-  <div class="bar">
+  <div class="bar edit-navigation">
     <a class="btn small" href="<?= h($returnTo) ?>">Volver</a>
     <a class="btn small" href="involucrados_personas_ver.php?id=<?= (int)$inv_id ?>&return_to=<?= urlencode($returnTo) ?>">Ver detalle</a>
     <span></span>
   </div>
 
-  <h1>Editar involucrado – Persona <span class="badge">ID #<?= (int)$inv_id ?></span></h1>
+  <h1>Editar participación</h1>
   <div class="note">Busca por DNI para reemplazar la persona asociada si corresponde. Si el rol requiere vehículo, selecciónalo.</div>
 
   <?php if($ok): ?><div class="ok">✅ <?=h($ok)?></div><?php endif; ?>
@@ -170,15 +173,7 @@ include __DIR__ . '/sidebar.php';
     <input type="hidden" name="persona_id" id="persona_id" value="<?= (int)$inv['persona_id'] ?>">
 
     <div class="grid">
-      <div class="col-6">
-        <label>Accidente</label>
-        <select disabled>
-          <?php foreach($accidentes as $a): ?>
-            <option value="<?=$a['id']?>" <?=($a['id']==$accidente_id?'selected':'')?>><?=h($a['nom'])?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
+      <div class="col-12 edit-section-title">Identificación de la persona</div>
       <div class="col-6">
         <label>DNI</label>
         <div class="rowin">
@@ -213,17 +208,18 @@ include __DIR__ . '/sidebar.php';
         <input type="text" id="edad" value="<?=h($inv['edad'] ?? '')?>" readonly>
       </div>
 
-      <div class="col-12"><strong>Datos vigentes para este accidente</strong><div class="note">Los cambios aquí solo se guardan en este accidente y no alteran expedientes anteriores.</div></div>
+      <div class="col-12 edit-section-title"><strong>Datos de la persona en este expediente</strong><div class="note">Los cambios aquí solo se guardan en este accidente y no alteran expedientes anteriores.</div></div>
       <div class="col-4"><label>Estado civil</label><input name="estado_civil" value="<?=h($inv['estado_civil'] ?? '')?>"></div>
       <div class="col-4"><label>Grado de instrucción</label><input name="grado_instruccion" value="<?=h($inv['grado_instruccion'] ?? '')?>"></div>
       <div class="col-4"><label>Número de hijos</label><input type="number" min="0" max="99" name="numero_hijos" value="<?=h($inv['numero_hijos'] ?? '')?>"></div>
-      <div class="col-6"><label>Domicilio</label><input name="domicilio" value="<?=h($inv['domicilio'] ?? '')?>"></div>
-      <div class="col-2"><label>Departamento domicilio</label><input name="domicilio_departamento" value="<?=h($inv['domicilio_departamento'] ?? '')?>"></div>
-      <div class="col-2"><label>Provincia domicilio</label><input name="domicilio_provincia" value="<?=h($inv['domicilio_provincia'] ?? '')?>"></div>
-      <div class="col-2"><label>Distrito domicilio</label><input name="domicilio_distrito" value="<?=h($inv['domicilio_distrito'] ?? '')?>"></div>
+      <div class="col-12"><label>Domicilio</label><input name="domicilio" value="<?=h($inv['domicilio'] ?? '')?>"></div>
+      <div class="col-4"><label>Departamento domicilio</label><input name="domicilio_departamento" value="<?=h($inv['domicilio_departamento'] ?? '')?>"></div>
+      <div class="col-4"><label>Provincia domicilio</label><input name="domicilio_provincia" value="<?=h($inv['domicilio_provincia'] ?? '')?>"></div>
+      <div class="col-4"><label>Distrito domicilio</label><input name="domicilio_distrito" value="<?=h($inv['domicilio_distrito'] ?? '')?>"></div>
       <div class="col-6"><label>Celular</label><input name="celular" value="<?=h($inv['celular'] ?? '')?>"></div>
       <div class="col-6"><label>Correo</label><input type="email" name="email" value="<?=h($inv['email'] ?? '')?>"></div>
 
+      <div class="col-12 edit-section-title">Participación en el accidente</div>
       <div class="col-6">
         <label>Rol</label>
         <select name="rol_id" id="rol_id" required>
@@ -329,8 +325,8 @@ include __DIR__ . '/sidebar.php';
       </div>
     </div>
 
-    <div class="actions">
-      <a class="btn small" href="<?= h($returnTo) ?>">Cancelar</a>
+    <div class="actions participation-save-bar">
+      <a data-participant-cancel class="btn small" href="<?= h($returnTo) ?>">Cancelar</a>
       <button class="btn primary small" type="submit">Guardar cambios</button>
     </div>
   </form>

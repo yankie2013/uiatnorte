@@ -103,9 +103,54 @@ if (!$embed) {
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--danger:#fecaca;--soft:#101a2f}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1120px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#eff6ff;border-color:transparent}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.field{display:flex;flex-direction:column;gap:6px}.label{font-size:12px;color:var(--muted);font-weight:700}.small{color:var(--muted);font-size:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}.search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text)}textarea{min-height:96px;resize:vertical}.photo{width:100px;height:100px;border:1px solid var(--border);border-radius:14px;object-fit:cover;display:none}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}@media(max-width:860px){.c6,.c4,.c3{grid-column:span 12}}
 [hidden]{display:none!important}.search-choice{display:flex;gap:16px;flex-wrap:wrap}.search-choice label{display:flex;align-items:center;gap:6px}.search-choice input{width:auto}.name-search{border:1px dashed var(--border);border-radius:12px;padding:12px;background:var(--soft);display:flex;flex-direction:column;gap:10px}.name-search-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.name-search-title{font-weight:800}.name-results{display:grid;gap:8px}.person-result{width:100%;display:grid;grid-template-columns:minmax(92px,120px) 1fr auto;gap:10px;align-items:center;text-align:left;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--text);padding:10px;cursor:pointer}.person-result:hover{border-color:var(--primary)}.person-dni{font-weight:900;color:var(--primary);font-size:15px}.person-name{font-weight:750}.person-meta{color:var(--muted);font-size:12px}.person-action{font-size:12px;color:var(--muted);white-space:nowrap}@media(max-width:680px){.person-result{grid-template-columns:1fr}.person-action{white-space:normal}}
+/* Compact person registration, isolated from other forms. */
+.person-create .wrap{max-width:1000px;margin:10px auto;padding:0 14px 20px}
+.person-create .toolbar{position:sticky;top:0;z-index:20;margin:0 0 10px;padding:10px 0;background:var(--page)}
+.person-create .toolbar h1{font-size:20px;line-height:1.2}
+.person-create .toolbar .small{font-size:11px}
+.person-create #frmPersona{padding:14px;border-radius:12px}
+.person-create #frmPersona>p{margin:0 0 10px;font-size:11px}
+.person-create #frmPersona>fieldset{margin-bottom:12px!important}
+.person-create .name-search-title{font-size:12px}
+.person-create .search-choice{gap:14px;font-size:12px}
+.person-create .search-choice label{min-height:30px}
+.person-create .grid{gap:10px 12px;align-items:start}
+.person-create .field{min-width:0;gap:4px}
+.person-create .label{font-size:11px;color:var(--text);font-weight:700}
+.person-create :is(input,select,textarea){font:400 13px/1.4 Inter,system-ui,sans-serif;border-radius:8px;padding:8px 10px}
+.person-create :is(input,select):not([type=radio]):not([type=hidden]){min-height:36px}
+.person-create textarea{min-height:56px;line-height:1.5}
+.person-create .small{font-size:11px;line-height:1.4}
+.person-create .btn{padding:9px 12px;font-size:12px;line-height:1.4;border-radius:8px}
+.person-create .search-row{flex-wrap:nowrap;align-items:stretch;gap:6px}
+.person-create .search-row input{flex:1;min-width:0;width:0}
+.person-create .search-row .btn{flex:0 0 auto;white-space:nowrap;font-size:11px;padding:8px 10px}
+.person-create .photo{width:72px;height:82px;border-radius:9px;object-fit:cover}
+.person-create .person-save-bar{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.person-create.is-embed{padding-bottom:70px}
+.person-create.is-embed .toolbar{position:static;padding:0;margin-bottom:8px}
+.person-create.is-embed .toolbar>div:last-child{display:none}
+.person-create.is-embed .person-save-bar{position:fixed;inset:auto 0 0;z-index:50;margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--border);box-shadow:0 -4px 14px #172c2610}
+@media(min-width:601px) and (max-width:860px){.person-create .grid>.c3,.person-create .grid>.c4{grid-column:span 6}.person-create .grid>.c6{grid-column:span 6}.person-create .grid>.person-photo-field{grid-column:span 12;align-items:flex-start!important}}
+@media(max-width:600px){
+ .person-create .wrap{margin-top:0!important;padding:8px!important}
+ .person-create #frmPersona{padding:12px}
+ .person-create .toolbar h1{font-size:18px!important}
+ .person-create .grid{gap:9px 10px}
+ .person-create .grid>.c3{grid-column:span 6}
+ .person-create .grid>.c4,.person-create .grid>.c6{grid-column:span 12}
+ .person-create .grid>#campo_numero_documento{grid-column:span 12}
+ .person-create .grid>.person-photo-field{grid-column:span 6}
+ .person-create :is(input,select,textarea):not([type=radio]):not([type=hidden]){font-size:13px!important;padding:8px 9px!important}
+ .person-create :is(input,select):not([type=radio]):not([type=hidden]){height:38px!important;min-height:38px!important}
+ .person-create select{padding-right:28px!important}
+ .person-create .search-choice input[type=radio]{width:16px;height:16px;margin:0;min-height:0}
+ .person-create .person-save-bar .btn{min-height:40px}
+ .person-create.is-embed .person-save-bar .btn{width:100%}
+}
 </style>
 </head>
-<body>
+<body class="person-create <?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <?php if (($_GET['ok'] ?? '') === 'created'): ?><div class="card" role="status">Registro guardado correctamente.</div><?php endif; ?>
   <div class="toolbar">
@@ -134,7 +179,7 @@ if (!$embed) {
     <div class="grid">
       <div class="c3 field" id="campo_tipo_documento"><label class="label">Tipo de documento</label><select name="tipo_doc" id="tipo_doc"><?php foreach (['DNI','CE','PAS','OTRO'] as $opt): ?><option value="<?= $opt ?>" <?= (string) $data['tipo_doc'] === $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?></select></div>
       <div class="c6 field" id="campo_numero_documento"><label class="label">Numero de documento</label><div class="search-row"><input type="text" name="num_doc" id="num_doc" value="<?= h((string) $data['num_doc']) ?>" maxlength="20" required><button class="btn" type="button" id="btnBuscarReniec">Buscar RENIEC</button></div><div class="small" id="dni_hint">Solo disponible para DNI.</div></div>
-      <div class="c3 field" style="align-items:flex-end;"><img id="foto_previa" class="photo" alt="Foto"></div>
+      <div class="c3 field person-photo-field" style="align-items:flex-end;"><img id="foto_previa" class="photo" alt="Foto"></div>
       <div class="c12 name-search" id="busqueda_nombre" hidden>
         <div class="name-search-head">
           <div>
@@ -162,7 +207,7 @@ if (!$embed) {
       <div class="c3 field"><label class="label">Departamento nacimiento</label><input type="text" name="departamento_nac" id="departamento_nac" value="<?= h((string) $data['departamento_nac']) ?>"></div>
       <div class="c3 field"><label class="label">Provincia nacimiento</label><input type="text" name="provincia_nac" id="provincia_nac" value="<?= h((string) $data['provincia_nac']) ?>"></div>
       <div class="c3 field"><label class="label">Distrito nacimiento</label><input type="text" name="distrito_nac" id="distrito_nac" value="<?= h((string) $data['distrito_nac']) ?>"></div>
-      <div class="c12 field"><label class="label">Domicilio</label><textarea name="domicilio" id="domicilio"><?= h((string) $data['domicilio']) ?></textarea></div>
+      <div class="c12 field"><label class="label">Domicilio</label><textarea rows="2" name="domicilio" id="domicilio"><?= h((string) $data['domicilio']) ?></textarea></div>
       <div class="c4 field"><label class="label">Departamento domicilio</label><input type="text" name="domicilio_departamento" id="domicilio_departamento" value="<?= h((string) $data['domicilio_departamento']) ?>"></div>
       <div class="c4 field"><label class="label">Provincia domicilio</label><input type="text" name="domicilio_provincia" id="domicilio_provincia" value="<?= h((string) $data['domicilio_provincia']) ?>"></div>
       <div class="c4 field"><label class="label">Distrito domicilio</label><input type="text" name="domicilio_distrito" id="domicilio_distrito" value="<?= h((string) $data['domicilio_distrito']) ?>"></div>
@@ -172,9 +217,8 @@ if (!$embed) {
       <div class="c6 field"><label class="label">Email</label><input type="email" name="email" value="<?= h((string) $data['email']) ?>"></div>
       <div class="c6 field"><label class="label">Nombre del padre</label><input type="text" name="nombre_padre" id="nombre_padre" value="<?= h((string) $data['nombre_padre']) ?>"></div>
       <div class="c6 field"><label class="label">Nombre de la madre</label><input type="text" name="nombre_madre" id="nombre_madre" value="<?= h((string) $data['nombre_madre']) ?>"></div>
-      <div class="c12 field"><label class="label">Notas</label><textarea name="notas" id="notas"><?= h((string) $data['notas']) ?></textarea></div>
     </div>
-    <div class="actions"><?php if (!$embed): ?><a class="btn" href="<?= h($returnTo) ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar</button></div>
+    <div class="actions person-save-bar"><?php if (!$embed): ?><a class="btn" href="<?= h($returnTo) ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar persona</button></div>
   </form>
 </div>
 <script>

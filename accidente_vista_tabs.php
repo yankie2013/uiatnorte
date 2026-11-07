@@ -7511,6 +7511,7 @@ $resumenInterventionRows = [
 <link rel="stylesheet" href="assets/css/expediente_estado.css">
 <link rel="stylesheet" href="assets/css/user_topbar.css">
 <link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">
+<link rel="stylesheet" href="assets/css/expediente-compacto.css?v=<?= filemtime(__DIR__.'/assets/css/expediente-compacto.css') ?>">
 </head>
 <body class="uiat-case-view">
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>

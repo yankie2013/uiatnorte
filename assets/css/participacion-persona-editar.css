@@ -1,0 +1,40 @@
+/* Compact participation editor; no changes to shared registration styles. */
+.participation-edit{background:var(--bg);font-size:13px}
+.participation-edit>.wrap{max-width:980px;margin:14px auto;padding:0 18px 24px}
+.participation-edit h1{font-size:23px;margin:0 0 6px;letter-spacing:-.025em}
+.participation-edit .note{font-size:11px;line-height:1.5;color:var(--muted)}
+.participation-edit #formEdit{background:var(--panel);box-shadow:0 3px 14px #243b5308;border-radius:14px;padding:16px}
+.participation-edit #formEdit>.grid{gap:12px 14px;align-items:start;grid-template-columns:repeat(12,minmax(0,1fr))}
+.participation-edit #formEdit>.grid>div{min-width:0}
+.participation-edit #formEdit>.grid>.col-4{grid-column:span 4}
+.participation-edit #formEdit>.grid>.col-6{grid-column:span 6}
+.participation-edit #formEdit>.grid>.col-12{grid-column:span 12}
+.participation-edit label{display:table;max-width:100%;font-size:10px;font-weight:800;color:#24543f;line-height:1.4;margin:0 0 6px;padding:3px 7px;border:1px solid #b5d3c54d;border-radius:6px;background:linear-gradient(145deg,#e8f5edd1,#cae2d48c);box-shadow:inset 0 1px 0 #ffffffe6}
+.participation-edit :is(input,select,textarea){font:400 13px/1.4 system-ui,sans-serif;padding:8px 10px;border-radius:8px;background:var(--panel)}
+.participation-edit input[readonly]{background:var(--chip);color:var(--muted)}
+.participation-edit textarea{min-height:68px;line-height:1.5}
+.participation-edit .btn{font-size:11px;padding:8px 11px;min-height:34px;height:auto;border-radius:8px}
+.participation-edit .edit-section-title{font-size:13px;font-weight:750;color:var(--ink);padding:10px 0 2px;margin-top:2px;border-top:1px solid var(--line)}
+.participation-edit .edit-section-title:first-child{border-top:0;padding-top:0;margin-top:0}
+.participation-edit .edit-section-title .note{font-weight:400;margin:4px 0 0}
+.participation-edit .rowin input{min-width:0;flex:1}
+.participation-edit .rowin .btn{flex-shrink:0}
+.participation-edit .mut{font-size:11px;color:#8c651a}
+.participation-edit #formEdit>.card{box-shadow:none;background:var(--chip);border-radius:10px;font-size:12px}
+.participation-edit.is-embedded{padding-bottom:70px}
+.participation-edit.is-embedded>.wrap{max-width:980px;margin:0 auto;padding:12px 14px 20px}
+.participation-edit.is-embedded .edit-navigation,.participation-edit.is-embedded h1{display:none}
+.participation-edit.is-embedded .participation-save-bar{position:fixed;inset:auto 0 0;z-index:50;margin:0;display:flex;justify-content:flex-end;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -4px 14px #172c2610}
+.participation-edit :is(a,button,input,select,textarea):focus-visible{outline:2px solid #6a9b84;outline-offset:2px}
+@media(max-width:600px){
+ .participation-edit>.wrap{margin-top:0!important;padding:10px!important}
+ .participation-edit #formEdit{padding:12px}
+ .participation-edit #formEdit>.grid{gap:10px}
+ .participation-edit #formEdit>.grid>.col-4{grid-column:span 6}
+ .participation-edit #formEdit>.grid>.col-6{grid-column:span 12}
+ .participation-edit :is(input,select,textarea){font-size:13px!important;padding:8px 9px!important}
+ .participation-edit :is(input,select):not([type=hidden]){height:38px!important;min-height:38px!important}
+ .participation-edit select{padding-right:28px!important}
+ .participation-edit label{font-size:10px}
+ .participation-edit .participation-save-bar .btn{min-height:38px}
+}

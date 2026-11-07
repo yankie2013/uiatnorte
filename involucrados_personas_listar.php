@@ -57,7 +57,7 @@ $sql = "
 SELECT ip.id, ip.accidente_id, ip.rol_id, ip.vehiculo_id, ip.lesion, ip.observaciones,
        a.fecha_accidente, a.lugar,
        p.id AS persona_id, p.num_doc, p.apellido_paterno, p.apellido_materno, p.nombres,
-       v.placa, v.color,
+       v.placa, v.color, tv.nombre AS vehiculo_tipo_nombre,
        iv_ref.tipo AS veh_tipo_ref,
        iv_ref.orden_participacion AS veh_ut,
        combo.combo_placas,
@@ -66,6 +66,7 @@ FROM involucrados_personas_activos ip
 JOIN accidentes_activos a            ON a.id = ip.accidente_id
 JOIN personas p              ON p.id = ip.persona_id
 LEFT JOIN vehiculos v        ON v.id = ip.vehiculo_id
+LEFT JOIN tipos_vehiculo tv  ON tv.id = v.tipo_id
 LEFT JOIN involucrados_vehiculos_activos iv_ref ON iv_ref.accidente_id = ip.accidente_id AND iv_ref.vehiculo_id = ip.vehiculo_id
 LEFT JOIN (
     SELECT iv.accidente_id,
@@ -160,9 +161,11 @@ $messages = [
 <style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
 <script src="assets/js/participant-embed.js" defer></script>
 <?php endif; ?>
+<link rel="stylesheet" href="assets/css/personas-involucradas.css?v=<?= filemtime(__DIR__.'/assets/css/personas-involucradas.css') ?>">
 </head>
-<body>
+<body class="<?= \App\Support\CaseParticipantEmbed::active() ? 'people-embedded' : '' ?>">
 <div class="wrap">
+  <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
   <div class="toolbar">
     <?php if (!\App\Support\CaseParticipantEmbed::active()): ?>
     <?php if ($accidenteId > 0): ?>
@@ -179,6 +182,9 @@ $messages = [
 
   <h1>Involucrados - Personas</h1>
   <div class="subtitle">Listado general de personas involucradas por accidente, rol y documento.</div>
+  <?php else: ?>
+  <header class="people-heading"><div><h1>Personas involucradas <span><?= count($rows) ?></span></h1><p>Identificación y participación en el expediente.</p></div><a class="btn primary" href="<?= $base ?>involucrados_personas_nuevo.php?accidente_id=<?= $accidenteId ?>">＋ Agregar persona</a></header>
+  <?php endif; ?>
 
   <?php if ($ok !== ''): ?><div class="ok"><?= h($messages[$ok] ?? 'Operacion realizada correctamente.') ?></div><?php endif; ?>
   <?php if ($msg === 'eliminado'): ?><div class="ok">Involucrado eliminado correctamente.</div><?php endif; ?>
@@ -216,6 +222,29 @@ $messages = [
   </form>
   <?php endif; ?>
 
+  <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+  <div class="people-list" role="list">
+  <?php foreach ($rows as $r):
+    $personName = trim(implode(' ', array_filter([$r['nombres'], $r['apellido_paterno'], $r['apellido_materno']])));
+    $condition = \App\Support\CondicionPersona::normalizar((string) ($r['lesion'] ?? ''));
+    $conditionClass = ['Herido'=>'injured','Fallecido'=>'deceased','Ileso'=>'uninjured'][$condition] ?? '';
+    $vehiclePlate = in_array($r['veh_tipo_ref'] ?? '', ['Combinado vehicular 1','Combinado vehicular 2'], true) ? ($r['combo_placas'] ?? '') : placa_visible((string) ($r['placa'] ?? ''));
+    $vehicleText = implode(' · ', array_filter([$r['veh_ut'] ?? '', $r['vehiculo_tipo_nombre'] ?? '', $vehiclePlate]));
+  ?>
+    <article class="people-item" role="listitem">
+      <div class="people-identity"><span class="people-symbol" aria-hidden="true">👤</span><div><h2><?= h($personName ?: 'Nombre no registrado') ?></h2><p>Documento: <?= h($r['num_doc'] ?: 'Sin registro') ?></p></div><span class="people-condition <?= h($conditionClass) ?>"><?= h($condition ?: 'Sin condición registrada') ?></span></div>
+      <div class="people-facts"><div><span class="people-label">Participación</span><strong><?= h($r['rol_nombre']) ?></strong></div><div><span class="people-label">Vehículo</span><strong><?= h($vehicleText ?: 'Sin vehículo vinculado') ?></strong></div></div>
+      <?php if (trim((string) ($r['observaciones'] ?? '')) !== ''): ?><details class="people-notes"><summary>Observaciones</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details><?php endif; ?>
+      <div class="people-actions">
+        <a class="btn" data-participant-edit href="<?= $base ?>involucrados_personas_editar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">Editar participación</a>
+        <?php if (stripos((string)$r['rol_nombre'], 'conduc') !== false): ?><a class="btn" href="marcador_manifestacion_investigado.php?involucrado_id=<?= (int)$r['id'] ?>&amp;accidente_id=<?= (int)$r['accidente_id'] ?>&amp;download=1">Manifestación</a><?php endif; ?>
+        <a class="btn people-remove" href="<?= $base ?>involucrados_personas_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">Eliminar</a>
+      </div>
+    </article>
+  <?php endforeach; ?>
+  </div>
+  <?php if (!$rows): ?><div class="people-empty"><strong>Aún no hay personas registradas</strong><p>Usa «Agregar persona» para registrar la primera en este expediente.</p></div><?php endif; ?>
+  <?php else: ?>
   <div class="card" style="margin-top:12px">
     <table>
       <thead>
@@ -274,6 +303,7 @@ $messages = [
       </tbody>
     </table>
   </div>
+  <?php endif; ?>
 </div>
 </body>
 </html>

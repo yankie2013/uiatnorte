@@ -40,7 +40,7 @@
             default => 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
         };
         if ($lastRoleGroup !== $roleGroup) {
-            echo '<h4 class="overview-role-group" data-tone="' . h($roleTone) . '">' . h($roleGroup) . ':</h4>';
+            echo '<h4 class="overview-role-group overview-person-group-heading" data-tone="' . h($roleTone) . '">' . h($roleGroup) . ':</h4>';
             $lastRoleGroup = $roleGroup;
         }
         $related = [];
@@ -79,6 +79,7 @@
         <div class="participant-overview-person<?= needs_occ($person) ? ' is-fatal' : '' ?><?= $roleGroup === 'Testigos' ? ' is-witness' : '' ?>" data-tone="<?= h($roleTone) ?>">
           <span class="overview-person-icon" aria-hidden="true"><span class="overview-legacy-icon"><?= needs_occ($person) ? '💀' : h($roleIcon) ?></span><svg class="overview-modern-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="<?= h($mobileIconPath) ?>"/></svg></span>
           <div class="overview-person-info">
+            <span class="overview-person-role-glass"><?= h($roleGroup) ?></span>
             <?php if ($role !== $roleGroup && !in_array($roleGroup, ['Conductor', 'Abogados'], true)): ?><div class="overview-person-role"><?= h($role) ?></div><?php endif; ?>
             <strong><?= h($name !== '' ? $name : person_label($person)) ?></strong>
             <?php if ($roleGroup === 'Abogados'): ?><span class="overview-condition"><?= !empty($person['es_actual']) ? '✅' : 'Anterior' ?></span><?php endif; ?>

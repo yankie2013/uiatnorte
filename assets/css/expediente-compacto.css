@@ -1,0 +1,71 @@
+/* Comfortable density at 100% zoom; scoped to the case screen. */
+.uiat-case-view{font-size:12px}
+.uiat-case-view .page.case-overview-layout{gap:16px}
+.uiat-case-view .case-header-facts.case-header-facts-list{padding:10px 12px;gap:10px}
+.uiat-case-view .case-registration-block{padding:9px 12px;gap:7px 12px;border-radius:12px}
+.uiat-case-view .case-registration-block>h3{font-size:11px}
+.uiat-case-view .case-registration-block .case-facts-top-item{min-height:34px;padding:1px 10px}
+.uiat-case-view .case-registration-block .case-facts-top-item dt{font-size:8px}
+.uiat-case-view .case-registration-block .case-facts-top-item dd{font-size:12px;line-height:1.3}
+.uiat-case-view .case-registration-block .sidpol-summary-trigger{font-size:12px}
+.uiat-case-view .case-facts-card{border-radius:12px}
+.uiat-case-view .case-facts-card-title{padding:7px 10px;font-size:10px;gap:6px;min-height:0}
+.uiat-case-view .case-facts-card-title>span{font-size:13px}
+.uiat-case-view .case-facts-section{padding:11px 12px;gap:10px}
+.uiat-case-view .case-facts-row dt,.uiat-case-view .case-facts-row--detail dt{font-size:8px;line-height:1.4}
+.uiat-case-view .case-facts-row dd,.uiat-case-view .case-facts-row--featured dd,.uiat-case-view .case-facts-row--detail dd{font-size:11px;line-height:1.4}
+.uiat-case-view .case-fact-icon{width:25px;height:25px;font-size:14px}
+.uiat-case-view .case-fact-icon svg{width:17px;height:17px}
+.uiat-case-view .case-facts-row--featured{padding-left:33px;min-height:28px;gap:3px}
+.uiat-case-view .case-facts-row--detail .case-fact-icon{width:14px;height:16px}
+.uiat-case-view .case-module-sidebar{padding:10px;border-radius:20px}
+.uiat-case-view .case-module-sidebar #accTabs{gap:7px}
+.uiat-case-view .case-module-sidebar #accTabs>.nav-link:not([hidden]){min-height:46px;grid-template-columns:28px minmax(0,1fr) auto;padding:8px 10px;gap:8px;border-radius:12px}
+.uiat-case-view .case-module-sidebar #accTabs .main-tab-icon{width:28px;height:28px;border-radius:9px}
+.uiat-case-view .main-tab-icon svg{width:17px;height:17px}
+.uiat-case-view .case-module-sidebar #accTabs .main-tab-title{font-size:11px}
+.uiat-case-view .case-module-sidebar #accTabs .tab-sub{font-size:9px;padding:3px 6px;min-width:21px}
+.uiat-case-view .case-module-sidebar .case-participants-disclosure>summary{font-size:12px;min-height:44px;padding:10px 12px;border-radius:13px}
+.uiat-case-view #participantes>.participants-overview{padding:12px;border-radius:13px}
+.uiat-case-view .participants-overview .overview-title-actions{gap:8px;margin-bottom:12px}
+.uiat-case-view .participants-overview .overview-title-actions .case-command-button{font-size:10px;height:32px;min-height:32px;padding:0 10px;border-radius:9px;gap:6px}
+.uiat-case-view .case-command-icon{width:22px;height:22px}
+.uiat-case-view .participants-overview .participant-overview-unit{border-radius:12px;margin-bottom:8px}
+.uiat-case-view .participants-overview .participant-overview-unit>header{padding:9px 11px;gap:8px}
+.uiat-case-view .participants-overview .participant-overview-unit h3,.uiat-case-view .participants-overview .participant-overview-unit header strong,.uiat-case-view .participants-overview .overview-unit-drivers{font-size:11px;line-height:1.4}
+.uiat-case-view .participants-overview .participant-overview-unit>.overview-group-content{padding:9px 11px}
+.uiat-case-view .participants-overview .overview-unit-vehicle{padding:8px 10px;gap:10px;border-radius:12px;margin-bottom:8px}
+.uiat-case-view .overview-vehicle-icon{width:32px;height:32px;flex-basis:32px;border-radius:10px}
+.uiat-case-view .overview-vehicle-icon svg{width:20px;height:20px}
+.uiat-case-view .participants-overview .overview-unit-vehicle-info strong{font-size:14px}
+.uiat-case-view .participants-overview .overview-unit-vehicle-type{font-size:10px;padding:2px 6px}
+.uiat-case-view .participants-overview .overview-unit-vehicle>.case-person-view{font-size:10px;padding:6px 9px;border-radius:8px}
+.uiat-case-view .participants-overview .participant-overview-person{padding:9px 10px}
+.uiat-case-view .case-overview-layout .btn-shell{font-size:11px}
+@media(min-width:1101px){.uiat-case-view .page.case-overview-layout:has(>.case-module-sidebar){grid-template-columns:230px minmax(0,1fr)}}
+@media(min-width:761px){.uiat-case-view .uiat-user-topbar{min-height:54px;padding-top:0;padding-bottom:0}.uiat-case-view.uiat-has-accountbar{padding-top:54px!important}.uiat-case-view .uiat-user-avatar{width:30px;height:30px}}
+@media(max-width:760px){.uiat-case-view .page.case-overview-layout{gap:10px}.uiat-case-view .case-mobile-overview{padding:10px 12px}.uiat-case-view .case-mobile-overview h1{font-size:18px!important}.uiat-case-view .case-module-sidebar{padding:8px}.uiat-case-view .case-module-sidebar #accTabs>.nav-link:not([hidden]){min-height:42px}.uiat-case-view .participants-overview .overview-title-actions .case-command-button{min-height:36px;height:36px}.uiat-case-view .case-module-sidebar .case-participants-disclosure>summary{min-height:42px}}
+
+/* Summary fields follow the same label/value rhythm in every column. */
+.uiat-case-view .case-facts-scroll{align-items:stretch;gap:10px}
+.uiat-case-view .case-facts-scroll .case-facts-card{overflow:hidden;border:1px solid #dce5ef;box-shadow:none}
+.uiat-case-view .case-facts-scroll .case-facts-section{display:grid;align-content:start;align-items:start;gap:14px 12px;padding:13px;margin:0}
+.uiat-case-view .case-facts-scroll .case-facts-row,
+.uiat-case-view .case-facts-scroll .case-facts-row--featured,
+.uiat-case-view .case-facts-scroll .case-facts-row--detail{position:static;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:6px;padding:0;min-height:0;min-width:0;margin:0}
+.uiat-case-view .case-facts-scroll .case-facts-row dt{display:flex;align-items:center;flex-wrap:wrap;gap:5px;width:fit-content;max-width:100%;padding:4px 7px;margin:0;border:1px solid rgba(98,143,119,.23);border-radius:7px;background:linear-gradient(145deg,rgba(244,252,247,.85),rgba(217,237,226,.55));color:#365e4a;font-size:8px;font-weight:800;letter-spacing:.025em;line-height:1.4;box-shadow:inset 0 1px 0 #ffffffd9}
+.uiat-case-view .case-facts-scroll .case-facts-row .case-fact-icon,
+.uiat-case-view .case-facts-scroll .case-facts-row--featured .case-fact-icon{position:static;display:inline-flex;align-items:center;justify-content:center;flex:0 0 15px;width:15px;height:16px;min-height:0;padding:0;border-radius:0;background:transparent;font-size:12px}
+.uiat-case-view .case-facts-scroll .case-fact-icon svg{width:15px;height:15px}
+.uiat-case-view .case-facts-scroll .case-facts-row dd{display:block;width:100%;margin:0;font-size:11px;font-weight:650;line-height:1.5;letter-spacing:0;overflow-wrap:anywhere}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col{justify-content:flex-start}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col .case-facts-section{grid-template-columns:minmax(0,1fr)}
+.uiat-case-view .case-facts-scroll .case-facts-section--location,
+.uiat-case-view .case-facts-scroll .case-facts-section--authority{grid-template-columns:repeat(2,minmax(0,1fr))}
+.uiat-case-view .case-facts-scroll .case-facts-section--location>.case-facts-row:first-child,
+.uiat-case-view .case-facts-scroll .case-facts-section--authority>.case-facts-row:first-child{grid-column:1/-1}
+.uiat-case-view .case-facts-scroll .case-maps-pill{font-size:8px;padding:1px 5px;line-height:1.4;margin:0}
+.uiat-case-view .case-facts-scroll .case-facts-card-title{min-height:36px;padding:8px 11px;line-height:1.4;font-size:10px}
+html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#cae6d6;background:linear-gradient(145deg,#284638b3,#203d3280);border-color:#54765e80;box-shadow:inset 0 1px 0 #ffffff12}
+@media(max-width:1000px) and (min-width:761px){.uiat-case-view .case-facts-scroll{grid-template-columns:repeat(2,minmax(0,1fr))}.uiat-case-view .case-facts-scroll .case-facts-card--combined{grid-column:1/-1}}
+@media(max-width:480px){.uiat-case-view .case-facts-scroll .case-facts-section{gap:12px;padding:11px}.uiat-case-view .case-facts-scroll .case-facts-section--location,.uiat-case-view .case-facts-scroll .case-facts-section--authority{grid-template-columns:minmax(0,1fr)}}

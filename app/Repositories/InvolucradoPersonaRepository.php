@@ -156,9 +156,10 @@ final class InvolucradoPersonaRepository
     public function vehiculosPorAccidente(int $accidenteId): array
     {
         $sql = "SELECT iv.orden_participacion, iv.tipo,
-                       v.id, v.placa, v.color, v.anio
+                       v.id, v.placa, v.color, v.anio, tv.nombre AS tipo_vehiculo
                   FROM involucrados_vehiculos_activos iv
                   JOIN vehiculos v ON v.id=iv.vehiculo_id
+             LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id
                  WHERE iv.accidente_id=?
               ORDER BY iv.orden_participacion,
                        FIELD(iv.tipo, 'Combinado vehicular 1', 'Combinado vehicular 2', 'Unidad', 'Fugado'),
@@ -191,14 +192,14 @@ final class InvolucradoPersonaRepository
                         'anio' => null,
                         'tipo' => 'Combinado vehicular',
                         'orden_participacion' => (string) $row['orden_participacion'],
-                        't' => trim((string) $row['orden_participacion']) . ' - ' . $placa1 . ' + ' . $placa2,
+                        't' => implode(' - ', array_filter([trim((string) $row['orden_participacion']), implode(' + ', array_filter([trim((string) ($row['tipo_vehiculo'] ?? '')), trim((string) ($pair['tipo_vehiculo'] ?? ''))], static fn ($value) => $value !== '')), $placa1 . ' + ' . $placa2], static fn ($value) => $value !== '')),
                     ];
                     continue;
                 }
             }
 
             $placa = $this->displayPlaca((string) $row['placa']);
-            $texto = trim((string) $row['orden_participacion']) . ' - ' . $placa
+            $texto = implode(' - ', array_filter([trim((string) $row['orden_participacion']), trim((string) ($row['tipo_vehiculo'] ?? '')), $placa], static fn ($value) => $value !== ''))
                 . (!empty($row['color']) ? ' - ' . $row['color'] : '')
                 . (!empty($row['anio']) ? ' (' . $row['anio'] . ')' : '');
 
@@ -296,8 +297,10 @@ final class InvolucradoPersonaRepository
                        IF(ip.snapshot_guardado=1,ip.domicilio_provincia_snapshot,p.domicilio_provincia) AS domicilio_provincia,
                        IF(ip.snapshot_guardado=1,ip.domicilio_distrito_snapshot,p.domicilio_distrito) AS domicilio_distrito,
                        IF(ip.snapshot_guardado=1,ip.celular_snapshot,p.celular) AS celular,
-                       IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email, COALESCE(ip.ocupacion_snapshot,p.ocupacion) AS ocupacion
+                       IF(ip.snapshot_guardado=1,ip.email_snapshot,p.email) AS email, COALESCE(ip_snapshot.ocupacion_snapshot,p.ocupacion) AS ocupacion
                   FROM involucrados_personas_activos ip
+                  -- Active view controls visibility; the base table includes newer snapshot columns.
+                  JOIN involucrados_personas ip_snapshot ON ip_snapshot.id = ip.id
                   JOIN accidentes_activos a ON a.id = ip.accidente_id
                   JOIN personas   p ON p.id = ip.persona_id
                  WHERE ip.id=? LIMIT 1";
