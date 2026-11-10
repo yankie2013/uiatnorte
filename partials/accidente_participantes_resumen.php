@@ -157,6 +157,7 @@
     ?>
     <section class="participants-overview" aria-label="Resumen de todos los participantes">
       <div class="overview-title-actions">
+        <h2>Participantes · <?= count($personas) + count($policias) + count($propietarios) + count($familiares) + count($abogados) ?></h2>
         <div class="case-new-actions">
           <button class="btn-shell btn-nuevo case-new-trigger case-command-button js-case-new-trigger" type="button" aria-expanded="false" aria-controls="case-new-menu">NUEVO</button>
           <div class="case-new-menu" id="case-new-menu" hidden>

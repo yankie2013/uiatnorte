@@ -486,7 +486,7 @@ html[data-theme-resolved="dark"] .participants-overview .overview-person-meta {c
 html[data-theme-resolved="dark"] .participants-overview .overview-related-people {background:#2d2943}
 
 .participants-overview .overview-title-actions {display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
-.participants-overview .overview-title-actions h2 {margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#758595}
+.participants-overview .overview-title-actions h2 {margin:0 auto 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#758595}
 .participants-overview .overview-title-actions .case-new-trigger {padding:7px 12px;font-size:11px;min-height:34px;border-radius:10px;background:linear-gradient(135deg,#078c83,#10b7a5);color:#fff;border:0;box-shadow:0 3px 10px #078c8326}
 .participants-overview .overview-title-actions .case-new-menu {text-transform:none;max-width:calc(100vw - 50px)}
 
