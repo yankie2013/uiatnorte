@@ -461,7 +461,10 @@ function summary_unit_heading(array $summaryUnit): string
     }
 
     $vehicle = $vehicles[0];
-    $type = title_text((string) ($vehicle['veh_tipo'] ?? 'Vehículo'));
+    $typeLabel = (string) ($vehicle['veh_tipo'] ?? 'Vehículo');
+    // The catalog label is "code - name"; headings display only the name.
+    $typeParts = explode(' - ', $typeLabel, 2);
+    $type = title_text(trim($typeParts[1] ?? $typeParts[0]));
     $plate = compact_text((string) ($vehicle['veh_placa'] ?? ''));
     return trim($ut . ' ' . $type . ($plate !== '' ? ' con placa ' . $plate : '')) . ':';
 }
@@ -13732,6 +13735,23 @@ document.querySelectorAll('.js-document-category-filter, .js-document-type-filte
       if (!event.target.closest('a, button')) toggle();
     });
   });
+  const overview = document.getElementById('case-participants-content');
+  const sizeParticipantBars = () => {
+    if (!overview || !overview.clientWidth) return;
+    let longest = 0;
+    overview.querySelectorAll('.overview-collapsible-heading').forEach((header) => {
+      const probe = header.cloneNode(true);
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.cssText = 'position:fixed;left:-10000px;top:0;width:max-content!important;max-width:none!important;flex-wrap:nowrap!important;visibility:hidden;pointer-events:none';
+      header.parentElement.append(probe);
+      longest = Math.max(longest, probe.getBoundingClientRect().width);
+      probe.remove();
+    });
+    overview.style.setProperty('--participant-bar-width', Math.ceil(longest) + 'px');
+  };
+  if (overview) new ResizeObserver(sizeParticipantBars).observe(overview);
+  document.fonts.ready.then(sizeParticipantBars);
+  sizeParticipantBars();
   const openFirstParticipantGroup = () => {
     const first = document.querySelector('.participants-overview .overview-group-toggle');
     if (first?.getAttribute('aria-expanded') === 'false') first.click();

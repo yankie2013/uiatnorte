@@ -201,7 +201,7 @@
       <div id="case-participants-content">
       <?php foreach ($summaryUnits as $unit): ?>
         <article class="participant-overview-unit" style="--unit-accent:hsl(<?= 190 + (($unitIndex++ * 47) % 100) ?> 42% 43%);">
-          <header class="overview-unit-heading"><h3><?= h($unit['ut']) ?></h3>
+          <header class="overview-unit-heading"><h3><?= h(rtrim(summary_unit_heading($unit), ':')) ?></h3>
 
           <?php
           $unitDrivers = array_values(array_filter($unit['personas'], 'is_conductor'));

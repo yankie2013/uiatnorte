@@ -69,3 +69,30 @@
 html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#cae6d6;background:linear-gradient(145deg,#284638b3,#203d3280);border-color:#54765e80;box-shadow:inset 0 1px 0 #ffffff12}
 @media(max-width:1000px) and (min-width:761px){.uiat-case-view .case-facts-scroll{grid-template-columns:repeat(2,minmax(0,1fr))}.uiat-case-view .case-facts-scroll .case-facts-card--combined{grid-column:1/-1}}
 @media(max-width:480px){.uiat-case-view .case-facts-scroll .case-facts-section{gap:12px;padding:11px}.uiat-case-view .case-facts-scroll .case-facts-section--location,.uiat-case-view .case-facts-scroll .case-facts-section--authority{grid-template-columns:minmax(0,1fr)}}
+
+/* Glass participant bars share the longest heading width. */
+.uiat-case-view #participantes>.participants-overview{background:linear-gradient(135deg,#ffffffb8,#f1f6ff80);border:1px solid #ffffffdb;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);box-shadow:inset 0 1px 0 #fff,0 12px 32px #243c6010}
+.uiat-case-view .participants-overview .participant-overview-unit{border:0;background:transparent;box-shadow:none;overflow:visible}
+.uiat-case-view .participants-overview .overview-collapsible-heading{width:var(--participant-bar-width,max-content);max-width:100%;box-sizing:border-box;border:1px solid #ffffffd9;border-radius:16px;background:linear-gradient(125deg,#ffffffb8,color-mix(in srgb,var(--unit-accent,#439777) 12%,#f4f8ff99));box-shadow:inset 0 1px 0 #fff,0 4px 14px #29496b18;backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%)}
+.uiat-case-view .participants-overview .overview-collapsible-heading h3,.uiat-case-view .participants-overview .overview-collapsible-heading .overview-unit-drivers{min-width:0;overflow-wrap:anywhere}
+html[data-theme-resolved="dark"] .uiat-case-view #participantes>.participants-overview{background:linear-gradient(135deg,#23354bd9,#17283dbd);border-color:#ffffff26}
+html[data-theme-resolved="dark"] .uiat-case-view .participants-overview .overview-collapsible-heading{background:linear-gradient(125deg,#34495dcc,#22394db3);border-color:#ffffff30;color:#e0edff;box-shadow:inset 0 1px 0 #ffffff30,0 4px 14px #0002}
+/* Glass actions in vehicle and participant cards. */
+.uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp){
+  --action-glass-rgb:48,112,195;
+  color:#245b9b;
+  border:1px solid rgba(var(--action-glass-rgb),.23);
+  background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(var(--action-glass-rgb),.10));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.45),0 3px 9px rgba(var(--action-glass-rgb),.10);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  transition:background .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.uiat-case-view .participants-overview .quick-pill-btn.whatsapp{--action-glass-rgb:20,156,85;color:#08783c}
+.uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp):hover{background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(var(--action-glass-rgb),.19));border-color:rgba(var(--action-glass-rgb),.40);box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(var(--action-glass-rgb),.18)}
+.uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp):active{box-shadow:inset 0 2px 4px rgba(var(--action-glass-rgb),.16)}
+.uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp):focus-visible{outline:2px solid currentColor;outline-offset:3px}
+html[data-theme-resolved="dark"] .uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp){color:#c1ddff;background:linear-gradient(145deg,#ffffff20,rgba(var(--action-glass-rgb),.23));border-color:#ffffff36;box-shadow:inset 0 1px 0 #ffffff30,0 3px 10px #0002}
+html[data-theme-resolved="dark"] .uiat-case-view .participants-overview .quick-pill-btn.whatsapp{color:#8cedb7}
+html[data-theme-resolved="dark"] .uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp):hover{background:linear-gradient(145deg,#ffffff30,rgba(var(--action-glass-rgb),.35));border-color:#ffffff60}
+@media(prefers-reduced-motion:reduce){.uiat-case-view .participants-overview :is(.case-person-view,.quick-pill-btn.whatsapp){transition:none}}
