@@ -3,7 +3,6 @@
 .uiat-case-view .page.case-overview-layout{gap:16px}
 .uiat-case-view .case-header-facts.case-header-facts-list{padding:10px 12px;gap:10px}
 .uiat-case-view .case-registration-block{padding:9px 12px;gap:7px 12px;border-radius:12px}
-.uiat-case-view .case-registration-block>h3{font-size:11px}
 .uiat-case-view .case-registration-block .case-facts-top-item{min-height:34px;padding:1px 10px}
 .uiat-case-view .case-registration-block .case-facts-top-item dt{font-size:8px}
 .uiat-case-view .case-registration-block .case-facts-top-item dd{font-size:12px;line-height:1.3}
@@ -69,6 +68,90 @@
 html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#cae6d6;background:linear-gradient(145deg,#284638b3,#203d3280);border-color:#54765e80;box-shadow:inset 0 1px 0 #ffffff12}
 @media(max-width:1000px) and (min-width:761px){.uiat-case-view .case-facts-scroll{grid-template-columns:repeat(2,minmax(0,1fr))}.uiat-case-view .case-facts-scroll .case-facts-card--combined{grid-column:1/-1}}
 @media(max-width:480px){.uiat-case-view .case-facts-scroll .case-facts-section{gap:12px;padding:11px}.uiat-case-view .case-facts-scroll .case-facts-section--location,.uiat-case-view .case-facts-scroll .case-facts-section--authority{grid-template-columns:minmax(0,1fr)}}
+
+/* One translucent surface for the complete case summary. */
+.uiat-case-view .case-overview-layout .accident-case-header > .case-header-facts-list{gap:0;padding:16px;border:1px solid rgba(255,255,255,.95);border-radius:22px;background:radial-gradient(ellipse at 0 0,#ffffffeb,transparent 60%),radial-gradient(ellipse at 100% 100%,#dceafb70,transparent 65%),linear-gradient(120deg,#ffffffb8,#edf5ffb8);box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #ffffff80,0 12px 32px rgba(52,78,112,.09);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+.uiat-case-view .case-overview-layout .case-registration-block{padding:0 0 12px;gap:7px 12px;border:0;border-bottom:1px solid rgba(124,151,179,.22);border-radius:0;background:transparent;box-shadow:none}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-topline{grid-column:1;grid-row:1}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-titlebar{grid-column:2;grid-row:1;margin:0;align-self:center}
+.uiat-case-view .case-facts-scroll{gap:0;padding-top:12px}
+.uiat-case-view .case-facts-scroll .case-facts-card{border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.uiat-case-view .case-facts-scroll .case-facts-card + .case-facts-card{border-left:1px solid rgba(124,151,179,.22)}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col{border-left:1px solid rgba(124,151,179,.22)}
+.uiat-case-view .case-facts-scroll .case-facts-card-title{display:none}
+.uiat-case-view .case-facts-scroll .case-facts-section{gap:12px;padding:0 12px}
+.uiat-case-view .case-facts-scroll .case-facts-row dt{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#61748b;font-size:8.5px;font-weight:700;letter-spacing:.025em}
+.uiat-case-view .case-facts-scroll .case-facts-row dd{color:#263f5c;font-size:11.5px;font-weight:600;line-height:1.45}
+.uiat-case-view .case-facts-scroll .case-facts-row .case-fact-icon{font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:13px;width:17px;flex-basis:17px}
+.uiat-case-view .case-registration-block .case-facts-top-item dt,.uiat-case-view .case-facts-scroll .case-facts-row dt{color:#315c88}
+.uiat-case-view .case-registration-block .case-facts-edit-chip{padding:5px 11px;border:1px solid #ffffffed;border-radius:10px;background:linear-gradient(145deg,#ffffffde,#e4efff9c);box-shadow:inset 0 1px 0 #fff,0 2px 6px #3557780a}
+html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .accident-case-header > .case-header-facts-list{background:linear-gradient(135deg,rgba(38,57,78,.94),rgba(22,37,55,.94));border-color:#ffffff26;box-shadow:inset 0 1px 0 #ffffff16,0 8px 28px #0003}
+html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .case-registration-block,html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-card,html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col{background:transparent;border-color:#ffffff20}
+html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#a5b8ca;background:transparent;border:0;box-shadow:none}
+html[data-theme-resolved="dark"] .uiat-case-view .case-registration-block .case-facts-top-item dt,html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#a9c9eb}
+html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dd{color:#e4eef8}
+html[data-theme-resolved="dark"] .uiat-case-view .case-registration-block .case-facts-edit-chip{background:linear-gradient(145deg,#ffffff18,#ffffff08);border-color:#ffffff26;box-shadow:inset 0 1px 0 #ffffff15;color:#c5dcf3}
+@media(max-width:1000px){.uiat-case-view .case-facts-scroll .case-facts-card + .case-facts-card{border-left:0}.uiat-case-view .case-facts-scroll{gap:14px 0}.uiat-case-view .case-facts-scroll .case-facts-card--authority{border-left:1px solid rgba(124,151,179,.22)}}
+@media(max-width:760px){.uiat-case-view .case-facts-scroll .case-facts-card--authority{border-left:0}}
+@media(max-width:560px){.uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col{border-left:0;border-top:1px solid rgba(124,151,179,.22);padding-top:12px;margin-top:12px}}
+
+/* Registration stays horizontal; the four detail areas are separate cards. */
+.uiat-case-view .case-overview-layout .accident-case-header > .case-header-facts-list{gap:12px;padding:14px}
+.uiat-case-view .case-overview-layout .case-registration-block{padding:12px 14px;border:1px solid #ffffffed;border-radius:15px;background:linear-gradient(125deg,#ffffffd9,#eaf3ffad);box-shadow:inset 0 1px 0 #fff,0 3px 12px #3757780b}
+.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0}
+.uiat-case-view .case-facts-scroll .case-facts-card--combined,.uiat-case-view .case-facts-card--combined .case-facts-combined-grid{display:contents}
+.uiat-case-view .case-facts-scroll :is(.case-facts-combined-col,.case-facts-card--location,.case-facts-card--authority){grid-column:auto;grid-row:auto;min-width:0;margin:0;padding:12px;border:1px solid #ffffffef;border-radius:14px;background:linear-gradient(145deg,#ffffffc9,#e9f2fcb5);box-shadow:inset 0 1px 0 #fff,0 3px 12px #3757780b;overflow:hidden}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col,.uiat-case-view .case-facts-scroll .case-facts-card + .case-facts-card{border:1px solid #ffffffef}
+.uiat-case-view .case-facts-scroll .case-facts-section,.uiat-case-view .case-facts-scroll .case-facts-combined-col .case-facts-section{padding:0;gap:13px}
+html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .case-registration-block,html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll :is(.case-facts-combined-col,.case-facts-card--location,.case-facts-card--authority){border-color:#ffffff24;background:linear-gradient(145deg,#34495cbb,#243b51b3);box-shadow:inset 0 1px 0 #ffffff14,0 3px 12px #0002}
+@media(max-width:1100px){.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:minmax(0,1fr)}.uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col{margin:0;padding:12px;border:1px solid #ffffffef}}
+
+/* Compact the detail cards and center every registration item. */
+.uiat-case-view .case-overview-layout .accident-case-header > .case-header-facts-list{gap:9px;padding:11px}
+.uiat-case-view .case-overview-layout .case-registration-block{padding:8px 10px}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item{align-items:center;justify-content:center;text-align:center;min-height:38px;padding:2px 7px}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item:first-child{padding-left:7px}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item dt{justify-content:center;margin-bottom:2px}
+.uiat-case-view .case-overview-layout .case-facts-scroll{gap:8px}
+.uiat-case-view .case-facts-scroll :is(.case-facts-combined-col,.case-facts-card--location,.case-facts-card--authority){padding:9px 10px}
+.uiat-case-view .case-facts-scroll .case-facts-section,.uiat-case-view .case-facts-scroll .case-facts-combined-col .case-facts-section{gap:9px}
+.uiat-case-view .case-facts-scroll .case-facts-row{gap:3px}
+@media(max-width:760px){.uiat-case-view .case-overview-layout .case-registration-block .case-facts-topline{grid-column:1/-1;grid-row:auto}.uiat-case-view .case-overview-layout .case-registration-block .case-facts-titlebar{grid-column:1/-1;grid-row:auto;justify-self:end}}
+
+/* Compact tiles above three table-like cards. */
+.uiat-case-view .case-overview-layout .accident-case-header > .case-header-facts-list{gap:9px;padding:10px 12px}
+.uiat-case-view .case-overview-layout .case-registration-block{padding:0;border:0;background:transparent;box-shadow:none}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-topline{gap:9px}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item,.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item:first-child{min-height:46px;align-items:flex-start;text-align:left;padding:6px 10px;border:1px solid #d8e5f2;border-radius:11px;background:linear-gradient(145deg,#ffffffdc,#f1f7ffb0);box-shadow:inset 0 1px 0 #fff}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item:first-child{background:linear-gradient(145deg,#edf7ff,#e1f1fd)}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-status{background:linear-gradient(145deg,#fffaf0,#fff1d8)}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item dt{justify-content:flex-start;font-size:9px;text-transform:none}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item dd{font-size:14px;line-height:1.1}
+.uiat-case-view .case-overview-layout .case-registration-block .case-facts-titlebar{gap:6px}
+.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.uiat-case-view .case-facts-scroll .case-facts-card--combined{display:block;grid-column:auto;grid-row:auto}
+.uiat-case-view .case-facts-card--combined .case-facts-combined-grid{display:grid;grid-template-columns:minmax(0,1fr)}
+.uiat-case-view .case-facts-scroll :is(.case-facts-card--combined,.case-facts-card--location,.case-facts-card--authority){padding:0;border:1px solid #d8e5f2;border-radius:13px;background:linear-gradient(145deg,#ffffffda,#f0f7ffb8);box-shadow:inset 0 1px 0 #fff,0 3px 9px #3757780c;overflow:hidden}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col{display:contents}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col .case-facts-section{display:contents}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col + .case-facts-combined-col{border:0;margin:0;padding:0;background:transparent;box-shadow:none}
+.uiat-case-view .case-facts-scroll .case-facts-card-title{display:flex;align-items:center;min-height:23px;margin:0;padding:3px 10px;border:0;background:linear-gradient(90deg,#e8f2fc,#f6faff);color:#263f65;font-size:11px;font-weight:800}
+.uiat-case-view .case-facts-scroll .case-facts-combined-col--dates .case-facts-card-title{display:none}
+.uiat-case-view .case-facts-scroll .case-facts-card-title>span{display:inline;font-size:14px}
+.uiat-case-view .case-facts-scroll .case-facts-card--combined .case-facts-row,.uiat-case-view .case-facts-scroll :is(.case-facts-card--location,.case-facts-card--authority) .case-facts-row{display:grid;grid-template-columns:minmax(0,43%) minmax(0,1fr);align-items:start;gap:5px;padding:2px 10px;border-bottom:1px solid #dce7f170}
+.uiat-case-view .case-facts-scroll .case-facts-row:last-child{border-bottom:0}
+.uiat-case-view .case-facts-scroll .case-facts-card--combined .case-facts-row dt,.uiat-case-view .case-facts-scroll :is(.case-facts-card--location,.case-facts-card--authority) .case-facts-row dt{font-size:10px;font-weight:700;text-transform:none;letter-spacing:0;color:#314d70}
+.uiat-case-view .case-facts-scroll .case-facts-row dd{font-size:10.5px;font-weight:700;line-height:1.25}
+.uiat-case-view .case-facts-scroll .case-facts-row .case-fact-icon{display:none}
+.uiat-case-view .case-facts-scroll :is(.case-facts-card--location,.case-facts-card--authority) .case-facts-section{display:block;padding:0}
+.uiat-case-view .case-facts-scroll :is(.case-facts-section--location,.case-facts-section--authority)>.case-facts-row:first-child{grid-column:auto}
+html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .case-registration-block{background:transparent;border:0;box-shadow:none}
+html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .case-registration-block .case-facts-top-item,html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll :is(.case-facts-card--combined,.case-facts-card--location,.case-facts-card--authority){background:linear-gradient(145deg,#34495c,#243b51);border-color:#ffffff27}
+html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-card-title{background:#344c66;color:#e2efff}
+html[data-theme-resolved="dark"] .uiat-case-view .case-facts-scroll .case-facts-row dt{color:#b7d3f0}
+@media(max-width:1100px){.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.uiat-case-view .case-overview-layout .case-facts-scroll{grid-template-columns:minmax(0,1fr)}}
 
 /* Glass participant bars share the longest heading width. */
 .uiat-case-view #participantes>.participants-overview{background:linear-gradient(135deg,#ffffffb8,#f1f6ff80);border:1px solid #ffffffdb;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);box-shadow:inset 0 1px 0 #fff,0 12px 32px #243c6010}

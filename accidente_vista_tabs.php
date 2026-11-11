@@ -7540,8 +7540,7 @@ $resumenInterventionRows = [
   <div class="case-sticky-header">
   <section class="accident-case-header" aria-label="Resumen del accidente">
     <div class="case-header-facts case-header-facts-list">
-      <section class="case-registration-block" aria-labelledby="case-registration-title">
-        <h3 id="case-registration-title">📁 Registro del expediente</h3>
+      <section class="case-registration-block" aria-label="Registro del expediente">
       <dl class="case-facts-topline">
         <div class="case-facts-top-item case-facts-sidpol"><dt>SIDPOL</dt><dd><button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></button></dd></div>
         <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
@@ -7569,16 +7568,16 @@ $resumenInterventionRows = [
       <section class="case-facts-card case-facts-card--combined">
         <div class="case-facts-combined-grid">
           <div class="case-facts-combined-col case-facts-combined-col--event">
-            <h3 class="case-facts-card-title"><span aria-hidden="true">🚘</span>Características del accidente</h3>
+            <h3 class="case-facts-card-title"><span aria-hidden="true">🚘</span>Datos del accidente</h3>
             <dl class="case-facts-rows case-facts-section">
-              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16v-4l2-4h5l2 4v4M12 16v-4l2-4h5l2 4v4M10 5l2-2 2 2M12 3v4"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg></span><span>Modalidad</span></dt><dd><?= h($modsConcat !== '' ? $modsConcat : '—') ?></dd></div>
-              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></svg></span><span>Consecuencias</span></dt><dd><?= h($consConcat !== '' ? $consConcat : '—') ?></dd></div>
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true">🚗</span><span>Modalidad</span></dt><dd><?= h($modsConcat !== '' ? $modsConcat : '—') ?></dd></div>
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true">📋</span><span>Consecuencias</span></dt><dd><?= h($consConcat !== '' ? $consConcat : '—') ?></dd></div>
             </dl>
           </div>
           <div class="case-facts-combined-col case-facts-combined-col--dates">
             <h3 class="case-facts-card-title"><span aria-hidden="true">📅</span>Fechas y actuaciones</h3>
             <dl class="case-facts-rows case-facts-section">
-              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg></span><span>Fecha y hora del accidente</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></dd></div>
+              <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true">📅</span><span>Fecha y hora del accidente</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_accidente'] ?? null)) ?></dd></div>
               <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📞</span><span>Fecha de comunicación</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_comunicacion'] ?? null)) ?></dd></div>
               <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🚓</span><span>Fecha de intervención</span></dt><dd><?= h(fecha_hora_corta_esp($A['fecha_intervencion'] ?? null)) ?></dd></div>
             </dl>
@@ -7586,20 +7585,20 @@ $resumenInterventionRows = [
         </div>
       </section>
       <section class="case-facts-card case-facts-card--location">
-        <h3 class="case-facts-card-title"><span aria-hidden="true">📍</span>Ubicación y dirección</h3>
+        <h3 class="case-facts-card-title"><span aria-hidden="true">📍</span>Lugar y jurisdicción</h3>
         <dl class="case-facts-rows case-facts-section case-facts-section--location">
         <?php
           $mapsTargetUrl = $googleMapsUrl !== '' ? $googleMapsUrl : (!empty($A['lugar']) ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim((string) ($A['lugar'] ?? '') . ' ' . $ubicacion)) : '');
         ?>
-        <div class="case-facts-row case-facts-row--featured case-facts-row--place"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span>Lugar</span><?php if ($mapsTargetUrl !== ''): ?><a href="<?= h($mapsTargetUrl) ?>" target="_blank" rel="noopener" class="case-maps-pill" title="Ver en Google Maps"><span>Ver en Maps</span> <span aria-hidden="true">↗</span></a><?php endif; ?></dt><dd><?= fmt($A['lugar'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--featured case-facts-row--place"><dt><span class="case-fact-icon" aria-hidden="true">📍</span><span>Lugar</span><?php if ($mapsTargetUrl !== ''): ?><a href="<?= h($mapsTargetUrl) ?>" target="_blank" rel="noopener" class="case-maps-pill" title="Ver en Google Maps"><span>Ver en Maps</span> <span aria-hidden="true">↗</span></a><?php endif; ?></dt><dd><?= fmt($A['lugar'] ?? '') ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🗺️</span><span>Ubicación</span></dt><dd><?= $ubicacion !== '' ? h($ubicacion) : '—' ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">🏢</span><span>Jurisdicción</span></dt><dd><?= fmt($A['comisaria_nom'] ?? '') ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">📌</span><span>Referencia</span></dt><dd><?= fmt($A['referencia'] ?? '') ?></dd></div>
-        <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 18-8-8 18-2-8z"/></svg></span><span>Sentido / dirección</span></dt><dd><?= fmt($A['sentido'] ?? '') ?></dd></div>
+        <div class="case-facts-row case-facts-row--featured"><dt><span class="case-fact-icon" aria-hidden="true">🧭</span><span>Sentido / dirección</span></dt><dd><?= fmt($A['sentido'] ?? '') ?></dd></div>
       </dl>
       </section>
       <section class="case-facts-card case-facts-card--authority">
-        <h3 class="case-facts-card-title"><span aria-hidden="true">⚖️</span>Fiscalía y documentación</h3>
+        <h3 class="case-facts-card-title"><span aria-hidden="true">⚖️</span>Información fiscal</h3>
         <dl class="case-facts-rows case-facts-section case-facts-section--authority">
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">⚖️</span><span>Fiscalía</span></dt><dd><?= fmt($A['fiscalia_nom'] ?? '') ?></dd></div>
         <div class="case-facts-row case-facts-row--detail"><dt><span class="case-fact-icon" aria-hidden="true">👨‍⚖️</span><span>Fiscal a cargo</span></dt><dd><?= fmt($A['fiscal_nom'] ?? '') ?></dd></div>
