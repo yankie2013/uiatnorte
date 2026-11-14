@@ -234,24 +234,27 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
   .vehicle-list{display:grid;gap:9px}
   .vehicle-item{min-width:0;border:1px solid var(--stroke);border-radius:13px;padding:11px 14px;background:linear-gradient(120deg,rgba(79,140,255,.07),transparent 70%),var(--card);box-shadow:0 4px 14px rgba(15,23,42,.04);transition:border-color .18s,box-shadow .18s}
   .vehicle-item:hover{border-color:rgba(79,140,255,.45);box-shadow:0 6px 18px rgba(37,99,235,.09)}
-  .vehicle-item-main{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .vehicle-item{display:flex;align-items:center;gap:12px;padding:9px 11px}
+  .vehicle-item-main{display:flex;gap:9px;align-items:center;flex:1;min-width:0}
   .vehicle-symbol{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:rgba(79,140,255,.12);font-size:20px}
-  .vehicle-identity{flex:1;min-width:120px;overflow-wrap:anywhere}
+  .vehicle-identity{flex:1;min-width:0}
+  .vehicle-name-line{display:flex;align-items:center;gap:8px;min-width:0}
   .vehicle-eyebrow{display:none;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
-  .vehicle-identity h2{font-size:18px;letter-spacing:.04em;margin:0 0 3px;color:var(--text)}
-  .vehicle-identity p{margin:0;color:var(--muted);font-size:12px}
-  .vehicle-type{padding:6px 11px;border-radius:20px;border:1px solid rgba(79,140,255,.24);background:rgba(79,140,255,.1);font-size:12px;font-weight:700;max-width:100%;overflow-wrap:anywhere}
-  .vehicle-item-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid var(--stroke)}
-  .vehicle-item-actions .btn{padding:6px 9px;font-size:11px}
-  .vehicle-item-actions .vehicle-remove{margin-left:auto;color:#c94251;border-color:rgba(201,66,81,.18)}
-  .vehicle-notes{margin-top:8px;font-size:13px}
-  .vehicle-notes summary{cursor:pointer;color:var(--muted);padding:6px 0;font-weight:600}
-  .vehicle-notes p{white-space:normal;overflow-wrap:anywhere;line-height:1.6;margin:8px 0}
+  .vehicle-identity h2{font-size:15px;letter-spacing:.04em;margin:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .vehicle-identity p{margin:3px 0 0;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vehicle-type{padding:3px 8px;border-radius:20px;border:1px solid rgba(79,140,255,.24);background:rgba(79,140,255,.1);font-size:10px;font-weight:700;flex:0 0 auto;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vehicle-item-actions{display:flex;align-items:center;flex-wrap:nowrap;gap:5px;flex:0 0 auto}
+  .vehicle-item-actions .btn,.vehicle-notes summary{display:inline-flex;align-items:center;justify-content:center;width:31px;height:31px;padding:0;font-size:14px;border-radius:9px}
+  .vehicle-item-actions .vehicle-remove{color:#c94251;border-color:rgba(201,66,81,.18);font-size:12px;font-weight:800}
+  .vehicle-notes{position:relative;font-size:11px}
+  .vehicle-notes summary{cursor:pointer;color:var(--muted);border:1px solid var(--stroke);background:var(--card);list-style:none}
+  .vehicle-notes summary::-webkit-details-marker{display:none}
+  .vehicle-notes p{position:absolute;z-index:5;right:0;top:calc(100% + 5px);width:280px;max-width:70vw;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin:0;padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--card);box-shadow:0 8px 25px #21395526}
   .vehicle-empty{padding:30px 18px;text-align:center;border:1px dashed var(--stroke);border-radius:16px;background:var(--card)}
   .vehicle-empty p{color:var(--muted);font-size:13px;line-height:1.6}
   .vehicle-embedded [hidden]{display:none!important}
   .vehicle-embedded :is(a,button,input,summary):focus-visible{outline:3px solid #60a5fa;outline-offset:3px}
-  @media(max-width:480px){.vehicle-list-tools{align-items:stretch;flex-direction:column;gap:8px}.vehicle-item{padding:10px 12px}.vehicle-item-actions .vehicle-remove{margin-left:0}.vehicle-type{margin-left:46px}}
+  @media(max-width:480px){.vehicle-list-tools{align-items:stretch;flex-direction:column;gap:8px}.vehicle-item{padding:8px;gap:6px}.vehicle-symbol{display:none}.vehicle-type{font-size:9px;padding:3px 5px}.vehicle-name-line{gap:5px}.vehicle-item-actions{gap:3px}.vehicle-item-actions .btn,.vehicle-notes summary{width:28px;height:30px}}
   @media(prefers-reduced-motion:reduce){.vehicle-embedded .btn,.vehicle-item{transition:none}.vehicle-embedded .btn:hover{transform:none}}
 </style>
 <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
@@ -323,18 +326,15 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
         <span class="vehicle-symbol" aria-hidden="true">🚘</span>
         <div class="vehicle-identity">
           <span class="vehicle-eyebrow">Placa del vehículo</span>
-          <h2><?= h(placa_visible($r['placa'])) ?></h2>
+          <div class="vehicle-name-line"><h2><?= h(placa_visible($r['placa'])) ?></h2><span class="vehicle-type" title="<?= h($r['tipo'] ?: 'Sin tipo registrado') ?>"><?= h($r['tipo'] ?: 'Sin tipo registrado') ?></span></div>
           <p><?= h(implode(' · ', array_filter([$r['categoria_codigo'], $r['vehiculo_tipo_nombre'], $r['color'], $r['anio']]))) ?: 'Datos del vehículo sin registrar' ?></p>
         </div>
-        <span class="vehicle-type"><?= h($r['tipo'] ?: 'Sin tipo registrado') ?></span>
       </div>
-      <?php if (trim((string)$r['observaciones']) !== ''): ?>
-      <details class="vehicle-notes"><summary>Observaciones</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details>
-      <?php endif; ?>
       <div class="vehicle-item-actions">
-        <a class="btn small" data-participant-edit href="<?= $base ?>vehiculo_editar.php?id=<?= (int)$r['vehiculo_id'] ?>&amp;return_to=<?= $returnParam ?>">Editar vehículo</a>
-        <a class="btn small" data-participant-edit href="<?= $base ?>involucrados_vehiculos_editar.php?id=<?= (int)$r['id'] ?>&amp;return=<?= $returnParam ?>">Editar participación</a>
-        <a class="btn small vehicle-remove" href="<?= $base ?>involucrados_vehiculos_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= $returnParam ?>" onclick="return confirm('¿Eliminar este vehículo del expediente?');">Eliminar</a>
+        <?php if (trim((string)$r['observaciones']) !== ''): ?><details class="vehicle-notes"><summary title="Observaciones" aria-label="Observaciones">📝</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details><?php endif; ?>
+        <a class="btn small" data-participant-edit title="Editar vehículo" aria-label="Editar vehículo <?= h(placa_visible($r['placa'])) ?>" href="<?= $base ?>vehiculo_editar.php?id=<?= (int)$r['vehiculo_id'] ?>&amp;return_to=<?= $returnParam ?>">✏️</a>
+        <a class="btn small" data-participant-edit title="Editar participación" aria-label="Editar participación del vehículo <?= h(placa_visible($r['placa'])) ?>" href="<?= $base ?>involucrados_vehiculos_editar.php?id=<?= (int)$r['id'] ?>&amp;return=<?= $returnParam ?>">✏️</a>
+        <a class="btn small vehicle-remove" title="Eliminar vehículo" aria-label="Eliminar vehículo <?= h(placa_visible($r['placa'])) ?>" href="<?= $base ?>involucrados_vehiculos_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= $returnParam ?>" onclick="return confirm('¿Eliminar este vehículo del expediente?');">X</a>
       </div>
     </article>
     <?php endforeach; ?>

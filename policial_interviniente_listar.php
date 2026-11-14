@@ -40,10 +40,14 @@ if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.ph
 <?php if (\App\Support\CaseParticipantEmbed::active()): ?>
 <style>body{margin:0!important;padding:0!important;background:transparent!important}.wrap,.container{max-width:none!important;margin:0!important;padding:12px!important}.topbar{display:none!important}</style>
 <script src="assets/js/participant-embed.js" defer></script>
+<link rel="stylesheet" href="assets/css/personas-involucradas.css?v=<?= filemtime(__DIR__ . '/assets/css/personas-involucradas.css') ?>">
 <?php endif; ?>
 </head>
-<body>
+<body class="<?= \App\Support\CaseParticipantEmbed::active() ? 'people-embedded' : '' ?>">
 <div class="wrap">
+<?php if (\App\Support\CaseParticipantEmbed::active()): ?>
+<?php $participantListKind = 'policia'; include __DIR__ . '/partials/participantes_listado_compacto.php'; ?>
+<?php else: ?>
   <div class="toolbar">
     <div>
       <h1 style="margin:0 0 6px">Intervinientes policiales <span class="badge"><?= $filtered ? 'Accidente' : 'Global' ?></span></h1>
@@ -108,6 +112,7 @@ if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.ph
       </tbody>
     </table>
   </div>
+<?php endif; ?>
 </div>
 </body>
 </html>

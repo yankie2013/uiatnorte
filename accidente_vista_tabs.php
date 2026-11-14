@@ -7542,11 +7542,11 @@ $resumenInterventionRows = [
     <div class="case-header-facts case-header-facts-list">
       <section class="case-registration-block" aria-label="Registro del expediente">
       <dl class="case-facts-topline">
-        <div class="case-facts-top-item case-facts-sidpol"><dt>SIDPOL</dt><dd><button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></button></dd></div>
+        <div class="case-facts-top-item case-facts-sidpol"><dt><span class="case-fact-icon" aria-hidden="true">🗂️</span><span>SIDPOL</span></dt><dd><button type="button" class="sidpol-summary-trigger js-case-summary-open" aria-controls="case-summary-modal" aria-expanded="false" title="Abrir resumen SIDPOL (Ctrl + Alt + S)"><?= h($caseSummarySidpol !== '' ? $caseSummarySidpol : '—') ?></button></dd></div>
         <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📝</span><span>Tipo de registro</span></dt><dd><?= (string) ($A['tipo_registro'] ?? '') === 'Intervencion' ? 'Intervención' : fmt($A['tipo_registro'] ?? '') ?></dd></div>
         <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📄</span><span>N° informe policial</span></dt><dd><?= fmt($A['nro_informe_policial'] ?? '') ?></dd></div>
         <div class="case-facts-top-item"><dt><span class="case-fact-icon" aria-hidden="true">📁</span><span>N° folder</span></dt><dd><?= fmt($A['folder'] ?? '') ?></dd></div>
-        <div class="case-facts-top-item case-facts-status"><dt>Estado</dt><dd>
+        <div class="case-facts-top-item case-facts-status"><dt><span class="case-fact-icon" aria-hidden="true">🚦</span><span>Estado</span></dt><dd>
         <div class="case-status-switch" role="group" aria-label="Cambiar estado del accidente">
 <select hidden tabindex="-1" class="quick-status-select <?= h($caseHeaderStatusClass) ?> js-quick-status" aria-label="Estado del accidente" data-accidente-id="<?= (int) $accidente_id ?>" data-prev="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>"><?php foreach (['Pendiente', 'Resuelto', 'Con diligencias'] as $estadoOpt): ?><option value="<?= h($estadoOpt) ?>" <?= (string) ($A['estado'] ?? 'Pendiente') === $estadoOpt ? 'selected' : '' ?>><?= h($estadoOpt) ?></option><?php endforeach; ?></select>
           <button type="button" class="case-status-current" data-state="<?= h((string) ($A['estado'] ?? 'Pendiente')) ?>" aria-expanded="false" aria-controls="case-status-options" title="Cambiar estado del accidente"><?= h((string) ($A['estado'] ?? 'Pendiente')) ?></button>
@@ -10216,44 +10216,46 @@ $resumenInterventionRows = [
                         $oficioEsInformacionDiligencias = (str_contains($oficioDownloadText, 'informacion') || str_contains($oficioDownloadText, 'información')) && str_contains($oficioDownloadText, 'diligenc');
                         $oficioEsInformeMedico = str_contains($oficioDownloadText, 'informe') && (str_contains($oficioDownloadText, 'medico') || str_contains($oficioDownloadText, 'médico'));
                       ?>
-                      <article class="module-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>" data-type="<?= h($oficioTipo) ?>">
+                      <article class="module-card oficio-compact-card" data-document-list="oficios" data-category="<?= h(trim((string) ($row['categoria'] ?? ''))) ?>" data-type="<?= h($oficioTipo) ?>">
                         <header>
                           <div>
-                            <h4>
+                            <h4 title="<?= h($oficioCategoria . ' — ' . $oficioEntidad) ?>">
                               <?= h($oficioIcon) ?> <?= h($oficioCategoria) ?> — <?= h($oficioEntidad) ?>
                               <?php if (!empty($row['tiene_documento_recibido'])): ?><span class="document-link-check" role="img" aria-label="Documento recibido registrado" title="Documento recibido registrado">✅</span><?php endif; ?>
                             </h4>
-                            <p><?= h($oficioNumeroCompleto) ?></p>
+
                           </div>
-                          <select class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
-                            <?php foreach ($oficioEstados as $estadoOpt): ?>
-                              <option value="<?= h((string) $estadoOpt) ?>" <?= (string) ($row['estado'] ?? 'BORRADOR') === (string) $estadoOpt ? 'selected' : '' ?>><?= h((string) $estadoOpt) ?></option>
-                            <?php endforeach; ?>
-                          </select>
+
                         </header>
-                        <div class="module-meta">
+                        <div class="module-meta" title="<?= h(trim((string) ($row['referencia_texto'] ?? '') . ' · ' . (string) ($row['motivo'] ?? ''), ' ·')) ?>">
+                          <span class="oficio-number"><?= h($oficioNumeroCompleto) ?></span>
                           <span class="chip-simple"><?= h((string) (($row['asunto_nombre'] ?? '') !== '' ? $row['asunto_nombre'] : 'Sin asunto')) ?></span>
                           <span class="chip-simple">Fecha: <?= h(fecha_simple($row['fecha_emision'] ?? null)) ?></span>
                           <?php if (!empty($row['veh_placa'])): ?><span class="chip-simple"><?= h(trim((string) (($row['veh_ut'] ?? '') . ' · ' . ($row['veh_placa'] ?? '')))) ?></span><?php endif; ?>
                           <?php if (!empty(trim((string) ($row['persona_nombre'] ?? '')))): ?><span class="chip-simple"><?= h(trim((string) $row['persona_nombre'])) ?></span><?php endif; ?>
                         </div>
-                        <?php if (!empty($row['referencia_texto'])): ?><p style="margin-top:10px;">Referencia: <?= nl2br(h((string) $row['referencia_texto'])) ?></p><?php endif; ?>
-                        <?php if (!empty($row['motivo'])): ?><p style="margin-top:10px;"><?= nl2br(h((string) $row['motivo'])) ?></p><?php endif; ?>
+
+
                         <div class="module-actions">
-                          <?php if ($oficioEsDefuncionReniec): ?><a class="btn-shell btn-docx" href="word_oficio_defuncion_reniec.php?oficio_id=<?= (int) $row['id'] ?>">Descargar defunción</a><?php endif; ?>
-                          <?php if ($oficioEsCamara): ?><a class="btn-shell btn-docx" href="word_oficio_camaras.php?oficio_id=<?= (int) $row['id'] ?>">Descargar cámara</a><?php endif; ?>
-                          <?php if ($oficioEsRemitir): ?><a class="btn-shell btn-docx" href="oficio_remitir_diligencia.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['accid']) ? '&accidente_id=' . urlencode((string) $row['accid']) : '' ?>">Descargar remitir</a><?php endif; ?>
-                          <?php if ($oficioEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar dosaje</a><?php endif; ?>
-                          <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>">Descargar peritaje</a><?php endif; ?>
-                          <?php if ($oficioEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>">Descargar necropsia</a><?php endif; ?>
-                          <?php if ($oficioEsSunarpHistorial): ?><a class="btn-shell btn-docx" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= (int) $row['id'] ?>">Descargar SUNARP</a><?php endif; ?>
-                          <?php if ($oficioEsInformacionCertificadoUper): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= (int) $row['id'] ?>">Descargar UPER</a><?php endif; ?>
-                          <?php if ($oficioEsInformacionDiligencias): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= (int) $row['id'] ?>">Descargar diligencias</a><?php endif; ?>
-                          <?php if ($oficioEsInformeMedico): ?><a class="btn-shell btn-docx" href="word_oficio_informe_medico.php?oficio_id=<?= (int) $row['id'] ?>">Descargar informe medico</a><?php endif; ?>
-                          <a class="btn-shell btn-documento-recibido js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&referencia_oficio_id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=documentos')) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido">Documento recibido</a>
-                          <a class="btn-shell js-inline-open" href="oficios_leer.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Ver oficio">Ver</a>
-                          <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Editar oficio">Editar</a>
-                          <?php if (\App\Support\Access::admin()): ?><a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio">Eliminar</a><?php endif; ?>
+                          <select aria-label="Estado del oficio" class="module-status-select <?= h($oficioEstadoClass) ?> js-quick-oficio-status" data-oficio-id="<?= (int) $row['id'] ?>" data-prev="<?= h((string) ($row['estado'] ?? 'BORRADOR')) ?>">
+                            <?php foreach ($oficioEstados as $estadoOpt): ?>
+                              <option value="<?= h((string) $estadoOpt) ?>" <?= (string) ($row['estado'] ?? 'BORRADOR') === (string) $estadoOpt ? 'selected' : '' ?>><?= h((string) $estadoOpt) ?></option>
+                            <?php endforeach; ?>
+                          </select>
+                          <?php if ($oficioEsDefuncionReniec): ?><a class="btn-shell btn-docx" href="word_oficio_defuncion_reniec.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar defunción" aria-label="Descargar defunción">📄</a><?php endif; ?>
+                          <?php if ($oficioEsCamara): ?><a class="btn-shell btn-docx" href="word_oficio_camaras.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar cámara" aria-label="Descargar cámara">📄</a><?php endif; ?>
+                          <?php if ($oficioEsRemitir): ?><a class="btn-shell btn-docx" href="oficio_remitir_diligencia.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['accid']) ? '&accidente_id=' . urlencode((string) $row['accid']) : '' ?>" title="Descargar remitir" aria-label="Descargar remitir">📄</a><?php endif; ?>
+                          <?php if ($oficioEsDosaje): ?><a class="btn-shell btn-docx" href="oficio_resultado_dosaje.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar dosaje" aria-label="Descargar dosaje">📄</a><?php endif; ?>
+                          <?php if ($oficioEsPeritaje): ?><a class="btn-shell btn-peritaje" href="oficio_peritaje.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar peritaje" aria-label="Descargar peritaje">📄</a><?php endif; ?>
+                          <?php if ($oficioEsNecropsia): ?><a class="btn-shell btn-necropsia" href="oficio_protocolo.php?oficio_id=<?= (int) $row['id'] ?><?= !empty($row['inv_per_id']) ? '&inv_id=' . urlencode((string) $row['inv_per_id']) : '' ?>" title="Descargar necropsia" aria-label="Descargar necropsia">📄</a><?php endif; ?>
+                          <?php if ($oficioEsSunarpHistorial): ?><a class="btn-shell btn-docx" href="word_oficio_sunarp_historial_transferencias.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar SUNARP" aria-label="Descargar SUNARP">📄</a><?php endif; ?>
+                          <?php if ($oficioEsInformacionCertificadoUper): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_certificado_uper.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar UPER" aria-label="Descargar UPER">📄</a><?php endif; ?>
+                          <?php if ($oficioEsInformacionDiligencias): ?><a class="btn-shell btn-docx" href="word_oficio_informacion_diligencias_comisaria.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar diligencias" aria-label="Descargar diligencias">📄</a><?php endif; ?>
+                          <?php if ($oficioEsInformeMedico): ?><a class="btn-shell btn-docx" href="word_oficio_informe_medico.php?oficio_id=<?= (int) $row['id'] ?>" title="Descargar informe medico" aria-label="Descargar informe medico">📄</a><?php endif; ?>
+                          <a class="btn-shell btn-documento-recibido js-inline-open" href="documento_recibido_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&referencia_oficio_id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id . '&tab=documentos')) ?>" data-workbench="documento-recibido-modal" data-frame="documento-recibido-modal-frame" data-title="Nuevo documento recibido" title="Documento recibido" aria-label="Documento recibido">📥</a>
+                          <a class="btn-shell js-inline-open" href="oficios_leer.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Ver oficio" title="Ver" aria-label="Ver">👁️</a>
+                          <a class="btn-shell js-inline-open" href="oficios_editar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Editar oficio" title="Editar" aria-label="Editar">✏️</a>
+                          <?php if (\App\Support\Access::admin()): ?><a class="btn-shell js-inline-open" href="oficios_eliminar.php?id=<?= (int) $row['id'] ?>&embed=1&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>" data-workbench="oficio-modal" data-frame="oficio-modal-frame" data-title="Eliminar oficio" title="Eliminar" aria-label="Eliminar">X</a><?php endif; ?>
                         </div>
                       </article>
                     <?php endforeach; ?>

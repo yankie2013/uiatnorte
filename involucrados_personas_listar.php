@@ -232,13 +232,12 @@ $messages = [
     $vehicleText = implode(' · ', array_filter([$r['veh_ut'] ?? '', $r['vehiculo_tipo_nombre'] ?? '', $vehiclePlate]));
   ?>
     <article class="people-item" role="listitem">
-      <div class="people-identity"><span class="people-symbol" aria-hidden="true">👤</span><div><h2><?= h($personName ?: 'Nombre no registrado') ?></h2><p>Documento: <?= h($r['num_doc'] ?: 'Sin registro') ?></p></div><span class="people-condition <?= h($conditionClass) ?>"><?= h($condition ?: 'Sin condición registrada') ?></span></div>
-      <div class="people-facts"><div><span class="people-label">Participación</span><strong><?= h($r['rol_nombre']) ?></strong></div><div><span class="people-label">Vehículo</span><strong><?= h($vehicleText ?: 'Sin vehículo vinculado') ?></strong></div></div>
-      <?php if (trim((string) ($r['observaciones'] ?? '')) !== ''): ?><details class="people-notes"><summary>Observaciones</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details><?php endif; ?>
+      <div class="people-identity"><span class="people-symbol" aria-hidden="true">👤</span><div><div class="people-name-line"><h2 title="<?= h($personName) ?>"><?= h($personName ?: 'Nombre no registrado') ?></h2><span class="people-condition <?= h($conditionClass) ?>"><?= h($condition ?: 'Sin condición registrada') ?></span></div><p class="people-meta" title="<?= h('Documento: ' . ($r['num_doc'] ?: 'Sin registro') . ' · ' . $r['rol_nombre'] . ' · ' . ($vehicleText ?: 'Sin vehículo vinculado')) ?>"><span>Documento: <?= h($r['num_doc'] ?: 'Sin registro') ?></span><span><?= h($r['rol_nombre']) ?></span><span><?= h($vehicleText ?: 'Sin vehículo vinculado') ?></span></p></div></div>
       <div class="people-actions">
-        <a class="btn" data-participant-edit href="<?= $base ?>involucrados_personas_editar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">Editar participación</a>
-        <?php if (stripos((string)$r['rol_nombre'], 'conduc') !== false): ?><a class="btn" href="marcador_manifestacion_investigado.php?involucrado_id=<?= (int)$r['id'] ?>&amp;accidente_id=<?= (int)$r['accidente_id'] ?>&amp;download=1">Manifestación</a><?php endif; ?>
-        <a class="btn people-remove" href="<?= $base ?>involucrados_personas_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">Eliminar</a>
+        <?php if (trim((string) ($r['observaciones'] ?? '')) !== ''): ?><details class="people-notes"><summary title="Observaciones" aria-label="Observaciones">📝</summary><p><?= nl2br(h($r['observaciones'])) ?></p></details><?php endif; ?>
+        <?php if (stripos((string)$r['rol_nombre'], 'conduc') !== false): ?><a class="btn people-icon-action" title="Descargar manifestación" aria-label="Descargar manifestación de <?= h($personName) ?>" href="marcador_manifestacion_investigado.php?involucrado_id=<?= (int)$r['id'] ?>&amp;accidente_id=<?= (int)$r['accidente_id'] ?>&amp;download=1">📄</a><?php endif; ?>
+        <a class="btn people-icon-action" data-participant-edit title="Editar participación" aria-label="Editar participación de <?= h($personName) ?>" href="<?= $base ?>involucrados_personas_editar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">✏️</a>
+        <a class="btn people-icon-action people-remove" title="Eliminar" aria-label="Eliminar a <?= h($personName) ?>" href="<?= $base ?>involucrados_personas_eliminar.php?id=<?= (int)$r['id'] ?>&amp;return_to=<?= urlencode($returnTo) ?>">X</a>
       </div>
     </article>
   <?php endforeach; ?>
