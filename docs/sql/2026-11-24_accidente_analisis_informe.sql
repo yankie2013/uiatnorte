@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS accidente_analisis_informe (
+ accidente_id INT NOT NULL,
+ seccion VARCHAR(24) NOT NULL,
+ contenido LONGTEXT NOT NULL,
+ version INT NOT NULL DEFAULT 1,
+ actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY (accidente_id, seccion)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

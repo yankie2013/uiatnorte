@@ -10535,14 +10535,14 @@ $resumenInterventionRows = [
           </div>
 
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#analisis-danos-lesiones" type="button" role="tab">
-              analisis de daños y lesiones
-              <span class="tab-mini"><?= $analysisTabCount ?> registro(s)</span>
-            </button>
+            <?php foreach (['velocidad' => '1. Determinación de velocidad', 'danos-lesiones' => '2. Análisis de daños y lesiones', 'evidencias' => '3. Análisis de evidencias', 'integral' => '4. Análisis integral', 'causalidad' => '5. Causalidad del accidente'] as $analysisKey => $analysisLabel): ?>
+            <button class="nav-link <?= $analysisKey === 'velocidad' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#analisis-<?= h($analysisKey) ?>" type="button" role="tab"><?= h($analysisLabel) ?></button>
+            <?php endforeach; ?>
           </div>
 
           <div class="tab-content mt-2">
-            <div class="tab-pane fade show active" id="analisis-danos-lesiones" role="tabpanel">
+            <?php require __DIR__ . '/partials/accidente_analisis_informe.php'; ?>
+            <div class="tab-pane fade" id="analisis-danos-lesiones" role="tabpanel">
               <div class="analysis-two-cols">
                 <article class="module-card">
                   <header>
