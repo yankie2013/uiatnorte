@@ -19,6 +19,13 @@ try {
     $data = json_decode((string) ($_POST['contenido'] ?? ''), true, 32, JSON_THROW_ON_ERROR);
     if (!is_array($data)) throw new RuntimeException('Contenido no válido.');
     $clean = AnalisisInformeService::validate($pdo, $case, $section, $data);
+    if ($section === 'causalidad') {
+        // Conserva los registros anteriores hasta que se guarden en su apartado independiente.
+        $legacy = $pdo->prepare("SELECT contenido FROM accidente_analisis_informe WHERE accidente_id = ? AND seccion = 'causalidad'");
+        $legacy->execute([$case]);
+        $old = json_decode((string) ($legacy->fetchColumn() ?: '{}'), true);
+        if (isset($old['infracciones'])) $clean['infracciones'] = $old['infracciones'];
+    }
     $version = (int) ($_POST['version'] ?? 0);
     $content = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     if ($version === 0) {

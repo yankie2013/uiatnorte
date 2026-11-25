@@ -10535,7 +10535,7 @@ $resumenInterventionRows = [
           </div>
 
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
-            <?php foreach (['velocidad' => '1. Determinación de velocidad', 'danos-lesiones' => '2. Análisis de daños y lesiones', 'evidencias' => '3. Análisis de evidencias', 'integral' => '4. Análisis integral', 'causalidad' => '5. Causalidad del accidente'] as $analysisKey => $analysisLabel): ?>
+            <?php foreach (['velocidad' => '1. Determinación de velocidad', 'danos-lesiones' => '2. Análisis de daños y lesiones', 'evidencias' => '3. Análisis de evidencias', 'integral' => '4. Análisis integral', 'causalidad' => '5. Causalidad del accidente', 'infracciones' => '6. Infracciones administrativas'] as $analysisKey => $analysisLabel): ?>
             <button class="nav-link <?= $analysisKey === 'velocidad' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#analisis-<?= h($analysisKey) ?>" type="button" role="tab"><?= h($analysisLabel) ?></button>
             <?php endforeach; ?>
           </div>
@@ -10543,128 +10543,11 @@ $resumenInterventionRows = [
           <div class="tab-content mt-2">
             <?php require __DIR__ . '/partials/accidente_analisis_informe.php'; ?>
             <div class="tab-pane fade" id="analisis-danos-lesiones" role="tabpanel">
-              <div class="analysis-two-cols">
-                <article class="module-card">
-                  <header>
-                    <div>
-                      <h4>Conductores</h4>
-                      <p>Nombre del conductor, vehículo involucrado y daños que presenta.</p>
-                    </div>
-                  </header>
-                  <?php if (!$analysisDriverRows): ?>
-                    <div class="summary-empty">No hay conductores registrados para este accidente.</div>
-                  <?php else: ?>
-                    <div class="summary-doc-stack">
-                      <?php foreach ($analysisDriverRows as $driver): ?>
-                        <article class="record-card">
-                          <h5><?= h((string) ($driver['nombre'] ?? 'Sin nombre')) ?></h5>
-                          <div class="section-block">
-                            <div class="field-grid">
-                              <div class="field-card span-2">
-                                <div class="field-label">Vehículo involucrado</div>
-                                <div class="field-value"><?= h((string) ($driver['vehiculo'] ?? 'Sin vehículo registrado')) ?></div>
-                              </div>
-                              <div class="field-card span-2">
-                                <div class="field-label">Peritaje</div>
-                                <div class="field-value"><?= h((string) (($driver['peritaje']['numero_peritaje'] ?? '') !== '' ? ('N° ' . $driver['peritaje']['numero_peritaje']) : 'Sin número')) ?></div>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="section-block">
-                            <?= render_analysis_peritaje_story((array) ($driver['peritaje'] ?? [])) ?>
-                          </div>
-                        </article>
-                      <?php endforeach; ?>
-                    </div>
-                  <?php endif; ?>
-                  <div class="analysis-upload">
-                    <?php if ($analysisMediaBySection['danos'] !== []): ?>
-                      <div class="analysis-inline-slider js-analysis-inline-slider">
-                        <div class="analysis-inline-stage">
-                          <button type="button" class="analysis-inline-nav analysis-inline-prev js-analysis-inline-prev" aria-label="Imagen anterior">‹</button>
-                          <img class="analysis-inline-image js-analysis-inline-image" src="" alt="Imagen de daños">
-                          <button type="button" class="analysis-inline-nav analysis-inline-next js-analysis-inline-next" aria-label="Imagen siguiente">›</button>
-                        </div>
-                        <div class="analysis-inline-meta">
-                          <span class="analysis-image-order js-analysis-inline-order"></span>
-                          <span class="analysis-image-name js-analysis-inline-caption"></span>
-                          <button type="button" class="btn-shell analysis-delete-btn js-analysis-delete-image">Eliminar imagen</button>
-                        </div>
-                        <div hidden>
-                          <?php foreach ($analysisMediaBySection['danos'] as $mediaIndex => $media): ?>
-                            <button
-                              type="button"
-                              class="js-analysis-inline-item"
-                              data-id="<?= (int) ($media['id'] ?? 0) ?>"
-                              data-index="<?= (int) $mediaIndex ?>"
-                              data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
-                              data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
-                              data-order="<?= (int) ($media['sort_order'] ?? ($mediaIndex + 1)) ?>"
-                            ></button>
-                          <?php endforeach; ?>
-                        </div>
-                      </div>
-                    <?php endif; ?>
-                  </div>
-                </article>
-
-                <article class="module-card">
-                  <header>
-                    <div>
-                      <h4>Fallecidos</h4>
-                      <p>Nombres y lesiones registradas del participante fallecido.</p>
-                    </div>
-                  </header>
-                  <?php if (!$analysisFallecidoRows): ?>
-                    <div class="summary-empty">No hay personas fallecidas registradas para este accidente.</div>
-                  <?php else: ?>
-                    <div class="summary-doc-stack">
-                      <?php foreach ($analysisFallecidoRows as $fallecido): ?>
-                        <article class="record-card">
-                          <h5><?= h((string) ($fallecido['nombre'] ?? 'Sin nombre')) ?></h5>
-                          <div class="section-block">
-                            <div class="field-grid">
-                              <div class="field-card span-4">
-                                <div class="field-label">Lesiones</div>
-                                <div class="field-value"><?= ($fallecido['lesiones'] ?? '') !== '' ? render_hyphen_list_html((string) $fallecido['lesiones']) : 'Sin lesiones registradas' ?></div>
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      <?php endforeach; ?>
-                    </div>
-                  <?php endif; ?>
-                  <div class="analysis-upload">
-                    <?php if ($analysisMediaBySection['lesiones'] !== []): ?>
-                      <div class="analysis-inline-slider js-analysis-inline-slider">
-                        <div class="analysis-inline-stage">
-                          <button type="button" class="analysis-inline-nav analysis-inline-prev js-analysis-inline-prev" aria-label="Imagen anterior">‹</button>
-                          <img class="analysis-inline-image js-analysis-inline-image" src="" alt="Imagen de lesiones">
-                          <button type="button" class="analysis-inline-nav analysis-inline-next js-analysis-inline-next" aria-label="Imagen siguiente">›</button>
-                        </div>
-                        <div class="analysis-inline-meta">
-                          <span class="analysis-image-order js-analysis-inline-order"></span>
-                          <span class="analysis-image-name js-analysis-inline-caption"></span>
-                          <button type="button" class="btn-shell analysis-delete-btn js-analysis-delete-image">Eliminar imagen</button>
-                        </div>
-                        <div hidden>
-                          <?php foreach ($analysisMediaBySection['lesiones'] as $mediaIndex => $media): ?>
-                            <button
-                              type="button"
-                              class="js-analysis-inline-item"
-                              data-id="<?= (int) ($media['id'] ?? 0) ?>"
-                              data-index="<?= (int) $mediaIndex ?>"
-                              data-src="<?= h((string) ($media['archivo_path'] ?? '')) ?>"
-                              data-caption="<?= h((string) (($media['archivo_nombre'] ?? '') !== '' ? $media['archivo_nombre'] : 'Imagen guardada')) ?>"
-                              data-order="<?= (int) ($media['sort_order'] ?? ($mediaIndex + 1)) ?>"
-                            ></button>
-                          <?php endforeach; ?>
-                        </div>
-                      </div>
-                    <?php endif; ?>
-                  </div>
-                </article>
-              </div>
+              <?php
+              $section = 'danos-lesiones';
+              $title = 'Análisis de daños y lesiones';
+              require __DIR__ . '/partials/accidente_analisis_formulario.php';
+              ?>
             </div>
           </div>
         </div>
