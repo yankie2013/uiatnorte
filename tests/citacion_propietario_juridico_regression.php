@@ -30,8 +30,9 @@ try {
         checkCompany(str_contains($matches[0]['extra'], 'Empresa de prueba de citación S.A.C.'), 'Debe identificar la empresa.');
         $quick = $service->quickContext((int) $vehicle['accidente_id'], 'PRO:' . $owner);
         checkCompany(!$representative || $quick['defaults']['en_calidad'] === 'Representante legal', 'Debe sugerir la calidad de representante legal.');
-        $created = $service->create((int) $vehicle['accidente_id'], ['persona' => 'PRO:' . $owner, 'en_calidad' => 'Propietario del vehículo', 'fecha' => '2026-10-20', 'hora' => '10:00', 'lugar' => 'Sede UIAT', 'motivo' => 'Prueba de citación de empresa']);
+        $created = $service->create((int) $vehicle['accidente_id'], ['persona' => 'PRO:' . $owner, 'en_calidad' => $quick['defaults']['en_calidad'], 'fecha' => '2026-10-20', 'hora' => '10:00', 'lugar' => 'Sede UIAT', 'motivo' => 'Prueba de citación de empresa']);
         $citation = $service->detail($created['id']);
+        checkCompany($citation['en_calidad'] === $quick['defaults']['en_calidad'], 'Debe conservar la calidad sugerida, incluido Representante legal.');
         if (!$representative) {
         checkCompany($citation['persona_nombres'] === 'Empresa de prueba de citación S.A.C.' && $citation['persona_doc_tipo'] === 'RUC', 'Debe guardar razón social y tipo RUC.');
         checkCompany($citation['persona_doc_num'] === '20999999991' && $citation['persona_domicilio'] === 'Domicilio fiscal de prueba', 'Debe conservar RUC y domicilio fiscal.');
