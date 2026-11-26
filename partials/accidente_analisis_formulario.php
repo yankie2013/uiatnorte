@@ -1,6 +1,7 @@
 <form class="report-analysis module-card" data-section="<?= h($section) ?>">
 <?php
 $reportTitles = [
+    'descripcion' => 'I. DESCRIPCIÓN ANALÍTICA',
     'velocidad' => 'A. DETERMINACIÓN DE VELOCIDAD DE LOS VEHICULOS PARTICIPANTES',
     'danos-lesiones' => 'A. ANÁLISIS COMPARATIVO DE DAÑOS Y LESIONES',
     'evidencias' => 'A. ANÁLISIS DE EVIDENCIAS.',

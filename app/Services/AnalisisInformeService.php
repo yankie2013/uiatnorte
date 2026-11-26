@@ -8,6 +8,10 @@ final class AnalisisInformeService
 {
     public static function validate(PDO $pdo, int $case, string $section, array $data): array
     {
+        if ($section === 'descripcion') {
+            if (!isset($data['contenido']) || !is_array($data['contenido'])) throw new InvalidArgumentException('Descripción analítica no válida.');
+            return ['contenido' => DescripcionAnaliticaService::validate($data['contenido'])];
+        }
         $schemas = [
             'velocidad' => ['riesgos' => ['texto'], 'parrafos' => ['texto'], 'estimaciones' => ['vehiculo_id', 'desplazamiento']],
             'danos-lesiones' => ['consideraciones' => ['texto'], 'parrafos' => ['texto'], 'determinaciones' => ['texto']],

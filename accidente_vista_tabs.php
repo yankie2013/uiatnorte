@@ -10546,7 +10546,7 @@ $resumenInterventionRows = [
           </div>
 
           <div class="inner-tabs nav nav-tabs flex-nowrap" id="analisis-tabs" role="tablist">
-            <?php foreach (['velocidad' => '1. Determinación de velocidad', 'danos-lesiones' => '2. Análisis de daños y lesiones', 'evidencias' => '3. Análisis de evidencias', 'integral' => '4. Análisis integral', 'causalidad' => '5. Causalidad del accidente', 'infracciones' => '6. Infracciones administrativas'] as $analysisKey => $analysisLabel): ?>
+            <?php foreach (['descripcion' => '1. Descripción analítica', 'velocidad' => '2. Determinación de velocidad', 'danos-lesiones' => '3. Análisis de daños y lesiones', 'evidencias' => '4. Análisis de evidencias', 'integral' => '5. Análisis integral', 'causalidad' => '6. Causalidad del accidente', 'infracciones' => '7. Infracciones administrativas'] as $analysisKey => $analysisLabel): ?>
             <button class="nav-link <?= $analysisKey === 'velocidad' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#analisis-<?= h($analysisKey) ?>" type="button" role="tab"><?= h($analysisLabel) ?></button>
             <?php endforeach; ?>
           </div>

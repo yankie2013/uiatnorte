@@ -5,6 +5,7 @@
   const person = {key: 'involucrado_id', label: 'Involucrado y rol en el accidente', options: context.people};
   const choice = (key, label, values) => ({key, label, options: values.map(value => ({id: value, label: value}))});
   const groups = {
+    descripcion: [['contenido', 'Descripción analítica', 'Completar descripción analítica', []]],
     velocidad: [
       ['riesgos', 'Condiciones de riesgo', 'Añadir condición de riesgo', [text('texto', 'Condición de riesgo')]],
       ['parrafos', 'Párrafos del análisis', 'Añadir párrafo', [text('texto', 'Párrafo')]],
@@ -31,7 +32,7 @@
   const updateAnalysisTab = (section, data = {}) => {
     const tab = document.querySelector(`#analisis-tabs [data-bs-target="#analisis-${section}"]`);
     if (!tab) return;
-    const hasInformation = (groups[section] || []).some(([key]) => {
+    const hasInformation = section === 'descripcion' ? Boolean(data.contenido && (Object.values(data.contenido.inspeccion || {}).some(Boolean) || ['vias','consideraciones','aproximaciones','posiciones'].some(key => data.contenido[key]?.length))) : (groups[section] || []).some(([key]) => {
       const rows = data[key] || (key === 'evaluaciones' ? data.infracciones : []);
       return Array.isArray(rows) && rows.length > 0;
     });
@@ -46,12 +47,13 @@
             const panel = document.createElement('div'); panel.className = 'report-reference-panel'; panel.id = `${prefix}-reference-panel`; panel.setAttribute('role', 'tabpanel'); panel.tabIndex = 0;
             const sources = [
               ['Determinación de velocidad', '#analisis-velocidad .report-analysis-groups'],
+              ['Descripción analítica', '#analisis-descripcion .report-analysis-groups'],
               ['Daños y lesiones', '#analisis-danos-lesiones .report-analysis-groups'],
               ['Evidencias', '#analisis-evidencias .report-analysis-groups'],
               ['Participantes', '#case-participants-content'],
               ['ITP', '#itp .module-card']
             ];
-            if (includeIntegral) sources.splice(3, 0, ['Análisis integral', '#analisis-integral .report-analysis-groups']);
+            if (includeIntegral) sources.splice(4, 0, ['Análisis integral', '#analisis-integral .report-analysis-groups']);
             const copyReference = source => {
               const copy = source.cloneNode(true);
               copy.removeAttribute('hidden');
@@ -147,6 +149,10 @@
         }
       }
       group.append(head, rows, empty); form.querySelector('.report-analysis-groups').append(group);
+      if (section === 'descripcion') {
+        serializers[key] = window.ReportDescriptionEditor({context, form, rows, head, heading, empty, add, save: saveSection, status});
+        continue;
+      }
       if (key === 'evaluaciones') {
         serializers[key] = window.ReportInfractionEditor({context, form, rows, head, heading, empty, add, references: () => buildAnalysisReferences('infractions', true), save: saveSection, status});
         continue;
