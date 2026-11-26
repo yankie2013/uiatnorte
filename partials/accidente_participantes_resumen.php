@@ -140,12 +140,22 @@
     foreach ($propietarios as $owner) {
         $vehiclesWithOwner[(int) ($owner['vehiculo_inv_id'] ?? 0)] = true;
     }
-    $renderFamilyActions = static function (array $people) use ($accidente_id, $canManageParticipants): void {
+    $peopleWithFamily = [];
+    foreach ($familiares as $relative) {
+        $peopleWithFamily[(int) ($relative['fallecido_inv_id'] ?? 0)] = true;
+    }
+    $vehiclesWithDriver = [];
+    foreach ($personas as $person) {
+        if (is_conductor($person)) {
+            $vehiclesWithDriver[(int) ($person['vehiculo_id'] ?? $person['veh_id'] ?? 0)] = true;
+        }
+    }
+    $renderFamilyActions = static function (array $people) use ($accidente_id, $canManageParticipants, $peopleWithFamily): void {
         if (!$canManageParticipants) return;
         $deceased = array_values(array_filter($people, static fn(array $person): bool => needs_occ($person)));
         foreach ($deceased as $person) {
             $id = (int) ($person['involucrado_id'] ?? 0);
-            if ($id <= 0) continue;
+            if ($id <= 0 || isset($peopleWithFamily[$id])) continue;
             $label = '+ Familiar' . (count($people) > 1 ? ' · ' . person_label($person) : '');
             echo '<a class="overview-add-related" href="familiar_fallecido_nuevo.php?accidente_id=' . (int) $accidente_id . '&amp;fallecido_inv_id=' . $id . '" title="Agregar familiar de ' . h(person_label($person)) . '">' . h($label) . '</a>';
         }
@@ -224,8 +234,8 @@
                 $linkedPlate = (string) ($linkedVehicle['veh_placa'] ?: 'Sin placa');
                 $suffix = count($unit['vehiculos']) > 1 ? ' · ' . $linkedPlate : '';
               ?>
-                <?php if ($linkedVehicleId > 0): ?><a class="overview-add-related" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_id=<?= $linkedVehicleId ?>" title="Agregar conductor del vehículo <?= h($linkedPlate) ?>">+ Conductor<?= h($suffix) ?></a><?php endif; ?>
-                <?php if ($linkedParticipationId > 0): ?><a class="overview-add-related" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_inv_id=<?= $linkedParticipationId ?>" title="Agregar propietario del vehículo <?= h($linkedPlate) ?>">+ Propietario<?= h($suffix) ?></a><?php endif; ?>
+                <?php if ($linkedVehicleId > 0 && !isset($vehiclesWithDriver[$linkedVehicleId])): ?><a class="overview-add-related" href="involucrados_personas_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_id=<?= $linkedVehicleId ?>" title="Agregar conductor del vehículo <?= h($linkedPlate) ?>">+ Conductor<?= h($suffix) ?></a><?php endif; ?>
+                <?php if ($linkedParticipationId > 0 && !isset($vehiclesWithOwner[$linkedParticipationId])): ?><a class="overview-add-related" href="propietario_vehiculo_nuevo.php?accidente_id=<?= (int) $accidente_id ?>&amp;vehiculo_inv_id=<?= $linkedParticipationId ?>" title="Agregar propietario del vehículo <?= h($linkedPlate) ?>">+ Propietario<?= h($suffix) ?></a><?php endif; ?>
               <?php endforeach; ?>
             </span>
           <?php endif; ?>

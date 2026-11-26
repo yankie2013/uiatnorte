@@ -160,7 +160,7 @@ html[data-theme-resolved="dark"] .uiat-case-view .case-overview-layout .case-reg
 }
 
 /* Contextual participant actions remain visible on collapsed unit headers. */
-.uiat-case-view .overview-unit-add-actions{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;margin-left:auto}
+.uiat-case-view .overview-unit-add-actions{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;margin-left:0}
 .uiat-case-view .overview-collapsible-heading .overview-add-related{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border:1px solid color-mix(in srgb,var(--unit-accent,#3984b1) 45%,#cbd9e9);border-radius:9px;background:linear-gradient(135deg,#ffffffed,#ffffffa6);color:var(--unit-accent,#306a92);font-size:11px;font-weight:700;text-decoration:none;box-shadow:inset 0 1px 0 #fff;white-space:nowrap}
 .uiat-case-view .overview-collapsible-heading .overview-add-related:hover{background:#fff;box-shadow:0 3px 9px #29496b15}
 .uiat-case-view .overview-collapsible-heading .overview-add-related:focus-visible{outline:2px solid currentColor;outline-offset:2px}
