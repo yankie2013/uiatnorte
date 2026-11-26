@@ -115,7 +115,7 @@ if (!\App\Support\CaseParticipantEmbed::active()) include __DIR__ . '/sidebar.ph
         SIDPOL: <?= h((string) ($ctx['accidente']['sidpol'] ?? 'Sin SIDPOL')) ?>
         - Registro: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? 'Sin registro')) ?>
         - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? 'Sin fecha')) ?>
-        - Lugar: <?= h((string) ($ctx['accidente']['lugar'] ?? 'Sin lugar')) ?>
+        - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($ctx['accidente'], 'lugar', (int) ($ctx['accidente']['id'] ?? 0)))) ?>
       </div>
     </div>
   <?php endif; ?>

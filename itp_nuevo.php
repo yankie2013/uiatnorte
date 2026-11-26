@@ -18,6 +18,7 @@ if (!function_exists('h')) {
 
 $service = new ItpService(new ItpRepository($pdo));
 $accidenteId = (int) ($_GET['accidente_id'] ?? $_POST['accidente_id'] ?? 0);
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $error = '';
 $ok = trim((string) ($_GET['ok'] ?? ''));
 $data = $service->defaultData(null, $accidenteId > 0 ? $accidenteId : null);
@@ -63,6 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $newId = $service->create($data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"itp.saved"}, window.location.origin);</script><p>ITP guardada correctamente.</p>';
+            exit;
+        }
         header('Location: itp_ver.php?id=' . $newId . '&ok=created');
         exit;
     } catch (Throwable $e) {
@@ -73,7 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $ctx = $service->formContext($accidenteId > 0 ? $accidenteId : null);
 $caseSummaryContext = case_summary_widget_context($pdo, $accidenteId);
-include __DIR__ . '/sidebar.php';
+$itpLocalizationCase = (int) ($data['accidente_id'] ?? 0);
+$itpLocalizationOptions = $service->localizationCandidates($itpLocalizationCase);
+if (!$embed) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -86,27 +93,29 @@ include __DIR__ . '/sidebar.php';
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--danger:#fecaca;--ok:#bbf7d0;--gold:#e6c97d}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1160px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}h1,h2{color:var(--gold);margin:0}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--primary);color:#eff6ff;border-color:transparent}.btn.ghost{background:transparent}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}.fieldset{border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:14px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.field{display:flex;flex-direction:column;gap:6px}.label{font-size:12px;color:var(--gold);font-weight:700}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);color:var(--ok);padding:10px;border-radius:10px;margin-bottom:12px}.err{background:rgba(220,38,38,.12);color:var(--danger);padding:10px;border-radius:10px;margin-bottom:12px}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text)}textarea{min-height:92px;resize:vertical}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}.tagbox,.measurebox,.pairbox{border:1px dashed var(--border);border-radius:12px;padding:10px}.tag-items,.measure-list,.pair-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}.chip,.measure-item,.pair-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(148,163,184,.08)}.mini-row{display:flex;gap:8px;flex-wrap:wrap}.mini-row input{flex:1}.gps-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gps-row input{flex:1}.gps-modal{position:fixed;inset:0;display:none;z-index:60}.gps-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.65)}.gps-panel{position:relative;max-width:760px;margin:50px auto 0;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:14px}.gps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.gps-search input{width:100%;margin-bottom:10px}.gps-map{height:380px;border:1px solid var(--border);border-radius:12px;overflow:hidden}@media(max-width:920px){.c6,.c4,.c3{grid-column:span 12}}
 </style>
+<link rel="stylesheet" href="assets/css/itp-glass.css?v=<?= filemtime(__DIR__.'/assets/css/itp-glass.css') ?>">
 </head>
-<body>
+<body class="uiat-itp-form <?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <div class="toolbar">
     <div>
       <h1>ITP <span class="badge">Nuevo</span></h1>
       <div class="small">Inspeccion tecnico policial</div>
-      <?= case_summary_widget_render($caseSummaryContext, 'itp-nuevo') ?>
+      <?php if (!$embed): ?><?= case_summary_widget_render($caseSummaryContext, 'itp-nuevo') ?><?php endif; ?>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn ghost" href="itp_listar.php<?= $accidenteId > 0 ? '?accidente_id=' . (int) $accidenteId : '' ?>">Volver</a><button class="btn primary" type="submit" form="frmItp">Guardar ITP</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if ($embed): ?><button class="btn ghost" type="button" onclick="window.parent.postMessage({type:'itp.close'}, window.location.origin)">Cancelar</button><?php else: ?><a class="btn ghost" href="itp_listar.php<?= $accidenteId > 0 ? '?accidente_id=' . (int) $accidenteId : '' ?>">Volver</a><?php endif; ?><button class="btn primary" type="submit" form="frmItp">Guardar ITP</button></div>
   </div>
 
   <?php if ($ok !== ''): ?><div class="ok"><?= h($ok) ?></div><?php endif; ?>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" id="frmItp" class="card" autocomplete="off">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <?php if ($ctx['accidente']): ?>
       <input type="hidden" name="accidente_id" value="<?= (int) $ctx['accidente']['id'] ?>">
-      <div class="fieldset"><strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? '-')) ?> - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? '-')) ?> - Lugar: <?= h((string) ($ctx['accidente']['lugar'] ?? '-')) ?></div></div>
+      <div class="fieldset"><strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? '-')) ?> - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? '-')) ?> - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($ctx['accidente'], 'lugar', (int) ($ctx['accidente']['id'] ?? 0)))) ?></div></div>
     <?php else: ?>
-      <div class="field c12"><label class="label">Accidente*</label><select name="accidente_id" id="accidente_id" required><option value="">Selecciona</option><?php foreach ($ctx['accidentes'] as $acc): ?><?php $accGps = is_numeric((string) ($acc['latitud'] ?? '')) && is_numeric((string) ($acc['longitud'] ?? '')) ? number_format((float) $acc['latitud'], 6, '.', '') . ', ' . number_format((float) $acc['longitud'], 6, '.', '') : ''; ?><option value="<?= (int) $acc['id'] ?>" data-gps="<?= h($accGps) ?>" <?= (int) $data['accidente_id'] === (int) $acc['id'] ? 'selected' : '' ?>>[ID <?= (int) $acc['id'] ?>] <?= h((string) ($acc['fecha_accidente'] ?? '-')) ?> - SIDPOL: <?= h((string) ($acc['registro_sidpol'] ?? '-')) ?> - <?= h((string) ($acc['lugar'] ?? '')) ?></option><?php endforeach; ?></select></div>
+      <div class="field c12"><label class="label">Accidente*</label><select name="accidente_id" id="accidente_id" required><option value="">Selecciona</option><?php foreach ($ctx['accidentes'] as $acc): ?><?php $accGps = is_numeric((string) ($acc['latitud'] ?? '')) && is_numeric((string) ($acc['longitud'] ?? '')) ? number_format((float) $acc['latitud'], 6, '.', '') . ', ' . number_format((float) $acc['longitud'], 6, '.', '') : ''; ?><option value="<?= (int) $acc['id'] ?>" data-gps="<?= h($accGps) ?>" <?= (int) $data['accidente_id'] === (int) $acc['id'] ? 'selected' : '' ?>>[ID <?= (int) $acc['id'] ?>] <?= h((string) ($acc['fecha_accidente'] ?? '-')) ?> - SIDPOL: <?= h((string) ($acc['registro_sidpol'] ?? '-')) ?> - <?= h((string) (\App\Support\AccidentPlace::fromRecord($acc, 'lugar', (int) ($acc['accidente_id'] ?? $acc['id'] ?? 0)))) ?></option><?php endforeach; ?></select></div>
     <?php endif; ?>
 
     <div class="fieldset">
@@ -117,7 +126,7 @@ include __DIR__ . '/sidebar.php';
         <div class="c6 field"><label class="label">Forma de la via</label><input type="text" name="forma_via" value="<?= h((string) $data['forma_via']) ?>"></div>
         <div class="c12 field"><label class="label">Punto de referencia</label><input type="text" name="punto_referencia" value="<?= h((string) $data['punto_referencia']) ?>"></div>
         <div class="c12 field"><label class="label">Ubicacion GPS</label><div class="gps-row"><input type="text" id="ubicacion_gps" name="ubicacion_gps" value="<?= h((string) $data['ubicacion_gps']) ?>" readonly><button type="button" class="btn" id="btnGps">Marcar en mapa</button><button type="button" class="btn ghost" id="btnViewMap">Ver mapa</button><a class="btn ghost" id="btnGoogleMaps" href="#" target="_blank" rel="noopener noreferrer">Google Maps</a></div><div class="small">Se usa automaticamente el punto registrado en Datos Generales del accidente.</div></div>
-        <div class="c12 field"><label class="label">Localizacion de unidades</label><div class="pairbox" id="pb_localizacion" data-values="<?= h((string) $data['localizacion_unidades']) ?>"><div class="mini-row"><input type="text" class="p-unit" placeholder="Unidad"><input type="text" class="p-place" placeholder="Ubicacion"><button class="btn" type="button" class="p-add">Agregar</button></div><div class="pair-list"></div><input type="hidden" name="localizacion_unidades" value="<?= h((string) $data['localizacion_unidades']) ?>"></div></div>
+        <div class="c12 field"><label class="label">Localizacion de unidades</label><div class="pairbox" id="pb_localizacion" data-values="<?= h((string) $data['localizacion_unidades']) ?>"><div class="mini-row"><select class="p-unit" aria-label="Vehículo o persona involucrada"><option value="">Selecciona un vehículo o una persona…</option></select><input type="text" class="p-place" placeholder="Ubicacion"><button class="btn" type="button" class="p-add">Agregar</button></div><div class="pair-list"></div><input type="hidden" name="localizacion_unidades" value="<?= h((string) $data['localizacion_unidades']) ?>"></div></div>
         <div class="c12 field"><label class="label">Ocurrencia policial</label><textarea name="ocurrencia_policial"><?= h((string) $data['ocurrencia_policial']) ?></textarea></div>
         <div class="c12 field"><label class="label">Llegada al lugar</label><textarea name="llegada_lugar"><?= h((string) $data['llegada_lugar']) ?></textarea></div>
       </div>
@@ -183,5 +192,7 @@ include __DIR__ . '/sidebar.php';
 (function(){const gpsInput=document.getElementById('ubicacion_gps');const viewBtn=document.getElementById('btnViewMap');const markerBtn=document.getElementById('btnGps');const googleLink=document.getElementById('btnGoogleMaps');function gps(){return gpsInput?String(gpsInput.value||'').trim():'';}function syncLink(){const value=gps();if(!googleLink)return;if(value){googleLink.href='https://www.google.com/maps?q='+encodeURIComponent(value);googleLink.removeAttribute('aria-disabled');}else{googleLink.href='#';googleLink.setAttribute('aria-disabled','true');}}viewBtn?.addEventListener('click',function(){if(!gps()){alert('Primero registra una ubicacion GPS.');return;}markerBtn?.click();});googleLink?.addEventListener('click',function(ev){if(!gps()){ev.preventDefault();alert('Primero registra una ubicacion GPS.');}});gpsInput?.addEventListener('input',syncLink);gpsInput?.addEventListener('change',syncLink);document.getElementById('accidente_id')?.addEventListener('change',function(){setTimeout(syncLink,0);});syncLink();})();
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBnJS7WFYPLcroPFi-l0felTh2UW_QR4Q&libraries=places&callback=initGpsMap" async defer></script>
+<script type="application/json" id="itp-localization-options"><?= json_encode(['caseId' => $itpLocalizationCase, 'items' => $itpLocalizationOptions], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
+<script src="assets/js/itp-localization-options.js?v=<?= filemtime(__DIR__.'/assets/js/itp-localization-options.js') ?>" defer></script>
 </body>
 </html>

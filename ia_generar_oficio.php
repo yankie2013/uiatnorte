@@ -242,7 +242,7 @@ function fallback_cuerpo(array $accidente, string $prompt): string
     if (!empty($accidente['fecha_accidente']) && strtotime((string) $accidente['fecha_accidente'])) {
         $hora = date('H:i', strtotime((string) $accidente['fecha_accidente']));
     }
-    $lugar = first_non_empty($accidente, ['lugar'], 'el lugar materia de investigacion');
+    $lugar = (\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0)) ?: 'el lugar materia de investigacion');
     $distrito = first_non_empty($accidente, ['distrito_nombre', 'cod_dist'], 'el distrito correspondiente');
     $modalidad = first_non_empty($accidente, ['modalidad_resumen'], 'accidente de transito');
     $consecuencia = first_non_empty($accidente, ['consecuencia_resumen'], 'consecuencias materia de investigacion');
@@ -409,7 +409,7 @@ try {
     $template->setValue('oficio_rango_desde', h($rangoDesde));
     $template->setValue('oficio_rango_hasta', h($rangoHasta));
     $template->setValue('accidente_fecha_abrev', h(fecha_abrev((string) ($accidente['fecha_accidente'] ?? ''))));
-    $template->setValue('accidente_lugar', h(first_non_empty($accidente, ['lugar'], 'el lugar materia de investigacion')));
+    $template->setValue('accidente_lugar', h((\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0)) ?: 'el lugar materia de investigacion')));
     $template->setValue('accidente_referencia', h(first_non_empty($accidente, ['referencia'], 'sin referencia consignada')));
     $template->setValue('accidente_modalidad', h(first_non_empty($accidente, ['modalidad_resumen'], 'accidente de transito')));
     $template->setValue('accidente_consecuencia', h(first_non_empty($accidente, ['consecuencia_resumen'], 'consecuencias materia de investigacion')));

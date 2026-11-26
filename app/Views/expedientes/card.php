@@ -91,7 +91,7 @@ $state=trim((string)$a['estado'])?:'Pendiente';
  </section>
  <?php endif; ?>
  <?php if($a['eliminado_en']): ?><p class="case-card-deleted">Expediente eliminado</p><?php endif ?>
- <h2 class="case-card-place"><?= $icon('place') ?><span><?= $h($a['lugar']) ?><?= $a['distrito']?' <span class="case-card-muted">· '. $h($a['distrito']).'</span>':'' ?></span></h2>
+ <h2 class="case-card-place"><?= $icon('place') ?><span><?= $h(\App\Support\AccidentPlace::fromRecord($a, 'lugar', (int) ($a['id'] ?? 0))) ?></span></h2>
  <p class="case-card-modality"><span>MODALIDAD</span><?= $h(implode(', ',$modalidades)?:'Sin registrar') ?></p>
  <div class="case-card-facts">
   <div><span class="case-card-label"><?= $icon('date') ?> FECHA</span><strong><?= $h($a['fecha_accidente']?date('d/m/Y H:i',strtotime($a['fecha_accidente'])):'Sin registrar') ?></strong></div>

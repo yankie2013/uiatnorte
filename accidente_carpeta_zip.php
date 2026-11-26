@@ -127,7 +127,7 @@ if ($numeroSidpol === '') {
 }
 
 $modalidad = carpeta_zip_modalidad($modalidades);
-$lugar = carpeta_zip_lugar_resumido((string) ($accidente['lugar'] ?? ''));
+$lugar = carpeta_zip_lugar_resumido((string) (\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0))));
 $folderName = substr(carpeta_zip_slug($numeroSidpol . '_' . $modalidad . '_' . $lugar, 'Accidente_' . $accidenteId), 0, 120);
 
 $tmp = tempnam(sys_get_temp_dir(), 'carpeta_accidente_');
@@ -165,7 +165,7 @@ $zip->addFromString(
     "Estructura inicial del accidente\n"
     . "SIDPOL: " . $numeroSidpol . "\n"
     . "Modalidad: " . str_replace('_', ', ', $modalidad) . "\n"
-    . "Lugar: " . (string) ($accidente['lugar'] ?? '') . "\n"
+    . "Lugar: " . (string) (\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0))) . "\n"
     . "Expediente: accidente_vista_tabs.php?accidente_id=" . $accidenteId . "\n"
 );
 

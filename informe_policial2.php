@@ -285,7 +285,7 @@ LIMIT 4";
   $vars['acc_fecha_larga']   = fecha_larga_es($ACC['fecha_accidente'] ?? $ACC['fecha'] ?? '');
   $vars['acc_fecha_abrev']   = fecha_abrev_es($ACC['fecha_accidente'] ?? $ACC['fecha'] ?? '');
   $vars['acc_hora']          = substr((string)($ACC['fecha_accidente'] ?? ''),11,5) ?: ($ACC['hora'] ?? '');
-  $vars['acc_lugar']         = val($ACC['lugar']);
+  $vars['acc_lugar']         = val(\App\Support\AccidentPlace::fromRecord($ACC, 'lugar', (int) ($ACC['accidente_id'] ?? $ACC['id'] ?? 0)));
   $vars['acc_direccion']     = val($ACC['direccion'] ?? '');
   $vars['acc_km']            = val($ACC['km'] ?? '');
   $vars['acc_referencia']    = val($ACC['referencia']);

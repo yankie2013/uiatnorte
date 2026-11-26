@@ -87,7 +87,7 @@ if (is_file($plantilla)) {
   $T = new TemplateProcessor($plantilla);
   $T->setValue('sidpol',              $acc['sidpol']);
   $T->setValue('registro_sidpol',     $acc['registro_sidpol']);
-  $T->setValue('lugar',               $acc['lugar']);
+  $T->setValue('lugar',               \App\Support\AccidentPlace::fromRecord($acc, 'lugar', (int) ($acc['accidente_id'] ?? $acc['id'] ?? 0)));
   $T->setValue('referencia',          $acc['referencia']);
   $T->setValue('fecha_accidente',     $acc['fecha_accidente']);
   $T->setValue('fecha',               $acc['fecha_sola']);
@@ -107,7 +107,7 @@ if (is_file($plantilla)) {
   $sec->addText('SIDPOL: '.$acc['sidpol'], ['bold'=>true]);
   $sec->addText('Registro SIDPOL: '.$acc['registro_sidpol']);
   $sec->addText('Comisaria: '.$acc['comisaria']);
-  $sec->addText('Lugar: '.$acc['lugar']);
+  $sec->addText('Lugar: '.\App\Support\AccidentPlace::fromRecord($acc, 'lugar', (int) ($acc['accidente_id'] ?? $acc['id'] ?? 0)));
   $sec->addText('Referencia: '.$acc['referencia']);
   $sec->addText('Fecha: '.$acc['fecha_sola'].'   Hora: '.$acc['hora_accidente']);
   $sec->addText('Estado: '.$acc['estado']);

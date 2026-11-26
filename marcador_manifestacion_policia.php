@@ -267,7 +267,7 @@ $replacements['FISCAL_CELULAR'] = $replacements['fiscal_telefono'];
 $replacements['FISCAL_EMAIL'] = $replacements['fiscal_email'];
 
 // amigables
-$replacements['accidente_lugar']      = to_str($accidente['lugar'] ?? '');
+$replacements['accidente_lugar']      = to_str(\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0)));
 $replacements['accidente_referencia'] = to_str($accidente['referencia'] ?? '');
 
 // fecha abreviada del accidente

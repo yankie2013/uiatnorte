@@ -315,7 +315,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1280px;margin:24px
         <?php endif; ?>
         </div>
           <h2><?= h(App\Support\CitacionMotivo::texto($first) ?: 'Motivo sin registrar') ?></h2>
-          <p>📍 <?= h($first['lugar'] ?: 'Lugar sin registrar') ?></p>
+          <p>📍 <?= h(\App\Support\AccidentPlace::fromRecord($first, 'lugar') ?: 'Lugar sin registrar') ?></p>
         </div>
         <a class="btn add-participant" href="citacion_nuevo.php?accidente_id=<?= $accidenteId ?>&base_citacion_id=<?= (int) $first['id'] ?><?= $embed ? '&embed=1' : '' ?>&return_to=<?= urlencode($returnTo) ?>">+ Agregar participante</a>
         <?php if (App\Support\Access::canDeleteCaseRecord($accidenteId)): ?>

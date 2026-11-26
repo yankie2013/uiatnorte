@@ -105,4 +105,4 @@
       <?php endif; ?>
     </section>
     <?php
-})($personas, $policias, $abogados, $propietarios, $familiares, whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, $A['lugar'] ?? null, $A['registro_sidpol'] ?? null));
+})($personas, $policias, $abogados, $propietarios, $familiares, whatsapp_message_pack($modalidades, $A['fecha_accidente'] ?? null, \App\Support\AccidentPlace::fromRecord($A, 'lugar', (int) ($A['id'] ?? 0)), $A['registro_sidpol'] ?? null));

@@ -52,7 +52,7 @@ if ($rows && in_array(Access::role(), ['jefe_emi','secretaria','administracion']
 }
 foreach($rows as $row){
     $id=(int)$row['accidente_id'];
-    echo '<article class="reception-item"><h2>Expediente '.Page::escape($row['registro_sidpol']?:'#'.$id).'</h2><p>'.Page::escape($row['lugar']).'</p><p>Destino: '.($row['tipo']==='archivo'?'Archivo':'Investigación').'</p><p>De: '.Page::escape(trim(($row['origen_grado']??'').' '.($row['origen']??''))?:'Sin responsable anterior').'<br>Para: '.Page::escape(trim(($row['destino_grado']??'').' '.$row['destino'])).'</p>';
+    echo '<article class="reception-item"><h2>Expediente '.Page::escape($row['registro_sidpol']?:'#'.$id).'</h2><p>'.Page::escape(\App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) ($row['accidente_id'] ?? $row['id'] ?? 0))).'</p><p>Destino: '.($row['tipo']==='archivo'?'Archivo':'Investigación').'</p><p>De: '.Page::escape(trim(($row['origen_grado']??'').' '.($row['origen']??''))?:'Sin responsable anterior').'<br>Para: '.Page::escape(trim(($row['destino_grado']??'').' '.$row['destino'])).'</p>';
     if ($row['tipo']==='archivo') echo '<p><strong>Informe N°:</strong> '.Page::escape($row['informe_remision']?:'No registrado').'<br><strong>Oficio N°:</strong> '.Page::escape($row['oficio_remision']?:'No registrado').'</p>';
     echo '<p>'.Page::escape($row['motivo']).' · '.Page::escape($row['creado_en']).'</p>';
     if(in_array(Access::role(), ['jefe_emi','secretaria','administracion'], true) && (int)$row['destino_id']===Access::id()){

@@ -119,7 +119,7 @@ if (empty($oficio['involucrado_vehiculo_id'])) {
     exit('Selecciona el vehiculo involucrado para generar este oficio.');
 }
 
-$accidenteLugar = identveh_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
+$accidenteLugar = identveh_clean((\App\Support\AccidentPlace::fromRecord($oficio, 'lugar')) . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
 $responsableDocumento = \App\Support\Access::documentProfile($oficio);
 $firmaGrado = identveh_clean($responsableDocumento['grado'] ?? '');
 

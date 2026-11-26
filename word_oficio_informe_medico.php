@@ -136,7 +136,7 @@ $personaNombre = im_clean(($oficio['persona_nombres'] ?? '') . ' ' . ($oficio['p
 $personaApellidos = im_clean(($oficio['persona_apellido_paterno'] ?? '') . ' ' . ($oficio['persona_apellido_materno'] ?? ''));
 $fiscalNombre = im_clean(($oficio['fiscal_nombres'] ?? '') . ' ' . ($oficio['fiscal_apellido_paterno'] ?? '') . ' ' . ($oficio['fiscal_apellido_materno'] ?? ''));
 $accidenteLugarCompleto = im_clean(implode(' - ', array_filter([
-    $oficio['lugar'] ?? '', $oficio['accidente_referencia'] ?? '', $oficio['accidente_distrito'] ?? '', $oficio['comisaria_nombre'] ?? '',
+    \App\Support\AccidentPlace::fromRecord($oficio, 'lugar'), $oficio['accidente_referencia'] ?? '', $oficio['comisaria_nombre'] ?? '',
 ], static fn(mixed $value): bool => im_clean($value) !== '')));
 $numeroCompleto = im_clean(($oficio['numero'] ?? '') . '-' . ($oficio['anio'] ?? ''));
 
@@ -162,7 +162,7 @@ $values = [
     'accidente_fecha' => im_fecha_larga($oficio['fecha_accidente'] ?? null),
     'accidente_fecha_abrev' => im_fecha_abrev($oficio['fecha_accidente'] ?? null),
     'accidente_hora' => !empty($oficio['fecha_accidente']) && strtotime((string) $oficio['fecha_accidente']) ? date('H:i', strtotime((string) $oficio['fecha_accidente'])) : '',
-    'accidente_lugar' => $oficio['lugar'] ?? '',
+    'accidente_lugar' => \App\Support\AccidentPlace::fromRecord($oficio, 'lugar'),
     'accidente_lugar_completo' => $accidenteLugarCompleto,
     'accidente_referencia' => $oficio['accidente_referencia'] ?? '',
     'accidente_distrito' => $oficio['accidente_distrito'] ?? '',

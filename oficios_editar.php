@@ -210,6 +210,9 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
     <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
     <div class="grid">
+      <?php if ($embed && !$returnGeneralList): ?>
+        <input type="hidden" name="accidente_id" id="accidente_id" value="<?= h($data['accidente_id']) ?>">
+      <?php else: ?>
       <div class="c12">
         <label>Accidente asociado*</label>
         <select name="accidente_id" id="accidente_id" required>
@@ -219,6 +222,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1180px;margin:24px
           <?php endforeach; ?>
         </select>
       </div>
+      <?php endif; ?>
       <div class="c12"><label for="categoria">Categoría</label><div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias_documento']), JSON_UNESCAPED_UNICODE)) ?>"><input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar una categoría" role="combobox" aria-autocomplete="list" aria-expanded="false"></div></div>
       <div class="c2"><label>Año*</label><input type="number" name="anio_oficio" id="anio_oficio" value="<?= h($data['anio_oficio']) ?>" required></div>
       <div class="c3"><label>Número*</label><div class="field-row"><input type="number" name="numero_oficio" id="numero_oficio" value="<?= h($data['numero_oficio']) ?>"><button class="btn mini" type="button" onclick="recalcularNumero()">↻</button></div></div>

@@ -59,7 +59,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.95rem}thead 
     <select name="accidente_id">
       <option value="">Filtrar por accidente</option>
       <?php foreach($ctx['accidentes'] as $a): ?>
-        <option value="<?= h($a['id']) ?>" <?= ((string)$filters['accidente_id'] === (string)$a['id']) ? 'selected' : '' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty($a['lugar']) ? (' - ' . h($a['lugar'])) : '' ?></option>
+        <option value="<?= h($a['id']) ?>" <?= ((string)$filters['accidente_id'] === (string)$a['id']) ? 'selected' : '' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty(\App\Support\AccidentPlace::fromRecord($a, 'lugar', (int) ($a['accidente_id'] ?? $a['id'] ?? 0))) ? (' - ' . h(\App\Support\AccidentPlace::fromRecord($a, 'lugar', (int) ($a['accidente_id'] ?? $a['id'] ?? 0)))) : '' ?></option>
       <?php endforeach; ?>
     </select>
     <select name="tipo_documento">
@@ -90,7 +90,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.95rem}thead 
           <td><div><strong>Recepcion:</strong> <?= h($r['fecha_recepcion_resuelta'] ?? $r['fecha_recepcion'] ?? $r['fecha'] ?? '') ?></div><div class="small">Documento: <?= h($r['fecha_documento_resuelta'] ?? $r['fecha_documento'] ?? $r['fecha'] ?? '-') ?></div><div class="small">ID <?= h($r['id']) ?></div></td>
           <td><div><?= h($r['asunto']) ?></div><div class="small"><?= h($r['entidad_persona']) ?></div><?php if(!empty($r['contenido'])): ?><div class="small" style="margin-top:6px;"><?= h(mb_strimwidth((string)$r['contenido'],0,160,'...')) ?></div><?php endif; ?></td>
           <td><div><strong><?= h($r['categoria'] ?? '') ?: 'Sin categoría' ?></strong></div><div class="small"><?= h($r['tipo_documento']) ?></div><div class="small">Nro. <?= h($r['numero_documento']) ?><?= !empty($r['siglas_documento']) ? ' · ' . h($r['siglas_documento']) : '' ?></div></td>
-          <td><?php if($r['accidente_id']): ?><div class="small">#<?= h($r['accidente_id']) ?> - <?= h($r['accidente_sidpol'] ?: '-') ?></div><div class="small"><?= h((string)($r['accidente_lugar'] ?? '')) ?></div><?php else: ?><div class="small">Sin accidente</div><?php endif; ?></td>
+          <td><?php if($r['accidente_id']): ?><div class="small">#<?= h($r['accidente_id']) ?> - <?= h($r['accidente_sidpol'] ?: '-') ?></div><div class="small"><?= h((string)(\App\Support\AccidentPlace::fromRecord($r, 'accidente_lugar'))) ?></div><?php else: ?><div class="small">Sin accidente</div><?php endif; ?></td>
           <td><?php if($r['referencia_oficio_id']): ?><div class="small">Oficio <?= h($r['oficio_numero']) ?>/<?= h($r['oficio_anio']) ?></div><?php else: ?><div class="small">Sin referencia</div><?php endif; ?></td>
           <td><?php $st = (string)($r['estado'] ?? 'Pendiente'); $cls = strtolower($st)==='revisado'?'estado-revisado':(strtolower($st)==='archivado'?'estado-archivado':'estado-pendiente'); ?><span class="tag <?= $cls ?>"><?= h($st) ?></span></td>
           <td><div class="actions-row"><a class="btn" href="documento_recibido_ver.php?id=<?= h($r['id']) ?>&return_to=<?= urlencode($returnTo) ?>">Ver</a><a class="btn" href="documento_recibido_editar.php?id=<?= h($r['id']) ?>">Editar</a><a class="btn" href="documento_recibido_eliminar.php?id=<?= h($r['id']) ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a></div></td>

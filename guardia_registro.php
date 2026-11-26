@@ -21,7 +21,7 @@ $st=$pdo->prepare('SELECT rbac_guardia_draft(?)');$st->execute([$id]);$editable=
 $step=(string)($_GET['paso']??'vehiculos');
 $steps=['datos'=>'Datos del accidente','vehiculos'=>'Registrar vehículos','personas'=>'Registrar personas','documentos'=>'Documentos','entrega'=>'Revisar y entregar'];
 if(!isset($steps[$step]))$step='vehiculos';
-echo '<div class="guardia-layout"><aside class="guardia-navigation"><div class="guardia-case"><strong>'.Page::escape($record['registro_sidpol']?:'Accidente #'.$id).'</strong><p>'.Page::escape($record['lugar']).'</p></div><nav aria-label="Pasos del registro">';
+echo '<div class="guardia-layout"><aside class="guardia-navigation"><div class="guardia-case"><strong>'.Page::escape($record['registro_sidpol']?:'Accidente #'.$id).'</strong><p>'.Page::escape(\App\Support\AccidentPlace::fromRecord($record, 'lugar', $id)).'</p></div><nav aria-label="Pasos del registro">';
 $number=0;
 foreach($steps as $key=>$label){$number++;echo '<a '.($key===$step?'aria-current="step"':'').' href="?accidente_id='.$id.'&paso='.$key.'"><span>'.$number.'</span>'.Page::escape($label).'</a>';}
 echo '</nav><p class="muted">Dispones de 12 horas desde el registro inicial para completar los datos antes de la entrega.</p></aside><div class="guardia-content">';

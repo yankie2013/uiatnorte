@@ -30,7 +30,7 @@ final class DocumentoManifestacionRepository
         $st = $this->pdo->prepare('SELECT ' . implode(',', $select) . ' FROM accidentes_activos WHERE id=? LIMIT 1');
         $st->execute([$id]);
         $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
-        return '#' . $id . ' - ' . trim(($row['sidpol'] ?? '') . ' ' . ($row['fecha'] ?? '') . ' ' . ($row['lugar'] ?? ''));
+        return '#' . $id . ' - ' . trim(($row['sidpol'] ?? '') . ' ' . ($row['fecha'] ?? '') . ' ' . \App\Support\AccidentPlace::fromRecord($row, 'lugar', $id));
     }
 
     public function personaLabel(int $id): string

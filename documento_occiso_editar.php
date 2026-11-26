@@ -43,7 +43,7 @@ if($persona_lbl==='') $persona_lbl = 'ID '.$it['persona_id'];
 $acc_lbl = trim(implode(' � ', array_filter([
   $it['registro_sidpol']??'',
   (!empty($it['fecha_accidente']) ? date('Y-m-d',strtotime($it['fecha_accidente'])) : 's/f'),
-  $it['lugar_accidente']??''
+  \App\Support\AccidentPlace::fromRecord($it, 'lugar_accidente')
 ])));
 if($acc_lbl==='') $acc_lbl = '#'.$it['accidente_id'];
 ?><!doctype html>

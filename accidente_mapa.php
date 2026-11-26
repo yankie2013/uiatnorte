@@ -315,7 +315,7 @@ foreach ($rows as $row) {
         'sidpol' => (string) ($row['sidpol'] ?? ''),
         'registro_sidpol' => (string) ($row['registro_sidpol'] ?? ''),
         'tipo_registro' => (string) ($row['tipo_registro'] ?? ''),
-        'lugar' => (string) ($row['lugar'] ?? ''),
+        'lugar' => \App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) ($row['id'] ?? 0)),
         'referencia' => (string) ($row['referencia'] ?? ''),
         'fecha_accidente' => (string) ($row['fecha_accidente'] ?? ''),
         'estado' => (string) ($row['estado'] ?? 'Pendiente'),
@@ -632,7 +632,7 @@ body{margin:0;background:linear-gradient(180deg,#9fd8ee 0%,#90d2ea 100%);color:v
             ?>
             <article class="case-item" data-case-id="<?= (int) $marker['id'] ?>">
               <div class="case-top">
-                <div class="case-title"><?= h($marker['lugar'] !== '' ? $marker['lugar'] : ('Accidente #' . $marker['id'])) ?></div>
+                <div class="case-title"><?= h(\App\Support\AccidentPlace::fromRecord($marker, 'lugar') !== '' ? \App\Support\AccidentPlace::fromRecord($marker, 'lugar') : ('Accidente #' . $marker['id'])) ?></div>
                 <div class="list-sub">#<?= (int) $marker['id'] ?></div>
               </div>
               <div class="case-meta">
@@ -658,7 +658,7 @@ body{margin:0;background:linear-gradient(180deg,#9fd8ee 0%,#90d2ea 100%);color:v
             <?php foreach (array_slice($rowsWithoutGeo, 0, 20) as $row): ?>
               <li>
                 <a href="<?= h('accidente_editar.php?id=' . (int) $row['id']) ?>" class="btn" style="padding:6px 10px;margin-top:6px">
-                  #<?= (int) $row['id'] ?> <?= h($row['lugar'] !== '' ? $row['lugar'] : 'Sin lugar') ?>
+                  #<?= (int) $row['id'] ?> <?= h(\App\Support\AccidentPlace::fromRecord($row, 'lugar') !== '' ? \App\Support\AccidentPlace::fromRecord($row, 'lugar') : 'Sin lugar') ?>
                 </a>
               </li>
             <?php endforeach; ?>

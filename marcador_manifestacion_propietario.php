@@ -384,7 +384,7 @@ if ($fiscal) {
 foreach ($accidente as $col => $val) {
     $replacements['ACCIDENTE_' . strtoupper((string) $col)] = to_str($val);
 }
-$replacements['ACCIDENTE_LUGAR'] = to_str($accidente['lugar'] ?? '');
+$replacements['ACCIDENTE_LUGAR'] = to_str(\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0)));
 $replacements['ACCIDENTE_REFERENCIA'] = to_str($accidente['referencia'] ?? '');
 $replacements['ACCIDENTE_FECHA_ABREV'] = fecha_abrev($accidente['fecha_accidente'] ?? '');
 $replacements['ACCIDENTE_HORA'] = !empty($accidente['fecha_accidente']) ? date('H:i', strtotime($accidente['fecha_accidente'])) : '';

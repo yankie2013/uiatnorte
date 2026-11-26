@@ -273,7 +273,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
     <div class="muted" style="margin-bottom:12px;">
       <?php if ($accidenteId > 0): ?>
         <?php if ($accidenteResumen !== null): ?>
-          Caso <?= h((string) ($accidenteResumen['registro_sidpol'] ?? '')) ?> · <?= h((string) ($accidenteResumen['lugar'] ?? 'Sin lugar')) ?>
+          Caso <?= h((string) ($accidenteResumen['registro_sidpol'] ?? '')) ?> · <?= h((string) (\App\Support\AccidentPlace::fromRecord($accidenteResumen, 'lugar', (int) ($accidenteResumen['accidente_id'] ?? $accidenteResumen['id'] ?? 0)))) ?>
         <?php else: ?>
           Se muestran solo las citaciones futuras del accidente seleccionado.
         <?php endif; ?>
@@ -324,7 +324,7 @@ body{background:var(--page);color:var(--text)}.wrap{max-width:1040px;margin:24px
             <?php if ($syncStatus === 'error' && !empty($row['google_calendar_last_error'])): ?><div class="agenda-sub"><strong>Detalle sync:</strong> <?= h((string) $row['google_calendar_last_error']) ?></div><?php endif; ?>
             <div class="agenda-sub">
               <strong>SIDPOL:</strong> <?= h((string) (($row['registro_sidpol'] ?? '') !== '' ? $row['registro_sidpol'] : '—')) ?>
-              <?php if (!empty($row['accidente_lugar'])): ?> · <strong>Caso:</strong> <?= h((string) $row['accidente_lugar']) ?><?php endif; ?>
+              <?php if (!empty(\App\Support\AccidentPlace::fromRecord($row, 'accidente_lugar'))): ?> · <strong>Caso:</strong> <?= h((string) \App\Support\AccidentPlace::fromRecord($row, 'accidente_lugar')) ?><?php endif; ?>
             </div>
             <div class="agenda-actions">
               <a class="btn" href="<?= h($citacionUrl) ?>">Ver citación</a>

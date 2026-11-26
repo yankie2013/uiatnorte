@@ -111,8 +111,9 @@ include __DIR__ . '/sidebar.php';
 @media (prefers-color-scheme: dark){:root{--page:#0b1220;--card:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--border:#23314d;--primary:#60a5fa;--danger:#fecaca;--gold:#e6c97d}}
 *{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}.wrap{max-width:1120px;margin:24px auto;padding:0 12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}h1,h2{color:var(--gold);margin:0}.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--primary);border:1px solid rgba(37,99,235,.18);font-size:11px}.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.danger{color:var(--danger)}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.c12{grid-column:span 12}.c6{grid-column:span 6}.c4{grid-column:span 4}.field{padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(148,163,184,.08)}.label{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px}.value{font-weight:700;word-break:break-word}.small{color:var(--muted);font-size:12px}.ok{background:rgba(22,163,74,.12);padding:10px;border-radius:10px;margin-bottom:12px}.list{margin:0;padding-left:18px}.gps-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.gps-frame{width:100%;height:320px;border:1px solid var(--border);border-radius:12px;margin-top:12px;background:#fff}@media(max-width:920px){.c6,.c4{grid-column:span 12}.gps-frame{height:260px}}
 </style>
+<link rel="stylesheet" href="assets/css/itp-glass.css?v=<?= filemtime(__DIR__.'/assets/css/itp-glass.css') ?>">
 </head>
-<body>
+<body class="uiat-itp-form">
 <div class="wrap">
   <div class="toolbar">
     <div>
@@ -134,7 +135,7 @@ include __DIR__ . '/sidebar.php';
     <div class="small" style="margin-top:4px;">
       SIDPOL: <?= h((string) ($detail['registro_sidpol'] ?? '-')) ?>
       - Fecha: <?= h((string) ($detail['fecha_accidente'] ?? '-')) ?>
-      - Lugar: <?= h((string) ($detail['lugar'] ?? '-')) ?>
+      - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($detail, 'lugar'))) ?>
     </div>
   </div>
 

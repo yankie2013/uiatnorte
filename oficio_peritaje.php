@@ -457,7 +457,7 @@ $asunto_visible = OficioContenido::componer([
   'veh_placa' => val($vehiculo,'placa',''),
 ]);
 $acc_fecha_sigla = fecha_abreviada_es(val($acc,'fecha_accidente',''));
-$acc_lugar       = trim(val($acc,'lugar','').(val($acc,'referencia','') ? ' - '.val($acc,'referencia','') : ''));
+$acc_lugar       = trim(\App\Support\AccidentPlace::format(val($acc,'lugar',''), $accidente_distrito).(val($acc,'referencia','') ? ' - '.val($acc,'referencia','') : ''));
 $accidente_resumen = "Por lo que se agradece a Ud., remitir el resultado estipulado según normas vigentes para efectos de proseguir con las diligencias respectivas relacionadas al esclarecimiento de un Accidente de Tránsito, ocurrido el día {$acc_fecha_sigla} a horas {$accidente_hora} aprox., en {$acc_lugar}.";
 
 /* Firma/pie */

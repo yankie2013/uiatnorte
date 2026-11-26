@@ -40,7 +40,7 @@ include __DIR__ . '/sidebar.php';
   <section class="created-box">
     <h1>Accidente creado</h1>
     <p>Se esta descargando el ZIP con la estructura inicial de carpetas.</p>
-    <p><strong>SIDPOL:</strong> <?= h($accidente['registro_sidpol'] ?: $accidente['sidpol']) ?> &nbsp; <strong>Lugar:</strong> <?= h($accidente['lugar']) ?></p>
+    <p><strong>SIDPOL:</strong> <?= h($accidente['registro_sidpol'] ?: $accidente['sidpol']) ?> &nbsp; <strong>Lugar:</strong> <?= h(\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0))) ?></p>
     <div class="created-actions">
       <a class="btn primary" href="accidente_vista_tabs.php?accidente_id=<?= (int) $accidenteId ?>">Abrir expediente</a>
       <a class="btn" href="accidente_carpeta_zip.php?accidente_id=<?= (int) $accidenteId ?>">Descargar ZIP otra vez</a>

@@ -51,7 +51,7 @@ function make_summary(array $inv): string
     if (!empty($inv['veh_placa'])) {
         $rows[] = 'Vehiculo: ' . trim((string) ($inv['veh_placa'] . ' ' . ($inv['veh_marca'] ?? '') . ' ' . ($inv['veh_modelo'] ?? '')));
     }
-    $rows[] = 'Accidente: #' . ((int) ($inv['accidente_id'] ?? 0)) . ' - ' . ($inv['fecha_accidente'] ? fmt_dt($inv['fecha_accidente']) : 'Sin fecha') . ' - ' . dash($inv['lugar_accidente'] ?? '');
+    $rows[] = 'Accidente: #' . ((int) ($inv['accidente_id'] ?? 0)) . ' - ' . ($inv['fecha_accidente'] ? fmt_dt($inv['fecha_accidente']) : 'Sin fecha') . ' - ' . dash(\App\Support\AccidentPlace::fromRecord($inv, 'lugar_accidente'));
     $rows[] = 'Lesion: ' . dash($inv['lesion'] ?? '');
     $obs = trim((string) ($inv['observaciones'] ?? ''));
     if ($obs !== '') {
@@ -296,7 +296,7 @@ if (!$show['occ'] && count($occList)) {
 
       <div>
         <div class="rowv"><div class="mut">Accidente</div><div>#<?= (int) $inv['accidente_id'] ?> - <?= h(fmt_dt($inv['fecha_accidente'] ?? '')) ?></div></div>
-        <div class="rowv"><div class="mut">Lugar</div><div><?= h(dash($inv['lugar_accidente'] ?? '')) ?></div></div>
+        <div class="rowv"><div class="mut">Lugar</div><div><?= h(dash(\App\Support\AccidentPlace::fromRecord($inv, 'lugar_accidente'))) ?></div></div>
         <div style="margin-top:12px">
           <div class="mut">Documentos</div>
           <div class="counts">

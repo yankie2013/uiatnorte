@@ -1921,7 +1921,7 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
               </div>
               <div class="acc-place">
                 <span class="acc-place-icon" aria-hidden="true">📍</span>
-                <span><?=h($r['lugar'])?><?php if (trim((string)($r['distrito'] ?? '')) !== ''): ?> <span class="acc-place-district">- <?=h($r['distrito'])?></span><?php endif; ?></span>
+                <span><?=h(\App\Support\AccidentPlace::fromRecord($r, 'lugar'))?></span>
               </div>
               <?php if ($modalidadesAccidente !== []): ?>
                 <div class="acc-modality" aria-label="Tipo de accidente">
@@ -2081,8 +2081,8 @@ html[data-theme-resolved="dark"] .acc-actions-item.is-danger:hover{background:#4
     </div>
   </td>
   <td role="cell">
-    <div class="cell-stack cell-place" title="<?=h($r['lugar'])?>">
-      <span class="cell-primary"><?=h($r['lugar'])?></span>
+    <div class="cell-stack cell-place" title="<?=h(\App\Support\AccidentPlace::fromRecord($r, 'lugar'))?>">
+      <span class="cell-primary"><?=h(\App\Support\AccidentPlace::fromRecord($r, 'lugar'))?></span>
     </div>
   </td>
   <td role="cell" data-sort-value="<?=h($r['fecha_accidente'] ?? '')?>">

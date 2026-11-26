@@ -71,7 +71,7 @@ include __DIR__ . '/sidebar.php';
       SIDPOL: <?= h((string) ($row['sidpol'] ?? 'Sin SIDPOL')) ?>
       - Registro: <?= h((string) ($row['registro_sidpol'] ?? 'Sin registro')) ?>
       - Fecha: <?= h((string) ($row['fecha_accidente'] ?? 'Sin fecha')) ?>
-      - Lugar: <?= h((string) ($row['lugar'] ?? 'Sin lugar')) ?>
+      - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($row, 'lugar'))) ?>
     </div>
   </div>
 

@@ -188,7 +188,7 @@ $instructorCip = $responsableDocumento['cip'] ?? '';
 $instructor = trim(implode(' ', array_filter([$instructorGrade, $instructorName])));
 $fiscalName = trim((string) ($accident['fiscal'] ?? ''));
 $fiscalOffice = trim((string) ($accident['fiscalia'] ?? ''));
-$accidentPlace = trim((string) ($accident['lugar'] ?? ''));
+$accidentPlace = trim((string) (\App\Support\AccidentPlace::fromRecord($accident, 'lugar', (int) ($accident['accidente_id'] ?? $accident['id'] ?? 0))));
 $accidentReference = trim((string) ($accident['referencia'] ?? ''));
 $accidentLocation = implode(', ', array_filter([$accidentPlace, $accidentReference]));
 

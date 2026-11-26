@@ -513,7 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'accidente_fecha_corta' => format_date_short($accidente['fecha_accidente'] ?? null),
             'accidente_fecha_larga' => format_date_long($accidente['fecha_accidente'] ?? null),
             'accidente_hora' => format_hour($accidente['fecha_accidente'] ?? null),
-            'accidente_lugar' => (string) ($accidente['lugar'] ?? ''),
+            'accidente_lugar' => (string) (\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0))),
             'accidente_referencia' => (string) ($accidente['referencia'] ?? ''),
             'accidente_modalidad' => $modalidad,
             'comisaria_nombre' => (string) ($accidente['comisaria_nombre'] ?? ''),

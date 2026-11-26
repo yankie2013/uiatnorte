@@ -127,7 +127,7 @@ $cons_concat = $cons ? implode(' → ', array_map('h',$cons)) : '—';
 $cons_concat = join_con_y($cons);
 /* WhatsApp vars que usa el panel */
 $modalidad_txt = $mods_concat ?: '—';
-$lugar_acc     = $A['lugar'] ?? '—';
+$lugar_acc = \App\Support\AccidentPlace::fromRecord($A, 'lugar', (int) ($A['id'] ?? 0));
 $fechaHoraRaw  = $A['fecha_accidente'] ?? null;
 if ($fechaHoraRaw && strtotime($fechaHoraRaw)) {
   $fecha_acc = date('d/m/Y', strtotime($fechaHoraRaw));

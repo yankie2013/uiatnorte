@@ -159,7 +159,7 @@ $cons_concat = $cons ? implode(' → ', array_map('h',$cons)) : '—';
 $cons_concat = join_con_y($cons);
 /* ===== Datos para mensaje WhatsApp ===== */
 $modalidad_txt = $mods_concat ?: '—';
-$lugar_acc     = $A['lugar'] ?? '—';
+$lugar_acc = \App\Support\AccidentPlace::fromRecord($A, 'lugar', (int) ($A['id'] ?? 0));
 
 $fechaHoraRaw = $A['fecha_accidente'] ?? null;
 if ($fechaHoraRaw && strtotime($fechaHoraRaw)) {
@@ -691,7 +691,7 @@ include __DIR__ . '/sidebar.php';
       <div class="grid">
         <div class="f s4">
           <div class="l">Lugar</div>
-          <div class="v copyable" id="lugarNom" title="Click para copiar"><?=fmt($A['lugar'])?></div>
+          <div class="v copyable" id="lugarNom" title="Click para copiar"><?=fmt(\App\Support\AccidentPlace::fromRecord($A, 'lugar', (int) ($A['accidente_id'] ?? $A['id'] ?? 0)))?></div>
         </div>
         <div class="f s4">
           <div class="l">Ubicación</div>

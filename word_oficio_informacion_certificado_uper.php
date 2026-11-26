@@ -152,7 +152,7 @@ $accidenteModalidades = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
 $st = $pdo->prepare('SELECT ca.nombre FROM accidente_consecuencia_activos ac JOIN consecuencia_accidente ca ON ca.id = ac.consecuencia_id WHERE ac.accidente_id = ? ORDER BY ca.id');
 $st->execute([(int) ($oficio['accidente_id'] ?? 0)]);
 $accidenteConsecuencias = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
-$accidenteLugarCompleto = uper_clean(($oficio['lugar'] ?? '') . (($oficio['accidente_referencia'] ?? '') !== '' ? ' - ' . $oficio['accidente_referencia'] : ''));
+$accidenteLugarCompleto = uper_clean((\App\Support\AccidentPlace::fromRecord($oficio, 'lugar')) . (($oficio['accidente_referencia'] ?? '') !== '' ? ' - ' . $oficio['accidente_referencia'] : ''));
 $accidenteUbicacion = uper_clean(implode(', ', array_filter([
     $oficio['accidente_distrito'] ?? '',
     $oficio['accidente_provincia'] ?? '',
@@ -185,7 +185,7 @@ $values = [
     'accidente_id' => $oficio['accidente_id'] ?? '',
     'accidente_tipo_registro' => $oficio['accidente_tipo_registro'] ?? '',
     'accidente_estado' => $oficio['accidente_estado'] ?? '',
-    'accidente_lugar' => $oficio['lugar'] ?? '',
+    'accidente_lugar' => \App\Support\AccidentPlace::fromRecord($oficio, 'lugar'),
     'accidente_lugar_completo' => $accidenteLugarCompleto,
     'accidente_referencia' => $oficio['accidente_referencia'] ?? '',
     'accidente_sentido' => $oficio['sentido'] ?? '',

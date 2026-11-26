@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Uiat\Connector;
+require_once dirname(__DIR__, 3) . '/app/Support/AccidentPlace.php';
 use DateTimeImmutable;
 use DOMDocument;
 use DOMXPath;
@@ -201,7 +202,7 @@ final class CameraDrafts
         $missing=[];
         if($yearQuestion)$missing[]=$yearQuestion;
         foreach(self::FIELDS as $name=>$label)if(!in_array($name,['lugar_aportado','fecha_accidente_aportada','nombre_oficial_ano'],true)&&($fields[$name]??'')==='')$missing[]=['campo'=>$name,'pregunta'=>$label];
-        $place=trim((string)($source['lugar']??''));$date=substr((string)($source['fecha_accidente']??''),0,10);
+        $place=\App\Support\AccidentPlace::format($source['lugar'] ?? '', $source['distrito'] ?? '');$date=substr((string)($source['fecha_accidente']??''),0,10);
         if($place!==''&&isset($fields['lugar_aportado']))throw new InvalidArgumentException('El lugar registrado no se puede sobrescribir en este borrador.');
         if($date!==''&&isset($fields['fecha_accidente_aportada']))throw new InvalidArgumentException('La fecha registrada no se puede sobrescribir.');
         $provenance+=['lugar'=>$place!==''?'UIAT: accidentes_activos.lugar':'aportado_por_usuario','fecha_accidente'=>$date!==''?'UIAT: accidentes_activos.fecha_accidente':'aportado_por_usuario','datos_del_destinatario_y_solicitud'=>'aportados_por_usuario_sin_cotejo_automatico'];

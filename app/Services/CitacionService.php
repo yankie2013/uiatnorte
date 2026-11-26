@@ -77,7 +77,7 @@ final class CitacionService
                 'id' => $accidenteId,
                 'label' => $this->accidenteLabel($accidente),
                 'fecha' => $this->formatDateTime($accidente['fecha_accidente'] ?? null),
-                'lugar' => trim((string) ($accidente['lugar'] ?? '')),
+                'lugar' => \App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0)),
                 'referencia' => trim((string) ($accidente['referencia'] ?? '')),
             ],
             'persona' => [
@@ -333,7 +333,7 @@ final class CitacionService
             $parts[] = trim((string) $accidente['fecha_accidente']);
         }
         if (!empty($accidente['lugar'])) {
-            $parts[] = trim((string) $accidente['lugar']);
+            $parts[] = \App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0));
         }
 
         return implode(' · ', array_filter($parts, static fn (string $part): bool => $part !== ''));

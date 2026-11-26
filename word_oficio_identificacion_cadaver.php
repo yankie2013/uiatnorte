@@ -112,7 +112,7 @@ if (empty($oficio['involucrado_persona_id'])) {
 }
 
 $fallecidoNombre = ident_clean(($oficio['fall_nombres'] ?? '') . ' ' . ($oficio['fall_ap'] ?? '') . ' ' . ($oficio['fall_am'] ?? ''));
-$accidenteLugar = ident_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
+$accidenteLugar = ident_clean((\App\Support\AccidentPlace::fromRecord($oficio, 'lugar')) . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
 $responsableDocumento = \App\Support\Access::documentProfile($oficio);
 $firmaGrado = ident_clean($responsableDocumento['grado'] ?? '');
 

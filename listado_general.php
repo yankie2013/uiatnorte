@@ -120,7 +120,7 @@ $eligibleIds = array_map('intval', array_column($users, 'id'));
 echo '<section><p>'.$total.' registros · Todos los responsables, incluidos los expedientes sin asignar.</p><div class="table-scroll"><table><thead><tr><th>SIDPOL</th><th>Lugar del accidente</th><th>Distrito</th><th>Comisaría</th><th>A cargo de</th><th>Estado</th><th>Tipo de accidente</th><th>Detalle</th></tr></thead><tbody>';
 foreach ($rows as $row) {
     $href='listado_general.php?'.http_build_query($query+['id'=>(int)$row['id']]);
-    echo '<tr><td>'.$h($row['registro_sidpol']?:'Sin SIDPOL').'</td><td>'.$h($row['lugar']).'</td><td>'.$h($row['distrito']?:'Sin registrar').'</td><td>'.$h($row['comisaria']?:'Sin registrar').'</td><td>';
+    echo '<tr><td>'.$h($row['registro_sidpol']?:'Sin SIDPOL').'</td><td>'.$h(\App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) ($row['id'] ?? 0))).'</td><td>'.$h($row['distrito']?:'Sin registrar').'</td><td>'.$h($row['comisaria']?:'Sin registrar').'</td><td>';
     echo '<form method="post" class="js-responsible-form"><input type="hidden" name="action" value="reasignar"><input type="hidden" name="expediente_id" value="'.(int)$row['id'].'">';
     Page::token();
     echo '<select name="usuario_id" required aria-label="A cargo del expediente '.$h($row['registro_sidpol']?:$row['id']).'" style="min-width:220px"><option value="">Seleccionar JEFE EMI</option>';

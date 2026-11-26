@@ -61,6 +61,11 @@ final class ItpService
         ];
     }
 
+    public function localizationCandidates(int $caseId): array
+    {
+        return $this->repository->localizationCandidates($caseId);
+    }
+
     public function formContext(?int $accidenteId = null): array
     {
         return [
@@ -104,9 +109,11 @@ final class ItpService
 
     public function delete(int $id): void
     {
-        if ($this->repository->find($id) === null) {
+        $row = $this->repository->find($id);
+        if ($row === null) {
             throw new InvalidArgumentException('ITP no encontrado.');
         }
+        \App\Support\Access::requireDeleteCaseRecord((int) $row['accidente_id']);
         $this->repository->delete($id);
     }
 

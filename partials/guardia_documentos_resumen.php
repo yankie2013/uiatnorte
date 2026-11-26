@@ -8,7 +8,7 @@ $formatDate=static fn($date)=>$date?date('d/m/Y H:i',strtotime($date)):'Sin regi
 $blocks=[
  ['🚘 Características del accidente','blue',['Modalidad'=>implode(', ',$modalities)?:'Sin registrar','Consecuencias'=>implode(', ',$consequences)?:'Sin registrar']],
  ['📅 Fechas y actuaciones','green',['Accidente'=>$formatDate($case['fecha_accidente']),'Comunicación'=>$formatDate($case['fecha_comunicacion']),'Intervención'=>$formatDate($case['fecha_intervencion'])]],
- ['📍 Ubicación y dirección','purple',['Lugar'=>$case['lugar']?:'Sin registrar','Referencia'=>$case['referencia']?:'Sin registrar','Registro SIDPOL'=>$case['registro_sidpol']?:'Sin registrar']]
+ ['📍 Ubicación y dirección','purple',['Lugar'=>\App\Support\AccidentPlace::fromRecord($case, 'lugar', (int) ($case['id'] ?? 0)) ?: 'Sin registrar','Referencia'=>$case['referencia']?:'Sin registrar','Registro SIDPOL'=>$case['registro_sidpol']?:'Sin registrar']]
 ];
 echo '<div class="guardia-summary-highlights">';
 foreach([['📁','Registro SIDPOL',$case['registro_sidpol']?:'Sin registrar'],['🚘','Vehículos',count($vehicles)],['👥','Participantes',count($people)]] as [$icon,$label,$value]){

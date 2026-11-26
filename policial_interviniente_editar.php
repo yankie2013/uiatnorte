@@ -106,7 +106,7 @@ include __DIR__ . '/sidebar.php';
     <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="<?= h($returnTo) ?>">Volver</a><a class="btn" href="policial_interviniente_leer.php?id=<?= (int) $id ?>&return_to=<?= urlencode($returnTo) ?>">Ver detalle</a><button class="btn primary" type="submit" form="frmPolicia">Guardar cambios</button></div>
   </div>
 
-  <?php if ($ctx['accidente']): ?><div class="card header-card"><strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($ctx['accidente']['sidpol'] ?? 'Sin SIDPOL')) ?> - Registro: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? 'Sin registro')) ?> - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? 'Sin fecha')) ?> - Lugar: <?= h((string) ($ctx['accidente']['lugar'] ?? 'Sin lugar')) ?></div></div><?php endif; ?>
+  <?php if ($ctx['accidente']): ?><div class="card header-card"><strong>Accidente #<?= (int) $ctx['accidente']['id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($ctx['accidente']['sidpol'] ?? 'Sin SIDPOL')) ?> - Registro: <?= h((string) ($ctx['accidente']['registro_sidpol'] ?? 'Sin registro')) ?> - Fecha: <?= h((string) ($ctx['accidente']['fecha_accidente'] ?? 'Sin fecha')) ?> - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($ctx['accidente'], 'lugar', (int) ($ctx['accidente']['id'] ?? 0)))) ?></div></div><?php endif; ?>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 
   <form method="post" class="card" id="frmPolicia" autocomplete="off">

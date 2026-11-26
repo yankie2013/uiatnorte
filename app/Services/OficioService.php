@@ -112,7 +112,7 @@ final class OficioService
         if ($this->repository->find($id) === null) {
             throw new InvalidArgumentException('Oficio no encontrado.');
         }
-        if (!\App\Support\Access::admin()) throw new InvalidArgumentException('Solo el administrador puede eliminar oficios.');
+        \App\Support\Access::requireDeleteCaseRecord((int) ($this->repository->find($id)['accidente_id'] ?? 0));
         $this->repository->delete($id);
     }
 

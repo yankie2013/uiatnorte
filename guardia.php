@@ -55,7 +55,7 @@ if($id || $edit){
     if(Access::admin())echo '<p><a href="guardia.php">Activas</a> · <a href="guardia.php?eliminadas=1">Eliminadas</a></p>';
     echo '<section><div class="table-scroll"><table><thead><tr><th>Registro</th><th>Lugar</th><th>Comunicante</th><th>Estado</th><th></th></tr></thead><tbody>';
     $page=max(1,(int)($_GET['pagina']??1));$offset=($page-1)*50;$rows=$pdo->query('SELECT c.*,u.nombre jefe FROM comunicaciones_guardia c LEFT JOIN usuarios u ON u.id=c.jefe_id WHERE c.eliminado_en IS '.($deleted?'NOT NULL':'NULL').' ORDER BY c.id DESC LIMIT 51 OFFSET '.$offset)->fetchAll();$more=count($rows)>50;
-    foreach(array_slice($rows,0,50) as $c)echo '<tr><td>#'.$c['id'].'<br>'.Page::escape($c['registrado_en']).'</td><td>'.Page::escape($c['lugar']).'</td><td>'.Page::escape($c['comunicante']).'</td><td>'.Page::escape($c['jefe']??'Pendiente de asignación').'</td><td><a href="guardia.php?id='.$c['id'].'">Abrir</a></td></tr>';
+    foreach(array_slice($rows,0,50) as $c)echo '<tr><td>#'.$c['id'].'<br>'.Page::escape($c['registrado_en']).'</td><td>'.Page::escape(\App\Support\AccidentPlace::fromRecord($c)).'</td><td>'.Page::escape($c['comunicante']).'</td><td>'.Page::escape($c['jefe']??'Pendiente de asignación').'</td><td><a href="guardia.php?id='.$c['id'].'">Abrir</a></td></tr>';
     if(!$rows)echo '<tr><td colspan="5">Todavía no hay comunicaciones registradas.</td></tr>';echo '</tbody></table></div><div class="actions">';if($page>1)echo '<a href="?'.($deleted?'eliminadas=1&amp;':'').'pagina='.($page-1).'">Anterior</a>';if($more)echo '<a href="?'.($deleted?'eliminadas=1&amp;':'').'pagina='.($page+1).'">Siguiente</a>';echo '</div></section>';
 }
 Page::end();

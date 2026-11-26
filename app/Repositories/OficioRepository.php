@@ -88,6 +88,7 @@ final class OficioRepository
                     WHERE am.accidente_id=a.id),'Sin tipo registrado') AS tipo_accidente,
                 CONCAT('Fecha: ',COALESCE(DATE_FORMAT(a.fecha_accidente,'%d/%m/%Y %H:%i'),'Sin fecha'),
                     ' · Lugar: ',COALESCE(a.lugar,'Sin lugar'),
+                    COALESCE((SELECT CONCAT(', distrito de ',ud.nombre) FROM ubigeo_distrito ud WHERE ud.cod_dep=a.cod_dep AND ud.cod_prov=a.cod_prov AND ud.cod_dist=a.cod_dist AND LOCATE(LOWER(ud.nombre),LOWER(COALESCE(a.lugar,'')))=0 LIMIT 1),''),
                     ' · Tipo: ',COALESCE((SELECT GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ')
                         FROM accidente_modalidad_activos am JOIN modalidad_accidente m ON m.id=am.modalidad_id
                         WHERE am.accidente_id=a.id),'Sin tipo registrado')) AS label
@@ -505,7 +506,7 @@ final class OficioRepository
             }
             foreach ($info as $column) {
                 if (!empty($row[$column])) {
-                    $parts[] = $row[$column];
+                    $parts[] = $column === 'lugar' ? \App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) $row['id']) : $row[$column];
                 }
             }
             $label = 'ACCID-' . $row['id'];
@@ -969,7 +970,7 @@ final class OficioRepository
 
     public function delete(int $id): void
     {
-        if (!\App\Support\Access::admin()) throw new \RuntimeException('Solo el administrador puede eliminar oficios.');
+        \App\Support\Access::requireDeleteCaseRecord((int) ($this->find($id)['accidente_id'] ?? 0));
         $st = $this->pdo->prepare('DELETE FROM oficios WHERE id = ? LIMIT 1');
         $st->execute([$id]);
     }

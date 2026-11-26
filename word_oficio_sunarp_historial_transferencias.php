@@ -231,7 +231,7 @@ foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
 }
 
 $conductorNombre = sunarp_clean(($conductor['nombres'] ?? '') . ' ' . ($conductor['apellido_paterno'] ?? '') . ' ' . ($conductor['apellido_materno'] ?? ''));
-$accidenteLugar = sunarp_clean(($oficio['lugar'] ?? '') . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
+$accidenteLugar = sunarp_clean((\App\Support\AccidentPlace::fromRecord($oficio, 'lugar')) . (($oficio['referencia'] ?? '') !== '' ? ' - ' . $oficio['referencia'] : ''));
 $responsableDocumento = \App\Support\Access::documentProfile($oficio);
 $firmaGrado = sunarp_clean($responsableDocumento['grado'] ?? '');
 $firmaNombre = ($responsableDocumento['nombre'] ?? '');

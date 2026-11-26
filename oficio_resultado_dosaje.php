@@ -245,7 +245,7 @@ $tpl->setValue('entidad_destino',   h($entNombre));
 $tpl->setValue('subentidad_destino', h($O['subentidad_nombre'] ?? ''));
 
 /* Accidente */
-$tpl->setValue('accidente_lugar',      h($O['acc_lugar'] ?? ''));
+$tpl->setValue('accidente_lugar',      h(\App\Support\AccidentPlace::fromRecord($O, 'acc_lugar')));
 $tpl->setValue('accidente_fecha',      h(!empty($O['fecha_accidente']) ? date('d/m/Y H:i', strtotime($O['fecha_accidente'])) : ''));
 $tpl->setValue('accidente_fecha_abrev', h(fecha_abrev($O['fecha_accidente'] ?? '')));
 

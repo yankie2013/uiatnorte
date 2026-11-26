@@ -172,7 +172,7 @@ if (!function_exists('case_summary_widget_context')) {
             'consecuencia' => case_summary_widget_join($cons),
             'fecha' => case_summary_widget_date($accidente['fecha_accidente'] ?? null),
             'hora' => case_summary_widget_time($accidente['fecha_accidente'] ?? null),
-            'lugar' => case_summary_widget_text((string) ($accidente['lugar'] ?? '')) ?: '-',
+            'lugar' => case_summary_widget_text((string) (\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['id'] ?? 0)))) ?: '-',
             'distrito' => case_summary_widget_text((string) ($accidente['distrito_ubicacion'] ?? ($accidente['distrito'] ?? ''))) ?: '-',
             'jurisdiccion' => case_summary_widget_text((string) ($accidente['jurisdiccion'] ?? '')) ?: '-',
             'people' => $people,

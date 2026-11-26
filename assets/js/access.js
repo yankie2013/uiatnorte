@@ -32,7 +32,7 @@
     if(role !== 'admin')document.querySelectorAll('a[href]').forEach(link => {
       if (/eliminar\.php|delete\.php/.test(link.getAttribute('href'))) {
         const path = new URL(link.href, location.href).pathname.split('/').pop();
-        const participant = ['involucrados_personas_eliminar.php','involucrados_vehiculos_eliminar.php','familiar_fallecido_eliminar.php','propietario_vehiculo_eliminar.php','abogado_eliminar.php','policial_interviniente_eliminar.php'].includes(path);
+        const participant = ['documento_occiso_eliminar.php','itp_eliminar.php','oficios_eliminar.php','documento_recibido_eliminar.php','acta_entrega_vehiculo_eliminar.php','acta_visualizacion_eliminar.php','involucrados_personas_eliminar.php','involucrados_vehiculos_eliminar.php','familiar_fallecido_eliminar.php','propietario_vehiculo_eliminar.php','abogado_eliminar.php','policial_interviniente_eliminar.php'].includes(path);
         link.hidden = !(participant && document.querySelector('meta[name="can-delete-participants"]')?.content === '1');
       }
     });

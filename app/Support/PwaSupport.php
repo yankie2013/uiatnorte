@@ -90,8 +90,14 @@ final class PwaSupport
                 return preg_match('~method\s*=\s*[\\"\']?post~i', $m[0]) ? $m[0] . '<input type="hidden" name="_csrf" value="' . $token . '">' : $m[0];
             }, $buffer);
             $case = (int) ($_GET['accidente_id'] ?? 0);
+            $page = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+            $id = (int) ($_GET['id'] ?? $_POST['id'] ?? $_GET['itp_id'] ?? $_POST['itp_id'] ?? 0);
+            $deletePage = preg_replace('/_(?:ver|leer|editar|listar)\.php$/', '_eliminar.php', $page);
+            if ($id > 0 && isset(\App\Support\Access::CASE_RECORD_DELETE_TABLES[$deletePage])) {
+                $case = \App\Support\Access::caseRecordDeletionCase($deletePage, $id);
+            }
             $canDeleteParticipants = $case > 0 && \App\Support\Access::canDeleteCaseRecord($case);
-            $accessScript = '<meta name="can-delete-participants" content="' . ($canDeleteParticipants ? '1' : '0') . '"><meta name="csrf-token" content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js"></script>';
+            $accessScript = '<meta name="can-delete-participants" content="' . ($canDeleteParticipants ? '1' : '0') . '"><meta name="csrf-token" content="' . $token . '"><meta name="user-role" content="' . htmlspecialchars((string)($_SESSION['user']['rol'] ?? ''), ENT_QUOTES) . '"><script src="assets/js/access.js?v=owner-records-20261126"></script>';
             $buffer = preg_replace('~</head>~i', $accessScript . '</head>', $buffer, 1);
         }
 

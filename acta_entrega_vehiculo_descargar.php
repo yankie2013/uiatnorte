@@ -117,7 +117,7 @@ $values = [
     'representante_nombre'=>$representativeName, 'representante_tipo_doc'=>$row['representante_tipo_doc'], 'representante_num_doc'=>$row['representante_num_doc'],
     'representante_rol_legal'=>$row['rol_legal'], 'representante_domicilio'=>$row['representante_domicilio'],
     'representante_celular'=>$row['representante_celular'], 'representante_email'=>$row['representante_email'],
-    'vehiculos_involucrados'=>implode("\n",$vehicleLines), 'accidente_sidpol'=>$row['registro_sidpol'], 'accidente_lugar'=>$row['lugar'],
+    'vehiculos_involucrados'=>implode("\n",$vehicleLines), 'accidente_sidpol'=>$row['registro_sidpol'], 'accidente_lugar'=>\App\Support\AccidentPlace::fromRecord($row, 'lugar'),
     'observaciones'=>$row['observaciones'] ?? '',
 ];
 $tpl = new TemplateProcessor($template);

@@ -367,7 +367,7 @@ dialog#vehiculoModal::backdrop{ background: rgba(0,0,0,.55); }
             <td>#<?=h($r['id'])?></td>
             <td>
               <div><strong>#<?=h($r['accidente_id'])?></strong> · <?=h(date('Y-m-d H:i', strtotime($r['fecha_accidente'])))?></div>
-              <div class="muted"><?=h($r['lugar'])?></div>
+              <div class="muted"><?=h(\App\Support\AccidentPlace::fromRecord($r, 'lugar'))?></div>
             </td>
             <?php endif; ?>
             <td>

@@ -409,7 +409,7 @@ $T = new TemplateProcessor($tplPath);
 $T->setValue('acc_id',               v($ACC['id']));
 $T->setValue('acc_sidpol',           v($ACC['sidpol']));
 $T->setValue('acc_registro_sidpol',  v($ACC['registro_sidpol'] ?? $ACC['sidpol'] ?? ''));
-$T->setValue('acc_lugar',            v($ACC['lugar']));
+$T->setValue('acc_lugar',            v(\App\Support\AccidentPlace::fromRecord($ACC, 'lugar', (int) ($ACC['accidente_id'] ?? $ACC['id'] ?? 0))));
 $T->setValue('distrito',             v($ACC['distrito_nombre']));
 $T->setValue('acc_referencia',       v($ACC['referencia']));
 $T->setValue('acc_estado',           v($ACC['estado']));

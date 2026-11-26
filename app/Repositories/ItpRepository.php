@@ -11,6 +11,34 @@ final class ItpRepository
     {
     }
 
+    public function localizationCandidates(int $caseId): array
+    {
+        if ($caseId <= 0) return [];
+        $stmt = $this->pdo->prepare('SELECT v.placa, tv.nombre AS tipo FROM involucrados_vehiculos_activos iv JOIN vehiculos v ON v.id=iv.vehiculo_id LEFT JOIN tipos_vehiculo tv ON tv.id=v.tipo_id WHERE iv.accidente_id=? ORDER BY iv.id');
+        $stmt->execute([$caseId]);
+        $items = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $vehicle) {
+            $type = trim((string) ($vehicle['tipo'] ?? '')) ?: 'Vehículo';
+            $items[] = ['group' => 'Vehículos involucrados', 'label' => $type . ' de placa de rodaje ' . (trim((string) ($vehicle['placa'] ?? '')) ?: 'sin placa')];
+        }
+        $stmt = $this->pdo->prepare("SELECT pp.Nombre AS rol, ip.lesion,
+            p.nombres AS nombres,
+            p.apellido_paterno AS apellido_paterno,
+            p.apellido_materno AS apellido_materno
+            FROM involucrados_personas_activos ip JOIN personas p ON p.id=ip.persona_id
+            LEFT JOIN participacion_persona pp ON pp.Id=ip.rol_id
+            WHERE ip.accidente_id=? ORDER BY ip.id");
+        $stmt->execute([$caseId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $person) {
+            $role = trim((string) ($person['rol'] ?? ''));
+            if (!preg_match('/peat[oó]n|pasajer|ocupante/iu', $role)) continue;
+            $name = trim(implode(' ', array_filter([$person['nombres'], $person['apellido_paterno'], $person['apellido_materno']])));
+            $condition = trim((string) ($person['lesion'] ?? ''));
+            $items[] = ['group' => 'Personas involucradas', 'label' => $role . ' · ' . ($name ?: 'Sin nombre registrado') . ($condition !== '' ? ' · ' . $condition : '')];
+        }
+        return $items;
+    }
+
     public function accidenteHeader(int $accidenteId): ?array
     {
         $st = $this->pdo->prepare('SELECT id, registro_sidpol, fecha_accidente, lugar, latitud, longitud FROM accidentes_activos WHERE id = ? LIMIT 1');

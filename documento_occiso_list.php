@@ -28,7 +28,7 @@ function acc_etq($r){
     $parts = [];
     if (!empty($r['registro_sidpol'])) $parts[] = $r['registro_sidpol'];
     $parts[] = !empty($r['fecha_accidente']) ? date('Y-m-d H:i', strtotime($r['fecha_accidente'])) : 's/f';
-    if (!empty($r['lugar_accidente'])) $parts[] = $r['lugar_accidente'];
+    if (!empty($r['lugar_accidente'])) $parts[] = \App\Support\AccidentPlace::fromRecord($r, 'lugar_accidente');
     return '#' . $r['accidente_id'] . ' - ' . implode(' - ', $parts);
 }
 ?>

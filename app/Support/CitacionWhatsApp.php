@@ -20,7 +20,7 @@ final class CitacionWhatsApp
         if (!empty($accident['fecha_accidente']) && ($stamp = strtotime($accident['fecha_accidente'])) !== false) {
             $context .= ', ocurrido el *' . date('d/m/Y', $stamp) . ', a horas ' . date('H:i', $stamp) . '*';
         }
-        if (!empty($accident['lugar'])) $context .= ', en ' . trim($accident['lugar']);
+        if (!empty($accident['lugar'])) $context .= ', en ' . \App\Support\AccidentPlace::fromRecord($accident);
         if (!empty($accident['registro_sidpol'])) $context .= ', registrado en el sistema SIDPOL con el N.° *' . trim($accident['registro_sidpol']) . '*';
         return self::salutation() . ', le saluda el *' . $identity . "*, de la Unidad Especializada de Investigación de Accidentes de Tránsito – Lima Norte.\n"
             . 'Por medio del presente, se le remite la *citación policial* correspondiente a las diligencias de investigación relacionadas con el ' . $context . ".\n"

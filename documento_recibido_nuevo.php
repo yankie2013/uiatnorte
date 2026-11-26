@@ -91,6 +91,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{min-height:38px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);background:rgba(15,159,145,.11);color:var(--primary-dark);box-shadow:0 0 0 2px rgba(15,159,145,.08)}.annex-add{white-space:nowrap}.annex-panels{margin-top:12px}.annex-panel{padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--soft)}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.annex-panel-title{font-size:.84rem;font-weight:850}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;padding:5px}.annex-remove:disabled{display:none}
   .ai-section{border-color:rgba(15,159,145,.38);background:linear-gradient(145deg,rgba(15,159,145,.07),var(--panel) 58%)}.ai-toggle{display:flex;width:100%;align-items:center;gap:10px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.ai-toggle-copy{flex:1}.ai-toggle-icon{display:grid;place-items:center;width:30px;height:30px;border:1px solid rgba(15,159,145,.35);border-radius:50%;color:var(--primary-dark);font-size:1rem;font-weight:900;transition:transform .18s ease}.ai-section.is-expanded .ai-toggle-icon{transform:rotate(180deg)}.ai-section:not(.is-expanded) .section-head{margin-bottom:0;padding-bottom:0;border-bottom:0}.ai-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ai-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(15,159,145,.13);color:var(--primary-dark);font-size:.7rem;font-weight:850;letter-spacing:.04em}.scan-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:14px}.scan-grid[hidden]{display:none}.scan-upload{display:grid;gap:9px}.scan-file{width:100%;padding:11px;border:1px dashed var(--primary);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;font-size:.83rem}.scan-paste{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;outline:none}.scan-paste:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,159,145,.13)}.scan-preview{display:none;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.scan-preview.is-visible{display:block}.scan-controls{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px}.scan-status{min-height:20px;color:var(--muted);font-size:.82rem;line-height:1.4}.scan-status.is-success{color:#087d55}.scan-status.is-error{color:#b42318}.scan-result{display:none;width:100%;padding:10px;border-radius:10px;background:var(--soft);border:1px solid var(--border);font-size:.78rem;color:var(--muted);line-height:1.45}.scan-result.is-visible{display:block}.scan-result strong{color:var(--text)}
   @media (prefers-color-scheme:dark){.error{background:#37191f;border-color:#73333e;color:#fecaca}.scan-status.is-success{color:#5eead4}.scan-status.is-error{color:#fca5a5}}@media (max-width:680px){body,body.is-embed{padding:8px}.wrap,body.is-embed .wrap{padding:8px}.form-grid,.scan-grid{grid-template-columns:1fr}.full{grid-column:auto}.form-actions{align-items:stretch}.form-actions .btn{flex:1}}
+
+.annex-disclosure>summary.annex-disclosure-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,var(--soft,var(--panel)),var(--panel));color:var(--primary);font:inherit;font-weight:750}
+.annex-disclosure-toggle::-webkit-details-marker{display:none}
+.annex-disclosure-toggle span{transition:transform .18s ease}
+.annex-disclosure[open]>.annex-disclosure-toggle span{transform:rotate(180deg)}
+.annex-disclosure>.annex-help{font-size:.82rem;color:var(--muted);margin:12px 0}
+.annex-disclosure-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.annex-disclosure-toggle span{transition:none}}
+
+/* Compact document intake: short fields share rows; narrative keeps more room. */
+body{font-size:13px;--gap:9px;--max-width:1100px}
+body.is-embed{padding:8px}
+body.is-embed .wrap{padding:4px 6px;max-width:1100px}
+.form-stack{gap:9px}.form-section{padding:10px 12px;border-radius:10px}
+.section-head{padding-bottom:6px;margin-bottom:8px}.section-head h2{font-size:13px}.section-head p{font-size:11px;margin-top:2px}
+label{font-size:12px;margin-bottom:4px;font-weight:650}
+input[type="text"],input[type="date"],select{height:34px;min-height:34px;padding:6px 9px;font-size:13px;border-radius:7px}
+textarea{min-height:64px;padding:7px 9px;font-size:13px;border-radius:7px;line-height:1.4}
+.help{font-size:11px;margin-top:3px}.btn{font-size:12px;padding:7px 12px;border-radius:8px}
+.annex-disclosure>summary.annex-disclosure-toggle{font-size:12px;padding:7px 10px}
+.annex-panel{padding:9px}.annex-tab{font-size:12px;min-height:32px;padding:5px 10px}.annex-panels{margin-top:8px}
+body.is-embed .section-head p,body.is-embed .document-dates-section .help{display:none}
+body.is-embed .form-actions{justify-content:flex-end;gap:8px}
+@media(min-width:880px){
+ body.is-embed .form-stack{grid-template-columns:repeat(12,minmax(0,1fr));align-items:start}
+ body.is-embed .form-stack>section,body.is-embed .form-stack>details,body.is-embed .form-actions{grid-column:1/-1}
+ body.is-embed .form-stack>.document-dates-section{grid-column:span 3;align-self:stretch}
+ body.is-embed .document-dates-section .form-grid{grid-template-columns:1fr}
+ body.is-embed .form-stack>.document-data-section{grid-column:span 9}
+ body.is-embed .document-data-section .form-grid{grid-template-columns:repeat(12,minmax(0,1fr))}
+ body.is-embed .document-data-section .form-grid>div{grid-column:span 6}
+ body.is-embed .document-data-section .form-grid>div:nth-child(5){grid-column:span 3}
+ body.is-embed .document-data-section .form-grid>div:nth-child(6){grid-column:span 6}
+ body.is-embed .document-data-section .form-grid>div:nth-child(7){grid-column:span 3}
+ body.is-embed .document-detail-section .form-grid{grid-template-columns:1fr;align-items:start}
+ body.is-embed .document-detail-section .form-grid>.full{grid-column:auto}
+}
+@media(max-width:680px){input[type="text"],input[type="date"],select{height:38px;min-height:38px;font-size:14px}.form-section{padding:10px}.form-actions .btn{min-height:38px}}
 </style>
 </head>
 <body class="<?= $embed ? 'is-embed' : '' ?>">
@@ -145,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
 
-    <section class="form-section">
+    <section class="form-section document-dates-section">
       <div class="section-head"><h2><?= $embed && $accidenteFijo ? 'Fechas' : 'Identificación y fechas' ?></h2><?php if (!$embed || !$accidenteFijo): ?><p>El accidente ya viene seleccionado desde la vista actual.</p><?php endif; ?></div>
       <div class="form-grid">
     <?php if ($embed && $accidenteFijo): ?>
@@ -179,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
 
-    <section class="form-section">
+    <section class="form-section document-data-section">
       <div class="section-head"><h2>Datos del documento</h2><p>Información que permitirá reconocerlo rápidamente en el listado.</p></div>
       <div class="form-grid">
     <div class="full">
@@ -224,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </section>
 
-    <section class="form-section">
+    <section class="form-section document-detail-section">
       <div class="section-head"><h2>Detalle y relación</h2><p>Resume el contenido y enlázalo con un oficio del accidente cuando corresponda.</p></div>
       <div class="form-grid">
     <div class="full">
@@ -242,8 +280,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
       </div>
     </section>
-    <section class="form-section">
-      <div class="section-head"><h2>Anexos remitidos</h2><p>Registra cada anexo por separado. Puedes agregar uno o varios mediante las pestañas.</p></div>
+    <details class="form-section annex-disclosure">
+      <summary class="annex-disclosure-toggle">Anexos remitidos <span aria-hidden="true">⌄</span></summary>
+      <p class="annex-help">Registra cada anexo por separado. Puedes agregar uno o varios mediante las pestañas.</p>
       <div class="annex-editor" id="anexos_editor">
         <div class="annex-toolbar">
           <div class="annex-tabs" id="anexos_tabs" role="tablist" aria-label="Anexos remitidos">
@@ -263,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php endforeach; ?>
         </div>
       </div>
-    </section>
+    </details>
     <div class="form-actions">
         <?php if ($embed): ?>
           <button type="button" class="btn secondary" onclick="try{window.parent&&window.parent.postMessage({type:'documento_recibido.close'},'*');}catch(e){}">Cancelar</button>

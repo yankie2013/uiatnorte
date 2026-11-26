@@ -87,7 +87,7 @@ body{margin:0;background:#f6f7fb;color:#111827;font:14px/1.45 Inter,system-ui,-a
   <div class="meta">
     <div class="row"><div class="lbl">Vehiculo</div><div class="val"><?= h($vehiculo !== '' ? $vehiculo : '-') ?></div></div>
     <div class="row"><div class="lbl">Tipo</div><div class="val"><?= h($row['tipo'] ?? '-') ?></div></div>
-    <div class="row"><div class="lbl">Accidente</div><div class="val">#<?= (int)$row['accidente_id'] ?> - <?= h($row['fecha_accidente'] ?? '-') ?> - <?= h($row['lugar'] ?? '-') ?></div></div>
+    <div class="row"><div class="lbl">Accidente</div><div class="val">#<?= (int)$row['accidente_id'] ?> - <?= h($row['fecha_accidente'] ?? '-') ?> - <?= h(\App\Support\AccidentPlace::fromRecord($row, 'lugar')) ?></div></div>
   </div>
 
   <form method="post" class="actions">

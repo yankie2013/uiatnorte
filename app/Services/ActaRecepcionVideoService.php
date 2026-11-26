@@ -79,7 +79,7 @@ final class ActaRecepcionVideoService
             'accidente_fecha' => $incident !== '' ? date('Y-m-d\TH:i', strtotime($incident)) : '',
             'accidente_tipo' => (string) ($accident['modalidades'] ?? ''),
             'accidente_consecuencia' => '',
-            'accidente_lugar' => (string) ($accident['lugar'] ?? ''),
+            'accidente_lugar' => \App\Support\AccidentPlace::fromRecord($accident, 'lugar', (int) ($accident['id'] ?? 0)),
             'accidente_referencia' => (string) ($accident['referencia'] ?? ''),
             'accidente_distrito' => (string) ($accident['distrito'] ?? ''),
             'jefe_emi_nombre' => (string) ($accident['jefe_emi_nombre'] ?? ''),
@@ -153,7 +153,7 @@ final class ActaRecepcionVideoService
             $reference = $d['accidente_referencia'];
             $incidentPlace .= ', ' . (preg_match('/^(?:referencia\b|ref\.)/iu', $reference) ? $reference : 'referencia ' . $reference);
         }
-        $incidentPlace .= ', distrito de ' . $d['accidente_distrito'];
+        $incidentPlace = \App\Support\AccidentPlace::format($incidentPlace, $d['accidente_distrito']);
         $intro = 'En el distrito de ' . $d['distrito_acta'] . ', en la oficina de la ' . $d['unidad']
             . ', siendo las ' . $d['hora_inicio'] . ' horas del ' . self::shortDate($d['fecha_acta'])
             . ', el ' . $instructor . ' procede a formular el acta de recepción de video, transferencia de archivo a PC, grabado de disco, rotulado y lacrado, con motivo de las diligencias de investigación por accidente de tránsito'

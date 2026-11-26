@@ -73,6 +73,24 @@ final class Access
         'abogado_eliminar.php' => 'abogados',
         'policial_interviniente_eliminar.php' => 'policial_interviniente',
     ];
+    public const CASE_RECORD_DELETE_TABLES = [
+        'itp_eliminar.php' => 'itp',
+        'documento_occiso_eliminar.php' => 'documento_occiso',
+        'oficios_eliminar.php' => 'oficios',
+        'documento_recibido_eliminar.php' => 'documentos_recibidos',
+        'acta_entrega_vehiculo_eliminar.php' => 'actas',
+        'acta_visualizacion_eliminar.php' => 'actas_visualizacion',
+    ];
+    public static function caseRecordDeletionCase(string $script, int $id): int {
+        $table = self::CASE_RECORD_DELETE_TABLES[$script] ?? null;
+        if (!$table || $id <= 0) return 0;
+        $stmt = Database::connection()->prepare("SELECT accidente_id FROM `$table` WHERE id=?");
+        $stmt->execute([$id]);
+        return (int) $stmt->fetchColumn();
+    }
+    public static function requireDeleteCaseRecord(int $case): void {
+        if (!self::canDeleteCaseRecord($case)) throw new RuntimeException('Solo el administrador o el JEFE EMI responsable del expediente puede eliminar este registro.');
+    }
     public static function participantDeletionCase(string $script, int $id, array $citationIds = []): int {
         $table = self::PARTICIPANT_DELETE_TABLES[$script] ?? null;
         if ($script === 'citacion_listar.php' && $citationIds !== []) {
@@ -172,7 +190,11 @@ final class Access
         if ($participantDeletion && !self::canDeleteCaseRecord(self::participantDeletionCase($script, (int) ($_GET['id'] ?? $_POST['id'] ?? 0), (array) ($_POST['citacion_ids'] ?? [])))) {
             http_response_code(403); exit('Solo el administrador o el JEFE EMI encargado del expediente puede eliminar este registro.');
         }
-        if($deleting && !self::admin() && !$pendingTaskDeletion && !$participantDeletion) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
+        $caseRecordDeletion = $deleting && isset(self::CASE_RECORD_DELETE_TABLES[$script]);
+        if ($caseRecordDeletion && !self::canDeleteCaseRecord(self::caseRecordDeletionCase($script, (int) ($_GET['id'] ?? $_POST['id'] ?? $_GET['itp_id'] ?? $_POST['itp_id'] ?? 0)))) {
+            http_response_code(403); exit('Solo el responsable del expediente o el administrador puede eliminar este registro.');
+        }
+        if($deleting && !self::admin() && !$pendingTaskDeletion && !$participantDeletion && !$caseRecordDeletion) {http_response_code(403);exit('Solo el administrador puede eliminar registros.');}
         // Se bloquean también las rutas de diagnóstico que realizan escrituras sin un formulario.
         if(preg_match('/^(tmp_|test_|.*_diag\.php|.*_debug\.php)/',$script) && !self::admin()) {header('Location: index.php', true, 303);exit;}
         $post=($_SERVER['REQUEST_METHOD']??'GET')==='POST';

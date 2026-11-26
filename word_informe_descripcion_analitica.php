@@ -750,8 +750,7 @@ $generalPairs = [
     '1. Clase de accidente' => join_con_y_doc($modalidades),
     '2. Consecuencia' => join_con_y_doc($consecuencias),
     '3. Lugar y jurisdiccion policial' => join_location_parts_doc([
-        compact_text_doc($accidente['lugar'] ?? ''),
-        title_text_doc($accidente['distrito_nombre'] ?? ''),
+        compact_text_doc(\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0))),
         $comisaria,
     ]) ?: '-',
     '4. Fecha y hora del accidente' => fecha_hora_aprox_doc($accidente['fecha_accidente'] ?? ''),

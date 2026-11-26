@@ -108,7 +108,7 @@
                   ?>
                   <?php if ($representativePhone !== ''): ?>
                     <div class="case-person-actions" style="margin-top:6px" aria-label="Contacto del representante">
-                      <?= render_whatsapp_message_actions($representativePhone, whatsapp_message_pack($GLOBALS['modalidades'] ?? [], $GLOBALS['A']['fecha_accidente'] ?? null, $GLOBALS['A']['lugar'] ?? null, $GLOBALS['A']['registro_sidpol'] ?? null)) ?>
+                      <?= render_whatsapp_message_actions($representativePhone, whatsapp_message_pack($GLOBALS['modalidades'] ?? [], $GLOBALS['A']['fecha_accidente'] ?? null, \App\Support\AccidentPlace::fromRecord($GLOBALS['A'], 'lugar', (int) ($GLOBALS['A']['id'] ?? 0)), $GLOBALS['A']['registro_sidpol'] ?? null)) ?>
                     </div>
                   <?php endif; ?>
                 <?php else: ?><p class="overview-person-meta">Sin representante registrado.</p><?php endif; ?>
@@ -117,7 +117,7 @@
           </div>
           <div class="case-person-actions">
             <?php if ($phone !== ''): ?>
-              <?php $overviewWhatsAppMessages=whatsapp_message_pack($GLOBALS['modalidades']??[], $GLOBALS['A']['fecha_accidente']??null, $GLOBALS['A']['lugar']??null, $GLOBALS['A']['registro_sidpol']??null); ?>
+              <?php $overviewWhatsAppMessages=whatsapp_message_pack($GLOBALS['modalidades']??[], $GLOBALS['A']['fecha_accidente']??null, \App\Support\AccidentPlace::fromRecord($GLOBALS['A'], 'lugar', (int) ($GLOBALS['A']['id'] ?? 0)), $GLOBALS['A']['registro_sidpol']??null); ?>
               <?= render_whatsapp_message_actions($phone,$overviewWhatsAppMessages) ?>
             <?php endif; ?>
             <button type="button" class="case-person-view js-sidebar-view-person" data-person-target="<?= h($target) ?>" data-vehicle-only="0"><svg class="person-view-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M6 16c0-3 6-3 6 0 M15 9h3 M15 13h3"/></svg><span>Ver persona</span><span aria-hidden="true">›</span></button>

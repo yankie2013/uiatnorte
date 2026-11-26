@@ -68,7 +68,7 @@ final class GuardiaSumillaService
   $line('JEFE DIVPIAT.');$line('CRNL PNP GERMAN J. AMANCIO MACHUCA');$line('JEFE UIAT NORTE');$line('CMDTE PNP JOSE A. SUASNABAR VIDARTE');$blank();
   $line('ASUNTO',true);
   $line('ACCIDENTE DE TRÁNSITO ('.$this->value(implode(' Y ',array_column($modalities,'nombre'))).') CON CONSECUENCIA DE '.$this->value(implode(' Y ',array_column($consequences,'nombre'))).'.');
-  $line('LUGAR DEL HECHO: '.$this->value($case['lugar']).($case['referencia']?' COMO REFERENCIA '.$this->upper($case['referencia']):'').'.');
+  $line('LUGAR DEL HECHO: '.$this->value(\App\Support\AccidentPlace::fromRecord($case, 'lugar', (int) ($case['id'] ?? 0))).($case['referencia']?' COMO REFERENCIA '.$this->upper($case['referencia']):'').'.');
   $line('JURISDICCIÓN: '.$this->value($case['comisaria']).'.');
   $line('FECHA Y HORA DEL ACCIDENTE: '.$this->date($case['fecha_accidente'],true));
   $line('FECHA Y HORA DE COMUNICACIÓN: '.$this->date($case['fecha_comunicacion'],true));

@@ -67,7 +67,7 @@ body{background:var(--page);color:var(--text)}body.is-embed{margin:0}.wrap{max-w
     <a class="btn" href="Dato_General_accidente.php?accidente_id=<?= urlencode((string) $detail['accidente_id']) ?>">Datos generales SIDPOL</a>
   <?php endif; ?>
   <?php if ($service->canEdit($detail)): ?><a class="btn primary" href="oficios_editar.php?origin=<?= urlencode($oficioOrigin) ?>&id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Editar</a><?php endif; ?>
-  <?php if (\App\Support\Access::admin()): ?><a class="btn danger" href="oficios_eliminar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a><?php endif; ?>
+  <?php if (\App\Support\Access::canDeleteCaseRecord((int) ($detail['accidente_id'] ?? 0))): ?><a class="btn danger" href="oficios_eliminar.php?id=<?= h($id) ?>&embed=<?= $embed ? 1 : 0 ?>&return_to=<?= urlencode($returnTo) ?>">Eliminar</a><?php endif; ?>
 </div>
 
   <h1>Oficio N° <?= h($detail['numero']) ?>/<?= h($detail['anio']) ?> <span class="badge"><?= h($detail['estado']) ?></span></h1>
@@ -78,7 +78,7 @@ body{background:var(--page);color:var(--text)}body.is-embed{margin:0}.wrap{max-w
     <div class="row"><div class="label">Subentidad</div><div><?= h($detail['subentidad'] ?? '-') ?></div></div>
     <div class="row"><div class="label">Persona destino</div><div><?= $persona !== '' ? h($persona) : '-' ?></div></div>
     <div class="row"><div class="label">Grado y cargo</div><div><?= h($detail['grado_cargo_nombre'] ?? '-') ?></div></div>
-    <div class="row"><div class="label">Accidente</div><div><?= !empty($detail['registro_sidpol']) ? h('SIDPOL ' . $detail['registro_sidpol']) : h('Accidente ' . ($detail['accidente_id'] ?? '-')) ?><?php if (!empty($detail['lugar'])): ?> - <?= h($detail['lugar']) ?><?php endif; ?><?php if (!empty($detail['fecha_accidente'])): ?> (<?= h($detail['fecha_accidente']) ?>)<?php endif; ?></div></div>
+    <div class="row"><div class="label">Accidente</div><div><?= !empty($detail['registro_sidpol']) ? h('SIDPOL ' . $detail['registro_sidpol']) : h('Accidente ' . ($detail['accidente_id'] ?? '-')) ?><?php if (!empty(\App\Support\AccidentPlace::fromRecord($detail, 'lugar'))): ?> - <?= h(\App\Support\AccidentPlace::fromRecord($detail, 'lugar')) ?><?php endif; ?><?php if (!empty($detail['fecha_accidente'])): ?> (<?= h($detail['fecha_accidente']) ?>)<?php endif; ?></div></div>
     <div class="row"><div class="label">Tipo de asunto</div><div><?= h($detail['asunto_tipo'] ?? '-') ?></div></div>
     <div class="row"><div class="label">Categoría</div><div><?= h($detail['categoria'] ?? '') ?: '-' ?></div></div>
     <div class="row"><div class="label">Asunto</div><div><?= h($detail['asunto_nombre'] ?? '-') ?></div></div>

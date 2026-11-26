@@ -238,7 +238,7 @@ $tpl->setValue('asunto_detalle', h($of['asunto_detalle']));
 
 /* Accidente (si aplica) */
 $tpl->setValue('accidente_sidpol',       h($of['registro_sidpol']));
-$tpl->setValue('accidente_lugar',        h($of['lugar']));
+$tpl->setValue('accidente_lugar',        h(\App\Support\AccidentPlace::fromRecord($of, 'lugar')));
 $tpl->setValue('accidente_referencia',   h($of['referencia']));
 $tpl->setValue('accidente_sentido',      h($of['sentido']));
 $tpl->setValue('accidente_fecha',        fecha_larga($of['fecha_accidente']));

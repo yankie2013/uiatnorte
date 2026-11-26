@@ -236,7 +236,7 @@ $tpl = new TemplateProcessor($plantilla);
 /* ===== Accidentes ===== */
 $tpl->setValue('acc_sidpol',            $row['acc_sidpol'] ?? '');
 $tpl->setValue('acc_registro_sidpol',   $row['acc_registro_sidpol'] ?? '');
-$tpl->setValue('acc_lugar',             $row['acc_lugar'] ?? '');
+$tpl->setValue('acc_lugar',             \App\Support\AccidentPlace::fromRecord($row, 'acc_lugar'));
 $tpl->setValue('acc_referencia',        $row['acc_referencia'] ?? '');
 $tpl->setValue('acc_cod_dep',           $row['acc_cod_dep'] ?? '');
 $tpl->setValue('acc_cod_prov',          $row['acc_cod_prov'] ?? '');

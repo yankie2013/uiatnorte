@@ -279,7 +279,7 @@ function exp_ai_download_word(array $export, string $baseFilename): void
         ['Accidente ID', $acc['id'] ?? ''],
         ['SIDPOL', $acc['registro_sidpol'] ?? ($acc['sidpol'] ?? '')],
         ['Fecha accidente', $acc['fecha_accidente'] ?? ''],
-        ['Lugar', $acc['lugar'] ?? ''],
+        ['Lugar', \App\Support\AccidentPlace::fromRecord($acc, 'lugar', (int) ($acc['accidente_id'] ?? $acc['id'] ?? 0))],
         ['Referencia', $acc['referencia'] ?? ''],
         ['Comisaria', $acc['comisaria_nombre'] ?? ''],
         ['Informe policial', $acc['nro_informe_policial'] ?? ''],
@@ -931,7 +931,7 @@ $lines[] = 'PAQUETE DE CONTEXTO PARA GPT';
 $lines[] = 'Accidente ID: ' . $accidenteId;
 exp_ai_add_line($lines, 'SIDPOL', $accidente['registro_sidpol'] ?? ($accidente['sidpol'] ?? ''));
 exp_ai_add_line($lines, 'Fecha accidente', $accidente['fecha_accidente'] ?? '');
-exp_ai_add_line($lines, 'Lugar', $accidente['lugar'] ?? '');
+exp_ai_add_line($lines, 'Lugar', \App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0)));
 exp_ai_add_line($lines, 'Referencia', $accidente['referencia'] ?? '');
 exp_ai_add_line($lines, 'Comisaria', $accidente['comisaria_nombre'] ?? '');
 exp_ai_add_line($lines, 'Informe policial', $accidente['nro_informe_policial'] ?? '');

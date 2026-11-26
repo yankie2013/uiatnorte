@@ -35,7 +35,7 @@ function acc_lbl($row){
     $parts = [];
     if (!empty($row['registro_sidpol'])) $parts[] = $row['registro_sidpol'];
     $parts[] = !empty($row['fecha_accidente']) ? date('Y-m-d H:i', strtotime($row['fecha_accidente'])) : 's/f';
-    if (!empty($row['lugar_accidente'])) $parts[] = $row['lugar_accidente'];
+    if (!empty($row['lugar_accidente'])) $parts[] = \App\Support\AccidentPlace::fromRecord($row, 'lugar_accidente');
     return '#' . $row['accidente_id'] . ' - ' . implode(' - ', $parts);
 }
 function summary_text($value): string {

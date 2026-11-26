@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Uiat\Connector;
+require_once dirname(__DIR__, 3) . '/app/Support/AccidentPlace.php';
 use DateTimeImmutable;
 use InvalidArgumentException;
 use RuntimeException;
@@ -78,7 +79,7 @@ final class OfficeDrafts
         $set(['oficio_persona_destino','destino_persona','persona_destino'],$common['destinatario_nombre']??'','aportado_por_usuario');
         $set(['entidad_nombre','oficio_entidad_nombre','destino_entidad','entidad_destino'],$common['entidad_destino']??'','aportado_por_usuario');
         $set(['destino_subentidad'],$common['subentidad_destino']??'','aportado_por_usuario');
-        $set(['accidente_lugar','accidente_lugar_completo'],$base['lugar']??'','accidentes_activos.lugar');$set(['accidente_referencia'],$base['referencia']??'','accidentes_activos.referencia');
+        $set(['accidente_lugar','accidente_lugar_completo'],\App\Support\AccidentPlace::format($base['lugar'] ?? '', $base['distrito'] ?? ''),'accidentes_activos.lugar');$set(['accidente_referencia'],$base['referencia']??'','accidentes_activos.referencia');
         $set(['accidente_modalidad','accidente_modalidades'],$base['modalidad']??'','accidente_modalidad_activos');$set(['accidente_consecuencia'],$base['consecuencia']??'','accidente_consecuencia_activos');
         $set(['fiscalia_nombre'],$base['fiscalia']??'','fiscalia.nombre');$set(['comisaria_nombre'],$base['comisaria']??'','comisarias.nombre');$set(['accidente_distrito'],$base['distrito']??'','ubigeo_distrito.nombre');
         $set(['accidente_sidpol'],$base['registro_sidpol']??'','accidentes_activos.registro_sidpol');

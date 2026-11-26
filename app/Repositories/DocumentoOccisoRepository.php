@@ -165,7 +165,7 @@ final class DocumentoOccisoRepository
                 $parts[] = date('Y-m-d', strtotime((string) $row['fecha_accidente']));
             }
             if (!empty($row['lugar'])) {
-                $parts[] = (string) $row['lugar'];
+                $parts[] = \App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) ($row['id'] ?? 0));
             }
             $items[] = [
                 'id' => (int) $row['id'],

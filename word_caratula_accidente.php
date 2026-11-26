@@ -449,13 +449,12 @@ $comisariaNombre = caratula_clean($accidente['comisaria_nombre'] ?? '');
 if ($comisariaNombre !== '' && stripos($comisariaNombre, 'comisar') === false) {
     $comisariaNombre = 'Comisaria PNP ' . $comisariaNombre;
 }
-$lugarBase = caratula_clean($accidente['lugar'] ?? '');
+$lugarBase = caratula_clean(\App\Support\AccidentPlace::fromRecord($accidente, 'lugar', (int) ($accidente['accidente_id'] ?? $accidente['id'] ?? 0)));
 $referencia = caratula_clean($accidente['referencia'] ?? '');
 $distritoNombre = caratula_clean($accidente['distrito_nombre'] ?? '');
 $lugarCompleto = caratula_join_location_parts([
     $lugarBase,
     $referencia,
-    $distritoNombre,
     $comisariaNombre,
 ]);
 $ubicacion = caratula_clean(implode(' / ', array_filter([

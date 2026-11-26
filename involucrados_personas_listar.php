@@ -265,7 +265,7 @@ $messages = [
             <?php
             $persona = trim((string) ($r['apellido_paterno'] . ' ' . $r['apellido_materno'] . ', ' . $r['nombres']));
             $fechaAccidente = !empty($r['fecha_accidente']) ? date('Y-m-d H:i', strtotime((string) $r['fecha_accidente'])) : 'Sin fecha';
-            $accidenteTxt = '#'.$r['accidente_id'].' - '.$fechaAccidente.' - '.($r['lugar'] ?? '-');
+            $accidenteTxt = '#'.$r['accidente_id'].' - '.$fechaAccidente.' - '.\App\Support\AccidentPlace::fromRecord($r);
             ?>
             <tr>
               <td>#<?= h($r['id']) ?></td>

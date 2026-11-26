@@ -340,7 +340,7 @@ $T = new TemplateProcessor($tplPath);
 $T->setValue('nro_informe_policial', v($ACC['nro_informe_policial']));
 $T->setValue('acc_sidpol',           v($ACC['sidpol']));
 $T->setValue('acc_registro_sidpol',  v($ACC['registro_sidpol'] ?? $ACC['sidpol'] ?? ''));
-$T->setValue('acc_lugar',            v($ACC['lugar']));
+$T->setValue('acc_lugar',            v(\App\Support\AccidentPlace::fromRecord($ACC, 'lugar', (int) ($ACC['accidente_id'] ?? $ACC['id'] ?? 0))));
 $T->setValue('acc_referencia',       v($ACC['referencia']));
 $T->setValue('dep_nombre',           v($ACC['dep_nombre']));
 $T->setValue('prov_nombre',          v($ACC['prov_nombre']));

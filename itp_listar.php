@@ -89,7 +89,7 @@ include __DIR__ . '/sidebar.php';
               <div class="small" style="margin-top:4px;">
                 SIDPOL: <?= h((string) (($row['registro_sidpol'] ?? '') !== '' ? $row['registro_sidpol'] : '-')) ?>
                 - Fecha: <?= h((string) (($row['fecha_accidente'] ?? '') !== '' ? $row['fecha_accidente'] : '-')) ?>
-                - Lugar: <?= h((string) (($row['lugar'] ?? '') !== '' ? $row['lugar'] : '-')) ?>
+                - Lugar: <?= h((string) ((\App\Support\AccidentPlace::fromRecord($row, 'lugar')) !== '' ? \App\Support\AccidentPlace::fromRecord($row, 'lugar') : '-')) ?>
               </div>
             </td>
             <td>

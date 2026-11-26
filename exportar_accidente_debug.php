@@ -75,7 +75,7 @@ if (class_exists(\PhpOffice\PhpWord\PhpWord::class)) {
     $s  = $pw->addSection();
     $s->addTitle('Debug exportacion accidente', 1);
     $s->addText('SIDPOL: ' . ($acc['sidpol'] ?? ''));
-    $s->addText('Lugar: ' . ($acc['lugar'] ?? ''));
+    $s->addText('Lugar: ' . (\App\Support\AccidentPlace::fromRecord($acc, 'lugar', (int) ($acc['accidente_id'] ?? $acc['id'] ?? 0))));
     $file = tempnam($tmpDir, 'acc_debug_');
     if ($file === false) {
       throw new RuntimeException('No se pudo crear archivo temporal');

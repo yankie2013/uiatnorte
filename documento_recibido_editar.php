@@ -49,6 +49,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 :root{--bg:#fafafa;--panel:#ffffff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--primary:#0b84ff;--radius:10px;--gap:14px;--max-width:980px}
 @media (prefers-color-scheme: dark){:root{--bg:#0b1220;--panel:#0f1724;--text:#e6eef8;--muted:#9aa7bf;--border:#243041;--primary:#4ea8ff}}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg);color:var(--text);padding:20px}.wrap{max-width:var(--max-width);margin:18px auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}form{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}.full{grid-column:1/-1}label{display:block;font-weight:700;margin-bottom:6px}input[type=text],input[type=date],select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}textarea{min-height:120px}.actions{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:8px}.btn{padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}.btn.primary{background:var(--primary);color:#fff;border-color:transparent}.error{background:#fff0f0;padding:10px;border-radius:8px;border:1px solid #f5c2c2;color:#8a1f1f;margin-bottom:12px}.annex-box{padding:14px;border:1px solid var(--border);border-radius:10px}.annex-heading{margin:0 0 4px;font-size:1rem}.annex-help{margin:0 0 12px;color:var(--muted);font-size:.82rem}.annex-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.annex-tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap}.annex-tab{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);font:inherit;font-weight:800;cursor:pointer}.annex-tab.is-active{border-color:var(--primary);color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 14%,transparent)}.annex-panels{margin-top:12px}.annex-panel{padding:12px;border:1px solid var(--border);border-radius:9px}.annex-panel[hidden]{display:none}.annex-panel-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.annex-panel-title{font-weight:800}.annex-remove{border:0;background:transparent;color:#b42318;font:inherit;font-weight:800;cursor:pointer}.annex-remove:disabled{display:none}.category-combobox{position:relative}.category-options{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:230px;overflow-y:auto;margin:0;padding:5px;list-style:none;border:1px solid var(--border);border-radius:8px;background:var(--panel);box-shadow:0 12px 30px rgba(0,0,0,.2)}.category-options[hidden]{display:none}.category-option{width:100%;padding:9px 10px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}.category-option:hover,.category-option.is-active{background:color-mix(in srgb,var(--primary) 12%,var(--panel));color:var(--primary)}.category-empty{padding:9px 10px;color:var(--muted);font-size:.84rem}@media (max-width:800px){form{grid-template-columns:1fr}}
+
+.annex-disclosure>summary.annex-disclosure-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,var(--soft,var(--panel)),var(--panel));color:var(--primary);font:inherit;font-weight:750}
+.annex-disclosure-toggle::-webkit-details-marker{display:none}
+.annex-disclosure-toggle span{transition:transform .18s ease}
+.annex-disclosure[open]>.annex-disclosure-toggle span{transform:rotate(180deg)}
+.annex-disclosure>.annex-help{font-size:.82rem;color:var(--muted);margin:12px 0}
+.annex-disclosure-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.annex-disclosure-toggle span{transition:none}}
 </style>
 </head>
 <body>
@@ -58,7 +66,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <h1 style="margin-top:0">Editar Documento Recibido #<?= (int)$id ?></h1>
 <?php if($errores): ?><div class="error"><?php foreach($errores as $e): ?>- <?= h($e) ?><br><?php endforeach; ?></div><?php endif; ?>
 <form method="post"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
-<div><label>Accidente</label><select name="accidente_id"><option value="">(ninguno)</option><?php foreach($ctx['accidentes'] as $a): ?><option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id']===(string)$a['id'])?'selected':'' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty($a['lugar']) ? (' - '.h($a['lugar'])) : '' ?></option><?php endforeach; ?></select></div>
+<div><label>Accidente</label><select name="accidente_id"><option value="">(ninguno)</option><?php foreach($ctx['accidentes'] as $a): ?><option value="<?= h($a['id']) ?>" <?= ((string)$data['accidente_id']===(string)$a['id'])?'selected':'' ?>><?= h($a['id']) ?> - <?= h($a['sidpol'] ?? '') ?><?= !empty(\App\Support\AccidentPlace::fromRecord($a, 'lugar', (int) ($a['accidente_id'] ?? $a['id'] ?? 0))) ? (' - '.h(\App\Support\AccidentPlace::fromRecord($a, 'lugar', (int) ($a['accidente_id'] ?? $a['id'] ?? 0)))) : '' ?></option><?php endforeach; ?></select></div>
 <div><label>Fecha de recepcion</label><input type="date" name="fecha_recepcion" value="<?= h($data['fecha_recepcion']) ?>"></div>
 <div><label>Fecha del documento</label><input type="date" name="fecha_documento" value="<?= h($data['fecha_documento']) ?>"></div>
 <div class="full"><label for="categoria">Categoría</label><div class="category-combobox" data-creatable-combobox data-options="<?= h(json_encode(array_values($ctx['categorias']), JSON_UNESCAPED_UNICODE)) ?>"><input id="categoria" type="text" name="categoria" value="<?= h($data['categoria']) ?>" maxlength="100" autocomplete="off" placeholder="Escribe para buscar o agregar" role="combobox" aria-autocomplete="list" aria-expanded="false"></div></div>
@@ -70,8 +78,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div><label>Estado</label><select name="estado"><option value="">(ninguno)</option><?php foreach($ctx['estados'] as $estado): ?><option value="<?= h($estado) ?>" <?= ($data['estado']===$estado)?'selected':'' ?>><?= h($estado) ?></option><?php endforeach; ?></select></div>
 <div class="full"><label>Contenido</label><textarea name="contenido"><?= h($data['contenido']) ?></textarea></div>
 <div><label>Referencia a oficio</label><select name="referencia_oficio_id"><option value="">(ninguno)</option><?php foreach($ctx['oficios'] as $o): ?><option value="<?= h($o['id']) ?>" <?= ((string)$data['referencia_oficio_id']===(string)$o['id'])?'selected':'' ?>><?= h($service->oficioLabel($o, $ctx['asuntos'])) ?></option><?php endforeach; ?></select></div>
-<div class="full annex-box">
-  <h2 class="annex-heading">Anexos remitidos</h2>
+<details class="full annex-box annex-disclosure">
+  <summary class="annex-disclosure-toggle">Anexos remitidos <span aria-hidden="true">⌄</span></summary>
   <p class="annex-help">Cada pestaña corresponde a un anexo. Puedes agregar uno o varios.</p>
   <div class="annex-toolbar">
     <div class="annex-tabs" id="anexos_tabs" role="tablist" aria-label="Anexos remitidos">
@@ -84,6 +92,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       <div class="annex-panel" role="tabpanel" <?= $index === 0 ? '' : 'hidden' ?>><div class="annex-panel-head"><span class="annex-panel-title">Anexo remitido <?= $index + 1 ?></span><button type="button" class="annex-remove">Quitar anexo</button></div><label>Descripción del anexo</label><textarea name="anexos[]" maxlength="1000" placeholder="Ej.: Un CD que contiene grabaciones de videovigilancia"><?= h($anexo) ?></textarea></div>
     <?php endforeach; ?>
   </div>
-</div>
+</details>
 <div class="actions"><?php if ($embed): ?><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>&embed=1&return_to=<?= urlencode($returnTo) ?>">Cancelar</a><?php else: ?><a class="btn" href="documento_recibido_ver.php?id=<?= (int)$id ?>">Cancelar</a><?php endif; ?><button class="btn primary" type="submit">Guardar cambios</button></div>
 </form></div><script src="assets/js/documento_recibido_categoria.js"></script><script src="assets/js/documento_recibido_anexos.js"></script></body></html>

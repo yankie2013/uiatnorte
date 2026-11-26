@@ -26,7 +26,7 @@ $searchPlate = static function (mixed $value): string {
       </div>
       <dl class="search-case-facts">
         <div><dt>Fecha y hora</dt><dd><?= SearchPage::escape($parsedDate ? $parsedDate->format('d/m/Y H:i') : 'Sin fecha y hora registradas') ?></dd></div>
-        <div><dt>Lugar</dt><dd><?= SearchPage::escape($searchValue($row['lugar'] ?? '', 'Sin lugar registrado')) ?></dd></div>
+        <div><dt>Lugar</dt><dd><?= SearchPage::escape($searchValue(\App\Support\AccidentPlace::fromRecord($row, 'lugar', (int) ($row['id'] ?? 0)), 'Sin lugar registrado')) ?></dd></div>
         <div><dt>Jurisdicción</dt><dd><?= SearchPage::escape($searchValue($row['jurisdiccion'] ?? '', 'Sin jurisdicción registrada')) ?></dd></div>
         <div><dt>Responsable del caso</dt><dd><?= SearchPage::escape(responsible_label($row['responsable'] ?? null, $row['responsable_grado'] ?? null)) ?></dd></div>
       </dl>

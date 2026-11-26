@@ -236,7 +236,7 @@ if ($destinoPersona === '') {
     $destinoPersona = dilig_clean($oficio['persona_destino_manual'] ?? '');
 }
 $fechaAccidente = $oficio['fecha_accidente'] ?? null;
-$lugarCompleto = dilig_clean(($oficio['lugar'] ?? '') . (($oficio['accidente_referencia'] ?? '') !== '' ? ' - ' . $oficio['accidente_referencia'] : ''));
+$lugarCompleto = dilig_clean((\App\Support\AccidentPlace::fromRecord($oficio, 'lugar')) . (($oficio['accidente_referencia'] ?? '') !== '' ? ' - ' . $oficio['accidente_referencia'] : ''));
 
 $values = [
     'nombre_oficial_ano' => $oficio['nombre_oficial_ano'] ?? '',
@@ -261,7 +261,7 @@ $values = [
     'accidente_fecha' => dilig_fecha_larga($fechaAccidente),
     'accidente_fecha_abrev' => dilig_fecha_abrev($fechaAccidente),
     'accidente_hora' => $fechaAccidente && strtotime($fechaAccidente) ? date('H:i', strtotime($fechaAccidente)) : '',
-    'accidente_lugar' => $oficio['lugar'] ?? '',
+    'accidente_lugar' => \App\Support\AccidentPlace::fromRecord($oficio, 'lugar'),
     'accidente_lugar_completo' => $lugarCompleto,
     'accidente_referencia' => $oficio['accidente_referencia'] ?? '',
     'accidente_sentido' => $oficio['sentido'] ?? '',
