@@ -8703,21 +8703,6 @@ $resumenInterventionRows = [
                   $itpShell = 'itp-' . (int) $row['id'];
                 ?>
                 <article class="module-card">
-                  <header>
-                    <div>
-                      <h4>ITP #<?= (int) $row['id'] ?></h4>
-                      <p>
-                        <?= h((string) (($row['fecha_itp'] ?? '') !== '' ? fecha_simple((string) $row['fecha_itp']) : 'Sin fecha')) ?>
-                        <?php if (!empty($row['hora_itp'])): ?> · <?= h((string) $row['hora_itp']) ?><?php endif; ?>
-                      </p>
-                    </div>
-                    <span class="chip-simple">SIDPOL <?= h((string) (($row['registro_sidpol'] ?? '') !== '' ? $row['registro_sidpol'] : '—')) ?></span>
-                  </header>
-                  <div class="module-meta">
-                    <span class="chip-simple"><?= h((string) (($row['forma_via'] ?? '') !== '' ? $row['forma_via'] : 'Sin forma de vía')) ?></span>
-                    <span class="chip-simple"><?= h((string) (($row['punto_referencia'] ?? '') !== '' ? $row['punto_referencia'] : 'Sin punto de referencia')) ?></span>
-                    <?php if (!empty($row['ubicacion_gps'])): ?><a class="chip-simple" href="https://www.google.com/maps?q=<?= urlencode((string) $row['ubicacion_gps']) ?>" target="_blank" rel="noopener">GPS</a><?php endif; ?>
-                  </div>
                   <div class="editable-shell" data-edit-shell="<?= h($itpShell) ?>">
                     <div class="editable-toolbar">
                       <div class="record-actions" style="margin-top:0">
@@ -8725,7 +8710,7 @@ $resumenInterventionRows = [
                         <a class="btn-shell" href="itp_eliminar.php?id=<?= (int) $row['id'] ?>&return_to=<?= urlencode($_SERVER['REQUEST_URI'] ?? ('accidente_vista_tabs.php?accidente_id=' . $accidente_id)) ?>">Eliminar</a>
                       </div>
                       <div class="editable-actions">
-                        <button type="button" class="btn-shell js-edit-start" data-shell="<?= h($itpShell) ?>">Editar</button>
+                        <a class="btn-shell js-inline-open" href="itp_editar.php?id=<?= (int) $row['id'] ?>&amp;embed=1" data-workbench="itp-modal" data-frame="itp-modal-frame" data-presentation="modal" data-title="Editar ITP">Editar</a>
                         <div class="editable-actions" data-edit-actions="<?= h($itpShell) ?>" hidden>
                           <button type="button" class="btn-shell js-edit-cancel" data-shell="<?= h($itpShell) ?>">Cancelar</button>
                           <button type="submit" class="btn-shell btn-primary" form="itp-inline-form-<?= (int) $row['id'] ?>">Guardar</button>

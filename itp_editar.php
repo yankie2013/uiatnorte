@@ -28,6 +28,7 @@ if ($detail === null) {
     exit('ITP no encontrado.');
 }
 
+$embed = (int) ($_GET['embed'] ?? $_POST['embed'] ?? 0) === 1;
 $error = '';
 $data = $service->defaultData($detail, (int) $detail['accidente_id']);
 $backUrl = trim((string) ($_POST['back_url'] ?? $_GET['back'] ?? ('itp_ver.php?id=' . $id)));
@@ -72,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $service->update($id, $data);
+        if ($embed) {
+            echo '<!doctype html><meta charset="utf-8"><script>window.parent.postMessage({type:"itp.saved"}, window.location.origin);</script><p>ITP actualizada correctamente.</p>';
+            exit;
+        }
         header('Location: itp_ver.php?id=' . $id . '&ok=updated');
         exit;
     } catch (Throwable $e) {
@@ -81,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $itpLocalizationCase = (int) ($data['accidente_id'] ?? 0);
 $itpLocalizationOptions = $service->localizationCandidates($itpLocalizationCase);
-include __DIR__ . '/sidebar.php';
+if (!$embed) include __DIR__ . '/sidebar.php';
 ?>
 <!doctype html>
 <html lang="es">
@@ -96,14 +101,15 @@ include __DIR__ . '/sidebar.php';
 </style>
 <link rel="stylesheet" href="assets/css/itp-glass.css?v=<?= filemtime(__DIR__.'/assets/css/itp-glass.css') ?>">
 </head>
-<body class="uiat-itp-form">
+<body class="uiat-itp-form <?= $embed ? 'is-embed' : '' ?>">
 <div class="wrap">
   <div class="toolbar">
     <div><h1>ITP <span class="badge">Editar</span></h1><div class="small">Registro #<?= (int) $id ?></div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn ghost" href="<?= h($backUrl) ?>">Volver</a><button class="btn primary" type="submit" form="frmItp">Guardar cambios</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><?php if ($embed): ?><button class="btn ghost" type="button" onclick="window.parent.postMessage({type:'itp.close'}, window.location.origin)">Cancelar</button><?php else: ?><a class="btn ghost" href="<?= h($backUrl) ?>">Volver</a><?php endif; ?><button class="btn primary" type="submit" form="frmItp">Guardar cambios</button></div>
   </div>
   <?php if ($error !== ''): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
   <form method="post" id="frmItp" class="card" autocomplete="off">
+    <input type="hidden" name="embed" value="<?= $embed ? 1 : 0 ?>">
     <input type="hidden" name="id" value="<?= (int) $id ?>">
     <input type="hidden" name="back_url" value="<?= h($backUrl) ?>">
     <div class="fieldset"><strong>Accidente #<?= (int) $detail['accidente_id'] ?></strong><div class="small" style="margin-top:4px;">SIDPOL: <?= h((string) ($detail['registro_sidpol'] ?? '-')) ?> - Fecha: <?= h((string) ($detail['fecha_accidente'] ?? '-')) ?> - Lugar: <?= h((string) (\App\Support\AccidentPlace::fromRecord($detail, 'lugar'))) ?></div></div>
@@ -113,7 +119,7 @@ include __DIR__ . '/sidebar.php';
     <div class="actions" style="justify-content:flex-start;margin-top:0;"><button type="button" class="btn" id="btnAddVia2" <?= (int) $data['via2_flag'] === 1 ? 'style="display:none;"' : '' ?>>Anadir via 2</button><button type="button" class="btn ghost" id="btnRemoveVia2" <?= (int) $data['via2_flag'] === 1 ? '' : 'style="display:none;"' ?>>Quitar via 2</button></div>
     <div class="fieldset" id="fs_via2" <?= (int) $data['via2_flag'] === 1 ? '' : 'style="display:none;"' ?>><h2 style="font-size:1rem;margin-bottom:10px;">Via 2</h2><div class="grid"><div class="c12 field"><label class="label">Descripcion</label><textarea name="descripcion_via2"><?= h((string) $data['descripcion_via2']) ?></textarea></div><div class="c4 field"><label class="label">Configuracion</label><input type="text" name="configuracion_via2" value="<?= h((string) $data['configuracion_via2']) ?>"></div><div class="c4 field"><label class="label">Material</label><input type="text" name="material_via2" value="<?= h((string) $data['material_via2']) ?>"></div><div class="c4 field"><label class="label">Senializacion</label><input type="text" name="senializacion_via2" value="<?= h((string) $data['senializacion_via2']) ?>"></div><div class="c4 field"><label class="label">Ordenamiento</label><input type="text" name="ordenamiento_via2" value="<?= h((string) $data['ordenamiento_via2']) ?>"></div><div class="c4 field"><label class="label">Iluminacion</label><input type="text" name="iluminacion_via2" value="<?= h((string) $data['iluminacion_via2']) ?>"></div><div class="c4 field"><label class="label">Visibilidad</label><input type="text" name="visibilidad_via2" value="<?= h((string) $data['visibilidad_via2']) ?>"></div><div class="c6 field"><label class="label">Intensidad</label><input type="text" name="intensidad_via2" value="<?= h((string) $data['intensidad_via2']) ?>"></div><div class="c6 field"><label class="label">Fluidez</label><input type="text" name="fluidez_via2" value="<?= h((string) $data['fluidez_via2']) ?>"></div><div class="c12 field"><label class="label">Medidas</label><div class="measurebox" id="mb_via2" data-values="<?= h((string) $data['medidas_via2']) ?>"><div class="mini-row"><input type="text" class="m-name" placeholder="Que mides"><input type="text" class="m-value" placeholder="Valor"><button type="button" class="btn m-add">Agregar</button></div><div class="measure-list"></div><input type="hidden" name="medidas_via2" value="<?= h((string) $data['medidas_via2']) ?>"></div></div><div class="c12 field"><label class="label">Observaciones</label><div class="tagbox" id="tl_obs_via2" data-values="<?= h((string) $data['observaciones_via2']) ?>"><div class="tag-items"></div><div class="mini-row"><input type="text" placeholder="Agregar observacion"><button type="button" class="btn">Agregar</button></div><input type="hidden" name="observaciones_via2" value="<?= h((string) $data['observaciones_via2']) ?>"></div></div></div></div>
     <div class="fieldset"><h2 style="font-size:1rem;margin-bottom:10px;">Evidencias</h2><div class="grid"><div class="c12 field"><label class="label">Evidencia biologica</label><textarea name="evidencia_biologica"><?= h((string) $data['evidencia_biologica']) ?></textarea></div><div class="c12 field"><label class="label">Evidencia fisica</label><textarea name="evidencia_fisica"><?= h((string) $data['evidencia_fisica']) ?></textarea></div><div class="c12 field"><label class="label">Evidencia material</label><textarea name="evidencia_material"><?= h((string) $data['evidencia_material']) ?></textarea></div></div></div>
-    <div class="actions"><a class="btn ghost" href="<?= h($backUrl) ?>">Cancelar</a><a class="btn ghost" href="itp_eliminar.php?id=<?= (int) $id ?>">Eliminar</a><button class="btn primary" type="submit">Guardar</button></div>
+    <div class="actions"><?php if ($embed): ?><button class="btn ghost" type="button" onclick="window.parent.postMessage({type:'itp.close'}, window.location.origin)">Cancelar</button><?php else: ?><a class="btn ghost" href="<?= h($backUrl) ?>">Cancelar</a><?php endif; ?><a class="btn ghost" href="itp_eliminar.php?id=<?= (int) $id ?>">Eliminar</a><button class="btn primary" type="submit">Guardar</button></div>
   </form>
 </div>
 <div class="gps-modal" id="gpsModal"><div class="gps-backdrop gps-close"></div><div class="gps-panel"><div class="gps-header"><strong>Seleccionar ubicacion</strong><button type="button" class="btn ghost gps-close">Cerrar</button></div><div class="gps-search"><input type="text" id="gpsSearch" placeholder="Buscar direccion, ciudad o lugar"></div><div id="gpsMap" class="gps-map"></div><p class="small">Busca un lugar o haz clic en el mapa para fijar las coordenadas.</p><div class="actions"><button type="button" class="btn ghost gps-close">Cancelar</button><button type="button" class="btn primary" id="gpsUse">Usar estas coordenadas</button></div></div></div>
