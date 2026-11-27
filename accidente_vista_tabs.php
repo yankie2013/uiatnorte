@@ -4580,6 +4580,8 @@ $actaVisualizacionTemplateAvailable = is_file(__DIR__ . '/plantillas/acta_visual
 $itps = safe_query_all(
     $pdo,
     "SELECT i.*,
+            i.`señalizacion_via1` AS senializacion_via1,
+            i.`señalizacion_via2` AS senializacion_via2,
             a.registro_sidpol,
             a.fecha_accidente,
             a.lugar
