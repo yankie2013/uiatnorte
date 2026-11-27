@@ -103,8 +103,8 @@ foreach ($personas as $person) {
 $reportCanEdit = $reportAnalysisError === '' && \App\Support\Access::canEdit($accidente_id);
 ?>
 <style>
-.report-word-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
-.report-word-actions small{color:#64748b;font-size:11px}
+.report-risk-entry>[hidden]{display:none!important}
+.report-draft-item-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0}
 .report-word-download{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border-color:#b8cde5;color:#245b9b}
 #analisis-tabs{flex-wrap:wrap!important;gap:5px}#analisis-tabs .nav-link{white-space:normal;flex:1 1 150px;text-align:left}
 .report-analysis{padding:14px}.report-analysis h3{font-size:17px;margin:0 0 8px}.report-analysis h4{font-size:14px;margin:0}.report-analysis-group{margin:14px 0}.report-analysis-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.report-analysis-row{border:1px solid var(--border-color,#cbd5e1);border-radius:10px;padding:9px 12px;margin:8px 0;background:var(--bs-body-bg,#fff)}.report-analysis-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.report-analysis label{display:block;font-weight:600;font-size:12px}.report-analysis textarea,.report-analysis select,.report-analysis input{display:block;width:100%;margin-top:4px;padding:6px 9px;border:1px solid #adbccf;border-radius:6px;color:inherit;background:transparent;font:inherit}.report-analysis textarea{height:52px;min-height:52px;resize:vertical}.report-analysis-status{display:block;margin:10px 0;white-space:pre-wrap}.report-analysis-empty{color:#64748b;font-size:13px}.report-analysis-row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}.report-analysis-full{grid-column:1/-1}@media(max-width:650px){.report-analysis-fields{grid-template-columns:1fr}}
@@ -158,7 +158,7 @@ $reportCanEdit = $reportAnalysisError === '' && \App\Support\Access::canEdit($ac
 .report-analysis[data-section="danos-lesiones"] [data-group="parrafos"] .report-paragraph-item:first-child{margin-top:0}
 @media(max-width:650px){.report-analysis[data-section="danos-lesiones"] [data-group="parrafos"]{padding-right:0}.report-analysis[data-section="danos-lesiones"] [data-group="parrafos"] .report-analysis-head{position:static;margin-bottom:2px}}
 
-.report-analysis-footer{display:flex;justify-content:flex-end;border-top:1px solid #dce7f4;padding-top:14px;margin-top:18px}
+.report-analysis-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #dce7f4;padding-top:14px;margin-top:18px}
 .report-analysis .report-analysis-save{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:11px 18px;border:1px solid #2466b3;border-radius:12px;background:linear-gradient(135deg,#3888dd,#205eaa);color:#fff;font:inherit;font-size:13px;font-weight:700;line-height:1.4;cursor:pointer;box-shadow:0 4px 12px #2466b32b,inset 0 1px 0 #ffffff26;transition:background .18s,box-shadow .18s,transform .18s}
 .report-analysis .report-analysis-save:hover{background:linear-gradient(135deg,#2879ce,#194f93);box-shadow:0 6px 16px #2466b33b;transform:translateY(-1px)}
 .report-analysis .report-analysis-save:active{transform:translateY(0)}

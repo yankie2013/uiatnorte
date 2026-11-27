@@ -403,6 +403,7 @@
       if (key === 'informacion' || key === 'anexos' || key === 'riesgos' || key === 'consideraciones' || key === 'determinaciones' || key === 'parrafos' || key === 'estimaciones') {
         const estimation = key === 'estimaciones';
         const numbered = key === 'parrafos';
+        const editableParagraph = numbered || estimation;
         const plainParagraph = key === 'informacion';
         const paragraphStart = section === 'danos-lesiones' ? 2 : 1;
         const paragraphMarker = index => {
@@ -487,30 +488,57 @@
           input.setAttribute('aria-label', estimation ? 'Párrafo de estimación de velocidad' : numbered ? 'Nuevo párrafo' : key === 'determinaciones' ? 'Permite determinar' : key === 'consideraciones' ? 'Elemento a considerar en el análisis' : 'Nueva condición de riesgo');
           if (estimation) input.value = 'Se estima que esta unidad realizaba su desplazamiento a una velocidad constante ';
           const addItem = document.createElement('button'); addItem.type = 'submit'; addItem.className = 'btn-shell'; addItem.textContent = 'Añadir';
-          editor.append(input, addItem);
+          const cancelEdit = document.createElement('button'); cancelEdit.type = 'button'; cancelEdit.className = 'btn-shell'; cancelEdit.textContent = 'Cancelar edición'; cancelEdit.hidden = true;
+          editor.append(input, addItem, cancelEdit);
           if (section === 'integral') {const label = document.createElement('label'); label.className = 'report-integral-writing-label'; label.textContent = 'Redactar párrafos del análisis integral'; input.id = 'integral-new-paragraph'; label.htmlFor = input.id; editor.prepend(label);}
           const list = document.createElement('ul'); list.className = 'report-risk-draft' + (!shortEntry ? ' report-draft-plain' : '');
           const message = document.createElement('p'); message.setAttribute('role', 'status');
           let draft = readRows();
+          let editingIndex = null;
+          const resetEditor = () => {
+            editingIndex = null; input.value = ''; addItem.textContent = 'Añadir'; cancelEdit.hidden = true; message.textContent = '';
+            if (vehicleSelect) vehicleSelect.value = '';
+          };
+          cancelEdit.addEventListener('click', () => {resetEditor(); input.focus();});
           const draw = () => {
             list.replaceChildren();
             draft.forEach((value, index) => {
               const item = document.createElement('li');
               const text = document.createElement('span'); text.textContent = (numbered ? paragraphMarker(index) : '') + describe(value);
               const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn-shell'; remove.textContent = 'Eliminar'; remove.setAttribute('aria-label', 'Eliminar: ' + describe(value));
-              remove.addEventListener('click', () => {draft.splice(index, 1); draw();});
-              item.append(text, remove); list.append(item);
+              remove.addEventListener('click', () => {
+                draft.splice(index, 1);
+                if (editingIndex === index) resetEditor();
+                else if (editingIndex !== null && index < editingIndex) editingIndex--;
+                draw();
+              });
+              const itemActions = document.createElement('div'); itemActions.className = 'report-draft-item-actions';
+              if (editableParagraph) {
+                const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'btn-shell'; edit.textContent = 'Editar'; edit.setAttribute('aria-label', 'Editar párrafo ' + (index + 1));
+                edit.addEventListener('click', () => {
+                  editingIndex = index; input.value = estimation ? value.desplazamiento : value.texto;
+                  if (vehicleSelect) vehicleSelect.value = String(value.vehiculo_id);
+                  addItem.textContent = 'Actualizar'; cancelEdit.hidden = false; message.textContent = 'Editando el párrafo ' + (index + 1) + '.'; input.focus();
+                });
+                itemActions.append(edit);
+              }
+              itemActions.append(remove); item.append(text, itemActions); list.append(item);
             });
           };
           const append = () => {
-            if (!input.value.trim()) return true;
+            if (!input.value.trim()) {
+              if (editingIndex !== null) {message.textContent = 'El párrafo no puede quedar vacío.'; input.focus(); return false;}
+              return true;
+            }
             if (estimation && input.value.trim() === 'Se estima que esta unidad realizaba su desplazamiento a una velocidad constante') {
               if (!vehicleSelect.value) return true;
               message.textContent = 'Completa el párrafo con la velocidad estimada y su sustento.'; input.focus(); return false;
             }
             if (estimation && !vehicleSelect.value) {message.textContent = 'Selecciona el vehículo involucrado.'; vehicleSelect.focus(); return false;}
-            if (draft.length >= 200) {message.textContent = 'Máximo 200 registros por lista.'; return false;}
-            draft.push(estimation ? {vehiculo_id: vehicleSelect.value, desplazamiento: input.value.trim()} : {texto: input.value.trim()}); input.value = ''; message.textContent = ''; draw(); input.focus(); return true;
+            if (editingIndex === null && draft.length >= 200) {message.textContent = 'Máximo 200 registros por lista.'; return false;}
+            const value = estimation ? {vehiculo_id: vehicleSelect.value, desplazamiento: input.value.trim()} : {texto: input.value.trim()};
+            if (editingIndex === null) draft.push(value); else draft[editingIndex] = value;
+            resetEditor(); draw(); input.focus(); return true;
           };
           editor.addEventListener('submit', event => {event.preventDefault(); append();});
           input.addEventListener('keydown', event => {
