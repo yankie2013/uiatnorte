@@ -7518,6 +7518,7 @@ $resumenInterventionRows = [
 <link rel="stylesheet" href="assets/css/sidebar-glass.css?v=<?= filemtime(__DIR__ . '/assets/css/sidebar-glass.css') ?>">
 <link rel="stylesheet" href="assets/css/expediente-compacto.css?v=<?= filemtime(__DIR__.'/assets/css/expediente-compacto.css') ?>">
 <link rel="stylesheet" href="assets/css/itp-glass.css?v=<?= filemtime(__DIR__.'/assets/css/itp-glass.css') ?>">
+<script src="assets/js/itp-sections.js?v=<?= filemtime(__DIR__ . '/assets/js/itp-sections.js') ?>" defer></script>
 </head>
 <body class="uiat-case-view">
 <?php $uiatSidebarCssPreloaded = true; include __DIR__ . '/sidebar.php'; ?>
@@ -8722,20 +8723,20 @@ $resumenInterventionRows = [
 
                     <div class="inline-edit-error" id="itp-inline-error-<?= (int) $row['id'] ?>"></div>
 
-                    <div class="editable-view" data-edit-view="<?= h($itpShell) ?>">
+                    <div class="editable-view itp-organized-view" data-edit-view="<?= h($itpShell) ?>">
                       <div class="section-block itp-section itp-section-general">
-                        <h3>Datos generales</h3>
+                        <h3>Inspección</h3>
                         <div class="field-grid"><?= render_field_cards($row, $itpGeneralFields) ?></div>
                         <div class="field-grid" style="margin-top:6px;">
                           <div class="field-card span-4">
                             <div class="field-label">Ocurrencia policial</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['ocurrencia_policial'] ?? '') !== '' ? $row['ocurrencia_policial'] : '—'))) ?></div>
                           </div>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Localización de unidades</div>
                             <div class="field-value"><?= render_csv_list_html((string) ($row['localizacion_unidades'] ?? '')) ?></div>
                           </div>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Llegada al lugar</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['llegada_lugar'] ?? '') !== '' ? $row['llegada_lugar'] : '—'))) ?></div>
                           </div>
@@ -8744,16 +8745,16 @@ $resumenInterventionRows = [
                       <div class="section-block itp-section itp-section-via">
                         <h3>Vía 1</h3>
                         <div class="field-grid">
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Descripción</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['descripcion_via1'] ?? '') !== '' ? $row['descripcion_via1'] : '—'))) ?></div>
                           </div>
                           <?= render_field_cards($row, $itpViaSimpleFields) ?>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Medidas</div>
                             <div class="field-value"><?= render_csv_list_html((string) ($row['medidas_via1'] ?? '')) ?></div>
                           </div>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Observaciones</div>
                             <div class="field-value"><?= render_csv_list_html((string) ($row['observaciones_via1'] ?? '')) ?></div>
                           </div>
@@ -8763,16 +8764,16 @@ $resumenInterventionRows = [
                         <div class="section-block itp-section itp-section-via">
                           <h3>Vía 2</h3>
                           <div class="field-grid">
-                            <div class="field-card span-2">
+                            <div class="field-card span-2 itp-long-field">
                               <div class="field-label">Descripción</div>
                               <div class="field-value"><?= nl2br(h((string) (($row['descripcion_via2'] ?? '') !== '' ? $row['descripcion_via2'] : '—'))) ?></div>
                             </div>
                             <?= render_field_cards($row, $itpVia2SimpleFields) ?>
-                            <div class="field-card span-2">
+                            <div class="field-card span-2 itp-long-field">
                               <div class="field-label">Medidas</div>
                               <div class="field-value"><?= render_csv_list_html((string) ($row['medidas_via2'] ?? '')) ?></div>
                             </div>
-                            <div class="field-card span-2">
+                            <div class="field-card span-2 itp-long-field">
                               <div class="field-label">Observaciones</div>
                               <div class="field-value"><?= render_csv_list_html((string) ($row['observaciones_via2'] ?? '')) ?></div>
                             </div>
@@ -8782,15 +8783,15 @@ $resumenInterventionRows = [
                       <div class="section-block itp-section itp-section-evidence">
                         <h3>Evidencias</h3>
                         <div class="field-grid">
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Evidencia biológica</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['evidencia_biologica'] ?? '') !== '' ? $row['evidencia_biologica'] : '—'))) ?></div>
                           </div>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Evidencia física</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['evidencia_fisica'] ?? '') !== '' ? $row['evidencia_fisica'] : '—'))) ?></div>
                           </div>
-                          <div class="field-card span-2">
+                          <div class="field-card span-2 itp-long-field">
                             <div class="field-label">Evidencia material</div>
                             <div class="field-value"><?= nl2br(h((string) (($row['evidencia_material'] ?? '') !== '' ? $row['evidencia_material'] : '—'))) ?></div>
                           </div>

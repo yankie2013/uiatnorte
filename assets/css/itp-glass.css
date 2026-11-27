@@ -101,3 +101,21 @@ html[data-theme-resolved="dark"] .uiat-case-view .main-panel-itp{background:line
 .description-edit-card{padding:12px;margin-top:10px;border:1px solid #c6dbf5;border-radius:10px;background:#f5f9ff}
 .description-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 @media(max-width:650px){.description-fields{grid-template-columns:1fr}.description-road dl{grid-template-columns:1fr;gap:2px}.description-road dd{margin-bottom:6px}.description-report-section{padding-left:4px}}
+
+/* Saved ITP: full width sections and deliberate space for long answers. */
+.uiat-case-view .main-panel-itp .itp-organized-view{display:block}
+.itp-section-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:6px;margin:4px 0 12px;border:1px solid var(--itp-line);border-radius:12px;background:var(--itp-section)}
+.itp-section-tabs button{flex:1 1 100px;padding:9px 14px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--itp-muted);font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.itp-section-tabs button[aria-selected="true"]{background:var(--itp-input);color:var(--itp-blue);border-color:var(--itp-line);box-shadow:0 2px 6px #29496b12}
+.itp-section-tabs button:focus-visible{outline:2px solid var(--itp-blue);outline-offset:2px}
+.main-panel-itp .itp-organized-view .itp-section{margin:0}
+.main-panel-itp .itp-organized-view .field-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.main-panel-itp .itp-organized-view .field-grid>.field-card{grid-column:auto;height:100%}
+.main-panel-itp .itp-organized-view .field-grid>:is(.span-4,.itp-long-field){grid-column:1/-1}
+.main-panel-itp .itp-organized-view .itp-section-evidence .field-grid>.field-card{grid-column:auto}
+.main-panel-itp .itp-organized-view .field-value ul{padding-left:18px;margin:3px 0;font-weight:400}
+@media(max-width:1000px){.main-panel-itp .itp-organized-view .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.main-panel-itp .itp-organized-view .field-grid{grid-template-columns:minmax(0,1fr)}.main-panel-itp .itp-organized-view .field-grid>.field-card{grid-column:1/-1}}
+.uiat-itp-form #frmItp .fieldset h2{font-size:14px}
+.uiat-itp-form #frmItp .c12 textarea{min-height:100px}
+.uiat-itp-form #frmItp .grid{align-items:start}
