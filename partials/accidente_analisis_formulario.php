@@ -10,6 +10,10 @@ $reportTitles = [
     'infracciones' => 'INFRACCIONES ADMINISTRATIVAS',
 ];
 ?>
+<div class="report-word-actions">
+<a class="btn-shell report-word-download" href="word_analisis_descargar.php?accidente_id=<?= (int) $accidente_id ?>&amp;seccion=<?= h($section) ?>" aria-label="Descargar Word de <?= h($title) ?>">Descargar Word</a>
+<small>Exporta los datos guardados.</small>
+</div>
 <h3><?= h($reportTitles[$section] ?? $title) ?></h3>
 <?php if ($section === 'velocidad'): ?>
 <p class="report-speed-introduction">Para el presente caso, la velocidad es obtenida de conformidad con el Texto Único Ordenado del Reglamento Nacional Código de Tránsito regulado con el D.S. Nº06-2009-MTC en su título IV capítulo II, sección IV en el artículo 162º que prescribe que cuando no exista riesgo y circunstancias señalados en los artículos anteriores, haciendo referencia a los artículos 160º y 161º solo en dicho supuesto se establecen límites cuantitativos de velocidad, por lo tanto para el presente análisis existieron situaciones que solo pueden ser estimadas de forma cualitativa en razón a los riesgos que presentaba las características y las condiciones señaladas, las cuales significan lo siguiente:</p>
