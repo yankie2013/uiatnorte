@@ -7,13 +7,23 @@ if (!is_dir($source)) exit("Uso: php docs/scripts/preparar_plantillas_analisis.p
 $target = dirname(__DIR__, 2) . '/plantillas/analisis';
 if (!is_dir($target)) mkdir($target, 0775, true);
 $config = [
-    'descripcion' => [6, ['titulo'=>0,'subtitulo'=>1,'intro'=>2,'apartado'=>4,'texto'=>5,'subapartado'=>16,'lista'=>11,'atributo'=>19,'pie'=>30]],
-    'velocidad' => [7, ['titulo'=>0,'intro'=>1,'lista'=>3,'subtitulo'=>11,'texto'=>12]],
-    'danos-lesiones' => [8, ['titulo'=>0,'subtitulo'=>2,'lista'=>4,'texto'=>9]],
-    'evidencias' => [9, ['titulo'=>0,'subtitulo'=>2,'texto'=>3,'lista'=>5]],
+    'descripcion' => [6, [
+        'titulo'=>0,'subtitulo'=>1,'intro'=>2,'apartado'=>4,'texto'=>5,
+        'via_titulo'=>16,'via_texto'=>17,'lista'=>11,'lista_final'=>13,
+        'atributo_configuracion'=>19,'atributo_material'=>20,'atributo_control'=>21,
+        'atributo_ordenamiento'=>22,'atributo_maniobrabilidad'=>23,'atributo_iluminacion'=>24,
+        'atributo_visibilidad'=>25,'atributo_intensidad'=>26,'atributo_fluidez'=>27,'pie'=>30,
+        'clima_titulo'=>48,'clima_texto'=>49,'conflicto_titulo'=>51,'conflicto_subtitulo'=>52,
+        'conflicto_lista'=>53,'conflicto_lista_final'=>56,'aproximacion_subtitulo'=>58,
+        'aproximacion_titulo'=>60,'aproximacion_texto'=>61,'posiciones_titulo'=>66,
+        'posicion_titulo'=>67,'posicion_texto'=>68,
+    ]],
+    'velocidad' => [7, ['titulo'=>0,'intro'=>1,'lista'=>3,'lista_final'=>9,'subtitulo'=>11,'texto'=>12]],
+    'danos-lesiones' => [8, ['titulo'=>0,'subtitulo'=>2,'lista'=>4,'lista_final'=>7,'texto'=>9,'determinacion_titulo'=>13,'determinacion'=>15]],
+    'evidencias' => [9, ['titulo'=>0,'subtitulo'=>2,'texto'=>3,'lista'=>5,'lista_final'=>8]],
     'integral' => [10, ['titulo'=>0,'texto'=>1]],
     'causalidad' => [11, ['titulo'=>0,'subtitulo'=>1,'apartado'=>2,'texto'=>3]],
-    'infracciones' => [12, ['titulo'=>0,'subtitulo'=>1,'intro'=>2,'apartado'=>5,'texto'=>6,'adicional'=>41,'anexos'=>44]],
+    'infracciones' => [12, ['titulo'=>0,'subtitulo'=>1,'intro'=>2,'apartado'=>5,'texto'=>6,'adicional'=>41,'adicional_texto'=>42,'anexos'=>44,'anexo'=>45]],
 ];
 $manifest = [];
 foreach ($config as $section => [$number, $roles]) {
@@ -47,7 +57,16 @@ foreach ($config as $section => [$number, $roles]) {
         $text->appendChild($dom->createTextNode($value)); $run->appendChild($text); $p->appendChild($run);
         $sdt = $dom->createElementNS($w, 'w:sdt'); $pr = $dom->createElementNS($w, 'w:sdtPr');
         $tag = $dom->createElementNS($w, 'w:tag'); $tag->setAttributeNS($w, 'w:val', $role); $pr->appendChild($tag); $sdt->appendChild($pr);
-        $content = $dom->createElementNS($w, 'w:sdtContent'); $content->appendChild($p); $sdt->appendChild($content); $patterns[] = $sdt;
+        $content = $dom->createElementNS($w, 'w:sdtContent'); $content->appendChild($p);
+        // Blank paragraphs are intentional spacing in the reference, not disposable content.
+        for ($next=$index+1; isset($paragraphs[$next]); $next++) {
+            $blank=$paragraphs[$next];
+            if (trim($blank->textContent)!=='' || $xp->query('.//w:drawing|.//w:pict|w:pPr/w:sectPr|w:pPr/w:numPr|w:pPr/w:pBdr', $blank)->length) break;
+            $blankStyle=$xp->evaluate('string(w:pPr/w:pStyle/@w:val)', $blank);
+            if (str_starts_with($blankStyle, 'Ttulo')) break;
+            $content->appendChild($blank->cloneNode(true));
+        }
+        $sdt->appendChild($content); $patterns[] = $sdt;
     }
     while ($body->firstChild) $body->removeChild($body->firstChild);
     foreach ($patterns as $pattern) $body->appendChild($pattern);
@@ -84,7 +103,12 @@ foreach ($config as $section => [$number, $roles]) {
         $zip->addFromString($part, $xml->saveXML());
     }
     $zip->close();
-    $manifest[$section] = ['modelo'=>basename($original),'sha256'=>hash_file('sha256',$original),'roles'=>$roles];
+    $originalZip = new ZipArchive(); $originalZip->open($original);
+    $manifest[$section] = ['modelo'=>basename($original),'sha256'=>hash_file('sha256',$original),
+        'styles_sha256'=>hash('sha256',$originalZip->getFromName('word/styles.xml')),
+        'numbering_sha256'=>hash('sha256',$originalZip->getFromName('word/numbering.xml')),
+        'roles'=>$roles];
+    $originalZip->close();
     echo "$section: modelo preparado.\n";
 }
 file_put_contents($target . '/modelos.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");

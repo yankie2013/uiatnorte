@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Support\AccidentPlace;
+use App\Support\WordListInstances;
 use DOMDocument;
 use DOMElement;
 use DOMXPath;
@@ -27,6 +28,8 @@ final class AnalisisWordService
     private DOMXPath $xp;
     private DOMElement $body;
     private array $patterns = [];
+    private array $spacers = [];
+    private WordListInstances $lists;
     private ZipArchive $zip;
     private array $context = [];
     private int $imageIndex = 0;
@@ -83,29 +86,32 @@ final class AnalisisWordService
         if (!isset(self::TITLES[$section])) throw new RuntimeException('Apartado no válido.');
         $template=dirname(__DIR__,2).'/plantillas/analisis/'.$section.'.docx';
         if (!is_file($template) || !copy($template,$output)) throw new RuntimeException('No se encontró el modelo Word del apartado.');
-        $this->context=$context; $this->patterns=[]; $this->imageIndex=0; $this->zip=new ZipArchive();
+        $this->context=$context; $this->patterns=[]; $this->spacers=[]; $this->imageIndex=0; $this->zip=new ZipArchive();
         if ($this->zip->open($output)!==true) throw new RuntimeException('No se pudo abrir el documento.');
         try {
+            $this->lists = new WordListInstances($this->zip);
             $this->dom=new DOMDocument();
             if (!$this->dom->loadXML($this->zip->getFromName('word/document.xml'),LIBXML_NONET)) throw new RuntimeException('Modelo Word no válido.');
             $this->xp=new DOMXPath($this->dom); $this->xp->registerNamespace('w',self::W);
             $this->body=$this->xp->query('/w:document/w:body')->item(0);
             foreach ($this->xp->query('w:sdt',$this->body) as $sdt) {
                 $role=$this->xp->query('w:sdtPr/w:tag',$sdt)->item(0)->getAttributeNS(self::W,'val');
-                $this->patterns[$role]=$this->xp->query('w:sdtContent/w:p',$sdt)->item(0)->cloneNode(true);
+                $paragraphs = iterator_to_array($this->xp->query('w:sdtContent/w:p',$sdt));
+                $this->patterns[$role] = $paragraphs[0]->cloneNode(true);
+                $this->spacers[$role] = array_map(static fn($paragraph) => $paragraph->cloneNode(true), array_slice($paragraphs,1));
             }
             $properties=$this->xp->query('w:sectPr',$this->body)->item(0)->cloneNode(true);
             while ($this->body->firstChild) $this->body->removeChild($this->body->firstChild);
             if ($section==='velocidad' && !empty($data['riesgos'])) {
-                $this->p('subtitulo','Condiciones de riesgo'); $this->items($data['riesgos']);
+                $this->p('subtitulo','Condiciones de riesgo'); $this->items($data['riesgos'], 'lista', 'riesgos', true);
             }
-            $this->p('titulo',self::TITLES[$section]);
+            $this->p('titulo',preg_replace('/^(?:I|A)\.\s*/u','',self::TITLES[$section]));
             switch ($section) {
                 case 'descripcion': $this->description($data['contenido']??[]); break;
                 case 'velocidad':
                     $intro=$this->xp->query('.//w:t',$this->patterns['intro'])->item(0)->textContent;
                     $this->p('intro',$intro);
-                    foreach ($data['parrafos']??[] as $i=>$item) $this->p('lista',self::letter($i).'. '.$item['texto']);
+                    $this->items($data['parrafos']??[], 'lista');
                     foreach ($data['estimaciones']??[] as $item) {
                         $vehicle=$context['vehicles'][(int)$item['vehiculo_id']]??[];
                         $this->p('subtitulo','Para el '.$this->vehicle($vehicle));
@@ -113,23 +119,23 @@ final class AnalisisWordService
                     }
                     break;
                 case 'danos-lesiones':
-                    $this->p('subtitulo','1. Se tomará en cuenta lo siguiente:'); $this->items($data['consideraciones']??[]);
-                    foreach ($data['parrafos']??[] as $i=>$item) $this->p('texto',($i+2).'. '.$item['texto']);
-                    $this->p('subtitulo',(count($data['parrafos']??[])+2).'. Lo analizado en los puntos que anteceden permite determinar:');
-                    $this->items($data['determinaciones']??[]); break;
+                    $this->p('subtitulo','Se tomará en cuenta lo siguiente:'); $this->items($data['consideraciones']??[]);
+                    foreach ($data['parrafos']??[] as $item) $this->p('texto',$item['texto']);
+                    $this->p('determinacion_titulo','Lo analizado en los puntos que anteceden permite determinar:');
+                    $this->items($data['determinaciones']??[], 'determinacion'); break;
                 case 'evidencias':
                     foreach ($data['evidencias']??[] as $i=>$item) {
-                        $this->p('subtitulo',($i+1).'. Evidencia '.$item['tipo'].' ('.$item['detalle'].')');
+                        $this->p('subtitulo','Evidencia '.$item['tipo'].' ('.$item['detalle'].')');
                         $this->p('texto',$item['ubicacion']);
-                        foreach (self::lines($item['caracteristicas']) as $line) $this->p('lista','– '.$line);
+                        $this->items(array_map(static fn($line)=>['texto'=>$line], self::lines($item['caracteristicas'])), 'lista');
                         $this->p('texto',$item['consecuencia']); $this->p('texto',$item['determinacion']);
                     }
                     break;
-                case 'integral': foreach ($data['parrafos']??[] as $i=>$item) $this->p('texto',($i+1).'. '.$item['texto']); break;
+                case 'integral': foreach ($data['parrafos']??[] as $item) $this->p('texto',$item['texto']); break;
                 case 'causalidad':
-                    $this->p('subtitulo','A. FACTORES INTERVINIENTES');
+                    $this->p('subtitulo','FACTORES INTERVINIENTES');
                     foreach ($data['factores']??[] as $i=>$item) {
-                        $this->p('apartado',($i+1).'. Factor '.mb_strtolower($item['tipo']));
+                        $this->p('apartado','Factor '.mb_strtolower($item['tipo']));
                         $p=$context['people'][(int)$item['involucrado_id']]??[];
                         if ($p) $this->p('texto',($p['nombre']??'').' · '.($p['rol']??''));
                         $this->p('texto',$item['descripcion']);
@@ -139,58 +145,57 @@ final class AnalisisWordService
             }
             $this->body->appendChild($properties);
             $this->zip->addFromString('word/document.xml',$this->dom->saveXML());
+            $this->lists->save($this->zip);
             $settings=new DOMDocument();
             if ($settings->loadXML($this->zip->getFromName('word/settings.xml'),LIBXML_NONET)) {
                 $xpath=new DOMXPath($settings); $xpath->registerNamespace('w',self::W);
                 $node=$xpath->query('//w:updateFields')->item(0);
                 if (!$node) {$node=$settings->createElementNS(self::W,'w:updateFields');$settings->documentElement->appendChild($node);}
-                $node->setAttributeNS(self::W,'w:val','true');$this->zip->addFromString('word/settings.xml',$settings->saveXML());
+                $node->setAttributeNS(self::W,'w:val','true');
+                $compat=$xpath->query('//w:compat')->item(0);
+                if (!$compat) {$compat=$settings->createElementNS(self::W,'w:compat');$settings->documentElement->appendChild($compat);}
+                if (!$xpath->query('w:doNotExpandShiftReturn',$compat)->length) $compat->appendChild($settings->createElementNS(self::W,'w:doNotExpandShiftReturn'));
+                $this->zip->addFromString('word/settings.xml',$settings->saveXML());
             }
         } finally { $this->zip->close(); }
     }
 
-    private function p(string $role, string $text): void
+    private function p(string $role, string $text, ?string $listGroup = null, bool $bullet = false): void
     {
         if (trim($text)==='') return;
-        // Real paragraphs avoid stretched justified lines when an article contains Enter.
-        if (preg_match('/[\r\n]/', $text)) {
-            foreach (preg_split('/\r\n|\r|\n/', $text) as $line) $this->p($role, $line);
-            return;
-        }
-        $pattern=$this->patterns[$role]??$this->patterns['texto']??$this->patterns['titulo'];
-        $p=$this->dom->createElementNS(self::W,'w:p');
-        $props=$this->xp->query('w:pPr',$pattern)->item(0);
-        if ($props) $p->appendChild($props->cloneNode(true));
-        $pPr=$this->xp->query('w:pPr',$p)->item(0);
-        if (!$pPr) {$pPr=$this->dom->createElementNS(self::W,'w:pPr');$p->appendChild($pPr);}
-        foreach (iterator_to_array($this->xp->query('w:numPr|w:sectPr|w:pageBreakBefore|w:keepNext',$pPr)) as $node) $pPr->removeChild($node);
-        // Suppress inherited list numbering: each component has independent explicit labels.
-        $num=$this->dom->createElementNS(self::W,'w:numPr');$id=$this->dom->createElementNS(self::W,'w:numId');$id->setAttributeNS(self::W,'w:val','0');$num->appendChild($id);
-        $before=null;
-        foreach ($pPr->childNodes as $node) {
-            if ($node instanceof DOMElement && !in_array($node->localName,['pStyle','keepNext','keepLines','pageBreakBefore','framePr','widowControl'],true)) {$before=$node;break;}
-        }
-        $pPr->insertBefore($num,$before);
-        if (in_array($role,['titulo','subtitulo','apartado','subapartado','adicional','anexos'],true)) {
-            $before=$this->xp->query('*[not(self::w:pStyle)]',$pPr)->item(0);
-            $pPr->insertBefore($this->dom->createElementNS(self::W,'w:keepNext'),$before);
-        }
+        if (!isset($this->patterns[$role])) throw new RuntimeException('Falta el patrón de párrafo: '.$role);
+        $pattern=$this->patterns[$role];
+        $paragraph=$this->dom->createElementNS(self::W,'w:p');
+        $properties=$this->xp->query('w:pPr',$pattern)->item(0);
+        if ($properties) $paragraph->appendChild($properties->cloneNode(true));
+        // Source pStyle and numPr are authoritative: never disable inherited heading numbering.
+        if ($listGroup !== null) $this->lists->restart($paragraph, $listGroup, $bullet);
         $run=$this->dom->createElementNS(self::W,'w:r');
-        $rPr=$this->xp->query('w:r/w:rPr',$pattern)->item(0);if($rPr)$run->appendChild($rPr->cloneNode(true));
-        foreach (preg_split('/\r\n|\r|\n/',$text) as $i=>$line) {
-            if ($i) $run->appendChild($this->dom->createElementNS(self::W,'w:br'));
-            $t=$this->dom->createElementNS(self::W,'w:t');$t->setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');
-            $t->appendChild($this->dom->createTextNode(preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u','',$line)));
+        $properties=$this->xp->query('w:r/w:rPr',$pattern)->item(0);
+        if ($properties) $run->appendChild($properties->cloneNode(true));
+        foreach (preg_split('/(\r\n|\r|\n|\t)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE) as $part) {
+            if ($part === "\t") {$run->appendChild($this->dom->createElementNS(self::W,'w:tab'));continue;}
+            if (preg_match('/^[\r\n]+$/', $part)) {$run->appendChild($this->dom->createElementNS(self::W,'w:br'));continue;}
+            if ($part === '') continue;
+            $t=$this->dom->createElementNS(self::W,'w:t');
+            $t->setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');
+            $t->appendChild($this->dom->createTextNode(preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u','',$part)));
             $run->appendChild($t);
         }
-        $p->appendChild($run);$this->body->appendChild($p);
+        $paragraph->appendChild($run);$this->body->appendChild($paragraph);
+        foreach ($this->spacers[$role] ?? [] as $spacer) $this->body->appendChild($spacer->cloneNode(true));
     }
-    private function items(array $items): void { foreach($items as $item)$this->p('lista','– '.$item['texto']); }
+
+    private function items(array $items, string $role='lista', ?string $listGroup=null, bool $bullet=false): void
+    {
+        $last=array_key_last($items);
+        foreach ($items as $index=>$item) {
+            $pattern=$index===$last && isset($this->patterns[$role.'_final']) ? $role.'_final' : $role;
+            $this->p($pattern,$item['texto'],$listGroup,$bullet);
+        }
+    }
     private static function lines(string $text, bool $csv=false): array {
         return array_values(array_filter(array_map(static fn($s)=>trim(preg_replace('/^\s*[-–•]\s*/u','',$s)),preg_split($csv?'/\r?\n|,/u':'/\r?\n/u',$text)),static fn($s)=>$s!==''));
-    }
-    private static function letter(int $index): string {
-        $out='';do{$out=chr(97+$index%26).$out;$index=intdiv($index,26)-1;}while($index>=0);return $out;
     }
     private function vehicle(array $v): string {
         return mb_strtolower(trim((string)($v['tipo']??''))?:'vehículo').' de placa de rodaje '.(trim((string)($v['placa']??''))?:'sin placa registrada');
@@ -200,31 +205,40 @@ final class AnalisisWordService
         $inspection=$data['inspeccion']??[];$accident=$this->context['accidente']??[];
         $place=AccidentPlace::format(trim((string)($inspection['lugar']??''))?:($accident['lugar']??''),$accident['distrito']??'');
         $parts=[];
-        if (!empty($inspection['fecha'])) {$date=\DateTimeImmutable::createFromFormat('!Y-m-d',$inspection['fecha']);$parts[]='Realizada el '.($date?$date->format('d/m/Y'):$inspection['fecha']);}
+        if (!empty($inspection['fecha'])) {
+            $date=\DateTimeImmutable::createFromFormat('!Y-m-d',$inspection['fecha']);
+            $months=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+            $parts[]='Realizada el '.($date?$date->format('d').$months[(int)$date->format('n')-1].$date->format('Y'):$inspection['fecha']);
+        }
         if (!empty($inspection['hora'])) $parts[]='a las '.$inspection['hora'].' horas aproximadamente';
         if ($place!=='') $parts[]='en '.$place;
-        $this->p('subtitulo','A. INSPECCIÓN TÉCNICO POLICIAL');
+        $this->p('subtitulo','INSPECCIÓN TÉCNICO POLICIAL');
         if ($parts) $this->p('intro',implode(', ',$parts).', constatándose lo siguiente:');
-        foreach (['llegada'=>'1. Llegada al lugar del evento','metodo'=>'2. Método utilizado de ingreso a la escena del evento','perennizacion'=>'3. Perennización'] as $key=>$title) {
+        foreach (['llegada'=>'Llegada al lugar del evento','metodo'=>'Método utilizado de ingreso a la escena del evento','perennizacion'=>'Perennización'] as $key=>$title) {
             $this->p('apartado',$title);
-            if ($key==='perennizacion') foreach(self::lines($inspection[$key]??'') as $line)$this->p('lista','– '.$line);
+            if ($key==='perennizacion') $this->items(array_map(static fn($line)=>['texto'=>$line],self::lines($inspection[$key]??'')));
             else $this->p('texto',$inspection[$key]??'');
         }
-        $this->p('apartado','4. Referente a la vía');
-        foreach ($data['vias']??[] as $road) {
-            $this->p('subapartado',$road['nombre']??'Vía');$this->p('texto',$road['descripcion']??'');
-            $labels=['configuracion'=>'a. Configuración','material'=>'b. Material y estado de la calzada','control'=>'c. Dispositivo control de tránsito','ordenamiento'=>'d. Ordenamiento del tránsito','maniobrabilidad'=>'e. Área de maniobrabilidad','iluminacion'=>'f. Iluminación','visibilidad'=>'g. Visibilidad','intensidad'=>'h. Intensidad vehicular','fluidez'=>'i. Fluidez vehicular'];
-            foreach($labels as $key=>$label) if(trim($road[$key]??'')!=='')$this->p('atributo',$label.': '.$road[$key]);
-            foreach(['medidas'=>'Medidas','observaciones'=>'Observaciones'] as $key=>$label)if(!empty($road[$key])){$this->p('subapartado',$label);$this->p('texto',$road[$key]);}
+        $this->p('apartado','Referente a la vía');
+        foreach ($data['vias']??[] as $index=>$road) {
+            $this->p('via_titulo',$road['nombre']??'Vía');$this->p('via_texto',$road['descripcion']??'');
+            $labels=['configuracion'=>'Configuración','material'=>'Material y estado de la calzada','control'=>'Dispositivo control de tránsito','ordenamiento'=>'Ordenamientos del tránsito','maniobrabilidad'=>'Área de maniobrabilidad','iluminacion'=>'Iluminación','visibilidad'=>'Visibilidad','intensidad'=>'Intensidad vehicular','fluidez'=>'Fluidez vehicular'];
+            foreach ($labels as $key=>$label) {
+                $separator=$key==='configuracion'?"\t: ":"\t:\t";
+                $this->p('atributo_'.$key,$label.$separator.($road[$key]??''),'via-'.$index);
+            }
+            foreach(['medidas'=>'Medidas','observaciones'=>'Observaciones'] as $key=>$label) if(!empty($road[$key])) {$this->p('via_titulo',$label);$this->p('via_texto',$road[$key]);}
             if(!empty($road['fotografia']))$this->picture($road['fotografia'],$road['pie']??'');
             elseif(!empty($road['pie']))$this->p('pie',$road['pie']);
         }
-        $this->p('apartado','5. Condiciones climáticas');$this->p('texto',$inspection['clima']??'');
-        $this->p('apartado','6. Zona de conflicto');
-        if(!empty($data['consideraciones'])){$this->p('subapartado','a. Teniendo en consideración lo siguiente:');$this->items($data['consideraciones']);}
-        if(!empty($data['aproximaciones'])){$this->p('subapartado','b. Se establece por aproximación:');foreach($data['aproximaciones'] as $i=>$item){$this->p('subapartado',($i+1).') '.$item['titulo']);$this->p('texto',$item['descripcion']);}}
-        $this->p('apartado','7. Posiciones finales');
-        foreach($data['posiciones']??[] as $i=>$item){$this->p('subapartado',self::letter($i).'. '.$item['unidad']);$this->p('texto',$item['ubicacion']);}
+        $this->p('clima_titulo','Condiciones climatéricas');$this->p('clima_texto',$inspection['clima']??'');
+        $this->p('conflicto_titulo','Zona de conflicto');
+        $this->p('conflicto_subtitulo','Teniendo en consideración lo siguiente:');
+        $this->items($data['consideraciones']??[], 'conflicto_lista');
+        $this->p('aproximacion_subtitulo','Se establece por aproximación:');
+        foreach($data['aproximaciones']??[] as $item){$this->p('aproximacion_titulo',$item['titulo']);$this->p('aproximacion_texto',$item['descripcion']);}
+        $this->p('posiciones_titulo','Posiciones finales');
+        foreach($data['posiciones']??[] as $item){$this->p('posicion_titulo',$item['unidad']);$this->p('posicion_texto',$item['ubicacion']);}
     }
     private function infractions(array $data): void
     {
@@ -243,8 +257,8 @@ final class AnalisisWordService
             $this->p('intro','El '.$role.($yes?' se encuentra':' no se encuentra').' incurso en el Reglamento Nacional de Tránsito-Código de Tránsito, D.S. Nro. 016-20009-MTC'.($yes?', artículos:':'.'));
             if($yes)foreach($item['articulos']??[] as $article){$this->p('apartado','Artículo '.$article['numero'].'.- '.$article['titulo']);$this->p('texto',$article['contenido']);}
         }
-        if(!empty($data['informacion'])){$this->p('adicional','INFORMACIÓN ADICIONAL');foreach($data['informacion'] as $item)$this->p('texto',$item['texto']);}
-        if(!empty($data['anexos'])){$this->p('anexos','ANEXOS');$this->items($data['anexos']);}
+        if(!empty($data['informacion'])){$this->p('adicional','INFORMACIÓN ADICIONAL');foreach($data['informacion'] as $item)$this->p('adicional_texto',$item['texto']);}
+        if(!empty($data['anexos'])){$this->p('anexos','ANEXOS');$this->items($data['anexos'], 'anexo');}
     }
     private function picture(string $reference, string $caption): void
     {

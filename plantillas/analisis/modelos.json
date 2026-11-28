@@ -1,26 +1,53 @@
 {
     "descripcion": {
         "modelo": "6 DESCRIPCION ANALITICA- ITP.docx",
-        "sha256": "d16ad743c64f428ac23d787acdb7ab5ada2e22acdf18761170a112dd97881179",
+        "sha256": "4ba7fdb08e2a1ae1cf7507f8a2a7fa58369839c1c27434a9fdba3e12a2dd53e7",
+        "styles_sha256": "f67914f707e5f2f27ffa02ce8f75d285df11eaf5d0bbc3539412d047765a34e9",
+        "numbering_sha256": "3c8a95a8bccceb83d8f17bc39ccc37d3bc605f7db16689dc3aabaca36c05bdba",
         "roles": {
             "titulo": 0,
             "subtitulo": 1,
             "intro": 2,
             "apartado": 4,
             "texto": 5,
-            "subapartado": 16,
+            "via_titulo": 16,
+            "via_texto": 17,
             "lista": 11,
-            "atributo": 19,
-            "pie": 30
+            "lista_final": 13,
+            "atributo_configuracion": 19,
+            "atributo_material": 20,
+            "atributo_control": 21,
+            "atributo_ordenamiento": 22,
+            "atributo_maniobrabilidad": 23,
+            "atributo_iluminacion": 24,
+            "atributo_visibilidad": 25,
+            "atributo_intensidad": 26,
+            "atributo_fluidez": 27,
+            "pie": 30,
+            "clima_titulo": 48,
+            "clima_texto": 49,
+            "conflicto_titulo": 51,
+            "conflicto_subtitulo": 52,
+            "conflicto_lista": 53,
+            "conflicto_lista_final": 56,
+            "aproximacion_subtitulo": 58,
+            "aproximacion_titulo": 60,
+            "aproximacion_texto": 61,
+            "posiciones_titulo": 66,
+            "posicion_titulo": 67,
+            "posicion_texto": 68
         }
     },
     "velocidad": {
         "modelo": "7 ANALISIS DE VELOCIDAD.docx",
         "sha256": "5b8dbd801ab14b23c39acc877ebf4c8d6aeb54093e4e004b40364c774ad096ba",
+        "styles_sha256": "e0f9a3970817c10cf7c209778f79db1bd3f6a03c9938d385b9cd300f096ad71b",
+        "numbering_sha256": "a73224d6d75e59ef3becf2fca4c9445948474e38940f186231b59943ecf2a451",
         "roles": {
             "titulo": 0,
             "intro": 1,
             "lista": 3,
+            "lista_final": 9,
             "subtitulo": 11,
             "texto": 12
         }
@@ -28,26 +55,36 @@
     "danos-lesiones": {
         "modelo": "8 ANALISIS DE DAÑOS Y LESIONES.docx",
         "sha256": "1d1dbea64a043725ca1a7d04d8c7d981b8e6fdf810e8e9673b9aa049b71f1626",
+        "styles_sha256": "c7208b87008af455f16ecf6f8eea0a40df50363eded5ce7231aa97a8803c01df",
+        "numbering_sha256": "11b818a83713eabb6bece59461f34e0fb28c5a8271f7f885ac0b513399906e2d",
         "roles": {
             "titulo": 0,
             "subtitulo": 2,
             "lista": 4,
-            "texto": 9
+            "lista_final": 7,
+            "texto": 9,
+            "determinacion_titulo": 13,
+            "determinacion": 15
         }
     },
     "evidencias": {
         "modelo": "9 ANALISIS DE EVIDENCIAS.docx",
         "sha256": "a7c4f0c209729b8b1fe53dc64b5c6d5741643d661f957410018d1c350e1625bc",
+        "styles_sha256": "c7208b87008af455f16ecf6f8eea0a40df50363eded5ce7231aa97a8803c01df",
+        "numbering_sha256": "11b818a83713eabb6bece59461f34e0fb28c5a8271f7f885ac0b513399906e2d",
         "roles": {
             "titulo": 0,
             "subtitulo": 2,
             "texto": 3,
-            "lista": 5
+            "lista": 5,
+            "lista_final": 8
         }
     },
     "integral": {
         "modelo": "10 ANALISIS INTEGRAL.docx",
         "sha256": "ebb057a9a51ee2af7d4379d3ebb742dae01fdd371d1470d1359ac4e63fd62d65",
+        "styles_sha256": "c7208b87008af455f16ecf6f8eea0a40df50363eded5ce7231aa97a8803c01df",
+        "numbering_sha256": "11b818a83713eabb6bece59461f34e0fb28c5a8271f7f885ac0b513399906e2d",
         "roles": {
             "titulo": 0,
             "texto": 1
@@ -56,6 +93,8 @@
     "causalidad": {
         "modelo": "11 CAUSALDAD DEL ACCIDENTE.docx",
         "sha256": "97cba95ea020b0d1210975a06075ed9ebf7d5e147c01fbb11cbb1ce62ff4dece",
+        "styles_sha256": "c7208b87008af455f16ecf6f8eea0a40df50363eded5ce7231aa97a8803c01df",
+        "numbering_sha256": "11b818a83713eabb6bece59461f34e0fb28c5a8271f7f885ac0b513399906e2d",
         "roles": {
             "titulo": 0,
             "subtitulo": 1,
@@ -66,6 +105,8 @@
     "infracciones": {
         "modelo": "12 INFRACCIONES ADMINISTRATIVAS-ANEXOS.docx",
         "sha256": "fed54f122ecc8c71588b948c6893b65a0336240fba230572cf81f5b80afc2aef",
+        "styles_sha256": "c7208b87008af455f16ecf6f8eea0a40df50363eded5ce7231aa97a8803c01df",
+        "numbering_sha256": "11b818a83713eabb6bece59461f34e0fb28c5a8271f7f885ac0b513399906e2d",
         "roles": {
             "titulo": 0,
             "subtitulo": 1,
@@ -73,7 +114,9 @@
             "apartado": 5,
             "texto": 6,
             "adicional": 41,
-            "anexos": 44
+            "adicional_texto": 42,
+            "anexos": 44,
+            "anexo": 45
         }
     }
 }

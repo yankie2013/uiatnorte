@@ -6,7 +6,7 @@ El endpoint `word_analisis_descargar.php?accidente_id=ID&seccion=APARTADO` compr
 
 `AnalisisWordService` obtiene el contenido de `accidente_analisis_informe`, los vehículos y las personas vigentes del mismo expediente. Descripción analítica conserva su contenido guardado; si aún no existe, utiliza la ITP más reciente, igual que la pantalla. El lugar de la inspección incluye el distrito. Las infracciones antiguas almacenadas en causalidad se leen sin modificar los registros originales.
 
-Los DOCX conservan el tamaño de página, márgenes, estilos, cabeceras, pies y marca de agua de cada modelo. El contenido de ejemplo, las fotografías, las firmas y la fecha de muestra se eliminan al preparar las plantillas. La introducción del modelo de velocidad permanece literal. Las fotografías JPEG/PNG alojadas dentro de `uploads/` se incluyen con su pie; una referencia externa o no disponible se conserva como texto, sin descargar recursos de red.
+Los DOCX conservan el tamaño de página, márgenes, estilos, cabeceras, pies y marca de agua de cada modelo. La jerarquía utiliza los estilos Título 1–5 y la numeración multinivel nativa del modelo, sin prefijos escritos manualmente. Cada nivel conserva sus sangrías, tabulaciones, formato y espaciado. Las características de cada vía reinician su lista alfabética a–i en una instancia propia; sus etiquetas, dos puntos y valores mantienen las tabulaciones de origen. El contenido de ejemplo, las fotografías, las firmas y la fecha de muestra se eliminan al preparar las plantillas. La introducción del modelo de velocidad permanece literal. Las fotografías JPEG/PNG alojadas dentro de `uploads/` se incluyen con su pie; una referencia externa o no disponible se conserva como texto, sin descargar recursos de red.
 
 No necesita cambios de esquema SQL. Requiere las tablas actuales del análisis y las extensiones PHP DOM/ZipArchive. El renderizado de las pruebas utiliza LibreOffice y no es una dependencia del servidor de producción.
 
@@ -16,7 +16,7 @@ Para volver a importar los modelos desde una carpeta local:
 php docs/scripts/preparar_plantillas_analisis.php '/ruta/a/Componentes del Informe'
 ```
 
-El importador reconoce los siete modelos por sus prefijos 6–12 y guarda la procedencia, SHA-256 y patrones de párrafo en `plantillas/analisis/modelos.json`. No necesita los originales en el VPS: se despliega la carpeta `plantillas/analisis/` ya preparada.
+El importador reconoce los siete modelos por sus prefijos 6–12 y guarda la procedencia, SHA-256 y patrones de párrafo y huellas de los estilos y la numeración en `plantillas/analisis/modelos.json`. No necesita los originales en el VPS: se despliega la carpeta `plantillas/analisis/` ya preparada.
 
 Verificación sin conexión a MySQL:
 

@@ -15,6 +15,12 @@ $fixtures=[
     'causalidad'=>['factores'=>[['tipo'=>'Predominante','involucrado_id'=>9,'descripcion'=>$paragraph['texto']],['tipo'=>'Contributivo','involucrado_id'=>10,'descripcion'=>'Descripción del factor contributivo.']]],
     'infracciones'=>['evaluaciones'=>[['involucrado_id'=>9,'vehiculo_id'=>8,'incurso'=>'si','articulos'=>[['numero'=>'88','titulo'=>'Título registrado & conservado','contenido'=>"Contenido del artículo guardado.\nb) Segundo párrafo del artículo."]]],['involucrado_id'=>10,'vehiculo_id'=>'','incurso'=>'no','articulos'=>[]]],'informacion'=>[$paragraph],'anexos'=>[['texto'=>'Anexo registrado']]],
 ];
+$fixtures['descripcion']['contenido']['vias'][0]['descripcion']=str_repeat('La vía cuenta con una calzada de circulación, aceras y separadores laterales descritos en la inspección. ',5);
+$fixtures['descripcion']['contenido']['vias'][0]['material']='Pavimento de asfalto en buen estado de uso y conservación, con condiciones registradas en la inspección.';
+$fixtures['descripcion']['contenido']['vias'][0]['control']='Marcas discontinuas & señalización vertical, separadores de carril y cruce peatonal señalizado.';
+$fixtures['descripcion']['contenido']['vias'][]=['nombre'=>'Jr. Secundario','descripcion'=>'Segunda vía de referencia.','configuracion'=>'Recta y plana','material'=>'Asfalto en regular estado de conservación.','control'=>'Señalización horizontal','ordenamiento'=>'De este a oeste','maniobrabilidad'=>'Porción circulable de la vía','iluminacion'=>'Natural','visibilidad'=>'Buena','intensidad'=>'Continua','fluidez'=>'Moderada'];
+$fixtures['descripcion']['contenido']['aproximaciones'][]=['titulo'=>'Segunda área de conflicto','descripcion'=>'Segunda aproximación registrada.'];
+$fixtures['descripcion']['contenido']['posiciones'][]=['unidad'=>'Peatón','ubicacion'=>'Posición final de la persona involucrada.'];
 function readWord(string $file):array {
     $z=new ZipArchive();assertAnalysisWord($z->open($file)===true,'DOCX inválido.');$d=new DOMDocument();
     assertAnalysisWord($d->loadXML($z->getFromName('word/document.xml'),LIBXML_NONET),'XML inválido.');
@@ -29,11 +35,11 @@ function readWord(string $file):array {
 }
 foreach($fixtures as $section=>$data){
     $file="$dir/$section.docx";(new AnalisisWordService())->generate($section,$data,$context,$file);[$text]=readWord($file);
-    assertAnalysisWord(str_contains($text,AnalisisWordService::TITLES[$section]),'Falta título: '.$section);
+    assertAnalysisWord(str_contains($text,preg_replace('/^(?:I|A)\.\s*/u','',AnalisisWordService::TITLES[$section])),'Falta título: '.$section);
     if($section==='descripcion')assertAnalysisWord(str_contains($text,'Av. de Prueba 123, distrito de Los Olivos')&&str_contains($text,'Marcas discontinuas & señalización vertical'),'Faltan distrito o señalización.');
     if($section==='infracciones')assertAnalysisWord(str_contains($text,'no se encuentra incurso')&&str_contains($text,'Artículo 88.-'),'Falta evaluación o artículo.');
-    if($section==='evidencias')assertAnalysisWord(str_contains($text,'– De color rojo')&&!str_contains($text,'Esta evidencia fue localizada en:'),'Características o ubicación incorrectas.');
-    if($section==='velocidad')assertAnalysisWord(str_contains($text,'D.S. Nº06-2009-MTC')&&str_contains($text,'a. Texto guardado')&&str_contains($text,'TEST-123'),'Faltan introducción, párrafos o vehículo.');
+    if($section==='evidencias')assertAnalysisWord(str_contains($text,'De color rojo')&&!str_contains($text,'Esta evidencia fue localizada en:'),'Características o ubicación incorrectas.');
+    if($section==='velocidad')assertAnalysisWord(str_contains($text,'D.S. Nº06-2009-MTC')&&str_contains($text,'Texto guardado')&&str_contains($text,'TEST-123'),'Faltan introducción, párrafos o vehículo.');
     (new AnalisisWordService())->generate($section,[],$context,"$dir/empty-$section.docx");readWord("$dir/empty-$section.docx");
     echo "$section: OK (completo y vacío).\n";
 }
@@ -74,3 +80,54 @@ $db->prepare("UPDATE accidente_analisis_informe SET contenido=? WHERE seccion='c
 try{AnalisisWordService::load($db,999,'integral');throw new RuntimeException('Aceptó expediente inexistente.');}catch(RuntimeException $e){assertAnalysisWord($e->getMessage()==='Expediente no disponible.','Fallo inesperado con expediente inexistente.');}
 require dirname(__DIR__).'/word_filename_helper.php';assertAnalysisWord(str_ends_with(uiat_docx_filename(['Análisis','velocidad','PRUEBA'],'analisis'),'.docx'),'Nombre de descarga incorrecto.');
 echo "Carga persistida de siete apartados, contexto, ITP reciente, legacy y expediente inexistente: OK.\n";
+// Native Word style/list regression: formatting must survive through the actual generator.
+$manifest=json_decode(file_get_contents(dirname(__DIR__).'/plantillas/analisis/modelos.json'),true,32,JSON_THROW_ON_ERROR);
+$w='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+$paragraphByText=static function(DOMXPath $xpath,string $text):DOMElement {
+    foreach($xpath->query('/w:document/w:body/w:p') as $p){$value='';foreach($xpath->query('w:r/w:t',$p) as $t)$value.=$t->textContent;if($value===$text)return $p;}
+    throw new RuntimeException('No se encontró el párrafo: '.$text);
+};
+foreach(array_keys($fixtures) as $section){
+    $reference=new ZipArchive();$reference->open(dirname(__DIR__).'/plantillas/analisis/'.$section.'.docx');
+    $generated=new ZipArchive();$generated->open("$dir/$section.docx");
+    assertAnalysisWord(hash('sha256',$reference->getFromName('word/styles.xml'))===$manifest[$section]['styles_sha256'],'Se alteraron estilos al preparar '.$section);
+    assertAnalysisWord(hash('sha256',$reference->getFromName('word/numbering.xml'))===$manifest[$section]['numbering_sha256'],'Se alteró numeración al preparar '.$section);
+    foreach(['word/styles.xml','word/fontTable.xml'] as $part)assertAnalysisWord($reference->getFromName($part)===$generated->getFromName($part),'Se alteró '.$part.' en '.$section);
+    $sourceNumbering=new DOMDocument();$sourceNumbering->loadXML($reference->getFromName('word/numbering.xml'));
+    $outputNumbering=new DOMDocument();$outputNumbering->loadXML($generated->getFromName('word/numbering.xml'));
+    $sourceXp=new DOMXPath($sourceNumbering);$sourceXp->registerNamespace('w',$w);$outputXp=new DOMXPath($outputNumbering);$outputXp->registerNamespace('w',$w);
+    foreach($sourceXp->query('/w:numbering/w:abstractNum|/w:numbering/w:num') as $sourceNode){
+        $attribute=$sourceNode->localName==='num'?'numId':'abstractNumId';$id=$sourceNode->getAttributeNS($w,$attribute);
+        $outputNode=$outputXp->query('/w:numbering/w:'.$sourceNode->localName.'[@w:'.$attribute.'="'.$id.'"]')->item(0);
+        assertAnalysisWord($outputNode && $sourceNode->C14N()===$outputNode->C14N(),'Se cambió la definición original '.$attribute.'='.$id.' de '.$section);
+    }
+    $document=new DOMDocument();$document->loadXML($generated->getFromName('word/document.xml'));$xpath=new DOMXPath($document);$xpath->registerNamespace('w',$w);
+    $nativeLists=new \App\Support\WordListInstances($generated);
+    $title=$paragraphByText($xpath,preg_replace('/^(?:I|A)\.\s*/u','',AnalisisWordService::TITLES[$section]));
+    $numbering=$nativeLists->resolve($title);
+    assertAnalysisWord($numbering!==null,'Título sin numeración nativa: '.$section);
+    assertAnalysisWord($xpath->query('w:pPr/w:numPr/w:numId[@w:val="0"]',$title)->length===0,'Título con numeración desactivada: '.$section);
+    if($section==='descripcion'){
+        foreach([
+            'DESCRIPCIÓN ANALÍTICA'=>['Ttulo1',0], 'INSPECCIÓN TÉCNICO POLICIAL'=>['Ttulo2',1],
+            'Llegada al lugar del evento'=>['Ttulo3',2], 'Zona de conflicto'=>['Ttulo3',2],
+            'Teniendo en consideración lo siguiente:'=>['Ttulo4',3], 'Se establece por aproximación:'=>['Ttulo4',3],
+            'Área de impacto'=>['Ttulo5',4], 'Posiciones finales'=>['Ttulo3',2], 'Automóvil TEST-123'=>['Ttulo4',3], 'Peatón'=>['Ttulo4',3],
+        ] as $text=>[$style,$level]){
+            $p=$paragraphByText($xpath,$text);assertAnalysisWord($xpath->evaluate('string(w:pPr/w:pStyle/@w:val)',$p)===$style,'Nivel de estilo incorrecto: '.$text);
+            $list=$nativeLists->resolve($p);assertAnalysisWord($list && $list['level']===$level,'Nivel de lista incorrecto: '.$text);
+        }
+        $attributeRows=[];
+        foreach($xpath->query('/w:document/w:body/w:p') as $p)if($xpath->query('w:r/w:tab',$p)->length)$attributeRows[]=$p;
+        assertAnalysisWord(count($attributeRows)===18,'Deben existir nueve atributos por cada vía.');
+        $ids=[];
+        foreach($attributeRows as $i=>$p){$list=$nativeLists->resolve($p);$ids[intdiv($i,9)][]=$list['id'];assertAnalysisWord($list['level']===0,'Atributo fuera del nivel alfabético.');}
+        assertAnalysisWord(count(array_unique($ids[0]))===1 && count(array_unique($ids[1]))===1 && $ids[0][0]!==$ids[1][0],'Las listas a–i deben reiniciar por vía.');
+        foreach(['Ubicación relativa al punto de referencia.'=>'1418','Posición final registrada.'=>'1176'] as $text=>$left){$p=$paragraphByText($xpath,$text);assertAnalysisWord($xpath->evaluate('string(w:pPr/w:ind/@w:left)',$p)===$left,'Sangría de cuerpo incorrecta: '.$text);}
+    }
+    $reference->close();$generated->close();
+}
+(new AnalisisWordService())->generate('integral',['parrafos'=>[['texto'=>"Primera línea\nSegunda línea"]]],$context,"$dir/native-linebreak.docx");
+$z=new ZipArchive();$z->open("$dir/native-linebreak.docx");$d=new DOMDocument();$d->loadXML($z->getFromName('word/document.xml'));$x=new DOMXPath($d);$x->registerNamespace('w',$w);
+assertAnalysisWord($x->query('//w:p[w:r/w:br]')->length===1 && $x->query('//w:p[w:r/w:br]/w:pPr/w:numPr/w:numId[@w:val="22"]')->length===1,'Shift+Enter debe conservarse dentro de un único párrafo numerado.');$z->close();
+echo "Estilos fuente, numeración multinivel, títulos 1–5, sangrías, tabulaciones, reinicio por vía y Shift+Enter: OK.\n";
